@@ -140,7 +140,8 @@ func TestTriggerInnerTypeAndVariableBranchesMatchInfraInnerTypeAndVariable(t *te
 						t.Fatal(err)
 					}
 				} else {
-					if _, err := CreateTable(env, targetName, []TableColumn{
+					tableName := targetName + "Table"
+					if _, err := CreateTable(env, tableName, []TableColumn{
 						PrimaryKeyColumn[string]("c1"),
 						{Name: "c2", Type: tableC2Type, Nested: innerSchema},
 					}); err != nil {
@@ -173,7 +174,7 @@ func TestTriggerInnerTypeAndVariableBranchesMatchInfraInnerTypeAndVariable(t *te
 						plan, err = env.Build(OnEvent(source).MergeIntoNamedWindowWhen(targetName,
 							Equal[string](NamedWindowField[string]("c1"), matchCol1), clauses...).Query(StatementName("infra-inner-variable-merge")))
 					} else {
-						plan, err = env.Build(OnEvent(source).MergeIntoTableWhen(targetName, []Expr{col1}, clauses...).Query(StatementName("infra-inner-variable-merge")))
+						plan, err = env.Build(OnEvent(source).MergeIntoTableWhen(targetName+"Table", []Expr{col1}, clauses...).Query(StatementName("infra-inner-variable-merge")))
 					}
 				} else {
 					source := FromAny(env, sourceName)
@@ -181,7 +182,7 @@ func TestTriggerInnerTypeAndVariableBranchesMatchInfraInnerTypeAndVariable(t *te
 						plan, err = env.Build(OnRecord(source).MergeIntoNamedWindowWhen(targetName,
 							Equal[string](NamedWindowField[string]("c1"), matchCol1), clauses...).Query(StatementName("infra-inner-variable-merge")))
 					} else {
-						plan, err = env.Build(OnRecord(source).MergeIntoTableWhen(targetName, []Expr{col1}, clauses...).Query(StatementName("infra-inner-variable-merge")))
+						plan, err = env.Build(OnRecord(source).MergeIntoTableWhen(targetName+"Table", []Expr{col1}, clauses...).Query(StatementName("infra-inner-variable-merge")))
 					}
 				}
 				if err != nil {
@@ -305,7 +306,7 @@ func TestTriggerInnerTypeAndVariableBranchesMatchInfraInnerTypeAndVariable(t *te
 						}
 					}
 				} else {
-					table, ok := engine.Table(targetName)
+					table, ok := engine.Table(targetName + "Table")
 					if !ok {
 						t.Fatal("inner-type table is missing")
 					}

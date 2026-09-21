@@ -1617,9 +1617,11 @@ func TestAggregateIntoTableMaterializesRollupSubtotals(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := CreateTable(env, "RollupMaterialized", []TableColumn{
-		PrimaryKeyColumn[string]("groupKey"),
-		OptionalTableColumnOf[string]("symbol"),
-		OptionalTableColumnOf[float64]("price"),
+		// Java requires the group-by count/types to match the table primary
+		// key exactly, rollup included: two keys need two key columns.
+		PrimaryKeyColumn[string]("symbol"),
+		PrimaryKeyColumn[float64]("price"),
+		TableColumnOf[string]("groupKey"),
 		TableColumnOf[int64]("eventCount"),
 	}); err != nil {
 		t.Fatal(err)

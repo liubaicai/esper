@@ -655,8 +655,13 @@ func buildInfraTableIntoTableCase(caseName string) (*infraTableIntoTableFixture,
 				).IntoTable("varagg")
 			}
 		case "bound-unbound-sorted-minmaxby":
+			// Java's bound into-table projection is zero-arg sorted() whose
+			// sort key is inherited from the declared column; the Go
+			// equivalent is the wildcard-form SortedEventsBy carrying the
+			// same declared key (sorted(expr) with a positional sort
+			// expression is Java-invalid into-table).
 			boundPlan, err = env.Build(boundStream.Aggregate(
-				esper.Alias("sortedb", esper.SortedEvents(esper.Ascending(intPrimitive))),
+				esper.Alias("sortedb", esper.SortedEventsBy[esper.Event, int](eventValue(), intPrimitive, false)),
 			).IntoTable("varagg"))
 			if err != nil {
 				return nil, err

@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 const planSchemaVersion = "esper-go-plan/v2"
@@ -143,6 +144,9 @@ func (e *Environment) RegisterSchema(schema Schema) error {
 	defer e.mu.Unlock()
 	if _, exists := e.schemas[schema.Name()]; exists {
 		return duplicateModuleObjectError(DeploymentResourceEventType, schema.Name())
+	}
+	if _, exists := e.tables[schema.Name()]; exists {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("A table by name '%s' already exists", schema.Name()))
 	}
 	if schema.kind == SchemaVariant && schema.variantMode == VariantPredefined {
 		for _, member := range schema.variantMembers {
@@ -2709,6 +2713,9 @@ func (e *Environment) validateNode(node *streamNode) error {
 		if err := node.window.validate(); err != nil {
 			return err
 		}
+		if base, err := sourceNode(node.input); err == nil && base != nil && base.kind == streamTable {
+			return NewError(ErrorInvalidRule, "Views are not supported with tables")
+		}
 		if _, grouped := node.window.(GroupWindowSpec); !grouped {
 			if source, ok := namedWindowConsumerSource(node.input); ok {
 				// Esper rejects data window views on named-window consumers:
@@ -4906,6 +4913,9 @@ func validateUnidirectionalJoin(definition *joinDefinition, sources []*streamNod
 			continue
 		}
 		for node := sources[index]; node != nil; node = node.input {
+			if node.kind == streamTable {
+				return NewError(ErrorInvalidRule, "Tables cannot be marked as unidirectional")
+			}
 			if node.kind == streamWindow {
 				return fmt.Errorf("unidirectional join source %d cannot declare a window view", index)
 			}
@@ -5055,6 +5065,9 @@ func (e *Environment) validateUpdateStream(query Query) error {
 	source, err := sourceNode(query.input)
 	if err != nil {
 		return err
+	}
+	if source.kind == streamTable {
+		return NewError(ErrorInvalidRule, "Tables cannot be used in an update-istream statement")
 	}
 	if source.kind != streamSource && source.kind != streamNamedWindow {
 		return NewError(ErrorInvalidRule, "update target must be a plain event stream or named window (table, method and historical targets are not yet supported)")
@@ -5615,6 +5628,18 @@ func (e *Environment) validateIntoTable(query Query) error {
 	if query.aggregate == nil {
 		return NewError(ErrorInvalidRule, "into-table requires an aggregate query")
 	}
+	// Java requires at least one aggregation function in the projection and
+	// reports it before resolving the target table.
+	hasAggregate := false
+	for _, selection := range query.aggregate.selections {
+		if isAggregateExpression(selection.Expr) {
+			hasAggregate = true
+			break
+		}
+	}
+	if !hasAggregate {
+		return NewError(ErrorInvalidRule, "Into-table requires at least one aggregation function")
+	}
 	moduleName, tableName := splitCatalogKey(query.tableTarget)
 	definition, ok := e.TableInModule(moduleName, tableName)
 	if !ok {
@@ -5625,6 +5650,37 @@ func (e *Environment) validateIntoTable(query Query) error {
 	for _, column := range columns {
 		columnByName[column.Name] = column
 	}
+	// Group-by key count and type must match the table primary key; Java
+	// validates the group keys before binding the select-clause columns and
+	// applies the check to every grouping form (rollup included).
+	groupBy := append([]Expr(nil), query.aggregate.groupBy...)
+	if len(groupBy) == 0 {
+		groupBy = implicitAggregateGroupBy(query.aggregate.input)
+	}
+	primaryKey := definition.PrimaryKey()
+	if len(groupBy) != len(primaryKey) {
+		if len(primaryKey) == 0 {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("Incompatible number of group-by expressions for use with table '%s', the table expects no group-by expressions and provided are %d group-by expressions", tableName, len(groupBy)))
+		}
+		if len(groupBy) == 0 {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("Incompatible number of group-by expressions for use with table '%s', the table expects %d group-by expressions and provided are no group-by expressions", tableName, len(primaryKey)))
+		}
+		return NewError(ErrorInvalidRule, fmt.Sprintf("Incompatible number of group-by expressions for use with table '%s', the table expects %d group-by expressions and provided are %d group-by expressions", tableName, len(primaryKey), len(groupBy)))
+	}
+	for index, keyExpr := range groupBy {
+		if keyExpr == nil || keyExpr.Type() == nil || index >= len(primaryKey) {
+			continue
+		}
+		pkColumn := columnByName[primaryKey[index]]
+		if pkColumn.Type == nil || pkColumn.Type == typeOf[any]() {
+			continue
+		}
+		// Java requires the provided key type to be a subtype of the declared
+		// key type (boxed); bidirectional or numeric leniency is not allowed.
+		if !keyExpr.Type().AssignableTo(pkColumn.Type) {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("Incompatible type returned by a group-by expression for use with table '%s', the group-by expression '%s' returns '%s' but the table expects '%s'", tableName, keyExpr.Description(), javaTypeName(keyExpr.Type()), javaTypeName(pkColumn.Type)))
+		}
+	}
 	selected := make(map[string]struct{}, len(query.aggregate.selections))
 	for _, selection := range query.aggregate.selections {
 		// Stage one mirrors Java's per-expression select-clause validation:
@@ -5634,6 +5690,11 @@ func (e *Environment) validateIntoTable(query Query) error {
 		if aggregate {
 			if err := validateIntoTableExpressionForm(info); err != nil {
 				return err
+			}
+			// window(*)/sorted(*) carry the source stream's event type; Java
+			// compares it against a declared @type column constraint.
+			if info.kind == "window" || info.kind == "sorted" {
+				info.eventType = e.intoTableProvidedEventType(query, selection.Expr)
 			}
 		}
 		column, exists := columnByName[selection.Name]
@@ -5666,11 +5727,6 @@ func (e *Environment) validateIntoTable(query Query) error {
 			// A grouped aggregate contributes its group key to a table primary
 			// key even when the key is not repeated in the selection list. The
 			// runtime derives the key from the corresponding group-by expression.
-			groupBy := append([]Expr(nil), query.aggregate.groupBy...)
-			if len(groupBy) == 0 {
-				groupBy = implicitAggregateGroupBy(query.aggregate.input)
-			}
-			primaryKey := definition.PrimaryKey()
 			columnIndex := -1
 			for index, name := range primaryKey {
 				if name == column.Name {
@@ -5689,21 +5745,90 @@ func (e *Environment) validateIntoTable(query Query) error {
 			}
 		}
 	}
-	if len(query.aggregate.groupBy) > 0 && len(definition.PrimaryKey()) == 0 {
-		return NewError(ErrorInvalidRule, "grouped into-table aggregation requires a primary-key column")
+	// Java rejects unidirectional joins feeding into-table; it reports this
+	// after the table and column checks.
+	for _, join := range []*joinDefinition{query.join, aggregateJoin(query.aggregate)} {
+		if joinDefinitionHasUnidirectional(join) {
+			return NewError(ErrorInvalidRule, "Into-table does not allow unidirectional joins")
+		}
 	}
 	return nil
+}
+
+// intoTableProvidedEventType resolves the event type name a window(*) or
+// sorted(*) provided expression draws from: the join source referenced by a
+// leading join-event child, otherwise the aggregate's single input stream.
+func (e *Environment) intoTableProvidedEventType(query Query, expr Expr) string {
+	node := expr.node()
+	for node != nil && (node.kind == "aggregate-distinct" || node.kind == "aggregate-filter") {
+		if len(node.children) == 0 {
+			return ""
+		}
+		node = node.children[0]
+	}
+	if node == nil {
+		return ""
+	}
+	var source *streamNode
+	if len(node.children) > 0 && node.children[0] != nil && node.children[0].kind == "join-event" {
+		index := node.children[0].joinSource
+		join := aggregateJoin(query.aggregate)
+		if join == nil {
+			join = query.join
+		}
+		if join != nil && index >= 0 && index < len(join.sources) {
+			source = join.sources[index]
+		}
+	}
+	if source == nil {
+		source = query.aggregate.input
+	}
+	return e.streamEventTypeName(source)
+}
+
+// streamEventTypeName returns the registered event type name a stream node
+// exposes, resolving aliases through the schema catalog.
+func (e *Environment) streamEventTypeName(node *streamNode) string {
+	if node == nil {
+		return ""
+	}
+	for node.kind == streamFilter || node.kind == streamWindow {
+		node = node.input
+		if node == nil {
+			return ""
+		}
+	}
+	switch node.kind {
+	case streamSource:
+		if node.isAlias {
+			if schema, ok := e.schemaForGoType(node.sourceType); ok {
+				return schema.Name()
+			}
+		}
+		return node.sourceName
+	case streamNamedWindow, streamTable:
+		return node.sourceName
+	}
+	return ""
 }
 
 // intoTableAggInfo is the Java-visible classification of a provided
 // into-table aggregate expression. Field names follow the pinned Esper
 // diagnostics that the validation reproduces.
 type intoTableAggInfo struct {
-	kind     string // engine expression kind, e.g. "max", "last-ever"
-	javaName string // canonical function name used by Java diagnostics
-	render   string // Java-visible rendering, e.g. "max(intPrimitive)"
-	nullArg  bool   // the only argument is a null literal
-	zeroKey  bool   // by-ever form without an explicit sort key
+	kind         string // engine expression kind, e.g. "max", "last-ever"
+	javaName     string // canonical function name used by Java diagnostics
+	render       string // Java-visible rendering, e.g. "max(intPrimitive)"
+	nullArg      bool   // the only argument is a null literal
+	zeroKey      bool   // by-ever form without an explicit sort key
+	hasSortKeys  bool   // sorted() carries explicit sort keys
+	distinct     bool   // provided expression carries a distinct wrapper
+	filter       bool   // provided expression carries a filter wrapper
+	ignoreNulls  bool   // provided expression carries an ignore-nulls marker
+	paramType    string // Java-visible parameter type name, e.g. "Integer"
+	nthSize      int    // nth() index; -1 when not an nth expression
+	rateInterval int64  // rate() interval in ms; -1 when not a rate expression
+	eventType    string // window(*)/sorted(*) source event type name
 }
 
 var intoTableEngineNames = map[string]string{
@@ -5715,8 +5840,11 @@ var intoTableEngineNames = map[string]string{
 	"min-by": "minby", "max-by": "maxby",
 	"min-by-ever": "minbyever", "max-by-ever": "maxbyever",
 	"sum": "sum", "sum-exact": "sum", "avg": "avg", "avg-exact": "avg",
-	"count": "count", "count-distinct": "count",
-	"median": "median", "stddev": "stddev",
+	"count": "count", "count-distinct": "count", "count-ever": "countever",
+	"median": "median", "stddev": "stddev", "stddev-pop": "stddev",
+	"variance": "variance", "avedev": "avedev",
+	"rate": "rate", "leaving": "leaving",
+	"plugin-aggregate": "plugin", "plugin-aggregate-multi": "plugin",
 }
 
 func intoTableAggregateInfo(expr Expr) (intoTableAggInfo, bool) {
@@ -5724,11 +5852,36 @@ func intoTableAggregateInfo(expr Expr) (intoTableAggInfo, bool) {
 	if node == nil {
 		return intoTableAggInfo{}, false
 	}
+	info := intoTableAggInfo{nthSize: -1, rateInterval: -1}
+	// Unwrap distinct/filter wrappers; they are signature details, not the
+	// aggregate kind itself.
+	filterText := ""
+	for node != nil && (node.kind == "aggregate-distinct" || node.kind == "aggregate-filter") {
+		if node.kind == "aggregate-distinct" {
+			info.distinct = true
+		} else {
+			info.filter = true
+			// Java renders the filter inside the parens, e.g.
+			// min(intPrimitive,theString="a"); keep the predicate text for
+			// the provided-expression render.
+			if len(node.children) > 1 && node.children[1] != nil {
+				filterText = node.children[1].description
+			}
+		}
+		if len(node.children) == 0 || node.children[0] == nil {
+			return intoTableAggInfo{}, false
+		}
+		node = node.children[0]
+	}
 	javaName, ok := intoTableEngineNames[node.kind]
 	if !ok {
 		return intoTableAggInfo{}, false
 	}
-	info := intoTableAggInfo{kind: node.kind, javaName: javaName}
+	info.kind = node.kind
+	info.javaName = javaName
+	if node.kind == "count-distinct" {
+		info.distinct = true
+	}
 	args := make([]string, 0, len(node.children))
 	for index, child := range node.children {
 		if child == nil {
@@ -5746,11 +5899,36 @@ func intoTableAggregateInfo(expr Expr) (intoTableAggInfo, bool) {
 			args = append(args, child.description)
 		}
 	}
+	if node.kind == "sorted" && len(node.children) > 0 && !node.sortedValueKey {
+		info.hasSortKeys = true
+	}
+	// Extract signature details from the node.
+	if len(node.children) > 0 && node.children[0] != nil && node.children[0].typ != nil {
+		info.paramType = javaTypeName(node.children[0].typ)
+	}
+	if strings.HasPrefix(node.kind, "nth(") && strings.HasSuffix(node.kind, ")") {
+		if size, err := strconv.Atoi(node.kind[4 : len(node.kind)-1]); err == nil {
+			info.nthSize = size
+		}
+	}
+	if node.kind == "rate" && strings.HasPrefix(node.description, "rate(") {
+		if end := strings.Index(node.description[5:], ")"); end > 0 {
+			if interval, err := time.ParseDuration(node.description[5 : 5+end]); err == nil {
+				info.rateInterval = interval.Milliseconds()
+			}
+		}
+	}
 	info.zeroKey = (node.kind == "min-by-ever" || node.kind == "max-by-ever") && len(node.children) == 1
-	if info.zeroKey || (node.kind == "window" && len(node.children) == 0) {
+	if info.zeroKey || (node.kind == "window" && len(node.children) == 0) || (node.kind == "count" && len(node.children) == 0) || node.kind == "leaving" {
 		info.render = javaName + "()"
 		if node.kind == "window" {
 			info.render = "window(*)"
+		}
+		if node.kind == "count" {
+			info.render = "count(*)"
+		}
+		if node.kind == "leaving" {
+			info.render = "leaving(*)"
 		}
 		return info, true
 	}
@@ -5759,6 +5937,9 @@ func intoTableAggregateInfo(expr Expr) (intoTableAggInfo, bool) {
 	if len(args) > 0 && args[0] == "*" &&
 		(node.kind == "min-by" || node.kind == "max-by" || node.kind == "min-by-ever" || node.kind == "max-by-ever") {
 		args = args[1:]
+	}
+	if filterText != "" {
+		args = append(args, filterText)
 	}
 	info.render = javaName + "(" + strings.Join(args, ",") + ")"
 	return info, true
@@ -5773,7 +5954,7 @@ func validateIntoTableExpressionForm(info intoTableAggInfo) error {
 		message = "For into-table use 'window(*)' or 'window(stream.*)' instead"
 	case info.nullArg:
 		message = "Null-type is not allowed"
-	case info.kind == "min-by" || info.kind == "max-by":
+	case info.kind == "min-by" || info.kind == "max-by" || (info.kind == "sorted" && info.hasSortKeys):
 		message = "When specifying into-table a sort expression cannot be provided"
 	default:
 		return nil
@@ -5898,6 +6079,47 @@ func validateIntoTableCompatible(tableName string, column TableColumn, info into
 			sub := fmt.Sprintf("The required aggregation function name is '%s' and provided is '%s'", declared.Name, info.javaName)
 			return intoTableIncompatible(tableName, column.Name, declared.Description, info.render, sub)
 		}
+	}
+	// Signature-detail checks mirror Java's per-detail diagnostics.
+	if declared.ParamType != "" && info.paramType != "" && declared.ParamType != info.paramType {
+		sub := fmt.Sprintf("The required parameter type is %s and provided is %s", declared.ParamType, info.paramType)
+		return intoTableIncompatible(tableName, column.Name, declared.Description, info.render, sub)
+	}
+	if declared.Distinct != info.distinct {
+		sub := "The aggregation declares no distinct and provided is a distinct"
+		if declared.Distinct {
+			sub = "The aggregation declares a distinct and provided is no distinct"
+		}
+		return intoTableIncompatible(tableName, column.Name, declared.Description, info.render, sub)
+	}
+	if declared.Filter != info.filter {
+		sub := "The aggregation declares no filter expression and provided is a filter expression"
+		if declared.Filter {
+			sub = "The aggregation declares a filter expression and provided is no filter expression"
+		}
+		return intoTableIncompatible(tableName, column.Name, declared.Description, info.render, sub)
+	}
+	if declared.IgnoreNulls != info.ignoreNulls {
+		// Go has no provided-side ignore-nulls marker, so only the
+		// declared=true direction can fire; the message mirrors Java's
+		// "provided is [no] ignore nulls" wording for both directions.
+		sub := "The aggregation declares no ignore nulls and provided is ignore nulls"
+		if declared.IgnoreNulls {
+			sub = "The aggregation declares ignore nulls and provided is no ignore nulls"
+		}
+		return intoTableIncompatible(tableName, column.Name, declared.Description, info.render, sub)
+	}
+	if declared.NthSize >= 0 && info.nthSize >= 0 && declared.NthSize != info.nthSize {
+		sub := fmt.Sprintf("The size is %d and provided is %d", declared.NthSize, info.nthSize)
+		return intoTableIncompatible(tableName, column.Name, declared.Description, info.render, sub)
+	}
+	if declared.RateInterval >= 0 && info.rateInterval >= 0 && declared.RateInterval != info.rateInterval {
+		sub := fmt.Sprintf("The interval-time is %d and provided is %d", declared.RateInterval, info.rateInterval)
+		return intoTableIncompatible(tableName, column.Name, declared.Description, info.render, sub)
+	}
+	if declared.EventType != "" && info.eventType != "" && declared.EventType != info.eventType {
+		sub := fmt.Sprintf("The required event type is '%s' and provided is '%s'", declared.EventType, info.eventType)
+		return intoTableIncompatible(tableName, column.Name, declared.Description, info.render, sub)
 	}
 	return nil
 }
@@ -6492,6 +6714,9 @@ func (e *Environment) validateRowRecog(definition *rowRecogDefinition, selection
 	}
 	if err := e.validateNode(definition.input); err != nil {
 		return err
+	}
+	if base, err := sourceNode(definition.input); err == nil && base != nil && base.kind == streamTable {
+		return NewError(ErrorInvalidRule, "Tables cannot be used with match-recognize")
 	}
 	if err := definition.pattern.validate("pattern"); err != nil {
 		return NewError(ErrorInvalidRule, err.Error())

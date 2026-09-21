@@ -1513,6 +1513,11 @@ func validatePatternNodeScope(node *patternNode, seen map[string]struct{}, allow
 		if strings.TrimSpace(node.tag) == "" || node.predicate == nil {
 			return NewError(ErrorInvalidRule, "pattern event requires a tag and predicate")
 		}
+		if node.source != nil {
+			if base, err := sourceNode(node.source); err == nil && base != nil && base.kind == streamTable {
+				return NewError(ErrorInvalidRule, "Tables cannot be used in pattern filter atoms")
+			}
+		}
 		if node.consumeLevelSet && node.consumeLevel < 0 {
 			return NewError(ErrorInvalidRule, "pattern consume level cannot be negative")
 		}

@@ -535,12 +535,17 @@ func infraNWTableOnMergeFlowITVCreateInfra(env *esper.Environment, caseName stri
 		if err != nil {
 			return err
 		}
-		infraSchema, err = esper.RegisterObjectArray(env, "MyInfraITV", []esper.FieldSpec{
-			esper.FieldDef("c1", reflect.TypeOf("")),
-			esper.FieldDef("c2", reflect.TypeOf([]any{})),
-		}, esper.WithNestedPropertySchema("c2", innerSchema))
-		if err != nil {
-			return err
+		if !isTable {
+			// Java registers the MyInfraITV event type only for the named
+			// window variant; the table variant declares a table of the
+			// same name and create-table rejects the schema collision.
+			infraSchema, err = esper.RegisterObjectArray(env, "MyInfraITV", []esper.FieldSpec{
+				esper.FieldDef("c1", reflect.TypeOf("")),
+				esper.FieldDef("c2", reflect.TypeOf([]any{})),
+			}, esper.WithNestedPropertySchema("c2", innerSchema))
+			if err != nil {
+				return err
+			}
 		}
 	} else {
 		// MAP and DEFAULT both resolve to the map underlying.
@@ -558,12 +563,14 @@ func infraNWTableOnMergeFlowITVCreateInfra(env *esper.Environment, caseName stri
 		if err != nil {
 			return err
 		}
-		infraSchema, err = esper.RegisterMap(env, "MyInfraITV", []esper.FieldSpec{
-			esper.FieldDef("c1", reflect.TypeOf("")),
-			esper.FieldDef("c2", reflect.TypeOf(map[string]any{})),
-		}, esper.WithNestedPropertySchema("c2", innerSchema))
-		if err != nil {
-			return err
+		if !isTable {
+			infraSchema, err = esper.RegisterMap(env, "MyInfraITV", []esper.FieldSpec{
+				esper.FieldDef("c1", reflect.TypeOf("")),
+				esper.FieldDef("c2", reflect.TypeOf(map[string]any{})),
+			}, esper.WithNestedPropertySchema("c2", innerSchema))
+			if err != nil {
+				return err
+			}
 		}
 	}
 	_ = eventSchema

@@ -7099,8 +7099,9 @@ type Table = internalengine.Table
 
 // TableAggDecl mirrors the declared aggregation signature of a table
 // column: the canonical function name, the exact declaration rendering used
-// in diagnostics, and whether the declaration binds the state to a data
-// window (false for ever-style declarations).
+// in diagnostics, whether the declaration binds the state to a data window
+// (false for ever-style declarations), and the fine-grained signature
+// details Java checks when an into-table projection feeds the column.
 type TableAggDecl = internalengine.TableAggDecl
 
 // TableAssignment maps an incoming event expression to one target table
@@ -8393,6 +8394,14 @@ func WithStatementUserObjectResolver(resolver StatementUserObjectResolver) Compi
 // "window(*)", false). The name uses the canonical engine spelling.
 func WithTableAgg(name, description string, bound bool) TableColumnOption {
 	return internalengine.WithTableAgg(name, description, bound)
+}
+
+// WithTableAggDecl declares the full aggregation signature of a table
+// column, including the fine-grained details Java checks (parameter type,
+// distinct, filter, ignore-nulls, nth size, rate interval, event type).
+// NthSize and RateInterval use -1 as the unset sentinel.
+func WithTableAggDecl(decl TableAggDecl) TableColumnOption {
+	return internalengine.WithTableAggDecl(decl)
 }
 
 // WithTableColumnNestedSchema associates a composite column with its nested

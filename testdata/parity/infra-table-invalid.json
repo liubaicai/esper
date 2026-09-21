@@ -1,0 +1,1450 @@
+{
+  "version": "esper-parity/v1",
+  "id": "infra-table-invalid",
+  "description": "InfraTableInvalid (ords 0-3): pure-invalidity replay. InfraInvalidAggMatchSingleFunc runs 43 tryInvalidAggMatch probes (declared vs provided aggregation signature mismatches: parameter type, distinct, filter, ignore-nulls, min/max direction, nth size, rate interval, ever direction, plug-in names); InfraInvalidAggMatchMultiFunc runs 6 unbound probes (window(*) @type event-type mismatch, sorted() sort-expression rejections, se1() plug-in name mismatch); InfraInvalidAnnotations runs 5 path-less annotation probes; InfraInvalid deploys 12 fixtures then runs 50 path-ful probes across declaration, into-table, consumption and table-misuse surfaces. Zero events are sent.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableInvalid.java",
+  "javaRuntimes": [
+    "java-runtime-70e525638c5fbaf37752",
+    "java-runtime-7c97277eedfa76b7e0cf",
+    "java-runtime-fd2a7de8e5606de63b80",
+    "java-runtime-b9b6435f81135ce15040"
+  ],
+  "javaNames": [
+    "InfraInvalidAggMatchSingleFunc",
+    "InfraInvalidAggMatchMultiFunc",
+    "InfraInvalidAnnotations",
+    "InfraInvalid"
+  ],
+  "javaStaticIds": [
+    "java-dc8058ccbd099b1d1361",
+    "java-ecf59e6ef7727ab987fa",
+    "java-53cb0410fe21932803bc",
+    "java-c44ff6d4e86c09522b35"
+  ],
+  "javaFlags": [
+    "INVALIDITY"
+  ],
+  "cases": [
+    {
+      "case": "agg-match-single-func",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-70e525638c5fbaf37752",
+      "executionName": "InfraInvalidAggMatchSingleFunc",
+      "observation": "compile-error; 43 tryInvalidAggMatch probes each deploy @name('create') @public create table var1(value <declared>) with the runtime path, compile the into-table probe against the path and undeploy the 'create' module; 12 probes pin startsWith prefixes and 31 null-message probes pin contains 'Incompatible aggregation function for table'",
+      "epl": "@name('create') @public create table var1(value sum(double))"
+    },
+    {
+      "case": "agg-match-multi-func",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-7c97277eedfa76b7e0cf",
+      "executionName": "InfraInvalidAggMatchMultiFunc",
+      "observation": "compile-error; 6 tryInvalidAggMatch probes, all unbound (#time(1000)): window(*) @type event-type mismatch, sorted() sort-expression rejections and the se1() plug-in name mismatch",
+      "epl": "@name('create') @public create table var1(value window(*) @type(SupportBean))"
+    },
+    {
+      "case": "annotations",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-fd2a7de8e5606de63b80",
+      "executionName": "InfraInvalidAnnotations",
+      "observation": "compile-error; 5 path-less tryInvalidCompile probes over table-column annotations: unknown annotation, missing value, duplicate annotation, non-string value and unknown event type",
+      "epl": "create table v1 (abc window(*) @unknown)"
+    },
+    {
+      "case": "invalid",
+      "ordinal": 3,
+      "runtimeId": "java-runtime-b9b6435f81135ce15040",
+      "executionName": "InfraInvalid",
+      "observation": "compile-error; 12 fixture deploys (the objectarray schema deploys without the runtime path, mirroring env.compileDeploy(epl)) then 50 path-ful tryInvalidCompile probes across declaration, into-table, consumption and table-misuse surfaces, then undeployAll",
+      "epl": "@public create table aggvar_grouped_string (key string primary key, total count(*))"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "sum-param-type",
+      "epl": "@name('create') @public create table var1(value sum(double))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "sum-param-type",
+      "epl": "into table var1 select sum(intPrimitive) as value from SupportBean",
+      "expectError": "Incompatible aggregation function for table 'var1' column 'value', expecting 'sum(double)' and received 'sum(intPrimitive)': The required parameter type is Double and provided is Integer ["
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "sum-name-mismatch",
+      "epl": "@name('create') @public create table var1(value sum(double))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "sum-name-mismatch",
+      "epl": "into table var1 select count(*) as value from SupportBean",
+      "expectError": "Incompatible aggregation function for table 'var1' column 'value', expecting 'sum(double)' and received 'count(*)': The table declares 'sum(double)' and provided is 'count(*)'"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "sum-filter-provided",
+      "epl": "@name('create') @public create table var1(value sum(double))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "sum-filter-provided",
+      "epl": "into table var1 select sum(doublePrimitive, theString='a') as value from SupportBean",
+      "expectError": "Incompatible aggregation function for table 'var1' column 'value', expecting 'sum(double)' and received 'sum(doublePrimitive,theString=\"a\")': The aggregation declares no filter expression and provided is a filter expression ["
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "sum-filter-declared",
+      "epl": "@name('create') @public create table var1(value sum(double, boolean))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "sum-filter-declared",
+      "epl": "into table var1 select sum(doublePrimitive) as value from SupportBean",
+      "expectError": "Incompatible aggregation function for table 'var1' column 'value', expecting 'sum(double,boolean)' and received 'sum(doublePrimitive)': The aggregation declares a filter expression and provided is no filter expression ["
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "count-name-mismatch",
+      "epl": "@name('create') @public create table var1(value count(*))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "count-name-mismatch",
+      "epl": "into table var1 select sum(intPrimitive) as value from SupportBean",
+      "expectError": "Incompatible aggregation function for table 'var1' column 'value', expecting 'count(*)' and received 'sum(intPrimitive)': The table declares 'count(*)' and provided is 'sum(intPrimitive)'"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "count-distinct-provided",
+      "epl": "@name('create') @public create table var1(value count(*))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "count-distinct-provided",
+      "epl": "into table var1 select count(distinct intPrimitive) as value from SupportBean",
+      "expectError": "Incompatible aggregation function for table 'var1' column 'value', expecting 'count(*)' and received 'count(distinct intPrimitive)': The aggregation declares no distinct and provided is a distinct ["
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "count-distinct-multikey",
+      "epl": "@name('create') @public create table var1(value count(*))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "count-distinct-multikey",
+      "epl": "into table var1 select count(distinct intPrimitive, boolPrimitive) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "count-distinct-param-type",
+      "epl": "@name('create') @public create table var1(value count(distinct int))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "count-distinct-param-type",
+      "epl": "into table var1 select count(distinct doublePrimitive) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "count-ignore-nulls",
+      "epl": "@name('create') @public create table var1(value count(int))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "count-ignore-nulls",
+      "epl": "into table var1 select count(*) as value from SupportBean",
+      "expectError": "Incompatible aggregation function for table 'var1' column 'value', expecting 'count(int)' and received 'count(*)': The aggregation declares ignore nulls and provided is no ignore nulls ["
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "avg-name-mismatch",
+      "epl": "@name('create') @public create table var1(value avg(int))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "avg-name-mismatch",
+      "epl": "into table var1 select sum(intPrimitive) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "avg-param-type",
+      "epl": "@name('create') @public create table var1(value avg(int))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "avg-param-type",
+      "epl": "into table var1 select avg(longPrimitive) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "avg-filter-provided",
+      "epl": "@name('create') @public create table var1(value avg(int))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "avg-filter-provided",
+      "epl": "into table var1 select avg(intPrimitive, boolPrimitive) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "avg-distinct-provided",
+      "epl": "@name('create') @public create table var1(value avg(int))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "avg-distinct-provided",
+      "epl": "into table var1 select avg(distinct intPrimitive) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "max-direction",
+      "epl": "@name('create') @public create table var1(value max(int))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "max-direction",
+      "epl": "into table var1 select min(intPrimitive) as value from SupportBean",
+      "expectError": "Incompatible aggregation function for table 'var1' column 'value', expecting 'max(int)' and received 'min(intPrimitive)': The aggregation declares max and provided is min ["
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "min-name-mismatch",
+      "epl": "@name('create') @public create table var1(value min(int))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "min-name-mismatch",
+      "epl": "into table var1 select avg(intPrimitive) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "min-param-type",
+      "epl": "@name('create') @public create table var1(value min(int))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "min-param-type",
+      "epl": "into table var1 select min(doublePrimitive) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "min-filter-provided",
+      "epl": "@name('create') @public create table var1(value min(int))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "min-filter-provided",
+      "epl": "into table var1 select fmin(intPrimitive, theString='a') as value from SupportBean",
+      "expectError": "Incompatible aggregation function for table 'var1' column 'value', expecting 'min(int)' and received 'min(intPrimitive,theString=\"a\")': The aggregation declares no filter expression and provided is a filter expression ["
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "stddev-name-mismatch",
+      "epl": "@name('create') @public create table var1(value stddev(int))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "stddev-name-mismatch",
+      "epl": "into table var1 select avg(intPrimitive) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "stddev-param-type",
+      "epl": "@name('create') @public create table var1(value stddev(int))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "stddev-param-type",
+      "epl": "into table var1 select stddev(doublePrimitive) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "stddev-filter-provided",
+      "epl": "@name('create') @public create table var1(value stddev(int))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "stddev-filter-provided",
+      "epl": "into table var1 select stddev(intPrimitive, true) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "avedev-name-mismatch",
+      "epl": "@name('create') @public create table var1(value avedev(int))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "avedev-name-mismatch",
+      "epl": "into table var1 select avg(intPrimitive) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "avedev-param-type",
+      "epl": "@name('create') @public create table var1(value avedev(int))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "avedev-param-type",
+      "epl": "into table var1 select avedev(doublePrimitive) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "avedev-filter-provided",
+      "epl": "@name('create') @public create table var1(value avedev(int))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "avedev-filter-provided",
+      "epl": "into table var1 select avedev(intPrimitive, true) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "median-name-mismatch",
+      "epl": "@name('create') @public create table var1(value median(int))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "median-name-mismatch",
+      "epl": "into table var1 select avg(intPrimitive) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "median-param-type",
+      "epl": "@name('create') @public create table var1(value median(int))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "median-param-type",
+      "epl": "into table var1 select median(doublePrimitive) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "median-filter-provided",
+      "epl": "@name('create') @public create table var1(value median(int))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "median-filter-provided",
+      "epl": "into table var1 select median(intPrimitive, true) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "firstever-direction",
+      "epl": "@name('create') @public create table var1(value firstever(int))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "firstever-direction",
+      "epl": "into table var1 select lastever(intPrimitive) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "firstever-param-type",
+      "epl": "@name('create') @public create table var1(value firstever(int))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "firstever-param-type",
+      "epl": "into table var1 select firstever(doublePrimitive) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "firstever-filter-declared",
+      "epl": "@name('create') @public create table var1(value firstever(int, boolean))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "firstever-filter-declared",
+      "epl": "into table var1 select firstever(intPrimitive) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "lastever-direction",
+      "epl": "@name('create') @public create table var1(value lastever(int))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "lastever-direction",
+      "epl": "into table var1 select firstever(intPrimitive) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "lastever-param-type",
+      "epl": "@name('create') @public create table var1(value lastever(int))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "lastever-param-type",
+      "epl": "into table var1 select lastever(doublePrimitive) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "lastever-filter-declared",
+      "epl": "@name('create') @public create table var1(value lastever(int, boolean))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "lastever-filter-declared",
+      "epl": "into table var1 select lastever(intPrimitive) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "countever-direction",
+      "epl": "@name('create') @public create table var1(value lastever(int))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "countever-direction",
+      "epl": "into table var1 select countever(intPrimitive) as value from SupportBean#time(1000)",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "countever-filter-declared",
+      "epl": "@name('create') @public create table var1(value lastever(int, boolean))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "countever-filter-declared",
+      "epl": "into table var1 select countever(intPrimitive) as value from SupportBean#time(1000)",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "countever-filter-provided",
+      "epl": "@name('create') @public create table var1(value lastever(int))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "countever-filter-provided",
+      "epl": "into table var1 select countever(intPrimitive, true) as value from SupportBean#time(1000)",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "countever-ignore-nulls",
+      "epl": "@name('create') @public create table var1(value countever(*))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "countever-ignore-nulls",
+      "epl": "into table var1 select countever(intPrimitive) as value from SupportBean#time(1000)",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "nth-name-mismatch",
+      "epl": "@name('create') @public create table var1(value nth(int, 10))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "nth-name-mismatch",
+      "epl": "into table var1 select avg(20) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "nth-size",
+      "epl": "@name('create') @public create table var1(value nth(int, 10))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "nth-size",
+      "epl": "into table var1 select nth(intPrimitive, 11) as value from SupportBean",
+      "expectError": "Incompatible aggregation function for table 'var1' column 'value', expecting 'nth(int,10)' and received 'nth(intPrimitive,11)': The size is 10 and provided is 11 ["
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "nth-param-type",
+      "epl": "@name('create') @public create table var1(value nth(int, 10))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "nth-param-type",
+      "epl": "into table var1 select nth(doublePrimitive, 10) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "rate-name-mismatch",
+      "epl": "@name('create') @public create table var1(value rate(20))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "rate-name-mismatch",
+      "epl": "into table var1 select avg(20) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "rate-interval",
+      "epl": "@name('create') @public create table var1(value rate(20))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "rate-interval",
+      "epl": "into table var1 select rate(11) as value from SupportBean",
+      "expectError": "Incompatible aggregation function for table 'var1' column 'value', expecting 'rate(20)' and received 'rate(11)': The interval-time is 20000 and provided is 11000 ["
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "leaving-name-mismatch",
+      "epl": "@name('create') @public create table var1(value leaving())",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "leaving-name-mismatch",
+      "epl": "into table var1 select avg(intPrimitive) as value from SupportBean",
+      "expectContains": "Incompatible aggregation function for table"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-single-func",
+      "statement": "plugin-single-name",
+      "epl": "@name('create') @public create table var1(value myaggsingle())",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-single-func",
+      "statement": "plugin-single-name",
+      "epl": "into table var1 select leaving() as value from SupportBean",
+      "expectError": "Incompatible aggregation function for table 'var1' column 'value', expecting 'myaggsingle(*)' and received 'leaving(*)': The table declares 'myaggsingle(*)' and provided is 'leaving(*)'"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-single-func"
+    },
+    {
+      "op": "case",
+      "case": "agg-match-multi-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-multi-func",
+      "statement": "window-vs-agg-method",
+      "epl": "@name('create') @public create table var1(value window(*) @type(SupportBean))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-multi-func",
+      "statement": "window-vs-agg-method",
+      "epl": "into table var1 select avg(intPrimitive) as value from SupportBean#time(1000)",
+      "expectError": "Incompatible aggregation function for table 'var1' column 'value', expecting 'window(*)' and received 'avg(intPrimitive)': The table declares 'window(*)' and provided is 'avg(intPrimitive)'"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-multi-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-multi-func",
+      "statement": "window-vs-sorted",
+      "epl": "@name('create') @public create table var1(value window(*) @type(SupportBean))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-multi-func",
+      "statement": "window-vs-sorted",
+      "epl": "into table var1 select sorted(intPrimitive) as value from SupportBean#time(1000)",
+      "expectError": "Failed to validate select-clause expression 'sorted(intPrimitive)': When specifying into-table a sort expression cannot be provided ["
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-multi-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-multi-func",
+      "statement": "window-event-type",
+      "epl": "@name('create') @public create table var1(value window(*) @type(SupportBean_S0))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-multi-func",
+      "statement": "window-event-type",
+      "epl": "into table var1 select window(*) as value from SupportBean#time(1000)",
+      "expectError": "Incompatible aggregation function for table 'var1' column 'value', expecting 'window(*)' and received 'window(*)': The required event type is 'SupportBean_S0' and provided is 'SupportBean' ["
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-multi-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-multi-func",
+      "statement": "sorted-vs-window",
+      "epl": "@name('create') @public create table var1(value sorted(intPrimitive) @type(SupportBean))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-multi-func",
+      "statement": "sorted-vs-window",
+      "epl": "into table var1 select window(*) as value from SupportBean#time(1000)",
+      "expectError": "Incompatible aggregation function for table 'var1' column 'value', expecting 'sorted(intPrimitive)' and received 'window(*)': The table declares 'sorted(intPrimitive)' and provided is 'window(*)'"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-multi-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-multi-func",
+      "statement": "sorted-sort-expr",
+      "epl": "@name('create') @public create table var1(value sorted(id) @type(SupportBean_S0))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-multi-func",
+      "statement": "sorted-sort-expr",
+      "epl": "into table var1 select sorted(intPrimitive) as value from SupportBean#time(1000)",
+      "expectError": "Failed to validate select-clause expression 'sorted(intPrimitive)': When specifying into-table a sort expression cannot be provided ["
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-multi-func"
+    },
+    {
+      "op": "deploy",
+      "case": "agg-match-multi-func",
+      "statement": "plugin-multi-vs-window",
+      "epl": "@name('create') @public create table var1(value se1() @type(SupportBean))",
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "agg-match-multi-func",
+      "statement": "plugin-multi-vs-window",
+      "epl": "into table var1 select window(*) as value from SupportBean#time(1000)",
+      "expectError": "Incompatible aggregation function for table 'var1' column 'value', expecting 'se1(*)' and received 'window(*)': The table declares 'se1(*)' and provided is 'window(*)'"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "agg-match-multi-func"
+    },
+    {
+      "op": "case",
+      "case": "annotations"
+    },
+    {
+      "op": "build-error",
+      "case": "annotations",
+      "statement": "annotation-unknown",
+      "epl": "create table v1 (abc window(*) @unknown)",
+      "expectError": "For column 'abc' unrecognized annotation 'unknown' [",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "build-error",
+      "case": "annotations",
+      "statement": "annotation-missing-value",
+      "epl": "create table v1 (abc window(*) @type)",
+      "expectError": "For column 'abc' no value provided for annotation 'type', expected a value [",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "build-error",
+      "case": "annotations",
+      "statement": "annotation-duplicate",
+      "epl": "create table v1 (abc window(*) @type(SupportBean) @type(SupportBean))",
+      "expectError": "For column 'abc' multiple annotations provided named 'type' [",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "build-error",
+      "case": "annotations",
+      "statement": "annotation-non-string",
+      "epl": "create table v1 (abc window(*) @type(1))",
+      "expectError": "For column 'abc' string value expected for annotation 'type' [",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "build-error",
+      "case": "annotations",
+      "statement": "annotation-unknown-type",
+      "epl": "create table v1 (abc window(*) @type(xx))",
+      "expectError": "For column 'abc' failed to find event type 'xx' [",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "case",
+      "case": "invalid"
+    },
+    {
+      "op": "deploy",
+      "case": "invalid",
+      "statement": "table-grouped-string",
+      "epl": "@public create table aggvar_grouped_string (key string primary key, total count(*))",
+      "expectContains": "",
+      "compileWithoutPath": false
+    },
+    {
+      "op": "deploy",
+      "case": "invalid",
+      "statement": "table-twogrouped",
+      "epl": "@public create table aggvar_twogrouped (keyone string primary key, keytwo string primary key, total count(*))",
+      "expectContains": "",
+      "compileWithoutPath": false
+    },
+    {
+      "op": "deploy",
+      "case": "invalid",
+      "statement": "table-grouped-int",
+      "epl": "@public create table aggvar_grouped_int (key int primary key, total count(*))",
+      "expectContains": "",
+      "compileWithoutPath": false
+    },
+    {
+      "op": "deploy",
+      "case": "invalid",
+      "statement": "table-ungrouped",
+      "epl": "@public create table aggvar_ungrouped as (total count(*))",
+      "expectContains": "",
+      "compileWithoutPath": false
+    },
+    {
+      "op": "deploy",
+      "case": "invalid",
+      "statement": "table-ungrouped-window",
+      "epl": "@public create table aggvar_ungrouped_window as (win window(*) @type(SupportBean))",
+      "expectContains": "",
+      "compileWithoutPath": false
+    },
+    {
+      "op": "deploy",
+      "case": "invalid",
+      "statement": "context",
+      "epl": "@public create context MyContext initiated by SupportBean_S0 terminated by SupportBean_S1",
+      "expectContains": "",
+      "compileWithoutPath": false
+    },
+    {
+      "op": "deploy",
+      "case": "invalid",
+      "statement": "table-context",
+      "epl": "@public context MyContext create table aggvarctx (total count(*))",
+      "expectContains": "",
+      "compileWithoutPath": false
+    },
+    {
+      "op": "deploy",
+      "case": "invalid",
+      "statement": "context-other",
+      "epl": "@public create context MyOtherContext initiated by SupportBean_S0 terminated by SupportBean_S1",
+      "expectContains": "",
+      "compileWithoutPath": false
+    },
+    {
+      "op": "deploy",
+      "case": "invalid",
+      "statement": "variable",
+      "epl": "@public create variable int myvariable",
+      "expectContains": "",
+      "compileWithoutPath": false
+    },
+    {
+      "op": "deploy",
+      "case": "invalid",
+      "statement": "named-window",
+      "epl": "@public create window MyNamedWindow#keepall as select * from SupportBean",
+      "expectContains": "",
+      "compileWithoutPath": false
+    },
+    {
+      "op": "deploy",
+      "case": "invalid",
+      "statement": "schema",
+      "epl": "@public create schema SomeSchema(p0 string)",
+      "expectContains": "",
+      "compileWithoutPath": false
+    },
+    {
+      "op": "deploy",
+      "case": "invalid",
+      "statement": "schema-objectarray",
+      "epl": "create objectarray schema MyEvent(abc int[])",
+      "compileWithoutPath": true,
+      "expectContains": ""
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "declare-constant-variable",
+      "epl": "create constant variable aggvar_ungrouped (total count(*))",
+      "expectError": "Incorrect syntax near '(' expecting an identifier but found an opening parenthesis '(' at line 1 column 42 ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "declare-invalid-type",
+      "epl": "create table aggvar_notright as (total sum(abc))",
+      "expectError": "Failed to resolve type 'abc': Could not load class by name 'abc', please check imports ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "declare-non-aggregation",
+      "epl": "create table aggvar_wrongtoo as (total singlerow(1))",
+      "expectError": "Expression 'singlerow(1)' is not an aggregation ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "declare-window-param",
+      "epl": "create table aggvar_invalid as (mywindow window(intPrimitive) @type(SupportBean))",
+      "expectError": "Failed to validate table-column expression 'window(intPrimitive)': For tables columns, the window aggregation function requires the 'window(*)' declaration ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "declare-last-star",
+      "epl": "create table aggvar_invalid as (mywindow last(*)@type(SupportBean))"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "declare-window-stream-star",
+      "epl": "create table aggvar_invalid as (mywindow window(sb.*)@type(SupportBean)"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "declare-maxby",
+      "epl": "create table aggvar_invalid as (mymax maxBy(intPrimitive) @type(SupportBean))",
+      "expectError": "Failed to validate table-column expression 'maxby(intPrimitive)': For tables columns, the aggregation function requires the 'sorted(*)' declaration ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "declare-duplicate-column",
+      "epl": "create table aggvar_invalid as (mycount count(*),mycount count(*))",
+      "expectError": "Column 'mycount' is listed more than once [create table aggvar_invalid as (mycount count(*),mycount count(*))]"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "declare-variable-collision",
+      "epl": "create table myvariable as (mycount count(*))",
+      "expectError": "A variable by name 'myvariable' has already been declared ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "declare-table-collision",
+      "epl": "create table aggvar_ungrouped as (total count(*))",
+      "expectError": "A table by name 'aggvar_ungrouped' has already been declared ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "declare-pk-expression",
+      "epl": "create table abc as (total count(*) primary key)",
+      "expectError": "Column 'total' may not be tagged as primary key, an expression cannot become a primary key column ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "declare-pk-event-type",
+      "epl": "create table abc as (arr SupportBean primary key)",
+      "expectError": "Column 'arr' may not be tagged as primary key, received unexpected event type 'SupportBean' ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "declare-pk-prim",
+      "epl": "create table abc as (mystr string prim key)",
+      "expectError": "Invalid keyword 'prim' encountered, expected 'primary key' ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "declare-pk-keys",
+      "epl": "create table abc as (mystr string primary keys)",
+      "expectError": "Invalid keyword 'keys' encountered, expected 'primary key' ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "declare-schema-collision",
+      "epl": "create table SomeSchema as (mystr string)",
+      "expectError": "An event type by name 'SomeSchema' has already been declared"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "into-table-not-found",
+      "epl": "into table xxx select count(*) as total from SupportBean group by intPrimitive",
+      "expectError": "Invalid into-table clause: Failed to find table by name 'xxx' ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "into-groupby-type",
+      "epl": "into table aggvar_grouped_string select count(*) as total from SupportBean group by intPrimitive",
+      "expectError": "Incompatible type returned by a group-by expression for use with table 'aggvar_grouped_string', the group-by expression 'intPrimitive' returns 'Integer' but the table expects 'String' ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "into-groupby-count-over",
+      "epl": "into table aggvar_grouped_string select count(*) as total from SupportBean group by theString, intPrimitive",
+      "expectError": "Incompatible number of group-by expressions for use with table 'aggvar_grouped_string', the table expects 1 group-by expressions and provided are 2 group-by expressions ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "into-groupby-count-ungrouped",
+      "epl": "into table aggvar_ungrouped select count(*) as total from SupportBean group by theString",
+      "expectError": "Incompatible number of group-by expressions for use with table 'aggvar_ungrouped', the table expects no group-by expressions and provided are 1 group-by expressions ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "into-groupby-count-missing",
+      "epl": "into table aggvar_grouped_string select count(*) as total from SupportBean",
+      "expectError": "Incompatible number of group-by expressions for use with table 'aggvar_grouped_string', the table expects 1 group-by expressions and provided are no group-by expressions ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "into-context-missing",
+      "epl": "into table aggvarctx select count(*) as total from SupportBean",
+      "expectError": "Table by name 'aggvarctx' has been declared for context 'MyContext' and can only be used within the same context [into table aggvarctx select count(*) as total from SupportBean]"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "into-context-other",
+      "epl": "context MyOtherContext into table aggvarctx select count(*) as total from SupportBean",
+      "expectError": "Table by name 'aggvarctx' has been declared for context 'MyContext' and can only be used within the same context [context MyOtherContext into table aggvarctx select count(*) as total from SupportBean]"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "into-write-only",
+      "epl": "into table aggvar_ungrouped select count(*) as total, aggvar_ungrouped from SupportBean",
+      "expectError": "Invalid use of table 'aggvar_ungrouped', aggregate-into requires write-only, the expression 'aggvar_ungrouped' is not allowed [into table aggvar_ungrouped select count(*) as total, aggvar_ungrouped from SupportBean]"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "into-unidirectional",
+      "epl": "into table aggvar_ungrouped select count(*) as total from SupportBean unidirectional, SupportBean_S0#keepall",
+      "expectError": "Into-table does not allow unidirectional joins ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "into-requires-aggregation",
+      "epl": "into table aggvar_ungrouped select * from SupportBean",
+      "expectError": "Into-table requires at least one aggregation function ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "access-key-count",
+      "epl": "select aggvar_ungrouped['a'].total from SupportBean",
+      "expectError": "Failed to validate select-clause expression 'aggvar_ungrouped[\"a\"].total': Incompatible number of key expressions for use with table 'aggvar_ungrouped', the table expects no key expressions and provided are 1 key expressions [select aggvar_ungrouped['a'].total from SupportBean]"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "access-no-key",
+      "epl": "select aggvar_grouped_string.total from SupportBean",
+      "expectError": "Failed to validate select-clause expression 'aggvar_grouped_string.total': Failed to resolve property 'aggvar_grouped_string.total' to a stream or nested property in a stream"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "access-key-type",
+      "epl": "select aggvar_grouped_string[5].total from SupportBean",
+      "expectError": "Failed to validate select-clause expression 'aggvar_grouped_string[5].total': Incompatible type returned by a key expression for use with table 'aggvar_grouped_string', the key expression '5' returns 'Integer' but the table expects 'String' [select aggvar_grouped_string[5].total from SupportBean]"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "access-unknown-function",
+      "epl": "select aggvar_grouped_string.something() from SupportBean",
+      "expectError": "Invalid use of table 'aggvar_grouped_string', unrecognized use of function 'something', expected 'keys()'"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "access-unknown-name",
+      "epl": "select dummy[intPrimitive] from SupportBean",
+      "expectError": "Failed to validate select-clause expression 'dummy[intPrimitive]': Failed to resolve 'dummy' to a property, single-row function, aggregation function, script, stream or class name"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "access-unknown-column",
+      "epl": "select aggvarctx.dummy from SupportBean",
+      "expectError": "Failed to validate select-clause expression 'aggvarctx.dummy': A column 'dummy' could not be found for table 'aggvarctx' [select aggvarctx.dummy from SupportBean]"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "access-window-column-method",
+      "epl": "select aggvarctx_ungrouped_window.win.dummy(123) from SupportBean",
+      "expectError": "Failed to validate select-clause expression 'aggvarctx_ungrouped_window.win.dumm...(41 chars)': Failed to resolve 'aggvarctx_ungrouped_window.win.dummy' to a property, single-row function, aggregation function, script, stream or class name [select aggvarctx_ungrouped_window.win.dummy(123) from SupportBean]"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "access-context-other",
+      "epl": "context MyOtherContext select aggvarctx.total from SupportBean",
+      "expectError": "Failed to validate select-clause expression 'aggvarctx.total': Table by name 'aggvarctx' has been declared for context 'MyContext' and can only be used within the same context [context MyOtherContext select aggvarctx.total from SupportBean]"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "access-context-other-2",
+      "epl": "context MyOtherContext select aggvarctx.total from SupportBean",
+      "expectError": "Failed to validate select-clause expression 'aggvarctx.total': Table by name 'aggvarctx' has been declared for context 'MyContext' and can only be used within the same context [context MyOtherContext select aggvarctx.total from SupportBean]"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "access-unknown-column-nested",
+      "epl": "select aggvar_grouped_int[0].a.b from SupportBean",
+      "expectError": "Failed to validate select-clause expression 'aggvar_grouped_int[0].a.b': A column 'a' could not be found for table 'aggvar_grouped_int'"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "view-param-table",
+      "epl": "select * from SupportBean#time(aggvar_ungrouped.total sec)",
+      "expectError": "Failed to validate data window declaration: Error in view 'time', Invalid parameter expression 0 for Time view: Failed to validate view parameter expression 'aggvar_ungrouped.total seconds': Invalid use of table access expression, expression 'aggvar_ungrouped' is not allowed here"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "view-on-table",
+      "epl": "select * from aggvar_grouped_string#time(30)",
+      "expectError": "Views are not supported with tables"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "view-on-table-subquery",
+      "epl": "select (select * from aggvar_ungrouped#keepall) from SupportBean",
+      "expectError": "Views are not supported with tables ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "contained-table",
+      "epl": "select * from aggvar_grouped_string[books]",
+      "expectError": "Contained-event expressions are not supported with tables"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "join-method-on-column",
+      "epl": "select aggvar_grouped_int[1].total.countMinSketchFrequency(theString) from SupportBean",
+      "expectError": "Failed to validate select-clause expression 'aggvar_grouped_int[1].total.countMi...(62 chars)': Failed to resolve method 'countMinSketchFrequency': Could not find enumeration method, date-time method, instance method or property named 'countMinSketchFrequency' in class 'Long' with matching parameter number and expected parameter type(s) 'String' "
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "join-unidirectional-method",
+      "epl": "select total.countMinSketchFrequency(theString) from aggvar_grouped_int, SupportBean unidirectional",
+      "expectError": "Failed to validate select-clause expression 'total.countMinSketchFrequency(theString)': Failed to resolve method 'countMinSketchFrequency': Could not find"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "table-unidirectional",
+      "epl": "select * from aggvar_grouped_int unidirectional, SupportBean",
+      "expectError": "Tables cannot be marked as unidirectional ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "table-retain",
+      "epl": "select * from aggvar_grouped_int retain-union",
+      "expectError": "Tables cannot be marked with retain ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "table-on-action",
+      "epl": "on aggvar_ungrouped select * from aggvar_ungrouped",
+      "expectError": "Tables cannot be used in an on-action statement triggering stream ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "table-match-recognize",
+      "epl": "select * from aggvar_ungrouped match_recognize ( measures a.theString as a pattern (A) define A as true)",
+      "expectError": "Tables cannot be used with match-recognize ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "table-update-istream",
+      "epl": "update istream aggvar_grouped_string set key = 'a'",
+      "expectError": "Tables cannot be used in an update-istream statement ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "table-context-declaration",
+      "epl": "create context InvalidCtx as start aggvar_ungrouped end after 5 seconds",
+      "expectError": "Tables cannot be used in a context declaration ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "table-pattern-atom",
+      "epl": "select * from pattern[aggvar_ungrouped]",
+      "expectError": "Tables cannot be used in pattern filter atoms ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "schema-table-collision",
+      "epl": "create schema aggvar_ungrouped as SupportBean",
+      "expectError": "A table by name 'aggvar_ungrouped' already exists ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "declare-null-pk",
+      "epl": "create table MyTable(somefield null primary key, id string)",
+      "expectError": "Incorrect syntax near 'null' (a reserved keyword)"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "invalid"
+    }
+  ]
+}

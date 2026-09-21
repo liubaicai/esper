@@ -30,12 +30,30 @@ type TableColumn struct {
 
 // TableAggDecl mirrors the declared aggregation signature of a table
 // column: the canonical function name, the exact declaration rendering used
-// in diagnostics, and whether the declaration binds the state to a data
-// window (false for ever-style declarations).
+// in diagnostics, whether the declaration binds the state to a data window
+// (false for ever-style declarations), and the fine-grained signature
+// details Java checks when an into-table projection feeds the column.
 type TableAggDecl struct {
 	Name        string
 	Description string
 	Bound       bool
+	// ParamType is the declared parameter type name (e.g. "int", "double")
+	// for single-parameter aggregations; empty means unconstrained.
+	ParamType string
+	// Distinct marks a declared distinct aggregation.
+	Distinct bool
+	// Filter marks a declared filtered aggregation.
+	Filter bool
+	// IgnoreNulls marks a declared ignore-nulls aggregation.
+	IgnoreNulls bool
+	// NthSize is the declared nth() index; -1 means not an nth declaration.
+	NthSize int
+	// RateInterval is the declared rate() interval in milliseconds; -1 means
+	// not a rate declaration.
+	RateInterval int64
+	// EventType is the declared @type event type for window(*)/sorted(*)
+	// columns; empty means unconstrained.
+	EventType string
 }
 
 // TableColumnOption changes the metadata of a table column declaration.
@@ -53,7 +71,17 @@ func WithTableColumnNestedSchema(nested Schema) TableColumnOption {
 // "window(*)", false). The name uses the canonical engine spelling.
 func WithTableAgg(name, description string, bound bool) TableColumnOption {
 	return func(column *TableColumn) {
-		column.Agg = &TableAggDecl{Name: name, Description: description, Bound: bound}
+		column.Agg = &TableAggDecl{Name: name, Description: description, Bound: bound, NthSize: -1, RateInterval: -1}
+	}
+}
+
+// WithTableAggDecl declares the full aggregation signature of a table
+// column, including the fine-grained details Java checks (parameter type,
+// distinct, filter, ignore-nulls, nth size, rate interval, event type).
+// NthSize and RateInterval use -1 as the unset sentinel.
+func WithTableAggDecl(decl TableAggDecl) TableColumnOption {
+	return func(column *TableColumn) {
+		column.Agg = &decl
 	}
 }
 
@@ -183,6 +211,12 @@ func NewTableDefinition(name string, columns []TableColumn, options ...TableOpti
 			nested = append(nested, WithNestedPropertySchema(column.Name, column.Nested))
 		}
 		if column.PrimaryKey {
+			if column.Agg != nil {
+				return TableDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("Column '%s' may not be tagged as primary key, an expression cannot become a primary key column", column.Name))
+			}
+			if column.Nested.valid() {
+				return TableDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("Column '%s' may not be tagged as primary key, an event type cannot become a primary key column", column.Name))
+			}
 			primaryKey = append(primaryKey, column.Name)
 		}
 	}
@@ -277,6 +311,15 @@ func (e *Environment) RegisterTableInModule(moduleName, name string, columns []T
 	key := catalogKey(moduleName, name)
 	if _, exists := e.tables[key]; exists {
 		return TableDefinition{}, duplicateModuleObjectError(DeploymentResourceTable, key)
+	}
+	// Java rejects a table name that collides with a variable or event type
+	// in the same module; a same-named named window is legal (the table wins
+	// stream resolution).
+	if _, exists := e.variables[key]; exists {
+		return TableDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("A variable by name '%s' has already been declared", name))
+	}
+	if _, exists := e.schemas[key]; exists {
+		return TableDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("An event type by name '%s' has already been declared", name))
 	}
 	definition.moduleName = moduleName
 	definition.schema.name = "table:" + key

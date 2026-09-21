@@ -644,6 +644,11 @@ func validateContextPatternStream(pattern PatternStream, label string) error {
 	if pattern.env == nil || pattern.def == nil {
 		return NewError(ErrorInvalidRule, fmt.Sprintf("pattern context %s pattern is required", label))
 	}
+	if pattern.def.input != nil {
+		if base, err := sourceNode(pattern.def.input); err == nil && base != nil && base.kind == streamTable {
+			return NewError(ErrorInvalidRule, "Tables cannot be used in a context declaration")
+		}
+	}
 	if err := validatePattern(pattern.def); err != nil {
 		return WrapError(ErrorInvalidRule, "context "+label+" pattern", err)
 	}

@@ -57,6 +57,9 @@ type Step struct {
 	// whose deployment owns the window instance in Java.
 	Of     string `json:"of,omitempty"`
 	Create string `json:"create,omitempty"`
+	// ExpectContains pins a substring assertion for build-error steps whose
+	// Java oracle uses assertMessage contains rather than startsWith.
+	ExpectContains string `json:"expectContains,omitempty"`
 }
 
 func LoadScenario(reader io.Reader) (Scenario, error) {

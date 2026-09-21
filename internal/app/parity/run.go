@@ -378,6 +378,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraTableSubqueryScenario(file)
 	} else if *mode == "infra-table-context" || *mode == "infra-table-context-diff" {
 		scenario, err = loadInfraTableContextScenario(file)
+	} else if *mode == "infra-table-invalid" || *mode == "infra-table-invalid-diff" {
+		scenario, err = loadInfraTableInvalidScenario(file)
 	} else {
 		scenario, err = compat.LoadScenario(file)
 	}
@@ -4095,6 +4097,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraTableContextJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraTableContextJavaSources),
 				splitMetadata(*javaExecutions, infraTableContextJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-table-invalid" || *mode == "infra-table-invalid-diff" {
+		trace, err := runInfraTableInvalidScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-table-invalid-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, infraTableInvalidJavaCommit,
+				splitMetadata(*javaRuntimeIDs, infraTableInvalidJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraTableInvalidJavaSources),
+				splitMetadata(*javaExecutions, infraTableInvalidJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

@@ -106,6 +106,10 @@ type exprNode struct {
 	// (product for conjunction, sum for disjunction); nil keeps
 	// single-boolean delivery.
 	multiMatch func(EvalContext) int
+	// sortedValueKey marks the SortedEventsBy value+key pair form, which is
+	// the legal into-table sorted(*) projection; SortedEvents carries only
+	// sort keys and is the rejected sorted(key) form.
+	sortedValueKey bool
 }
 
 type typedExpr[T any] struct {
@@ -6054,7 +6058,7 @@ func SortedEvents(keys ...SortKey) AggregateExpression[[]Event] {
 // comes from an arbitrary key such as a join stream field.
 func SortedEventsBy[V any, K Ordered](value Expression[V], key Expression[K], descending bool) AggregateExpression[[]V] {
 	children := []*exprNode{value.node(), key.node()}
-	return makeAggregateExpr[[]V]("sorted", "sorted(*)", children, func(ctx EvalContext) Value {
+	node := makeAggregateExpr[[]V]("sorted", "sorted(*)", children, func(ctx EvalContext) Value {
 		if len(ctx.Group) == 0 {
 			return Null()
 		}
@@ -6088,6 +6092,8 @@ func SortedEventsBy[V any, K Ordered](value Expression[V], key Expression[K], de
 		}
 		return Present(values)
 	})
+	node.node().sortedValueKey = true
+	return node
 }
 
 // SortedAccessEntry is one key bucket in a SortedAccessValue. Values sharing

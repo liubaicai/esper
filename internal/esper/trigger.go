@@ -992,6 +992,9 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 	if err := e.validateNode(definition.input); err != nil {
 		return err
 	}
+	if base, err := sourceNode(definition.input); err == nil && base != nil && base.kind == streamTable {
+		return NewError(ErrorInvalidRule, "Tables cannot be used in an on-action statement triggering stream")
+	}
 	if definition.action == triggerSplitStream {
 		return e.validateSplitStream(definition)
 	}

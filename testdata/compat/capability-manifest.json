@@ -1478,7 +1478,8 @@
     "internal/compat/scenario.go",
     "internal/app/parity/infra_table_faf_execute_query.go",
     "internal/app/parity/infra_table_subquery.go",
-    "internal/app/parity/infra_table_context.go"
+    "internal/app/parity/infra_table_context.go",
+    "internal/app/parity/infra_table_invalid.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -1596,7 +1597,11 @@
     "java-runtime-a839574d871f88c2fdbf",
     "java-runtime-8b5b2d92d108da7e8fb2",
     "java-runtime-5c625828c160a26df78b",
-    "java-runtime-df03d93aca6b6b5ccd59"
+    "java-runtime-df03d93aca6b6b5ccd59",
+    "java-runtime-70e525638c5fbaf37752",
+    "java-runtime-7c97277eedfa76b7e0cf",
+    "java-runtime-fd2a7de8e5606de63b80",
+    "java-runtime-b9b6435f81135ce15040"
    ],
    "representativeScenarioIds": [
     "named-window-mutation",
@@ -46973,6 +46978,65 @@
    "notes": [
     "Born-DV: InfraTableContext ords 0-2 \u2014 InfraPartitioned (CtxPerString partitioned context + unkeyed context-bound table + into-table sum + s0 reads MyTable.thesum per partition), InfraNonOverlapping (CtxNowTillS0 start-@now/end-S0 context + keyed table + output snapshot when terminated batches + mid-run create index + deploy-only join), InfraTableContextInvalid (SimpleCtx + three context-visibility tryInvalidCompile probes). Java/Go 19 records, 0 differences. Shared-core: esper.TableContext option + validateTableContext."
    ]
+  },
+  {
+   "id": "case.infra-table-invalid",
+   "javaRuntimeIds": [
+    "java-runtime-70e525638c5fbaf37752",
+    "java-runtime-7c97277eedfa76b7e0cf",
+    "java-runtime-fd2a7de8e5606de63b80",
+    "java-runtime-b9b6435f81135ce15040"
+   ],
+   "javaStaticIds": [
+    "java-dc8058ccbd099b1d1361",
+    "java-ecf59e6ef7727ab987fa",
+    "java-53cb0410fe21932803bc",
+    "java-c44ff6d4e86c09522b35"
+   ],
+   "javaNames": [
+    "InfraInvalidAggMatchSingleFunc",
+    "InfraInvalidAggMatchMultiFunc",
+    "InfraInvalidAnnotations",
+    "InfraInvalid"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableInvalid.java"
+   ],
+   "goTests": [
+    "internal/app/parity/infra_table_invalid.go"
+   ],
+   "tags": [
+    "infra",
+    "table",
+    "invalidity",
+    "born-differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-table-invalid.json",
+    "testdata/parity/infra-table-invalid.trace.json",
+    "testdata/parity/infra-table-invalid.go.trace.json",
+    "testdata/parity/infra-table-invalid.evidence.json",
+    "tools/java-oracle/InfraTableInvalidScenarioOracle.java",
+    "tools/java-oracle/run-infra-table-invalid.sh",
+    "javaCommit=9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+    "java=17"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-70e525638c5fbaf37752",
+    "java-runtime-7c97277eedfa76b7e0cf",
+    "java-runtime-fd2a7de8e5606de63b80",
+    "java-runtime-b9b6435f81135ce15040"
+   ],
+   "notes": [
+    "Born-DV: InfraTableInvalid ords 0-3 \u2014 InfraInvalidAggMatchSingleFunc (43 into-table signature-mismatch probes: param type, distinct, filter, ignore-nulls, min/max direction, nth size, rate interval, plugin names), InfraInvalidAggMatchMultiFunc (6 unbound #time(1000) probes: window(*) @type event-type mismatch, sorted() sort-expr rejection, se1() plugin name mismatch), InfraInvalidAnnotations (5 table-column annotation rejections), InfraInvalid (50 probes: PK-on-expression/event-type, name collisions vs variables/schemas/tables, into-table group-by count/type, context visibility, write-only, unidirectional join, requires-aggregation, keyed-access count/type, unknown column/function, views/retain/on-action/match-recognize/update-istream/context/pattern-atom misuse). Java/Go 104 records, 0 differences. Shared-core: TableAggDecl signature-detail fields + WithTableAggDecl; validateIntoTableCompatible per-detail checks; validateIntoTable group-by count/type vs PK, unidirectional join, requires-aggregation; NewTableDefinition PK-on-expression/event-type; RegisterTableInModule name collisions vs variables/schemas/named-windows; table-misuse guards for Window/OnRecord/MatchRecognize; RegisterSchema table-name collision."
+   ]
   }
  ],
  "mappings": [
@@ -50235,13 +50299,17 @@
   {
    "capabilityId": "trigger.table-named-window",
    "caseId": "case.infra-table-context"
+  },
+  {
+   "capabilityId": "trigger.table-named-window",
+   "caseId": "case.infra-table-invalid"
   }
  ],
  "summary": {
-  "inventoriedCases": 730,
-  "implementedCases": 728,
-  "differentialVerifiedCases": 354,
-  "differentialVerifiedRuntimeIds": 1373,
+  "inventoriedCases": 731,
+  "implementedCases": 729,
+  "differentialVerifiedCases": 355,
+  "differentialVerifiedRuntimeIds": 1377,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -50251,13 +50319,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3923,
-  "referencedJavaRuntimeIds": 3495,
+  "runtimeAssociationCount": 3927,
+  "referencedJavaRuntimeIds": 3499,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 641,
+  "unreferencedJavaRuntimeIds": 637,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 730,
+  "totalCases": 731,
   "totalCapabilities": 122
  }
 }
