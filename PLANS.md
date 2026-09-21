@@ -55,54 +55,22 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly') committed and pushed as 9ac32d036; Git owns identity. Parity review PASS, two P3s fixed.
 
 ## Current work unit
-Active: Draft 4.493 ('infra-table-count-min-sketch').
-
-- [x] Contract frozen (.omp/contract-493.md) from prefetched scouts
-  NextJavaContract493 + NextGoSurface493: InfraTableCountMinSketch ords 0-3
-  (f09401ff/87f8d005/4b4c531b/217779fa, flags=[]). Frozen API: TableAggDecl
-  gains TopK/Agent; CountMinSketchValue retains exact counts + topk capacity;
-  CountMinSketchTopK[T](sketch) accessor; countMinSketchAdd restricted to
-  into-table statements.
-- [x] Shared core: `CountMinSketchValue` retains exact counts + lastBump
-  sequence; `TopK()` derives Java's strict-> admission / last-of-lowest-bucket
-  eviction order lazily; `CountMinSketchTopKItem[T]` + `CountMinSketchTopK`
-  ref expression added; `TableAggDecl` gains `TopK`/`Agent`; declared topk
-  applied at `aggregateTableContributionRow` materialization; CMS into-table
-  classification (`countMinSketch` decl ↔ `count-min-sketch` kind) + param-type
-  check ("Mismatching parameter return type, expected any of [class
-  java.lang.String] but received byte[]"); form checks for distinct/null/
-  zero-param; `countMinSketchAdd` outside into-table rejected (existing test
-  rewritten to into-table form); `javaPrettyTypeName` renders `byte[]`.
-  `make check` green (parity 80s, esper 112s).
-- [x] Parity assets (TableCMSAssets493): runner `infra_table_count_min_sketch.go`,
-  scenario (4 cases / 88 steps), oracle `InfraTableCountMinSketchScenarioOracle.java`
-  + `run-infra-table-count-min-sketch.sh`, run.go/run_test.go wiring. Worker
-  transcription errors fixed by primary: oracle pinned step keys had mixed
-  13/14-field widths (16 pins + build-error template + EXPECTED_RECORDS 53->57
-  corrected against `stepKey`'s 13-field format); script deploy/deployed counts
-  15->14; test record count 53->57 (Java emits 57).
-- [x] Engine fixes found by replay: `SelectFromTableWhere` dropped the pattern
-  trigger (added `pattern: s.pattern`); `validateTrigger` now allows
-  `triggerSelectTable` for pattern triggers via `validatePatternTableRead`
-  (Java `select T.c.m() from pattern[...]`); `count-min-sketch` node check
-  relaxed to reject only >2 children so `countMinSketchAdd()` reaches the
-  into-table param-count diagnostic; `intoTableAggregateInfo` treats `null`
-  kind as null arg; `rejectInfraTableCMSExtraFields` rejects unknown top-level
-  scenario fields.
-- [x] Java trace via oracle (57 records), Go trace byte-comparable, diff mode
-  `passing` / 0 differences; evidence `infra-table-count-min-sketch.evidence.json`.
-- [x] Manifest: `case.infra-table-count-min-sketch` born-DV with 4 runtime IDs;
-  `infra.table-count-min-sketch` capability born-DV. Summary +1 case/capability,
-  +4 DV runtime IDs/associations, unreferenced -4.
-- [x] Gates + parity review: `make check` green (parity 81s, esper 112s);
-  parity review initial FAIL (2 P2 + 5 P3) -> all fixed -> confirmation PASS.
-  P2s: restored `validateExpressionSubqueries` in `validateJoinScopedExpression`;
-  `validatePatternTableRead` mirrors the event select-table checks incl.
-  where-predicate field validation. P3s: `SelectFromTable` pattern propagation,
-  payload-pinned step keys, dead helper removed, Draft typo, truncated bullet.
-- [x] Shipped; Git owns identity.
+Active: Draft 4.494 (next unit — selection pending; prefetched candidate
+`ResultSetLocalGroupedSolutionPattern` ord 12, the last unreferenced
+ResultSetQueryTypeLocalGroupBy execution: virtual time + boundary snapshot +
+double division).
 
 ## Previous work units (shipped)
+
+- Shipped: Draft 4.493 ('infra-table-count-min-sketch') committed and pushed as
+  2433f0bb1; Git owns identity. New capability `infra.table-count-min-sketch` +
+  `case.infra-table-count-min-sketch` born-DV (4 runtime IDs, 57 records, 0
+  differences). Parity review initial FAIL (2 P2 + 5 P3) -> all fixed ->
+  confirmation PASS. Shared core: CountMinSketchValue counts/lastBump/TopK
+  lazy admission+eviction, TableAggDecl TopK/Agent, countMinSketchAdd
+  into-table-only, pattern-triggered table reads, restored join-scoped
+  subquery validation.
+
 
 - Shipped: Draft 4.492 ('infra-table-invalid') committed and pushed as a136a2f7f;
   Git owns identity. Parity review PASS after two fix rounds (dead eventType
