@@ -4239,12 +4239,24 @@ func evaluateAggregatePluginFactory(ctx EvalContext, node *exprNode, input Expr,
 
 // CountMinSketchValue is a compact frequency estimator. The implementation
 // uses deterministic FNV-1a rows and preserves the Count-Min Sketch contract:
-// estimates never under-count, while collisions may over-count.
+// estimates never under-count, while collisions may over-count. Exact counts
+// and the last-bump sequence are retained so the declared top-k capacity can
+// be applied at materialization with Java's admission/eviction order.
 type CountMinSketchValue[T comparable] struct {
 	width    uint32
 	depth    uint32
 	counters []uint64
 	total    int64
+	// counts tracks exact per-key frequencies for top-k evaluation.
+	counts map[T]int64
+	// lastBump records the sequence number of each key's most recent
+	// frequency change; Java's top-k keeps insertion order inside one
+	// frequency bucket and evicts the last entry of the lowest bucket.
+	lastBump map[T]int64
+	bumpSeq  int64
+	// topk is the declared top-k capacity applied at into-table
+	// materialization; zero disables top-k tracking.
+	topk int
 }
 
 const (
@@ -4257,6 +4269,8 @@ func newCountMinSketch[T comparable]() CountMinSketchValue[T] {
 		width:    defaultCountMinSketchWidth,
 		depth:    defaultCountMinSketchDepth,
 		counters: make([]uint64, defaultCountMinSketchWidth*defaultCountMinSketchDepth),
+		counts:   make(map[T]int64),
+		lastBump: make(map[T]int64),
 	}
 }
 
@@ -4269,6 +4283,9 @@ func (s *CountMinSketchValue[T]) add(key T) {
 		s.counters[index]++
 	}
 	s.total++
+	s.bumpSeq++
+	s.counts[key]++
+	s.lastBump[key] = s.bumpSeq
 }
 
 func (s CountMinSketchValue[T]) Frequency(key T) int64 {
@@ -4286,6 +4303,45 @@ func (s CountMinSketchValue[T]) Frequency(key T) int64 {
 		return int64(^uint64(0) >> 1)
 	}
 	return int64(minimum)
+}
+
+// CountMinSketchTopKItem is one entry of a top-k read: the tracked value and
+// its exact frequency.
+type CountMinSketchTopKItem[T comparable] struct {
+	Value     T
+	Frequency int64
+}
+
+// withTopKCapacity returns a copy carrying the declared top-k capacity. The
+// into-table materialization applies it from the column declaration, matching
+// Java where the create-table spec owns the topk parameter.
+func (s CountMinSketchValue[T]) withTopKCapacity(capacity int) any {
+	s.topk = capacity
+	return s
+}
+
+// TopK returns the up-to-capacity most frequent keys ordered by frequency
+// descending, ties by the most recent frequency bump ascending — the same
+// order Java's CountMinSketchStateTopk produces (strictly-greater admission,
+// last-of-lowest-bucket eviction).
+func (s CountMinSketchValue[T]) TopK() []CountMinSketchTopKItem[T] {
+	if s.topk <= 0 || len(s.counts) == 0 {
+		return []CountMinSketchTopKItem[T]{}
+	}
+	items := make([]CountMinSketchTopKItem[T], 0, len(s.counts))
+	for key, count := range s.counts {
+		items = append(items, CountMinSketchTopKItem[T]{Value: key, Frequency: count})
+	}
+	sort.SliceStable(items, func(left, right int) bool {
+		if items[left].Frequency != items[right].Frequency {
+			return items[left].Frequency > items[right].Frequency
+		}
+		return s.lastBump[items[left].Value] < s.lastBump[items[right].Value]
+	})
+	if len(items) > s.topk {
+		items = items[:s.topk]
+	}
+	return items
 }
 
 func (s CountMinSketchValue[T]) Total() int64 { return s.total }
@@ -4391,6 +4447,30 @@ func (s CountMinSketchExpression[T]) Total() AggregateExpression[int64] {
 			return Missing()
 		}
 		return Present(sketch.Total())
+	})
+}
+
+// CountMinSketchTopK reads the top-k entries of a sketch-valued expression,
+// including a TableField or another target-row expression — the fluent
+// equivalent of `col.countMinSketchTopk()`.
+func CountMinSketchTopK[T comparable](sketch Expression[CountMinSketchValue[T]]) Expression[[]CountMinSketchTopKItem[T]] {
+	children := make([]*exprNode, 0, 1)
+	if sketch != nil {
+		children = append(children, sketch.node())
+	}
+	return makeExpr[[]CountMinSketchTopKItem[T]]("count-min-topk-ref", "count-min-topk()", children, func(ctx EvalContext) Value {
+		if sketch == nil {
+			return Missing()
+		}
+		value := sketch.eval(ctx)
+		if !value.IsPresent() {
+			return value
+		}
+		countSketch, ok := value.Any().(CountMinSketchValue[T])
+		if !ok {
+			return Missing()
+		}
+		return Present(countSketch.TopK())
 	})
 }
 

@@ -65415,6 +65415,256 @@ func assertInfraTableInvalidTrace(t *testing.T, trace compat.Trace) {
 	}
 }
 
+func TestRunInfraTableCountMinSketchDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraTableCMSID,
+		"-scenario", filepath.Join(root, infraTableCMSID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertInfraTableCMSTrace(t, trace)
+}
+
+func TestRunInfraTableCountMinSketchDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), infraTableCMSID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraTableCMSID + "-diff",
+		"-scenario", filepath.Join(root, infraTableCMSID+".json"),
+		"-java-trace", filepath.Join(root, infraTableCMSID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != infraTableCMSJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, infraTableCMSJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, infraTableCMSJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, infraTableCMSJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertInfraTableCMSTrace(t, evidence.JavaTrace)
+	assertInfraTableCMSTrace(t, evidence.GoTrace)
+}
+
+func TestRunInfraTableCountMinSketchDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			// The first frequency listener record pins freq=1 for E1.
+			name: "frequency-value-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Operation == "listener" && rec.Statement == "frequency" {
+						rec.New[0].Fields["freq"] = float64(99)
+						return
+					}
+				}
+				panic("no frequency listener record")
+			},
+		},
+		{
+			// The last topk listener record pins {E2=2,E4=2,E1=1}.
+			name: "topk-order-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Operation == "listener" && rec.Statement == "topk" && rec.Sequence == 7 {
+						rec.New[0].Fields["topk"] = []any{}
+						return
+					}
+				}
+				panic("no topk listener record")
+			},
+		},
+		{
+			// invalid's first probe pins the create-table-only prefix.
+			name: "invalid-prefix-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "invalid" && rec.Operation == "compile-error" {
+						rec.Value = "wrong prefix"
+						return
+					}
+				}
+				panic("no invalid compile-error record")
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:52]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join(root, infraTableCMSID+".evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), infraTableCMSID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", infraTableCMSID + "-diff",
+				"-scenario", filepath.Join(root, infraTableCMSID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunInfraTableCountMinSketchCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, infraTableCMSID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, infraTableCMSID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, infraTableCMSID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if !reflect.DeepEqual(javaTrace.Records, evidence.JavaTrace.Records) ||
+		!reflect.DeepEqual(goTrace.Records, evidence.GoTrace.Records) {
+		t.Fatal("checked-in traces diverge from evidence")
+	}
+}
+
+func TestRunInfraTableCountMinSketchRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, infraTableCMSID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-f09401ff1e3349b3497b"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`countMinSketch({topk:3})`), []byte(`countMinSketch({topk:4})`), 1)
+		}},
+		{name: "expect-error-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`can only be used in create-table statements`), []byte(`can only be used in create-table statments`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", infraTableCMSID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunInfraTableCountMinSketchRuntimeIDMappingMatchesScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, infraTableCMSID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenario struct {
+		Cases []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &scenario); err != nil {
+		t.Fatalf("scenario decode: %v", err)
+	}
+	if len(scenario.Cases) != len(infraTableCMSJavaRuntimeIDs) {
+		t.Fatalf("scenario cases = %d, want %d", len(scenario.Cases), len(infraTableCMSJavaRuntimeIDs))
+	}
+	for index, c := range scenario.Cases {
+		if c.RuntimeID != infraTableCMSJavaRuntimeIDs[index] {
+			t.Fatalf("case %d runtimeId = %q, want %q", index, c.RuntimeID, infraTableCMSJavaRuntimeIDs[index])
+		}
+	}
+}
+
+func assertInfraTableCMSTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.ID != infraTableCMSID {
+		t.Fatalf("trace id = %q", trace.ID)
+	}
+	if len(trace.Records) != 57 {
+		t.Fatalf("trace records = %d, want 57", len(trace.Records))
+	}
+	counts := map[string]map[string]int{}
+	for _, record := range trace.Records {
+		if counts[record.Case] == nil {
+			counts[record.Case] = map[string]int{}
+		}
+		counts[record.Case][record.Operation]++
+	}
+	want := map[string]map[string]int{
+		"frequency-and-topk": {"deployed": 3, "listener": 26},
+		"doc-samples":        {"deployed": 7},
+		"non-string-type":    {"deployed": 3, "listener": 2},
+		"invalid":            {"deployed": 1, "compile-error": 15},
+	}
+	if !reflect.DeepEqual(counts, want) {
+		t.Fatalf("record counts = %#v, want %#v", counts, want)
+	}
+}
+
 func TestRunInfraNWConsumerDirectReplay(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "testdata", "parity")
 	var stdout, stderr bytes.Buffer

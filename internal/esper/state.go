@@ -54,6 +54,13 @@ type TableAggDecl struct {
 	// EventType is the declared @type event type for window(*)/sorted(*)
 	// columns; empty means unconstrained.
 	EventType string
+	// TopK is the declared count-min-sketch top-k capacity; <=0 disables
+	// top-k tracking.
+	TopK int
+	// Agent is the declared count-min-sketch agent class name; when set the
+	// agent defines the accepted value types and the default String check is
+	// skipped.
+	Agent string
 }
 
 // TableColumnOption changes the metadata of a table column declaration.

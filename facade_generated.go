@@ -936,9 +936,22 @@ func CountMinSketchFrequency[T comparable](sketch Expression[CountMinSketchValue
 	return internalengine.CountMinSketchFrequency[T](sketch, key)
 }
 
+// CountMinSketchTopK reads the top-k entries of a sketch-valued expression,
+// including a TableField or another target-row expression — the fluent
+// equivalent of `col.countMinSketchTopk()`.
+func CountMinSketchTopK[T comparable](sketch Expression[CountMinSketchValue[T]]) Expression[[]CountMinSketchTopKItem[T]] {
+	return internalengine.CountMinSketchTopK[T](sketch)
+}
+
+// CountMinSketchTopKItem is one entry of a top-k read: the tracked value and
+// its exact frequency.
+type CountMinSketchTopKItem[T comparable] = internalengine.CountMinSketchTopKItem[T]
+
 // CountMinSketchValue is a compact frequency estimator. The implementation
 // uses deterministic FNV-1a rows and preserves the Count-Min Sketch contract:
-// estimates never under-count, while collisions may over-count.
+// estimates never under-count, while collisions may over-count. Exact counts
+// and the last-bump sequence are retained so the declared top-k capacity can
+// be applied at materialization with Java's admission/eviction order.
 type CountMinSketchValue[T comparable] = internalengine.CountMinSketchValue[T]
 
 func CreateCategoryContext(env *Environment, name string, categories ...ContextCategory) (ContextDefinition, error) {

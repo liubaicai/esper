@@ -5516,6 +5516,55 @@
     "java-runtime-4f6e15a0c30a5e95b1f6"
    ],
    "difference": "Invalid execution (ord 5): source-less subselect, wildcard projection and multi-selector FAF are unrepresentable in the typed API; Go pins its nearest rejection boundaries (empty projection, subquery-in-source-less rejection, unconditional source-less order-by rejection) with the Java message prefixes recorded."
+  },
+  {
+   "id": "infra.table-count-min-sketch",
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableCountMinSketch.java"
+   ],
+   "goRefs": [
+    "internal/esper/expr.go",
+    "internal/esper/plan.go",
+    "internal/esper/trigger.go",
+    "internal/app/parity/infra_table_count_min_sketch.go"
+   ],
+   "tags": [
+    "infra",
+    "table",
+    "count-min-sketch",
+    "approximation"
+   ],
+   "status": "differential-verified",
+   "cases": [
+    "case.infra-table-count-min-sketch"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "notes": "All four InfraTableCountMinSketch executions differential-verified.",
+   "domain": "infra",
+   "level": "S",
+   "summary": "Count-min-sketch approximation table columns: create-table json params, into-table add, frequency/topk reads, invalid-form diagnostics",
+   "javaRefs": [
+    "InfraFrequencyAndTopk",
+    "InfraDocSamples",
+    "InfraNonStringType",
+    "InfraInvalid"
+   ],
+   "javaRuntimeIds": [
+    "java-runtime-f09401ff1e3349b3497b",
+    "java-runtime-87f8d0057f91e1dfa7ec",
+    "java-runtime-4b4c531bbad3d4e1491d",
+    "java-runtime-217779fa3c860cc1ea18"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-f09401ff1e3349b3497b",
+    "java-runtime-87f8d0057f91e1dfa7ec",
+    "java-runtime-4b4c531bbad3d4e1491d",
+    "java-runtime-217779fa3c860cc1ea18"
+   ]
   }
  ],
  "cases": [
@@ -47037,6 +47086,72 @@
    "notes": [
     "Born-DV: InfraTableInvalid ords 0-3 \u2014 InfraInvalidAggMatchSingleFunc (43 into-table signature-mismatch probes: param type, distinct, filter, ignore-nulls, min/max direction, nth size, rate interval, plugin names), InfraInvalidAggMatchMultiFunc (6 unbound #time(1000) probes: window(*) @type event-type mismatch, sorted() sort-expr rejection, se1() plugin name mismatch), InfraInvalidAnnotations (5 table-column annotation rejections), InfraInvalid (50 probes: PK-on-expression/event-type, name collisions vs variables/schemas/tables, into-table group-by count/type, context visibility, write-only, unidirectional join, requires-aggregation, keyed-access count/type, unknown column/function, views/retain/on-action/match-recognize/update-istream/context/pattern-atom misuse). Java/Go 104 records, 0 differences. Shared-core: TableAggDecl signature-detail fields + WithTableAggDecl; validateIntoTableCompatible per-detail checks; validateIntoTable group-by count/type vs PK, unidirectional join, requires-aggregation; NewTableDefinition PK-on-expression/event-type; RegisterTableInModule name collisions vs variables/schemas/named-windows; table-misuse guards for Window/OnRecord/MatchRecognize; RegisterSchema table-name collision."
    ]
+  },
+  {
+   "id": "case.infra-table-count-min-sketch",
+   "javaRuntimeIds": [
+    "java-runtime-f09401ff1e3349b3497b",
+    "java-runtime-87f8d0057f91e1dfa7ec",
+    "java-runtime-4b4c531bbad3d4e1491d",
+    "java-runtime-217779fa3c860cc1ea18"
+   ],
+   "javaStaticIds": [
+    "java-834a25e0038e5f5a8950",
+    "java-d926cce1a816fb780ed8",
+    "java-304d2b5b2913d2f02828",
+    "java-91bcaf7a054d58304543"
+   ],
+   "javaNames": [
+    "InfraFrequencyAndTopk",
+    "InfraDocSamples",
+    "InfraNonStringType",
+    "InfraInvalid"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableCountMinSketch.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunInfraTableCountMinSketchDirectReplay",
+    "internal/app/parity/run_test.go:TestRunInfraTableCountMinSketchDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunInfraTableCountMinSketchDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunInfraTableCountMinSketchCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunInfraTableCountMinSketchRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunInfraTableCountMinSketchRuntimeIDMappingMatchesScenario",
+    "internal/esper/aggregate_test.go:TestCountMinSketchAggregateTracksFilteredFrequency"
+   ],
+   "tags": [
+    "infra",
+    "table",
+    "count-min-sketch",
+    "approximation",
+    "topk",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "testdata/parity/infra-table-count-min-sketch.json",
+    "testdata/parity/infra-table-count-min-sketch.trace.json",
+    "testdata/parity/infra-table-count-min-sketch.go.trace.json",
+    "testdata/parity/infra-table-count-min-sketch.evidence.json",
+    "tools/java-oracle/InfraTableCountMinSketchScenarioOracle.java",
+    "tools/java-oracle/run-infra-table-count-min-sketch.sh"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-f09401ff1e3349b3497b",
+    "java-runtime-87f8d0057f91e1dfa7ec",
+    "java-runtime-4b4c531bbad3d4e1491d",
+    "java-runtime-217779fa3c860cc1ea18"
+   ],
+   "notes": "Draft 4.493: InfraTableCountMinSketch ordinals 0-3 (frequency-and-topk, doc-samples, non-string-type, invalid). Java/Go each 57 records, 0 differences. Covers create-table declaration with json params (epsOfTotalCount/topk/agent), into-table countMinSketchAdd, countMinSketchFrequency and countMinSketchTopk reads, join/subquery/module consumption, byte[] non-string keys, and 15 invalid-form probes. Shared core: CountMinSketchValue retains exact counts + lastBump sequence; TopK() derives Java's strict-> admission and last-of-lowest-bucket eviction order lazily; countMinSketchAdd restricted to into-table; pattern-triggered table reads enabled for select T.c.m() from pattern[...]."
   }
  ],
  "mappings": [
@@ -50303,29 +50418,33 @@
   {
    "capabilityId": "trigger.table-named-window",
    "caseId": "case.infra-table-invalid"
+  },
+  {
+   "capabilityId": "infra.table-count-min-sketch",
+   "caseId": "case.infra-table-count-min-sketch"
   }
  ],
  "summary": {
-  "inventoriedCases": 731,
-  "implementedCases": 729,
-  "differentialVerifiedCases": 355,
-  "differentialVerifiedRuntimeIds": 1377,
+  "inventoriedCases": 732,
+  "implementedCases": 730,
+  "differentialVerifiedCases": 356,
+  "differentialVerifiedRuntimeIds": 1381,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
-  "inventoriedCapabilities": 122,
-  "implementedCapabilities": 121,
-  "differentialVerifiedCapabilities": 41,
+  "inventoriedCapabilities": 123,
+  "implementedCapabilities": 122,
+  "differentialVerifiedCapabilities": 42,
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3927,
-  "referencedJavaRuntimeIds": 3499,
+  "runtimeAssociationCount": 3931,
+  "referencedJavaRuntimeIds": 3503,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 637,
+  "unreferencedJavaRuntimeIds": 633,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 731,
-  "totalCapabilities": 122
+  "totalCases": 732,
+  "totalCapabilities": 123
  }
 }

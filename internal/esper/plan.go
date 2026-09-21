@@ -5623,6 +5623,15 @@ func (e *Environment) validateJoinScopedExpression(definition *joinDefinition, e
 
 func (e *Environment) validateIntoTable(query Query) error {
 	if strings.TrimSpace(query.tableTarget) == "" {
+		// Java restricts countMinSketchAdd to into-table statements.
+		if query.aggregate != nil {
+			for _, selection := range query.aggregate.selections {
+				info, aggregate := intoTableAggregateInfo(selection.Expr)
+				if aggregate && info.kind == "count-min-sketch" {
+					return NewError(ErrorInvalidRule, fmt.Sprintf("Failed to validate select-clause expression '%s': Count-min-sketch aggregation function 'countMinSketchAdd' can only be used with into-table", info.render))
+				}
+			}
+		}
 		return nil
 	}
 	if query.aggregate == nil {
@@ -5828,6 +5837,7 @@ type intoTableAggInfo struct {
 	paramType    string // Java-visible parameter type name, e.g. "Integer"
 	nthSize      int    // nth() index; -1 when not an nth expression
 	rateInterval int64  // rate() interval in ms; -1 when not a rate expression
+	paramCount   int    // positional parameter count (filters excluded)
 	eventType    string // window(*)/sorted(*) source event type name
 }
 
@@ -5844,7 +5854,7 @@ var intoTableEngineNames = map[string]string{
 	"median": "median", "stddev": "stddev", "stddev-pop": "stddev",
 	"variance": "variance", "avedev": "avedev",
 	"rate": "rate", "leaving": "leaving",
-	"plugin-aggregate": "plugin", "plugin-aggregate-multi": "plugin",
+	"count-min-sketch": "countMinSketchAdd",
 }
 
 func intoTableAggregateInfo(expr Expr) (intoTableAggInfo, bool) {
@@ -5890,7 +5900,7 @@ func intoTableAggregateInfo(expr Expr) (intoTableAggInfo, bool) {
 		switch {
 		case child.kind == "event-value":
 			args = append(args, "*")
-		case child.kind == "literal" && child.literalValue == nil:
+		case child.kind == "null" || (child.kind == "literal" && child.literalValue == nil):
 			args = append(args, "null")
 			if index == 0 && len(node.children) == 1 {
 				info.nullArg = true
@@ -5898,6 +5908,12 @@ func intoTableAggregateInfo(expr Expr) (intoTableAggInfo, bool) {
 		default:
 			args = append(args, child.description)
 		}
+	}
+	info.paramCount = len(args)
+	if node.kind == "count-min-sketch" && len(node.children) > 0 {
+		// CountMinSketchAdd's trailing children are the optional filter
+		// predicate, not positional parameters.
+		info.paramCount = 1
 	}
 	if node.kind == "sorted" && len(node.children) > 0 && !node.sortedValueKey {
 		info.hasSortKeys = true
@@ -5950,6 +5966,12 @@ func intoTableAggregateInfo(expr Expr) (intoTableAggInfo, bool) {
 func validateIntoTableExpressionForm(info intoTableAggInfo) error {
 	var message string
 	switch {
+	case info.kind == "count-min-sketch" && info.distinct:
+		message = "Count-min-sketch aggregation function 'countMinSketchAdd' is not supported with distinct"
+	case info.kind == "count-min-sketch" && info.nullArg:
+		message = "Invalid null-type parameter"
+	case info.kind == "count-min-sketch" && info.paramCount != 1:
+		message = "Count-min-sketch aggregation function 'countMinSketchAdd' requires a single parameter expression"
 	case info.kind == "first" || info.kind == "last":
 		message = "For into-table use 'window(*)' or 'window(stream.*)' instead"
 	case info.nullArg:
@@ -5996,6 +6018,8 @@ func intoTableDeclClass(name string) string {
 		return "linear"
 	case "sorted", "minby", "maxby", "minbyever", "maxbyever":
 		return "sorted-minmaxby"
+	case "countMinSketch":
+		return "countminsketch"
 	default:
 		return "decl:" + name
 	}
@@ -6011,6 +6035,8 @@ func intoTableKindClass(kind string) string {
 		return "linear"
 	case "sorted", "min-by", "max-by", "min-by-ever", "max-by-ever":
 		return "sorted-minmaxby"
+	case "count-min-sketch":
+		return "countminsketch"
 	default:
 		return "decl:" + intoTableEngineNames[kind]
 	}
@@ -6079,7 +6105,15 @@ func validateIntoTableCompatible(tableName string, column TableColumn, info into
 			sub := fmt.Sprintf("The required aggregation function name is '%s' and provided is '%s'", declared.Name, info.javaName)
 			return intoTableIncompatible(tableName, column.Name, declared.Description, info.render, sub)
 		}
+	case "countminsketch":
+		// The declared agent owns the accepted value types; the default
+		// UTF-16 agent accepts String only. A custom agent skips the check.
+		if declared.Agent == "" && info.paramType != "" && info.paramType != "String" {
+			sub := fmt.Sprintf("Mismatching parameter return type, expected any of [class java.lang.String] but received %s", javaPrettyTypeName(info.paramType))
+			return intoTableIncompatible(tableName, column.Name, declared.Description, info.render, sub)
+		}
 	}
+
 	// Signature-detail checks mirror Java's per-detail diagnostics.
 	if declared.ParamType != "" && info.paramType != "" && declared.ParamType != info.paramType {
 		sub := fmt.Sprintf("The required parameter type is %s and provided is %s", declared.ParamType, info.paramType)
@@ -6126,6 +6160,35 @@ func validateIntoTableCompatible(tableName string, column TableColumn, info into
 
 func intoTableIncompatible(tableName, columnName, declaredRender, providedRender, sub string) error {
 	return NewError(ErrorInvalidRule, fmt.Sprintf("Incompatible aggregation function for table '%s' column '%s', expecting '%s' and received '%s': %s", tableName, columnName, declaredRender, providedRender, sub))
+}
+
+// javaPrettyTypeName renders a javaTypeName result the way Java's
+// ClassHelperPrint.getClassNameFullyQualPretty does: boxed names for
+// primitives, Java-style "T[]" for slices.
+func javaPrettyTypeName(name string) string {
+	if strings.HasPrefix(name, "[]") {
+		element := javaPrettyTypeName(name[2:])
+		switch element {
+		case "Byte":
+			element = "byte"
+		case "Short":
+			element = "short"
+		case "Integer":
+			element = "int"
+		case "Long":
+			element = "long"
+		case "Float":
+			element = "float"
+		case "Double":
+			element = "double"
+		case "Boolean":
+			element = "boolean"
+		case "String":
+			element = "java.lang.String"
+		}
+		return element + "[]"
+	}
+	return name
 }
 
 func (e *Environment) validateOnDemand(query Query) error {
@@ -6403,7 +6466,7 @@ func validateAggregateExpressionNodes(node *exprNode) error {
 	if strings.HasPrefix(node.kind, "window-access-") && (len(node.children) == 0 || node.children[0] == nil) {
 		return NewError(ErrorInvalidRule, "window access method requires a window access aggregate")
 	}
-	if node.kind == "count-min-sketch" && (len(node.children) < 1 || len(node.children) > 2 || node.children[0] == nil || (len(node.children) == 2 && node.children[1] == nil)) {
+	if node.kind == "count-min-sketch" && len(node.children) > 2 {
 		return NewError(ErrorInvalidRule, "count-min-sketch requires a value and optional predicate")
 	}
 	if node.kind == "count-min-frequency" && (len(node.children) != 2 || node.children[0] == nil || node.children[1] == nil) {

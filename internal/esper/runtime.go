@@ -23051,7 +23051,16 @@ func aggregateTableContributionRow(definition *aggregateDefinition, tableDefinit
 		if index < len(values) {
 			for _, column := range tableDefinition.Columns() {
 				if column.Name == selection.Name {
-					row[selection.Name] = values[index].Any()
+					value := values[index].Any()
+					// The declared count-min-sketch spec owns the top-k
+					// capacity; apply it to the materialized cell so the
+					// stored value carries the declared policy.
+					if column.Agg != nil && column.Agg.TopK > 0 {
+						if sketch, ok := value.(interface{ withTopKCapacity(int) any }); ok {
+							value = sketch.withTopKCapacity(column.Agg.TopK)
+						}
+					}
+					row[selection.Name] = value
 					break
 				}
 			}

@@ -2623,23 +2623,43 @@ func (state *testAggregatePluginEventListState) Clear() {
 }
 
 func TestCountMinSketchAggregateTracksFilteredFrequency(t *testing.T) {
-	env, engine := newRuntimeTest(t)
+	env := NewEnvironment()
+	if _, err := RegisterStruct[runtimeTestTrade](env, "Trade"); err != nil {
+		t.Fatal(err)
+	}
+	// Java restricts countMinSketchAdd to into-table statements, so the
+	// filtered feed materializes into a table and a trigger reads it back.
+	if _, err := CreateTable(env, "SketchTable", []TableColumn{
+		TableColumnOf[CountMinSketchValue[string]]("wordcms"),
+	}); err != nil {
+		t.Fatal(err)
+	}
 	symbol := Field[runtimeTestTrade, string]("symbol")
 	price := Field[runtimeTestTrade, float64]("price")
 	sketch := CountMinSketchAdd[string](symbol, Greater[float64](price, Literal(0.0)))
-	plan, err := env.Build(From[runtimeTestTrade](env, "Trade").Aggregate(
-		Alias("frequency", sketch.Frequency(symbol)),
-		Alias("total", sketch.Total()),
-	).Query(StatementName("count-min-sketch")))
+	aggregatePlan, err := env.Build(From[runtimeTestTrade](env, "Trade").Aggregate(
+		Alias("wordcms", sketch),
+	).IntoTable("SketchTable", StatementName("count-min-sketch")))
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := engine.Deploy(context.Background(), plan)
+	triggerPlan, err := env.Build(OnEvent(From[runtimeTestTrade](env, "Trade")).SelectFromTableWhere(
+		"SketchTable", Literal(true),
+		Alias("frequency", CountMinSketchFrequency[string](TableField[CountMinSketchValue[string]]("wordcms"), Literal("hello"))),
+	).Query(StatementName("count-min-sketch-read")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), aggregatePlan); err != nil {
+		t.Fatal(err)
+	}
+	triggerDeployment, err := engine.Deploy(context.Background(), triggerPlan)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var last Row
-	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+	if _, err := triggerDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
 		if len(batch.New) == 0 {
 			return nil
 		}
@@ -2657,7 +2677,7 @@ func TestCountMinSketchAggregateTracksFilteredFrequency(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if last.Get("frequency").Any() != int64(2) || last.Get("total").Any() != int64(2) {
+	if last.Get("frequency").Any() != int64(2) {
 		t.Fatalf("count-min-sketch result = %#v", last.AsMap())
 	}
 	if value := sketch.Frequency(symbol); value == nil {

@@ -380,6 +380,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraTableContextScenario(file)
 	} else if *mode == "infra-table-invalid" || *mode == "infra-table-invalid-diff" {
 		scenario, err = loadInfraTableInvalidScenario(file)
+	} else if *mode == "infra-table-count-min-sketch" || *mode == "infra-table-count-min-sketch-diff" {
+		scenario, err = loadInfraTableCMSScenario(file)
 	} else {
 		scenario, err = compat.LoadScenario(file)
 	}
@@ -4113,6 +4115,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraTableInvalidJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraTableInvalidJavaSources),
 				splitMetadata(*javaExecutions, infraTableInvalidJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-table-count-min-sketch" || *mode == "infra-table-count-min-sketch-diff" {
+		trace, err := runInfraTableCMSScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-table-count-min-sketch-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, infraTableCMSJavaCommit,
+				splitMetadata(*javaRuntimeIDs, infraTableCMSJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraTableCMSJavaSources),
+				splitMetadata(*javaExecutions, infraTableCMSJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

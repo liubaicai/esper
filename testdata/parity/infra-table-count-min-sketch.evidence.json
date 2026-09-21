@@ -1,0 +1,2028 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-f09401ff1e3349b3497b",
+    "java-runtime-87f8d0057f91e1dfa7ec",
+    "java-runtime-4b4c531bbad3d4e1491d",
+    "java-runtime-217779fa3c860cc1ea18"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableCountMinSketch.java"
+  ],
+  "javaExecutions": [
+    "InfraFrequencyAndTopk",
+    "InfraDocSamples",
+    "InfraNonStringType",
+    "InfraInvalid"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-table-count-min-sketch",
+    "steps": [
+      {
+        "op": "case",
+        "case": "frequency-and-topk"
+      },
+      {
+        "op": "deploy",
+        "case": "frequency-and-topk",
+        "statement": "module",
+        "epl": "@public create table MyApproxFT(wordapprox countMinSketch({topk:3}));\ninto table MyApproxFT select countMinSketchAdd(theString) as wordapprox from SupportBean;\n@name('frequency') select MyApproxFT.wordapprox.countMinSketchFrequency(p00) as freq from SupportBean_S0;\n@name('topk') select MyApproxFT.wordapprox.countMinSketchTopk() as topk from SupportBean_S1;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "frequency-and-topk",
+        "statement": "module"
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E3"
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E3"
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E4"
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E3"
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E4"
+        }
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "frequency-and-topk",
+        "statement": "join",
+        "epl": "@name('join') select wordapprox.countMinSketchFrequency(s2.p20) as c0 from MyApproxFT, SupportBean_S2 s2 unidirectional"
+      },
+      {
+        "op": "deployed",
+        "case": "frequency-and-topk",
+        "statement": "join"
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S2",
+        "payload": {
+          "id": 0,
+          "p20": "E3"
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "frequency-and-topk",
+        "statement": "join"
+      },
+      {
+        "op": "deploy",
+        "case": "frequency-and-topk",
+        "statement": "subq",
+        "epl": "@name('subq') select (select wordapprox.countMinSketchFrequency(s2.p20) from MyApproxFT) as c0 from SupportBean_S2 s2"
+      },
+      {
+        "op": "deployed",
+        "case": "frequency-and-topk",
+        "statement": "subq"
+      },
+      {
+        "op": "send",
+        "case": "frequency-and-topk",
+        "eventType": "SupportBean_S2",
+        "payload": {
+          "id": 0,
+          "p20": "E3"
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "frequency-and-topk",
+        "statement": "subq"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "frequency-and-topk"
+      },
+      {
+        "op": "case",
+        "case": "doc-samples"
+      },
+      {
+        "op": "deploy",
+        "case": "doc-samples",
+        "statement": "schema-word-event",
+        "epl": "@public create schema WordEvent (word string)"
+      },
+      {
+        "op": "deployed",
+        "case": "doc-samples",
+        "statement": "schema-word-event"
+      },
+      {
+        "op": "deploy",
+        "case": "doc-samples",
+        "statement": "schema-estimate-event",
+        "epl": "@public create schema EstimateWordCountEvent (word string)"
+      },
+      {
+        "op": "deployed",
+        "case": "doc-samples",
+        "statement": "schema-estimate-event"
+      },
+      {
+        "op": "deploy",
+        "case": "doc-samples",
+        "statement": "table-word-count",
+        "epl": "@public create table WordCountTable(wordcms countMinSketch())"
+      },
+      {
+        "op": "deployed",
+        "case": "doc-samples",
+        "statement": "table-word-count"
+      },
+      {
+        "op": "deploy",
+        "case": "doc-samples",
+        "statement": "table-word-count2",
+        "epl": "@public create table WordCountTable2(wordcms countMinSketch({\n  epsOfTotalCount: 0.000002,\n  confidence: 0.999,\n  seed: 38576,\n  topk: 20,\n  agent: 'com.espertech.esper.common.client.util.CountMinSketchAgentStringUTF16Forge'}))"
+      },
+      {
+        "op": "deployed",
+        "case": "doc-samples",
+        "statement": "table-word-count2"
+      },
+      {
+        "op": "deploy",
+        "case": "doc-samples",
+        "statement": "into-word-count",
+        "epl": "into table WordCountTable select countMinSketchAdd(word) as wordcms from WordEvent"
+      },
+      {
+        "op": "deployed",
+        "case": "doc-samples",
+        "statement": "into-word-count"
+      },
+      {
+        "op": "deploy",
+        "case": "doc-samples",
+        "statement": "select-frequency",
+        "epl": "select WordCountTable.wordcms.countMinSketchFrequency(word) from EstimateWordCountEvent"
+      },
+      {
+        "op": "deployed",
+        "case": "doc-samples",
+        "statement": "select-frequency"
+      },
+      {
+        "op": "deploy",
+        "case": "doc-samples",
+        "statement": "select-topk",
+        "epl": "select WordCountTable.wordcms.countMinSketchTopk() from pattern[every timer:interval(10 sec)]"
+      },
+      {
+        "op": "deployed",
+        "case": "doc-samples",
+        "statement": "select-topk"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "doc-samples"
+      },
+      {
+        "op": "case",
+        "case": "non-string-type"
+      },
+      {
+        "op": "deploy",
+        "case": "non-string-type",
+        "statement": "table",
+        "epl": "@public create table MyApproxNS(bytefreq countMinSketch({  epsOfTotalCount: 0.02,  confidence: 0.98,  topk: null,  agent: 'com.espertech.esper.regressionlib.suite.infra.tbl.InfraTableCountMinSketch$MyBytesPassthruAgentForge'}))"
+      },
+      {
+        "op": "deployed",
+        "case": "non-string-type",
+        "statement": "table"
+      },
+      {
+        "op": "deploy",
+        "case": "non-string-type",
+        "statement": "into",
+        "epl": "into table MyApproxNS select countMinSketchAdd(body) as bytefreq from SupportByteArrEventStringId(id='A')"
+      },
+      {
+        "op": "deployed",
+        "case": "non-string-type",
+        "statement": "into"
+      },
+      {
+        "op": "deploy",
+        "case": "non-string-type",
+        "statement": "s0",
+        "epl": "@name('s0') select MyApproxNS.bytefreq.countMinSketchFrequency(body) as freq from SupportByteArrEventStringId(id='B')"
+      },
+      {
+        "op": "deployed",
+        "case": "non-string-type",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "non-string-type",
+        "eventType": "SupportByteArrEventStringId",
+        "payload": {
+          "id": "A",
+          "body": "AQID"
+        }
+      },
+      {
+        "op": "send",
+        "case": "non-string-type",
+        "eventType": "SupportByteArrEventStringId",
+        "payload": {
+          "id": "B",
+          "body": "AAID"
+        }
+      },
+      {
+        "op": "send",
+        "case": "non-string-type",
+        "eventType": "SupportByteArrEventStringId",
+        "payload": {
+          "id": "B",
+          "body": "AQID"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "non-string-type"
+      },
+      {
+        "op": "case",
+        "case": "invalid"
+      },
+      {
+        "op": "deploy",
+        "case": "invalid",
+        "statement": "table",
+        "epl": "@public create table MyCMS(wordcms countMinSketch())"
+      },
+      {
+        "op": "deployed",
+        "case": "invalid",
+        "statement": "table"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "cms-in-select",
+        "expectError": "Failed to validate select-clause expression 'countMinSketch()': Count-min-sketch aggregation function 'countMinSketch' can only be used in create-table statements [",
+        "epl": "select countMinSketch() from SupportBean"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "cms-invalid-param",
+        "expectError": "Failed to validate table-column expression 'countMinSketch(5)': Count-min-sketch aggregation function 'countMinSketch'  expects either no parameter or a single json parameter object [",
+        "epl": "create table MyTable(cms countMinSketch(5))"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "cms-invalid-json-param",
+        "expectError": "Failed to validate table-column expression 'countMinSketch({xxx=3})': Unrecognized parameter 'xxx' [",
+        "epl": "create table MyTable(cms countMinSketch({xxx:3}))"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "cms-invalid-eps",
+        "expectError": "Failed to validate table-column expression 'countMinSketch({epsOfTotalCount=a})': Property 'epsOfTotalCount' expects an Double but receives a value of type String [",
+        "epl": "create table MyTable(cms countMinSketch({epsOfTotalCount:'a'}))"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "cms-agent-not-found",
+        "expectError": "Failed to validate table-column expression 'countMinSketch({agent=a})': Failed to instantiate agent provider: Could not load class by name 'a', please check imports [",
+        "epl": "create table MyTable(cms countMinSketch({agent:'a'}))"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "cms-agent-wrong-type",
+        "expectError": "Failed to validate table-column expression 'countMinSketch({agent=java.lang.String})': Failed to instantiate agent provider: Class 'java.lang.String' does not implement interface 'com.espertech.esper.common.client.util.CountMinSketchAgentForge' [",
+        "epl": "create table MyTable(cms countMinSketch({agent:'java.lang.String'}))"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "add-in-select",
+        "expectError": "Failed to validate select-clause expression 'countMinSketchAdd(theString)': Count-min-sketch aggregation function 'countMinSketchAdd' can only be used with into-table",
+        "epl": "select countMinSketchAdd(theString) from SupportBean"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "add-no-param",
+        "expectError": "Failed to validate select-clause expression 'countMinSketchAdd()': Count-min-sketch aggregation function 'countMinSketchAdd' requires a single parameter expression",
+        "epl": "into table MyCMS select countMinSketchAdd() as wordcms from SupportBean"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "add-byte-param",
+        "expectError": "Incompatible aggregation function for table 'MyCMS' column 'wordcms', expecting 'countMinSketch()' and received 'countMinSketchAdd(body)': Mismatching parameter return type, expected any of [class java.lang.String] but received byte[] [",
+        "epl": "into table MyCMS select countMinSketchAdd(body) as wordcms from SupportByteArrEventStringId"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "add-distinct",
+        "expectError": "Failed to validate select-clause expression 'countMinSketchAdd(distinct \"abc\")': Count-min-sketch aggregation function 'countMinSketchAdd' is not supported with distinct [",
+        "epl": "into table MyCMS select countMinSketchAdd(distinct 'abc') as wordcms from SupportByteArrEventStringId"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "add-null",
+        "expectError": "Failed to validate select-clause expression 'countMinSketchAdd(null)': Invalid null-type parameter",
+        "epl": "into table MyCMS select countMinSketchAdd(null) as wordcms from SupportByteArrEventStringId"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "frequency-into-table",
+        "expectError": "Failed to validate select-clause expression 'countMinSketchFrequency(theString)': Unknown single-row function, aggregation function or mapped or indexed property named 'countMinSketchFrequency' could not be resolved ",
+        "epl": "into table MyCMS select countMinSketchFrequency(theString) as wordcms from SupportBean"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "frequency-select",
+        "expectError": "Failed to validate select-clause expression 'countMinSketchFrequency()': Unknown single-row function, expression declaration, script or aggregation function named 'countMinSketchFrequency' could not be resolved",
+        "epl": "select countMinSketchFrequency() from SupportBean"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "topk-select",
+        "expectError": "Failed to validate select-clause expression 'countMinSketchTopk()': Unknown single-row function, expression declaration, script or aggregation function named 'countMinSketchTopk' could not be resolved",
+        "epl": "select countMinSketchTopk() from SupportBean"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "topk-param",
+        "expectError": "Failed to validate select-clause expression 'MyCMS.wordcms.countMinSketchTopk(th...(43 chars)': Count-min-sketch aggregation function 'countMinSketchTopk' requires a no parameter expressions [",
+        "epl": "select MyCMS.wordcms.countMinSketchTopk(theString) from SupportBean"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "invalid"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-table-count-min-sketch",
+    "records": [
+      {
+        "case": "frequency-and-topk",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "topk",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "topk": [
+                {
+                  "frequency": 1,
+                  "value": "E1"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 2,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "topk",
+        "sequence": 2,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "topk": [
+                {
+                  "frequency": 1,
+                  "value": "E1"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 3,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 4,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "topk",
+        "sequence": 3,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "topk": [
+                {
+                  "frequency": 1,
+                  "value": "E1"
+                },
+                {
+                  "frequency": 1,
+                  "value": "E2"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 5,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 6,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "topk",
+        "sequence": 4,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "topk": [
+                {
+                  "frequency": 2,
+                  "value": "E2"
+                },
+                {
+                  "frequency": 1,
+                  "value": "E1"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 7,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 8,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 9,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "topk",
+        "sequence": 5,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "topk": [
+                {
+                  "frequency": 2,
+                  "value": "E2"
+                },
+                {
+                  "frequency": 1,
+                  "value": "E1"
+                },
+                {
+                  "frequency": 1,
+                  "value": "E3"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 10,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 11,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 12,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 13,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "topk",
+        "sequence": 6,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "topk": [
+                {
+                  "frequency": 2,
+                  "value": "E2"
+                },
+                {
+                  "frequency": 1,
+                  "value": "E1"
+                },
+                {
+                  "frequency": 1,
+                  "value": "E3"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 14,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 15,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 16,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 17,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "topk",
+        "sequence": 7,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "topk": [
+                {
+                  "frequency": 2,
+                  "value": "E2"
+                },
+                {
+                  "frequency": 2,
+                  "value": "E4"
+                },
+                {
+                  "frequency": 1,
+                  "value": "E1"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "deployed",
+        "statement": "join",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "join",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "deployed",
+        "statement": "subq",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "subq",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "doc-samples",
+        "operation": "deployed",
+        "statement": "schema-word-event",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "doc-samples",
+        "operation": "deployed",
+        "statement": "schema-estimate-event",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "doc-samples",
+        "operation": "deployed",
+        "statement": "table-word-count",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "doc-samples",
+        "operation": "deployed",
+        "statement": "table-word-count2",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "doc-samples",
+        "operation": "deployed",
+        "statement": "into-word-count",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "doc-samples",
+        "operation": "deployed",
+        "statement": "select-frequency",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "doc-samples",
+        "operation": "deployed",
+        "statement": "select-topk",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "non-string-type",
+        "operation": "deployed",
+        "statement": "table",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "non-string-type",
+        "operation": "deployed",
+        "statement": "into",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "non-string-type",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "non-string-type",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "non-string-type",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "invalid",
+        "operation": "deployed",
+        "statement": "table",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "cms-in-select",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'countMinSketch()': Count-min-sketch aggregation function 'countMinSketch' can only be used in create-table statements ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "cms-invalid-param",
+        "sequence": 0,
+        "value": "Failed to validate table-column expression 'countMinSketch(5)': Count-min-sketch aggregation function 'countMinSketch'  expects either no parameter or a single json parameter object ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "cms-invalid-json-param",
+        "sequence": 0,
+        "value": "Failed to validate table-column expression 'countMinSketch({xxx=3})': Unrecognized parameter 'xxx' ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "cms-invalid-eps",
+        "sequence": 0,
+        "value": "Failed to validate table-column expression 'countMinSketch({epsOfTotalCount=a})': Property 'epsOfTotalCount' expects an Double but receives a value of type String ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "cms-agent-not-found",
+        "sequence": 0,
+        "value": "Failed to validate table-column expression 'countMinSketch({agent=a})': Failed to instantiate agent provider: Could not load class by name 'a', please check imports ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "cms-agent-wrong-type",
+        "sequence": 0,
+        "value": "Failed to validate table-column expression 'countMinSketch({agent=java.lang.String})': Failed to instantiate agent provider: Class 'java.lang.String' does not implement interface 'com.espertech.esper.common.client.util.CountMinSketchAgentForge' ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "add-in-select",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'countMinSketchAdd(theString)': Count-min-sketch aggregation function 'countMinSketchAdd' can only be used with into-table"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "add-no-param",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'countMinSketchAdd()': Count-min-sketch aggregation function 'countMinSketchAdd' requires a single parameter expression"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "add-byte-param",
+        "sequence": 0,
+        "value": "Incompatible aggregation function for table 'MyCMS' column 'wordcms', expecting 'countMinSketch()' and received 'countMinSketchAdd(body)': Mismatching parameter return type, expected any of [class java.lang.String] but received byte[] ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "add-distinct",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'countMinSketchAdd(distinct \"abc\")': Count-min-sketch aggregation function 'countMinSketchAdd' is not supported with distinct ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "add-null",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'countMinSketchAdd(null)': Invalid null-type parameter"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "frequency-into-table",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'countMinSketchFrequency(theString)': Unknown single-row function, aggregation function or mapped or indexed property named 'countMinSketchFrequency' could not be resolved "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "frequency-select",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'countMinSketchFrequency()': Unknown single-row function, expression declaration, script or aggregation function named 'countMinSketchFrequency' could not be resolved"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "topk-select",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'countMinSketchTopk()': Unknown single-row function, expression declaration, script or aggregation function named 'countMinSketchTopk' could not be resolved"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "topk-param",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'MyCMS.wordcms.countMinSketchTopk(th...(43 chars)': Count-min-sketch aggregation function 'countMinSketchTopk' requires a no parameter expressions ["
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-table-count-min-sketch",
+    "records": [
+      {
+        "case": "frequency-and-topk",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "topk",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "topk": [
+                {
+                  "frequency": 1,
+                  "value": "E1"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 2,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "topk",
+        "sequence": 2,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "topk": [
+                {
+                  "frequency": 1,
+                  "value": "E1"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 3,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 4,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "topk",
+        "sequence": 3,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "topk": [
+                {
+                  "frequency": 1,
+                  "value": "E1"
+                },
+                {
+                  "frequency": 1,
+                  "value": "E2"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 5,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 6,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "topk",
+        "sequence": 4,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "topk": [
+                {
+                  "frequency": 2,
+                  "value": "E2"
+                },
+                {
+                  "frequency": 1,
+                  "value": "E1"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 7,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 8,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 9,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "topk",
+        "sequence": 5,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "topk": [
+                {
+                  "frequency": 2,
+                  "value": "E2"
+                },
+                {
+                  "frequency": 1,
+                  "value": "E1"
+                },
+                {
+                  "frequency": 1,
+                  "value": "E3"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 10,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 11,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 12,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 13,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "topk",
+        "sequence": 6,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "topk": [
+                {
+                  "frequency": 2,
+                  "value": "E2"
+                },
+                {
+                  "frequency": 1,
+                  "value": "E1"
+                },
+                {
+                  "frequency": 1,
+                  "value": "E3"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 14,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 15,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 16,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "frequency",
+        "sequence": 17,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "topk",
+        "sequence": 7,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "topk": [
+                {
+                  "frequency": 2,
+                  "value": "E2"
+                },
+                {
+                  "frequency": 2,
+                  "value": "E4"
+                },
+                {
+                  "frequency": 1,
+                  "value": "E1"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "deployed",
+        "statement": "join",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "join",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "deployed",
+        "statement": "subq",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "frequency-and-topk",
+        "operation": "listener",
+        "statement": "subq",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "doc-samples",
+        "operation": "deployed",
+        "statement": "schema-word-event",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "doc-samples",
+        "operation": "deployed",
+        "statement": "schema-estimate-event",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "doc-samples",
+        "operation": "deployed",
+        "statement": "table-word-count",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "doc-samples",
+        "operation": "deployed",
+        "statement": "table-word-count2",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "doc-samples",
+        "operation": "deployed",
+        "statement": "into-word-count",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "doc-samples",
+        "operation": "deployed",
+        "statement": "select-frequency",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "doc-samples",
+        "operation": "deployed",
+        "statement": "select-topk",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "non-string-type",
+        "operation": "deployed",
+        "statement": "table",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "non-string-type",
+        "operation": "deployed",
+        "statement": "into",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "non-string-type",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "non-string-type",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "non-string-type",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "freq": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "invalid",
+        "operation": "deployed",
+        "statement": "table",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "cms-in-select",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'countMinSketch()': Count-min-sketch aggregation function 'countMinSketch' can only be used in create-table statements ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "cms-invalid-param",
+        "sequence": 0,
+        "value": "Failed to validate table-column expression 'countMinSketch(5)': Count-min-sketch aggregation function 'countMinSketch'  expects either no parameter or a single json parameter object ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "cms-invalid-json-param",
+        "sequence": 0,
+        "value": "Failed to validate table-column expression 'countMinSketch({xxx=3})': Unrecognized parameter 'xxx' ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "cms-invalid-eps",
+        "sequence": 0,
+        "value": "Failed to validate table-column expression 'countMinSketch({epsOfTotalCount=a})': Property 'epsOfTotalCount' expects an Double but receives a value of type String ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "cms-agent-not-found",
+        "sequence": 0,
+        "value": "Failed to validate table-column expression 'countMinSketch({agent=a})': Failed to instantiate agent provider: Could not load class by name 'a', please check imports ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "cms-agent-wrong-type",
+        "sequence": 0,
+        "value": "Failed to validate table-column expression 'countMinSketch({agent=java.lang.String})': Failed to instantiate agent provider: Class 'java.lang.String' does not implement interface 'com.espertech.esper.common.client.util.CountMinSketchAgentForge' ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "add-in-select",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'countMinSketchAdd(theString)': Count-min-sketch aggregation function 'countMinSketchAdd' can only be used with into-table"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "add-no-param",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'countMinSketchAdd()': Count-min-sketch aggregation function 'countMinSketchAdd' requires a single parameter expression"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "add-byte-param",
+        "sequence": 0,
+        "value": "Incompatible aggregation function for table 'MyCMS' column 'wordcms', expecting 'countMinSketch()' and received 'countMinSketchAdd(body)': Mismatching parameter return type, expected any of [class java.lang.String] but received byte[] ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "add-distinct",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'countMinSketchAdd(distinct \"abc\")': Count-min-sketch aggregation function 'countMinSketchAdd' is not supported with distinct ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "add-null",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'countMinSketchAdd(null)': Invalid null-type parameter"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "frequency-into-table",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'countMinSketchFrequency(theString)': Unknown single-row function, aggregation function or mapped or indexed property named 'countMinSketchFrequency' could not be resolved "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "frequency-select",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'countMinSketchFrequency()': Unknown single-row function, expression declaration, script or aggregation function named 'countMinSketchFrequency' could not be resolved"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "topk-select",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'countMinSketchTopk()': Unknown single-row function, expression declaration, script or aggregation function named 'countMinSketchTopk' could not be resolved"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "topk-param",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'MyCMS.wordcms.countMinSketchTopk(th...(43 chars)': Count-min-sketch aggregation function 'countMinSketchTopk' requires a no parameter expressions ["
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

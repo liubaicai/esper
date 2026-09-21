@@ -55,80 +55,59 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly') committed and pushed as 9ac32d036; Git owns identity. Parity review PASS, two P3s fixed.
 
 ## Current work unit
-Active: Draft 4.492 ('infra-table-invalid').
+Active: Draft 4.493 ('infra-table-count-min-sketch').
 
-- [x] Contract frozen (.omp/contract-492.md) by NextJavaContract492 +
-  NextGoSurface492: InfraTableInvalid.java ALL 4 executions
-  (InfraInvalidAggMatchSingleFunc ord 0 / InfraInvalidAggMatchMultiFunc
-  ord 1 / InfraInvalidAnnotations ord 2 / InfraInvalid ord 3). Runtime IDs
-  java-runtime-70e525638c5fbaf37752 / -7c97277eedfa76b7e0cf /
-  -fd2a7de8e5606de63b80 / -b9b6435f81135ce15040.
-- [x] Shared-core changes (primary agent): `TableAggDecl` extended with
-  ParamType/Distinct/Filter/IgnoreNulls/NthSize/RateInterval/EventType +
-  `WithTableAggDecl`; `intoTableAggInfo` unwraps filter/distinct wrappers
-  and extracts signature details; `validateIntoTableCompatible` checks all
-  signature details; `validateIntoTable` checks group-by count/type vs PK
-  (plain grouping only), unidirectional joins, requires-aggregation;
-  `NewTableDefinition` rejects PK-on-expression and PK-on-event-type;
-  `RegisterTableInModule` rejects name collisions vs variables/schemas/
-  named-windows; `RecordStream.Window` on a table rejected; `OnRecord
-  (FromTable)` trigger input rejected; `RecordStream.MatchRecognize` on a
-  table rejected; `RegisterSchema` rejects table-name collision.
-  Engine suite green after fixing one test that reused a schema name for
-  a table (Java-invalid pattern).
-- [x] Assets integrated (TableInvalidAssets492): oracle + run script +
-  scenario + runner + run.go wiring. Two asset pin bugs fixed by primary
-  agent: `myaggsingle()`/`leaving()` declared renders must be `(*)` (Java's
-  ExprAggregateNodeBase prints `*` for zero-param aggs); runner error check
-  switched to errors.Is so DuplicateModuleObjectError (ErrorDependency) is
-  recognized; Go group-by-count message gained the trailing " group-by
-  expressions" (shared-core fix in plan.go); "skip"-pinned probes now omit
-  the trace value field like Java.
-- [x] Java trace regenerated via run script (md5 0074d825689a4a01c4246a5180ed6d6f,
-  104 records); `-mode infra-table-invalid-diff` passing / 0 differences;
-  evidence written to testdata/parity/infra-table-invalid.evidence.json.
-- [x] Manifest + run_test.go pins + docs: case.infra-table-invalid added
-  (4 runtime IDs, born-DV); mapping to trigger.table-named-window; summary
-  731 cases / 355 DV / 1377 DV runtime IDs; six-test family in run_test.go
-  green; roadmap + CHANGELOG entries prepended.
-- [x] Regression fixes after first `make check`: (1) `RegisterSchema`
-  table-name collision broke infra-nwtable-on-merge-flow-itv — runner
-  registered schema `MyInfraITV` unconditionally though Java only declares
-  that event type for the named-window variant; scoped registration to
-  `!isTable` (diff still 0). (2) `sorted(expr)` into-table rejection broke
-  infra-table-into-table `bound-unbound-sorted-minmaxby` — Java's bound
-  projection is zero-arg `sorted()` inheriting the declared key; runner now
-  uses `SortedEventsBy(eventValue(), intPrimitive, false)` (sortedValueKey
-  wildcard form, diff still 0).
-- [x] Independent parity review (ParityReview492): FAIL — 1 P1 + 4 P2 + 5 P3. All fixed:
-  P1 `info.eventType` now populated via `intoTableProvidedEventType`/`streamEventTypeName`
-  (join-event child or aggregate input stream; alias resolved through schema catalog) so the
-  declared `@type` check fires; `window-event-type` probe promoted to verified goSub.
-  P2 ignore-nulls message corrected to Java's "provided is ignore nulls" wording.
-  P2 guards added: table unidirectional join source ("Tables cannot be marked as
-  unidirectional"), update-istream ("Tables cannot be used in an update-istream statement"),
-  context declaration ("Tables cannot be used in a context declaration"), pattern atom
-  ("Tables cannot be used in pattern filter atoms") — all four probes promoted to verified
-  goSub. Write-only and retain are unrepresentable in the fluent API; contract corrected.
-  P2 group-by key check tightened to Java's boxed-subtype direction and applied to all
-  grouping forms (rollup exemption removed — Java validates unconditionally; the rollup
-  engine test was rewritten to a Java-valid 2-pk shape).
-  P2 named-window collision check removed from RegisterTableInModule (Java permits it).
-  P3 precedence reordered to Java's sequence (requires-aggregation → table lookup →
-  group-by → column compat → unidirectional); filter arg included in provided render;
-  count-distinct-param-type decl now sets Distinct; duplicated TableAggDecl comment removed
-  (facade regenerated); capability rollup extended (goRefs + 4 runtime IDs); probe counts
-  corrected to 43/6/5/50 in manifest/CHANGELOG/roadmap/contract; runner pins step.Case;
-  scenario javaFlags pinned [INVALIDITY] + oracle script updated.
-- [x] Post-fix gates: `make check` exit 0 (parity 80s, esper 110s); infra-table-invalid-diff
-  passing / 0 differences; into-table diff passing / 0 differences.
-- [x] Confirmation review (ParityReview492, round 2): caught stale oracle JAVA_FLAGS
-  constant — fixed to {"INVALIDITY"}, Java trace regenerated byte-identical (md5
-  0074d825689a4a01c4246a5180ed6d6f), ExpectContains pinned in all four matchers.
-  Round 3: PASS — all 104 probes verified, IDs/traces/evidence/manifest consistent,
-  regressions clean.
+- [x] Contract frozen (.omp/contract-493.md) from prefetched scouts
+  NextJavaContract493 + NextGoSurface493: InfraTableCountMinSketch ords 0-3
+  (f09401ff/87f8d005/4b4c531b/217779fa, flags=[]). Frozen API: TableAggDecl
+  gains TopK/Agent; CountMinSketchValue retains exact counts + topk capacity;
+  CountMinSketchTopK[T](sketch) accessor; countMinSketchAdd restricted to
+  into-table statements.
+- [x] Shared core: `CountMinSketchValue` retains exact counts + lastBump
+  sequence; `TopK()` derives Java's strict-> admission / last-of-lowest-bucket
+  eviction order lazily; `CountMinSketchTopKItem[T]` + `CountMinSketchTopK`
+  ref expression added; `TableAggDecl` gains `TopK`/`Agent`; declared topk
+  applied at `aggregateTableContributionRow` materialization; CMS into-table
+  classification (`countMinSketch` decl ↔ `count-min-sketch` kind) + param-type
+  check ("Mismatching parameter return type, expected any of [class
+  java.lang.String] but received byte[]"); form checks for distinct/null/
+  zero-param; `countMinSketchAdd` outside into-table rejected (existing test
+  rewritten to into-table form); `javaPrettyTypeName` renders `byte[]`.
+  `make check` green (parity 80s, esper 112s).
+- [x] Parity assets (TableCMSAssets493): runner `infra_table_count_min_sketch.go`,
+  scenario (4 cases / 88 steps), oracle `InfraTableCountMinSketchScenarioOracle.java`
+  + `run-infra-table-count-min-sketch.sh`, run.go/run_test.go wiring. Worker
+  transcription errors fixed by primary: oracle pinned step keys had mixed
+  13/14-field widths (16 pins + build-error template + EXPECTED_RECORDS 53->57
+  corrected against `stepKey`'s 13-field format); script deploy/deployed counts
+  15->14; test record count 53->57 (Java emits 57).
+- [x] Engine fixes found by replay: `SelectFromTableWhere` dropped the pattern
+  trigger (added `pattern: s.pattern`); `validateTrigger` now allows
+  `triggerSelectTable` for pattern triggers via `validatePatternTableRead`
+  (Java `select T.c.m() from pattern[...]`); `count-min-sketch` node check
+  relaxed to reject only >2 children so `countMinSketchAdd()` reaches the
+  into-table param-count diagnostic; `intoTableAggregateInfo` treats `null`
+  kind as null arg; `rejectInfraTableCMSExtraFields` rejects unknown top-level
+  scenario fields.
+- [x] Java trace via oracle (57 records), Go trace byte-comparable, diff mode
+  `passing` / 0 differences; evidence `infra-table-count-min-sketch.evidence.json`.
+- [x] Manifest: `case.infra-table-count-min-sketch` born-DV with 4 runtime IDs;
+  `infra.table-count-min-sketch` capability born-DV. Summary +1 case/capability,
+  +4 DV runtime IDs/associations, unreferenced -4.
+- [x] Gates + parity review: `make check` green (parity 81s, esper 112s);
+  parity review initial FAIL (2 P2 + 5 P3) -> all fixed -> confirmation PASS.
+  P2s: restored `validateExpressionSubqueries` in `validateJoinScopedExpression`;
+  `validatePatternTableRead` mirrors the event select-table checks incl.
+  where-predicate field validation. P3s: `SelectFromTable` pattern propagation,
+  payload-pinned step keys, dead helper removed, Draft typo, truncated bullet.
+- [x] Shipped; Git owns identity.
 
 ## Previous work units (shipped)
+
+- Shipped: Draft 4.492 ('infra-table-invalid') committed and pushed as a136a2f7f;
+  Git owns identity. Parity review PASS after two fix rounds (dead eventType
+  check, missing table-misuse guards, over-strict named-window collision,
+  lenient group-by check, stale oracle JAVA_FLAGS).
 - Draft 4.491 ('infra-table-context') committed and pushed as
   6b410228b; Git owns identity. Parity review PASS after two P2 fixes
   (RegisterTableInModule context-existence check; validateTableContext

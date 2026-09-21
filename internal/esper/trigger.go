@@ -677,6 +677,7 @@ func (s TriggerStream[T]) SelectFromTable(table string, keys []Expr, selections 
 		env: s.env,
 		definition: &triggerDefinition{
 			input:      s.node,
+			pattern:    s.pattern,
 			table:      strings.TrimSpace(table),
 			action:     triggerSelectTable,
 			keys:       append([]Expr(nil), keys...),
@@ -692,6 +693,7 @@ func (s TriggerStream[T]) SelectFromTableWhere(table string, predicate Expressio
 		env: s.env,
 		definition: &triggerDefinition{
 			input:      s.node,
+			pattern:    s.pattern,
 			table:      strings.TrimSpace(table),
 			action:     triggerSelectTable,
 			where:      predicate,
@@ -984,8 +986,15 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 		if err := validatePattern(definition.pattern); err != nil {
 			return err
 		}
-		if definition.action != triggerSetVariables {
+		// Java's `select T.c.m() from pattern[...]` reads a table from a
+		// pattern-sourced select; the fluent surface maps it to a
+		// pattern-triggered table read. Variable assignments remain the only
+		// other pattern-trigger action.
+		if definition.action != triggerSetVariables && definition.action != triggerSelectTable {
 			return NewError(ErrorInvalidRule, "pattern triggers support variable assignments only")
+		}
+		if definition.action == triggerSelectTable {
+			return e.validatePatternTableRead(definition)
 		}
 		return e.validateVariableTriggerAssignments(definition)
 	}
@@ -1301,6 +1310,59 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 					return fmt.Errorf("table merge clause %d action %d condition: %w", index, actionIndex, conditionErr)
 				}
 			}
+		}
+	}
+	return nil
+}
+
+// validatePatternTableRead validates a pattern-triggered table read: the
+// target table must exist, the where clause must be a non-aggregate bool, and
+// selections follow the same rules as the event-triggered select-table path.
+func (e *Environment) validatePatternTableRead(definition *triggerDefinition) error {
+	table, ok := e.TableInModule(definition.moduleName, definition.table)
+	if !ok {
+		return NewError(ErrorUnknownName, fmt.Sprintf("trigger references unknown table %q", definition.table))
+	}
+	if definition.where != nil {
+		if len(definition.keys) != 0 {
+			return NewError(ErrorInvalidRule, "table predicate select cannot also provide primary-key expressions")
+		}
+		if definition.where.Type() != typeOf[bool]() {
+			return NewError(ErrorTypeMismatch, "table trigger predicate must return bool")
+		}
+		if isAggregateExpression(definition.where) {
+			return NewError(ErrorInvalidRule, "an aggregate function may not appear in a WHERE clause (use the HAVING clause)")
+		}
+		if err := e.validateTriggerTargetExpression(definition.input, table.schema, definition.where, "table-field"); err != nil {
+			return fmt.Errorf("table trigger predicate: %w", err)
+		}
+	} else if len(definition.keys) != 0 {
+		return NewError(ErrorInvalidRule, "pattern-triggered table reads require a predicate, not primary-key expressions")
+	}
+	if len(definition.selections) == 0 {
+		return NewError(ErrorInvalidRule, "table select requires at least one projection")
+	}
+	seenSelections := make(map[string]struct{}, len(definition.selections))
+	tableNode := &streamNode{kind: streamTable, sourceName: definition.table, sourceType: typeOf[any]()}
+	for _, selection := range definition.selections {
+		if strings.TrimSpace(selection.Name) == "" || selection.Expr == nil {
+			return NewError(ErrorInvalidRule, "table select projection requires a name and expression")
+		}
+		if _, exists := seenSelections[selection.Name]; exists {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("table select duplicates alias %q", selection.Name))
+		}
+		seenSelections[selection.Name] = struct{}{}
+		if expressionContainsPrevious(selection.Expr) {
+			return NewError(ErrorInvalidRule, "Previous function cannot be used in this context")
+		}
+		var expressionErr error
+		if definition.where != nil {
+			expressionErr = e.validateTriggerTargetExpression(definition.input, table.schema, selection.Expr, "table-field")
+		} else {
+			expressionErr = e.validateExprFields(tableNode, selection.Expr)
+		}
+		if expressionErr != nil {
+			return fmt.Errorf("table select projection %q: %w", selection.Name, expressionErr)
 		}
 	}
 	return nil
