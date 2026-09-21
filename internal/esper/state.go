@@ -129,17 +129,28 @@ func UniqueBTreeIndex(name string, columns ...string) TableOption {
 }
 
 type tableConfig struct {
-	indexes []TableIndexDefinition
+	indexes     []TableIndexDefinition
+	contextName string
+}
+
+// TableContext binds a table to one registered context. Statements that
+// read or write the table must run inside the same context; building a
+// statement that references the table without the context (or under a
+// different context) fails at compile time, mirroring Java's
+// context-scoped table visibility rule.
+func TableContext(contextName string) TableOption {
+	return func(config *tableConfig) { config.contextName = strings.TrimSpace(contextName) }
 }
 
 // TableDefinition is an immutable compile-time table declaration.
 type TableDefinition struct {
-	name       string
-	moduleName string
-	columns    []TableColumn
-	schema     Schema
-	primaryKey []string
-	indexes    []TableIndexDefinition
+	name        string
+	moduleName  string
+	columns     []TableColumn
+	schema      Schema
+	primaryKey  []string
+	indexes     []TableIndexDefinition
+	contextName string
 }
 
 func NewTableDefinition(name string, columns []TableColumn, options ...TableOption) (TableDefinition, error) {
@@ -213,11 +224,12 @@ func NewTableDefinition(name string, columns []TableColumn, options ...TableOpti
 		return TableDefinition{}, err
 	}
 	return TableDefinition{
-		name:       name,
-		columns:    copyColumns,
-		schema:     schema,
-		primaryKey: primaryKey,
-		indexes:    cloneTableIndexDefinitions(config.indexes),
+		name:        name,
+		columns:     copyColumns,
+		schema:      schema,
+		primaryKey:  primaryKey,
+		indexes:     cloneTableIndexDefinitions(config.indexes),
+		contextName: config.contextName,
 	}, nil
 }
 
@@ -226,6 +238,7 @@ func (d TableDefinition) Module() string         { return d.moduleName }
 func (d TableDefinition) Schema() Schema         { return d.schema }
 func (d TableDefinition) Columns() []TableColumn { return append([]TableColumn(nil), d.columns...) }
 func (d TableDefinition) PrimaryKey() []string   { return append([]string(nil), d.primaryKey...) }
+func (d TableDefinition) Context() string        { return d.contextName }
 func (d TableDefinition) Indexes() []TableIndexDefinition {
 	result := append([]TableIndexDefinition(nil), d.indexes...)
 	for index := range result {
@@ -247,6 +260,11 @@ func (e *Environment) RegisterTableInModule(moduleName, name string, columns []T
 	}
 	if e == nil {
 		return TableDefinition{}, NewError(ErrorDependency, "nil environment")
+	}
+	if definition.contextName != "" {
+		if _, ok := e.Context(definition.contextName); !ok {
+			return TableDefinition{}, NewError(ErrorUnknownName, fmt.Sprintf("context %q is not registered", definition.contextName))
+		}
 	}
 	moduleName = normalizeModuleName(moduleName)
 	e.mu.Lock()

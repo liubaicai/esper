@@ -7118,6 +7118,15 @@ func TableColumnOf[T any](name string, options ...TableColumnOption) TableColumn
 // TableColumnOption changes the metadata of a table column declaration.
 type TableColumnOption = internalengine.TableColumnOption
 
+// TableContext binds a table to one registered context. Statements that
+// read or write the table must run inside the same context; building a
+// statement that references the table without the context (or under a
+// different context) fails at compile time, mirroring Java's
+// context-scoped table visibility rule.
+func TableContext(contextName string) TableOption {
+	return internalengine.TableContext(contextName)
+}
+
 // TableDefinition is an immutable compile-time table declaration.
 type TableDefinition = internalengine.TableDefinition
 

@@ -64885,6 +64885,258 @@ func assertInfraTableSubqueryTrace(t *testing.T, trace compat.Trace) {
 	}
 }
 
+func TestRunInfraTableContextDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraTableContextID,
+		"-scenario", filepath.Join(root, infraTableContextID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertInfraTableContextTrace(t, trace)
+}
+
+func TestRunInfraTableContextDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), infraTableContextID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraTableContextID + "-diff",
+		"-scenario", filepath.Join(root, infraTableContextID+".json"),
+		"-java-trace", filepath.Join(root, infraTableContextID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != infraTableContextJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, infraTableContextJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, infraTableContextJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, infraTableContextJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertInfraTableContextTrace(t, evidence.JavaTrace)
+	assertInfraTableContextTrace(t, evidence.GoTrace)
+}
+
+func TestRunInfraTableContextDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			// context-partitioned's first listener row pins c0=110 for the
+			// E1 partition after the 50+60 feed.
+			name: "context-partitioned-listener-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "context-partitioned" && rec.Operation == "listener" && len(rec.New) > 0 {
+						rec.New[0].Fields["c0"] = 999
+						return
+					}
+				}
+				panic("no context-partitioned listener record")
+			},
+		},
+		{
+			// context-nonoverlapping's first snapshot batch pins
+			// {E1,110},{E2,20} at the first SupportBean_S0 terminator.
+			name: "context-nonoverlapping-batch-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "context-nonoverlapping" && rec.Operation == "listener" && len(rec.New) > 0 {
+						rec.New[0].Fields["c1"] = 999
+						return
+					}
+				}
+				panic("no context-nonoverlapping listener record")
+			},
+		},
+		{
+			// context-invalid's compile-error rows pin the Java message
+			// prefixes; drifting the first prefix must fail the diff.
+			name: "context-invalid-compile-error-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "context-invalid" && rec.Operation == "compile-error" {
+						rec.Value = "wrong prefix"
+						return
+					}
+				}
+				panic("no context-invalid compile-error record")
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:18]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join(root, infraTableContextID+".evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), infraTableContextID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", infraTableContextID + "-diff",
+				"-scenario", filepath.Join(root, infraTableContextID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunInfraTableContextCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, infraTableContextID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, infraTableContextID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, infraTableContextID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if !reflect.DeepEqual(javaTrace.Records, evidence.JavaTrace.Records) ||
+		!reflect.DeepEqual(goTrace.Records, evidence.GoTrace.Records) {
+		t.Fatal("checked-in traces diverge from evidence")
+	}
+}
+
+func TestRunInfraTableContextRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, infraTableContextID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "context-partitioned"`), []byte(`"case": "context-partitioned", "extra": 0`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-8b5b2d92d108da7e8fb2"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`select MyTable.thesum as c0 from SupportBean_S0`), []byte(`select MyTable.thesum as c0 from SupportBean_S1`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", infraTableContextID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunInfraTableContextRuntimeIDMappingMatchesScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, infraTableContextID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenario struct {
+		Cases []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &scenario); err != nil {
+		t.Fatalf("scenario decode: %v", err)
+	}
+	if len(scenario.Cases) != len(infraTableContextJavaRuntimeIDs) {
+		t.Fatalf("scenario cases = %d, want %d", len(scenario.Cases), len(infraTableContextJavaRuntimeIDs))
+	}
+	for index, c := range scenario.Cases {
+		if c.RuntimeID != infraTableContextJavaRuntimeIDs[index] {
+			t.Fatalf("case %d runtimeId = %q, want %q", index, c.RuntimeID, infraTableContextJavaRuntimeIDs[index])
+		}
+	}
+}
+
+func assertInfraTableContextTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.ID != infraTableContextID {
+		t.Fatalf("trace id = %q", trace.ID)
+	}
+	if len(trace.Records) != 19 {
+		t.Fatalf("trace records = %d, want 19", len(trace.Records))
+	}
+	counts := map[string]map[string]int{}
+	for _, record := range trace.Records {
+		if counts[record.Case] == nil {
+			counts[record.Case] = map[string]int{}
+		}
+		counts[record.Case][record.Operation]++
+	}
+	want := map[string]map[string]int{
+		"context-partitioned":    {"deployed": 4, "listener": 2},
+		"context-nonoverlapping": {"deployed": 6, "listener": 2},
+		"context-invalid":        {"deployed": 2, "compile-error": 3},
+	}
+	if !reflect.DeepEqual(counts, want) {
+		t.Fatalf("record counts = %#v, want %#v", counts, want)
+	}
+}
+
 func assertInfraTableSelectEnumMultikeyTrace(t *testing.T, trace compat.Trace) {
 	t.Helper()
 	if trace.Version != compat.ScenarioVersion || trace.ID != infraTableSelectEnumMultikeyID {

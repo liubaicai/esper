@@ -55,35 +55,39 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly') committed and pushed as 9ac32d036; Git owns identity. Parity review PASS, two P3s fixed.
 
 ## Current work unit
-Active: Draft 4.490 ('infra-table-subquery').
+Active: Draft 4.491 ('infra-table-context') — SHIPPED.
 
-- [x] Contract frozen (.omp/contract-490.md) by NextJavaContract490 +
-  NextGoSurface490: InfraTableSubquery.java ALL 4 executions —
-  SubqueryAgainstKeyed (ord 0, correlated PK lookup), AgainstUnkeyed
-  (ord 1, full-scan on unkeyed, subquery deploys before feed),
-  SecondaryIndex (ord 2, index maintained across merge update of indexed
-  column), InFilter (ord 3, subquery inside stream filter +
-  orderBy().firstOf()). Runtime IDs java-runtime-7b449dd45dd6961c5d61 /
-  -9cde668ef5b4781b068a / -8ece65643b6ec15616f2 / -a839574d871f88c2fdbf.
-  Fully asset-only.
-- [x] Assets (TableSubqueryAssets490): oracle + run script + scenario
-  (4 cases / 54 steps / 23 records) + runner + run.go wiring. Contract
-  ord-3 was re-frozen mid-flight to the real InfraTableSubqueryInFilter
-  (single 3-statement module, uncorrelated orderBy().firstOf() subquery
-  inside the stream filter). Java trace regenerated; `-mode
-  infra-table-subquery-diff` passing / 0 differences.
-- [x] Manifest updated: new born-DV case.infra-table-subquery
-  (729 cases / 353 DV / 1370 DV runtime IDs); capability
+- [x] Contract frozen (.omp/contract-491.md) by NextJavaContract491 +
+  NextGoSurface491: InfraTableContext.java ALL 3 executions
+  (InfraPartitioned ord 0 / InfraNonOverlapping ord 1 /
+  InfraTableContextInvalid ord 2). Runtime IDs
+  java-runtime-8b5b2d92d108da7e8fb2 / -5c625828c160a26df78b /
+  -df03d93aca6b6b5ccd59.
+- [x] Shared-core change (primary agent): `esper.TableContext(name)`
+  TableOption + `TableDefinition.contextName`/`Context()` +
+  `validateTableContext` in plan.go covering stream sources, joins,
+  subqueries (recursive into expression children), into-table targets and
+  trigger targets. `RegisterTableInModule` rejects undeclared contexts.
+- [x] Assets (TableContextAssets491): oracle + run script + scenario
+  (3 cases / 46 steps / 19 records) + runner + run.go wiring. Java trace
+  regenerated; `-mode infra-table-context-diff` passing / 0 differences.
+- [x] Manifest updated: new born-DV case.infra-table-context
+  (730 cases / 354 DV / 1373 DV runtime IDs); capability
   trigger.table-named-window DV list + goRefs + mapping extended.
 - [x] run_test.go: six pinned tests all green.
-- [x] Independent parity review (ParityReview490): PASS; P3s are
-  precedent-consistent conventions (per-step case field not pinned in
-  step keys — same as the 489 runner).
+- [x] Independent parity review (ParityReview491): FAIL → two P2s fixed
+  (RegisterTableInModule context-existence check; validateTableContext
+  recurses into expression children for nested subqueries) + one P3
+  (PLANS.md duplicate heading removed). Re-verified: diff still
+  passing / 0 differences, engine + parity suites green.
 - [x] Full local gates GREEN: make check exit 0.
 
 ## Previous work units (shipped)
+- Draft 4.490 ('infra-table-subquery') committed and pushed as
+  50bed7548; Git owns identity. Parity review PASS (P3s precedent-consistent).
 - Draft 4.489 ('infra-table-faf-execute-query') committed and pushed as
   da1ab468f; Git owns identity. Parity review PASS (one P3 fixed).
+
 - Draft 4.488 ('infra-table-update-and-index') committed and pushed as
   195a2a472; Git owns identity. Parity review PASS after one P2 fix
   (deploy-time merge unique-key re-check against live table indexes).

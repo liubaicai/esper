@@ -1,0 +1,102 @@
+{
+  "version": "esper-parity/v1",
+  "id": "infra-table-context",
+  "description": "InfraTableContext ordinals 0-2: InfraPartitioned deploys the CtxPerString partitioned context, an unkeyed context-bound MyTable, an into-table sum feed and an s0 reading MyTable.thesum per SupportBean_S0 partition key, pinning c0=110 then c0=20; InfraNonOverlapping deploys the CtxNowTillS0 start-@now/end-SupportBean_S0 context, a keyed context-bound MyTable fed by a grouped into-table sum and an s0 emitting the partition table as one output-snapshot-when-terminated batch per SupportBean_S0(-1) terminator ({E1,110},{E2,20} then {E1,30},{E3,100}), with a late create index on col0 and a deploy-only MyTable/SupportBean_S1 join; InfraTableContextInvalid deploys the SimpleCtx scheduled context and a context-bound keyed MyTable, then pins three tryInvalidCompile prefixes for a contextless select, a contextless subquery and a contextless insert-into (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableContext.java).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableContext.java",
+  "javaRuntimes": [
+    "java-runtime-8b5b2d92d108da7e8fb2",
+    "java-runtime-5c625828c160a26df78b",
+    "java-runtime-df03d93aca6b6b5ccd59"
+  ],
+  "javaNames": [
+    "InfraPartitioned",
+    "InfraNonOverlapping",
+    "InfraTableContextInvalid"
+  ],
+  "javaStaticIds": [
+    "java-62ab3ac014745d5ab5c5",
+    "java-969b28d4058f010a19af",
+    "java-69b99206b5ca50456737"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "context-partitioned",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-8b5b2d92d108da7e8fb2",
+      "executionName": "InfraPartitioned",
+      "observation": "listener; the partitioned context keys MyTable per theString/p00 so S0(0,E1) reads the E1-partition sum 110 and S0(0,E2) reads 20",
+      "iteratorSnapshots": 0,
+      "epl": "@public create context CtxPerString partition by theString from SupportBean, p00 from SupportBean_S0\n@public context CtxPerString create table MyTable(thesum sum(int))\ncontext CtxPerString into table MyTable select sum(intPrimitive) as thesum from SupportBean\n@name('s0') context CtxPerString select MyTable.thesum as c0 from SupportBean_S0"
+    },
+    {
+      "case": "context-nonoverlapping",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-5c625828c160a26df78b",
+      "executionName": "InfraNonOverlapping",
+      "observation": "listener; s0 emits the whole partition table as one any-order new batch per SupportBean_S0(-1) terminator ({E1,110},{E2,20} then {E1,30},{E3,100}); the mid-run create index on col0 and the deploy-only MyTable/SupportBean_S1 join carry deployed markers only",
+      "iteratorSnapshots": 0,
+      "epl": "@public create context CtxNowTillS0 start @now end SupportBean_S0\n@public context CtxNowTillS0 create table MyTable(pkey string primary key, thesum sum(int), col0 string)\ncontext CtxNowTillS0 into table MyTable select sum(intPrimitive) as thesum from SupportBean group by theString\n@name('s0') context CtxNowTillS0 select pkey as c0, thesum as c1 from MyTable output snapshot when terminated\ncontext CtxNowTillS0 create index MyIdx on MyTable(col0)\ncontext CtxNowTillS0 select * from MyTable, SupportBean_S1 where col0 = p11"
+    },
+    {
+      "case": "context-invalid",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-df03d93aca6b6b5ccd59",
+      "executionName": "InfraTableContextInvalid",
+      "observation": "compile-error; three tryInvalidCompile probes pin the context-visibility prefixes for a contextless select, a contextless subquery and a contextless insert-into against SimpleCtx-bound MyTable",
+      "iteratorSnapshots": 0,
+      "epl": "@public create context SimpleCtx start after 1 sec end after 1 sec\n@public context SimpleCtx create table MyTable(pkey string primary key, thesum sum(int), col0 string)\nselect * from MyTable\nselect (select * from MyTable) from SupportBean\ninsert into MyTable select theString as pkey from SupportBean"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "context-partitioned"},
+    {"op": "deploy", "case": "context-partitioned", "statement": "ctx", "epl": "@public create context CtxPerString partition by theString from SupportBean, p00 from SupportBean_S0"},
+    {"op": "deployed", "case": "context-partitioned", "statement": "ctx"},
+    {"op": "deploy", "case": "context-partitioned", "statement": "create", "epl": "@public context CtxPerString create table MyTable(thesum sum(int))"},
+    {"op": "deployed", "case": "context-partitioned", "statement": "create"},
+    {"op": "deploy", "case": "context-partitioned", "statement": "into", "epl": "context CtxPerString into table MyTable select sum(intPrimitive) as thesum from SupportBean"},
+    {"op": "deployed", "case": "context-partitioned", "statement": "into"},
+    {"op": "deploy", "case": "context-partitioned", "statement": "s0", "epl": "@name('s0') context CtxPerString select MyTable.thesum as c0 from SupportBean_S0"},
+    {"op": "deployed", "case": "context-partitioned", "statement": "s0"},
+    {"op": "send", "case": "context-partitioned", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 50}},
+    {"op": "send", "case": "context-partitioned", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 20}},
+    {"op": "send", "case": "context-partitioned", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 60}},
+    {"op": "send", "case": "context-partitioned", "eventType": "SupportBean_S0", "payload": {"id": 0, "p00": "E1"}},
+    {"op": "send", "case": "context-partitioned", "eventType": "SupportBean_S0", "payload": {"id": 0, "p00": "E2"}},
+    {"op": "undeploy-all", "case": "context-partitioned"},
+
+    {"op": "case", "case": "context-nonoverlapping"},
+    {"op": "deploy", "case": "context-nonoverlapping", "statement": "ctx", "epl": "@public create context CtxNowTillS0 start @now end SupportBean_S0"},
+    {"op": "deployed", "case": "context-nonoverlapping", "statement": "ctx"},
+    {"op": "deploy", "case": "context-nonoverlapping", "statement": "create", "epl": "@public context CtxNowTillS0 create table MyTable(pkey string primary key, thesum sum(int), col0 string)"},
+    {"op": "deployed", "case": "context-nonoverlapping", "statement": "create"},
+    {"op": "deploy", "case": "context-nonoverlapping", "statement": "into", "epl": "context CtxNowTillS0 into table MyTable select sum(intPrimitive) as thesum from SupportBean group by theString"},
+    {"op": "deployed", "case": "context-nonoverlapping", "statement": "into"},
+    {"op": "deploy", "case": "context-nonoverlapping", "statement": "s0", "epl": "@name('s0') context CtxNowTillS0 select pkey as c0, thesum as c1 from MyTable output snapshot when terminated"},
+    {"op": "deployed", "case": "context-nonoverlapping", "statement": "s0"},
+    {"op": "send", "case": "context-nonoverlapping", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 50}},
+    {"op": "send", "case": "context-nonoverlapping", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 20}},
+    {"op": "send", "case": "context-nonoverlapping", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 60}},
+    {"op": "send", "case": "context-nonoverlapping", "eventType": "SupportBean_S0", "payload": {"id": -1}},
+    {"op": "deploy", "case": "context-nonoverlapping", "statement": "index", "epl": "context CtxNowTillS0 create index MyIdx on MyTable(col0)"},
+    {"op": "deployed", "case": "context-nonoverlapping", "statement": "index"},
+    {"op": "deploy", "case": "context-nonoverlapping", "statement": "join", "epl": "context CtxNowTillS0 select * from MyTable, SupportBean_S1 where col0 = p11"},
+    {"op": "deployed", "case": "context-nonoverlapping", "statement": "join"},
+    {"op": "send", "case": "context-nonoverlapping", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 90}},
+    {"op": "send", "case": "context-nonoverlapping", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 30}},
+    {"op": "send", "case": "context-nonoverlapping", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 10}},
+    {"op": "send", "case": "context-nonoverlapping", "eventType": "SupportBean_S0", "payload": {"id": -1}},
+    {"op": "undeploy-all", "case": "context-nonoverlapping"},
+
+    {"op": "case", "case": "context-invalid"},
+    {"op": "deploy", "case": "context-invalid", "statement": "ctx", "epl": "@public create context SimpleCtx start after 1 sec end after 1 sec"},
+    {"op": "deployed", "case": "context-invalid", "statement": "ctx"},
+    {"op": "deploy", "case": "context-invalid", "statement": "create", "epl": "@public context SimpleCtx create table MyTable(pkey string primary key, thesum sum(int), col0 string)"},
+    {"op": "deployed", "case": "context-invalid", "statement": "create"},
+    {"op": "build-error", "case": "context-invalid", "statement": "select-table", "epl": "select * from MyTable", "expectError": "Table by name 'MyTable' has been declared for context 'SimpleCtx' and can only be used within the same context ["},
+    {"op": "build-error", "case": "context-invalid", "statement": "subquery-table", "epl": "select (select * from MyTable) from SupportBean", "expectError": "Failed to plan subquery number 1 querying MyTable: Mismatch in context specification, the context for the table 'MyTable' is 'SimpleCtx' and the query specifies no context  [select (select * from MyTable) from SupportBean]"},
+    {"op": "build-error", "case": "context-invalid", "statement": "insert-table", "epl": "insert into MyTable select theString as pkey from SupportBean", "expectError": "Table by name 'MyTable' has been declared for context 'SimpleCtx' and can only be used within the same context ["},
+    {"op": "undeploy-all", "case": "context-invalid"}
+  ]
+}

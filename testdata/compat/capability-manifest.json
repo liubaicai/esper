@@ -1477,7 +1477,8 @@
     "internal/esper/trigger_index.go",
     "internal/compat/scenario.go",
     "internal/app/parity/infra_table_faf_execute_query.go",
-    "internal/app/parity/infra_table_subquery.go"
+    "internal/app/parity/infra_table_subquery.go",
+    "internal/app/parity/infra_table_context.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -1592,7 +1593,10 @@
     "java-runtime-7b449dd45dd6961c5d61",
     "java-runtime-9cde668ef5b4781b068a",
     "java-runtime-8ece65643b6ec15616f2",
-    "java-runtime-a839574d871f88c2fdbf"
+    "java-runtime-a839574d871f88c2fdbf",
+    "java-runtime-8b5b2d92d108da7e8fb2",
+    "java-runtime-5c625828c160a26df78b",
+    "java-runtime-df03d93aca6b6b5ccd59"
    ],
    "representativeScenarioIds": [
     "named-window-mutation",
@@ -46914,6 +46918,61 @@
    "notes": [
     "Born-DV: InfraTableSubquery ords 0-3 \u2014 SubqueryAgainstKeyed (correlated PK scalar subquery), AgainstUnkeyed (full-scan on unkeyed, subquery deployed before feed), SecondaryIndex (secondary index maintained across merge update of indexed column), InFilter (uncorrelated orderBy().firstOf() subquery inside stream filter). Java/Go 23 records, 0 differences. Fully asset-only; no shared-core changes."
    ]
+  },
+  {
+   "id": "case.infra-table-context",
+   "javaRuntimeIds": [
+    "java-runtime-8b5b2d92d108da7e8fb2",
+    "java-runtime-5c625828c160a26df78b",
+    "java-runtime-df03d93aca6b6b5ccd59"
+   ],
+   "javaStaticIds": [
+    "java-62ab3ac014745d5ab5c5",
+    "java-969b28d4058f010a19af",
+    "java-69b99206b5ca50456737"
+   ],
+   "javaNames": [
+    "InfraPartitioned",
+    "InfraNonOverlapping",
+    "InfraTableContextInvalid"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableContext.java"
+   ],
+   "goTests": [
+    "internal/app/parity/infra_table_context.go"
+   ],
+   "tags": [
+    "infra",
+    "table",
+    "context",
+    "born-differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-table-context.json",
+    "testdata/parity/infra-table-context.trace.json",
+    "testdata/parity/infra-table-context.go.trace.json",
+    "testdata/parity/infra-table-context.evidence.json",
+    "tools/java-oracle/InfraTableContextScenarioOracle.java",
+    "tools/java-oracle/run-infra-table-context.sh",
+    "javaCommit=9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+    "java=17"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-8b5b2d92d108da7e8fb2",
+    "java-runtime-5c625828c160a26df78b",
+    "java-runtime-df03d93aca6b6b5ccd59"
+   ],
+   "notes": [
+    "Born-DV: InfraTableContext ords 0-2 \u2014 InfraPartitioned (CtxPerString partitioned context + unkeyed context-bound table + into-table sum + s0 reads MyTable.thesum per partition), InfraNonOverlapping (CtxNowTillS0 start-@now/end-S0 context + keyed table + output snapshot when terminated batches + mid-run create index + deploy-only join), InfraTableContextInvalid (SimpleCtx + three context-visibility tryInvalidCompile probes). Java/Go 19 records, 0 differences. Shared-core: esper.TableContext option + validateTableContext."
+   ]
   }
  ],
  "mappings": [
@@ -50172,13 +50231,17 @@
   {
    "capabilityId": "trigger.table-named-window",
    "caseId": "case.infra-table-subquery"
+  },
+  {
+   "capabilityId": "trigger.table-named-window",
+   "caseId": "case.infra-table-context"
   }
  ],
  "summary": {
-  "inventoriedCases": 729,
-  "implementedCases": 727,
-  "differentialVerifiedCases": 353,
-  "differentialVerifiedRuntimeIds": 1370,
+  "inventoriedCases": 730,
+  "implementedCases": 728,
+  "differentialVerifiedCases": 354,
+  "differentialVerifiedRuntimeIds": 1373,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -50188,13 +50251,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3920,
-  "referencedJavaRuntimeIds": 3492,
+  "runtimeAssociationCount": 3923,
+  "referencedJavaRuntimeIds": 3495,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 644,
+  "unreferencedJavaRuntimeIds": 641,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 729,
+  "totalCases": 730,
   "totalCapabilities": 122
  }
 }

@@ -744,6 +744,9 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 			}
 		}
 	}
+	if err := e.validateTableContext(query); err != nil {
+		return Plan{}, err
+	}
 	if query.contextName != "" {
 		definition, ok := e.Context(query.contextName)
 		if !ok {
@@ -1377,6 +1380,99 @@ func (e *Environment) validateNamedWindowTriggerContext(definition *triggerDefin
 		return NewError(ErrorInvalidRule, fmt.Sprintf("named window %q was declared with context %q; trigger must declare the same context", definition.table, declared))
 	}
 	return NewError(ErrorInvalidRule, fmt.Sprintf("named window %q was declared with context %q; trigger uses context %q", definition.table, declared, contextName))
+}
+
+// validateTableContext enforces Java's context-scoped table visibility: a
+// table declared under a context may only be read or written by statements
+// running inside the same context. The check covers the statement's own
+// stream sources (including joins), subquery sources, into-table targets and
+// trigger targets.
+func (e *Environment) validateTableContext(query Query) error {
+	if e == nil {
+		return nil
+	}
+	contextName := strings.TrimSpace(query.contextName)
+	check := func(moduleName, tableName string, subquery bool) error {
+		definition, ok := e.TableInModule(moduleName, tableName)
+		if !ok {
+			return nil
+		}
+		declared := strings.TrimSpace(definition.contextName)
+		if declared == "" || declared == contextName {
+			return nil
+		}
+		if subquery {
+			if contextName == "" {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("subquery on table %q: mismatch in context specification, the context for the table is %q and the query specifies no context", tableName, declared))
+			}
+			return NewError(ErrorInvalidRule, fmt.Sprintf("subquery on table %q: mismatch in context specification, the context for the table is %q and the query specifies context %q", tableName, declared, contextName))
+		}
+		return NewError(ErrorInvalidRule, fmt.Sprintf("table %q has been declared for context %q and can only be used within the same context", tableName, declared))
+	}
+	checkNode := func(node *streamNode) error {
+		base, err := sourceNode(node)
+		if err != nil || base == nil || base.kind != streamTable {
+			return nil
+		}
+		return check(base.moduleName, base.sourceName, false)
+	}
+	if err := checkNode(query.input); err != nil {
+		return err
+	}
+	for _, join := range []*joinDefinition{query.join, aggregateJoin(query.aggregate)} {
+		for _, source := range joinDefinitionSources(join) {
+			if err := checkNode(source); err != nil {
+				return err
+			}
+		}
+	}
+	var checkSubqueries func(node *exprNode) error
+	checkSubqueries = func(node *exprNode) error {
+		if node == nil {
+			return nil
+		}
+		if node.subquery != nil {
+			base, err := sourceNode(node.subquery.source)
+			if err == nil && base != nil && base.kind == streamTable {
+				if err := check(base.moduleName, base.sourceName, true); err != nil {
+					return err
+				}
+			}
+		}
+		for _, child := range node.children {
+			if err := checkSubqueries(child); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	if err := visitQueryExpressions(e, query, func(expression Expr) error {
+		if expression == nil {
+			return nil
+		}
+		return checkSubqueries(expression.node())
+	}); err != nil {
+		return err
+	}
+	if query.tableTarget != "" {
+		moduleName, tableName := splitCatalogKey(query.tableTarget)
+		if err := check(moduleName, tableName, false); err != nil {
+			return err
+		}
+	}
+	if query.trigger != nil && query.trigger.target == triggerTargetTable {
+		if err := check(query.trigger.moduleName, query.trigger.table, false); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func aggregateJoin(definition *aggregateDefinition) *joinDefinition {
+	if definition == nil {
+		return nil
+	}
+	return definition.join
 }
 
 func validateContextFieldScope(query Query) error {
