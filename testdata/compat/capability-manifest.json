@@ -5565,6 +5565,52 @@
     "java-runtime-4b4c531bbad3d4e1491d",
     "java-runtime-217779fa3c860cc1ea18"
    ]
+  },
+  {
+   "id": "view.group-closure",
+   "domain": "view",
+   "level": "S",
+   "summary": "Group-window view closure: invalid-form diagnostics, grouped weighted_avg, escaped mapped-property keys",
+   "javaRefs": [
+    "ViewGroupInvalid",
+    "ViewGroupLengthWinWeightAvg",
+    "ViewGroupEscapedPropertyText"
+   ],
+   "javaRuntimeIds": [
+    "java-runtime-a72aa6eebc4ce8d21115",
+    "java-runtime-e718af611543b6d40436",
+    "java-runtime-d9b2e762c318369875e5"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-a72aa6eebc4ce8d21115",
+    "java-runtime-e718af611543b6d40436",
+    "java-runtime-d9b2e762c318369875e5"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewGroup.java"
+   ],
+   "goRefs": [
+    "internal/esper/stream.go",
+    "internal/esper/expr.go",
+    "internal/esper/plan.go",
+    "internal/esper/runtime.go",
+    "internal/app/parity/view_group_closure.go"
+   ],
+   "tags": [
+    "view",
+    "groupwin",
+    "weighted-avg"
+   ],
+   "status": "differential-verified",
+   "cases": [
+    "case.view-group-closure"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "notes": "All three remaining ViewGroup executions differential-verified; ViewGroup.java fully covered."
   }
  ],
  "cases": [
@@ -47152,6 +47198,66 @@
     "java-runtime-217779fa3c860cc1ea18"
    ],
    "notes": "Draft 4.493: InfraTableCountMinSketch ordinals 0-3 (frequency-and-topk, doc-samples, non-string-type, invalid). Java/Go each 57 records, 0 differences. Covers create-table declaration with json params (epsOfTotalCount/topk/agent), into-table countMinSketchAdd, countMinSketchFrequency and countMinSketchTopk reads, join/subquery/module consumption, byte[] non-string keys, and 15 invalid-form probes. Shared core: CountMinSketchValue retains exact counts + lastBump sequence; TopK() derives Java's strict-> admission and last-of-lowest-bucket eviction order lazily; countMinSketchAdd restricted to into-table; pattern-triggered table reads enabled for select T.c.m() from pattern[...]."
+  },
+  {
+   "id": "case.view-group-closure",
+   "javaRuntimeIds": [
+    "java-runtime-a72aa6eebc4ce8d21115",
+    "java-runtime-e718af611543b6d40436",
+    "java-runtime-d9b2e762c318369875e5"
+   ],
+   "javaStaticIds": [
+    "java-cd39f97bf5d0490c295a",
+    "java-586becfef68e2842ef18",
+    "java-3426d2a7294c0f93c788"
+   ],
+   "javaNames": [
+    "ViewGroupInvalid",
+    "ViewGroupLengthWinWeightAvg",
+    "ViewGroupEscapedPropertyText"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewGroup.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunViewGroupClosureDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunViewGroupClosureDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunViewGroupClosureRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunViewGroupClosureRuntimeIDMappingMatchesScenario",
+    "internal/app/parity/run_test.go:TestRunHelpIncludesViewGroupClosure"
+   ],
+   "tags": [
+    "view",
+    "groupwin",
+    "weighted-avg",
+    "invalid",
+    "escaped-property",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "testdata/parity/view-group-closure.json",
+    "testdata/parity/view-group-closure.trace.json",
+    "testdata/parity/view-group-closure.go.trace.json",
+    "testdata/parity/view-group-closure.evidence.json",
+    "tools/java-oracle/ViewGroupClosureScenarioOracle.java",
+    "tools/java-oracle/run-view-group-closure.sh"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-a72aa6eebc4ce8d21115",
+    "java-runtime-e718af611543b6d40436",
+    "java-runtime-d9b2e762c318369875e5"
+   ],
+   "notes": "Draft 4.494: ViewGroup ordinals 7/8/19 \u2014 the last three unreferenced executions of the file. Java/Go each 11 records, 0 differences. Covers five groupwin invalid probes (multiple declarations, no child views, not-first-position, merge+multi-window [pinned-only, unrepresentable], null-typed key), the groupwin/length/weighted_avg performance smoke (thin trace: deployed + sent markers), and the escaped mapped-property groupwin compile+deploy smoke. Shared core: WeightedAvg emits NaN on zero total weight; weighted-avg joins groupwin implicit grouping; groupwin first-position and null-key validation added."
   }
  ],
  "mappings": [
@@ -50422,29 +50528,33 @@
   {
    "capabilityId": "infra.table-count-min-sketch",
    "caseId": "case.infra-table-count-min-sketch"
+  },
+  {
+   "capabilityId": "view.group-closure",
+   "caseId": "case.view-group-closure"
   }
  ],
  "summary": {
-  "inventoriedCases": 732,
-  "implementedCases": 730,
-  "differentialVerifiedCases": 356,
-  "differentialVerifiedRuntimeIds": 1381,
+  "inventoriedCases": 733,
+  "implementedCases": 731,
+  "differentialVerifiedCases": 357,
+  "differentialVerifiedRuntimeIds": 1384,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
-  "inventoriedCapabilities": 123,
-  "implementedCapabilities": 122,
-  "differentialVerifiedCapabilities": 42,
+  "inventoriedCapabilities": 124,
+  "implementedCapabilities": 123,
+  "differentialVerifiedCapabilities": 43,
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3931,
-  "referencedJavaRuntimeIds": 3503,
+  "runtimeAssociationCount": 3934,
+  "referencedJavaRuntimeIds": 3506,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 633,
+  "unreferencedJavaRuntimeIds": 630,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 732,
-  "totalCapabilities": 123
+  "totalCases": 733,
+  "totalCapabilities": 124
  }
 }

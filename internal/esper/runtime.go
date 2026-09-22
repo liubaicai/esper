@@ -23629,7 +23629,8 @@ func expressionTreeContainsUnivariateStatistics(expression Expr) bool {
 			return false
 		}
 		if node.kind == "univariate-statistics" || strings.HasPrefix(node.kind, "univariate-statistics-") ||
-			node.kind == "correlation" || strings.HasPrefix(node.kind, "linear-regression") {
+			node.kind == "correlation" || strings.HasPrefix(node.kind, "linear-regression") ||
+			node.kind == "weighted-avg" {
 			return true
 		}
 		for _, child := range node.children {

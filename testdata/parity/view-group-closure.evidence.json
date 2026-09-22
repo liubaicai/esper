@@ -1,0 +1,308 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-a72aa6eebc4ce8d21115",
+    "java-runtime-e718af611543b6d40436",
+    "java-runtime-d9b2e762c318369875e5"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewGroup.java"
+  ],
+  "javaExecutions": [
+    "ViewGroupInvalid",
+    "ViewGroupLengthWinWeightAvg",
+    "ViewGroupEscapedPropertyText"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "view-group-closure",
+    "steps": [
+      {
+        "op": "case",
+        "case": "invalid"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "multiple-groupwin",
+        "expectError": "Failed to validate data window declaration: Multiple groupwin-declarations are not supported",
+        "epl": "select * from SupportBean#groupwin(theString)#length(1)#groupwin(theString)#uni(intPrimitive)"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "groupwin-no-child",
+        "expectError": "Failed to validate data window declaration: Invalid use of the 'groupwin' view, the view requires one or more child views to group, or consider using the group-by clause",
+        "epl": "select avg(price), symbol from SupportMarketDataBean#length(100)#groupwin(symbol)"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "groupwin-not-first",
+        "expectError": "Failed to validate data window declaration: The 'groupwin' declaration must occur in the first position",
+        "epl": "select * from SupportBean#keepall#groupwin(theString)#length(2)"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "invalid",
+        "statement": "groupwin-merge",
+        "expectError": "Failed to validate data window declaration: The 'merge' declaration cannot be used in conjunction with multiple data windows",
+        "epl": "select * from SupportBean#groupwin(theString)#length(2)#merge(theString)#keepall"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "groupwin-null-field",
+        "expectError": "Failed to validate data window declaration: Group-window received a null-typed criteria expression",
+        "epl": "create schema MyEvent(somefield null);\nselect * from MyEvent#groupwin(somefield)#length(2)"
+      },
+      {
+        "op": "case",
+        "case": "length-win-weighted-avg"
+      },
+      {
+        "op": "deploy",
+        "case": "length-win-weighted-avg",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportSensorEvent#groupwin(type)#length(10000000)#weighted_avg(measurement, confidence)"
+      },
+      {
+        "op": "deployed",
+        "case": "length-win-weighted-avg",
+        "statement": "s0"
+      },
+      {
+        "op": "send-batch",
+        "case": "length-win-weighted-avg",
+        "eventType": "SupportSensorEvent",
+        "name": "prime",
+        "payload": {
+          "id": 0,
+          "type": "A",
+          "device": "1",
+          "measurement": 0,
+          "confidence": 0
+        },
+        "mode": "index-sequence",
+        "count": 100
+      },
+      {
+        "op": "send-batch",
+        "case": "length-win-weighted-avg",
+        "eventType": "SupportSensorEvent",
+        "name": "measure",
+        "payload": {
+          "id": 0,
+          "type": "A1",
+          "device": "1",
+          "measurement": 0,
+          "confidence": 0
+        },
+        "mode": "index-sequence",
+        "count": 10000
+      },
+      {
+        "op": "undeploy-all",
+        "case": "length-win-weighted-avg"
+      },
+      {
+        "op": "case",
+        "case": "escaped-property-text"
+      },
+      {
+        "op": "deploy",
+        "case": "escaped-property-text",
+        "statement": "module",
+        "epl": "create schema event as com.espertech.esper.regressionlib.suite.view.ViewGroup$EventWithTags;\n\ninsert into stream1\nselect name, tags from event;\n\nselect name, tags('a\\.b') from stream1.std:groupwin(name, tags('a\\.b')).win:length(10)\nhaving count(1) \u003e= 5;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "escaped-property-text",
+        "statement": "schema"
+      },
+      {
+        "op": "deployed",
+        "case": "escaped-property-text",
+        "statement": "insert"
+      },
+      {
+        "op": "deployed",
+        "case": "escaped-property-text",
+        "statement": "select"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "escaped-property-text"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "view-group-closure",
+    "records": [
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "multiple-groupwin",
+        "sequence": 0,
+        "value": "Failed to validate data window declaration: Multiple groupwin-declarations are not supported"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "groupwin-no-child",
+        "sequence": 0,
+        "value": "Failed to validate data window declaration: Invalid use of the 'groupwin' view, the view requires one or more child views to group, or consider using the group-by clause"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "groupwin-not-first",
+        "sequence": 0,
+        "value": "Failed to validate data window declaration: The 'groupwin' declaration must occur in the first position"
+      },
+      {
+        "case": "invalid",
+        "operation": "unrepresentable",
+        "statement": "groupwin-merge",
+        "sequence": 0,
+        "value": "Failed to validate data window declaration: The 'merge' declaration cannot be used in conjunction with multiple data windows"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "groupwin-null-field",
+        "sequence": 0,
+        "value": "Failed to validate data window declaration: Group-window received a null-typed criteria expression"
+      },
+      {
+        "case": "length-win-weighted-avg",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "length-win-weighted-avg",
+        "operation": "sent",
+        "sequence": 0,
+        "name": "prime",
+        "count": 100
+      },
+      {
+        "case": "length-win-weighted-avg",
+        "operation": "sent",
+        "sequence": 0,
+        "name": "measure",
+        "count": 10000
+      },
+      {
+        "case": "escaped-property-text",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "escaped-property-text",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "escaped-property-text",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "view-group-closure",
+    "records": [
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "multiple-groupwin",
+        "sequence": 0,
+        "value": "Failed to validate data window declaration: Multiple groupwin-declarations are not supported"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "groupwin-no-child",
+        "sequence": 0,
+        "value": "Failed to validate data window declaration: Invalid use of the 'groupwin' view, the view requires one or more child views to group, or consider using the group-by clause"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "groupwin-not-first",
+        "sequence": 0,
+        "value": "Failed to validate data window declaration: The 'groupwin' declaration must occur in the first position"
+      },
+      {
+        "case": "invalid",
+        "operation": "unrepresentable",
+        "statement": "groupwin-merge",
+        "sequence": 0,
+        "value": "Failed to validate data window declaration: The 'merge' declaration cannot be used in conjunction with multiple data windows"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "groupwin-null-field",
+        "sequence": 0,
+        "value": "Failed to validate data window declaration: Group-window received a null-typed criteria expression"
+      },
+      {
+        "case": "length-win-weighted-avg",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "length-win-weighted-avg",
+        "operation": "sent",
+        "sequence": 0,
+        "name": "prime",
+        "count": 100
+      },
+      {
+        "case": "length-win-weighted-avg",
+        "operation": "sent",
+        "sequence": 0,
+        "name": "measure",
+        "count": 10000
+      },
+      {
+        "case": "escaped-property-text",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "escaped-property-text",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "escaped-property-text",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

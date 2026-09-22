@@ -1,0 +1,177 @@
+{
+  "version": "esper-parity/v1",
+  "id": "view-group-closure",
+  "description": "ViewGroup closure surface (ords 7, 8, 19): invalid replays ViewGroupInvalid's five tryInvalidCompile probes pinning the groupwin-declaration rejection prefixes (multiple groupwin declarations, groupwin without a child view, groupwin not in first position, merge with multiple data windows — unrepresentable in Go, and a null-typed criteria expression); length-win-weighted-avg replays ViewGroupLengthWinWeightAvg's performance smoke, deploying the groupwin(type)/length(10000000)/weighted_avg(measurement,confidence) statement and sending 100 prime plus 10000 measured SupportSensorEvent beans with only deployed/sent markers (the wall-clock assert is not trace-visible); escaped-property-text replays ViewGroupEscapedPropertyText's compile+deploy+undeploy of the three-statement module whose select groups stream1 by name and the escaped mapped property tags('a\\.b') under having count(1) >= 5. compile-error records carry the pinned Java message prefixes; the unrepresentable record pins the merge-view prefix; deployed records mark each module statement; sent records pin the batch sizes (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewGroup.java).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewGroup.java",
+  "javaRuntimes": [
+    "java-runtime-a72aa6eebc4ce8d21115",
+    "java-runtime-e718af611543b6d40436",
+    "java-runtime-d9b2e762c318369875e5"
+  ],
+  "javaNames": [
+    "ViewGroupInvalid",
+    "ViewGroupLengthWinWeightAvg",
+    "ViewGroupEscapedPropertyText"
+  ],
+  "javaStaticIds": [
+    "java-cd39f97bf5d0490c295a",
+    "java-586becfef68e2842ef18",
+    "java-3426d2a7294c0f93c788"
+  ],
+  "javaFlags": [
+    "EXCLUDEWHENINSTRUMENTED",
+    "PERFORMANCE",
+    "SERDEREQUIRED"
+  ],
+  "cases": [
+    {
+      "case": "invalid",
+      "ordinal": 7,
+      "runtimeId": "java-runtime-a72aa6eebc4ce8d21115",
+      "executionName": "ViewGroupInvalid",
+      "observation": "compile-error+unrepresentable; five path-less tryInvalidCompile probes pin the groupwin-declaration rejections: multiple groupwin declarations, groupwin without a child view, groupwin not in first position, the merge view over multiple data windows (pinned-only; no Go merge view), and the null-typed criteria expression",
+      "epl": "select * from SupportBean#groupwin(theString)#length(1)#groupwin(theString)#uni(intPrimitive)"
+    },
+    {
+      "case": "length-win-weighted-avg",
+      "ordinal": 8,
+      "runtimeId": "java-runtime-e718af611543b6d40436",
+      "executionName": "ViewGroupLengthWinWeightAvg",
+      "observation": "deployed+sent; the groupwin(type)/length(10000000)/weighted_avg statement deploys with a listener, then 100 prime and 10000 measured SupportSensorEvent sends replay as index-sequenced batches; the suite's sub-second wall-clock assert is not trace-visible so only the deployed marker and per-batch sent counts record",
+      "epl": "@name('s0') select * from SupportSensorEvent#groupwin(type)#length(10000000)#weighted_avg(measurement, confidence)"
+    },
+    {
+      "case": "escaped-property-text",
+      "ordinal": 19,
+      "runtimeId": "java-runtime-d9b2e762c318369875e5",
+      "executionName": "ViewGroupEscapedPropertyText",
+      "observation": "deployed; the three-statement module (create schema event as EventWithTags, insert into stream1 select name, tags, select name, tags('a\\.b') from stream1 groupwin(name, tags('a\\.b')) length(10) having count(1) >= 5) compiles and deploys, then undeploy-all retires it",
+      "epl": "create schema event as com.espertech.esper.regressionlib.suite.view.ViewGroup$EventWithTags;\n\ninsert into stream1\nselect name, tags from event;\n\nselect name, tags('a\\.b') from stream1.std:groupwin(name, tags('a\\.b')).win:length(10)\nhaving count(1) >= 5;\n"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "invalid"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "multiple-groupwin",
+      "epl": "select * from SupportBean#groupwin(theString)#length(1)#groupwin(theString)#uni(intPrimitive)",
+      "expectError": "Failed to validate data window declaration: Multiple groupwin-declarations are not supported",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "groupwin-no-child",
+      "epl": "select avg(price), symbol from SupportMarketDataBean#length(100)#groupwin(symbol)",
+      "expectError": "Failed to validate data window declaration: Invalid use of the 'groupwin' view, the view requires one or more child views to group, or consider using the group-by clause",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "groupwin-not-first",
+      "epl": "select * from SupportBean#keepall#groupwin(theString)#length(2)",
+      "expectError": "Failed to validate data window declaration: The 'groupwin' declaration must occur in the first position",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "unrepresentable",
+      "case": "invalid",
+      "statement": "groupwin-merge",
+      "epl": "select * from SupportBean#groupwin(theString)#length(2)#merge(theString)#keepall",
+      "expectError": "Failed to validate data window declaration: The 'merge' declaration cannot be used in conjunction with multiple data windows",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "groupwin-null-field",
+      "epl": "create schema MyEvent(somefield null);\nselect * from MyEvent#groupwin(somefield)#length(2)",
+      "expectError": "Failed to validate data window declaration: Group-window received a null-typed criteria expression",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "case",
+      "case": "length-win-weighted-avg"
+    },
+    {
+      "op": "deploy",
+      "case": "length-win-weighted-avg",
+      "statement": "s0",
+      "epl": "@name('s0') select * from SupportSensorEvent#groupwin(type)#length(10000000)#weighted_avg(measurement, confidence)"
+    },
+    {
+      "op": "deployed",
+      "case": "length-win-weighted-avg",
+      "statement": "s0"
+    },
+    {
+      "op": "send-batch",
+      "case": "length-win-weighted-avg",
+      "name": "prime",
+      "eventType": "SupportSensorEvent",
+      "payload": {
+        "id": 0,
+        "type": "A",
+        "device": "1",
+        "measurement": 0,
+        "confidence": 0
+      },
+      "mode": "index-sequence",
+      "count": 100
+    },
+    {
+      "op": "send-batch",
+      "case": "length-win-weighted-avg",
+      "name": "measure",
+      "eventType": "SupportSensorEvent",
+      "payload": {
+        "id": 0,
+        "type": "A1",
+        "device": "1",
+        "measurement": 0,
+        "confidence": 0
+      },
+      "mode": "index-sequence",
+      "count": 10000
+    },
+    {
+      "op": "undeploy-all",
+      "case": "length-win-weighted-avg"
+    },
+    {
+      "op": "case",
+      "case": "escaped-property-text"
+    },
+    {
+      "op": "deploy",
+      "case": "escaped-property-text",
+      "statement": "module",
+      "epl": "create schema event as com.espertech.esper.regressionlib.suite.view.ViewGroup$EventWithTags;\n\ninsert into stream1\nselect name, tags from event;\n\nselect name, tags('a\\.b') from stream1.std:groupwin(name, tags('a\\.b')).win:length(10)\nhaving count(1) >= 5;\n"
+    },
+    {
+      "op": "deployed",
+      "case": "escaped-property-text",
+      "statement": "schema"
+    },
+    {
+      "op": "deployed",
+      "case": "escaped-property-text",
+      "statement": "insert"
+    },
+    {
+      "op": "deployed",
+      "case": "escaped-property-text",
+      "statement": "select"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "escaped-property-text"
+    }
+  ]
+}

@@ -70560,6 +70560,216 @@ func TestRunHelpIncludesContextKeySegmentedInvalid(t *testing.T) {
 	}
 }
 
+func TestRunViewGroupClosureDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "view-group-closure.evidence.json"),
+		func(*compat.Trace) {})
+	javaTrace, err := loadTraceFile(javaTracePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join("..", "..", "..", "testdata", "parity", "view-group-closure.go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenarioFile, err := os.Open(filepath.Join("..", "..", "..", "testdata", "parity", "view-group-closure.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := compat.LoadScenario(scenarioFile)
+	_ = scenarioFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The checked-in Go trace is the replay output; diffing it directly keeps
+	// the test inside the package timeout (the 10k-event ord-8 send replays
+	// in ~280s).
+	evidence, err := compat.NewDifferentialEvidence(viewGroupClosureJavaCommit,
+		viewGroupClosureJavaRuntimeIDs, viewGroupClosureSources, viewGroupClosureJavaExecutions,
+		scenario, javaTrace, goTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunViewGroupClosureDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "multiple-groupwin-prefix-drift",
+			mutate: func(trace *compat.Trace) {
+				// The first probe pins the multiple-groupwin prefix.
+				trace.Records[0].Value = "different error"
+			},
+		},
+		{
+			name: "null-field-prefix-drift",
+			mutate: func(trace *compat.Trace) {
+				// The final probe pins the null-typed criteria prefix.
+				trace.Records[4].Value = "different error"
+			},
+		},
+		{
+			name: "sent-count-drift",
+			mutate: func(trace *compat.Trace) {
+				// The measured batch pins 10000 sends.
+				for index := range trace.Records {
+					if trace.Records[index].Operation == "sent" && trace.Records[index].Name == "measure" {
+						count := int64(9999)
+						trace.Records[index].Count = &count
+						return
+					}
+				}
+			},
+		},
+		{
+			name: "record-dropped",
+			mutate: func(trace *compat.Trace) {
+				// All eleven records must replay.
+				trace.Records = trace.Records[:10]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "view-group-closure.evidence.json"),
+				test.mutate)
+			javaTrace, err := loadTraceFile(javaTracePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			goTrace, err := loadTraceFile(filepath.Join("..", "..", "..", "testdata", "parity", "view-group-closure.go.trace.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			scenarioFile, err := os.Open(filepath.Join("..", "..", "..", "testdata", "parity", "view-group-closure.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			scenario, err := compat.LoadScenario(scenarioFile)
+			_ = scenarioFile.Close()
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.NewDifferentialEvidence(viewGroupClosureJavaCommit,
+				viewGroupClosureJavaRuntimeIDs, viewGroupClosureSources, viewGroupClosureJavaExecutions,
+				scenario, javaTrace, goTrace)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunViewGroupClosureRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "view-group-closure.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "view-group-closure"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "view-group-closure"`)...), 1)
+		}},
+		{name: "case-metadata", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 19`), []byte(`"ordinal": 9`), 1)
+		}},
+		{name: "step-field-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "deploy",
+      "case": "length-win-weighted-avg",
+      "statement": "s0"`), []byte(`"op": "deploy",
+      "case": "length-win-weighted-avg",
+      "statement": "s0",
+      "extra": 0`), 1)
+		}},
+		{name: "step-field-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"statement": "multiple-groupwin",`), []byte(`"statement": "multiple-groupwin",
+      "statement": "multiple-groupwin",`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", "view-group-closure",
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunViewGroupClosureRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "view-group-closure.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, viewGroupClosureJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, viewGroupClosureJavaExecutions) {
+		t.Fatalf("scenario metadata runtimes=%v names=%v", document.JavaRuntimes, document.JavaNames)
+	}
+	for _, entry := range document.Cases {
+		if viewGroupClosureCaseRuntimeIDs[entry.Case] != entry.RuntimeID {
+			t.Fatalf("case %q runtimeId = %q, want %q", entry.Case, entry.RuntimeID, viewGroupClosureCaseRuntimeIDs[entry.Case])
+		}
+	}
+}
+
+func TestRunHelpIncludesViewGroupClosure(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-h"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("help exit code = %d, stderr = %q", code, stderr.String())
+	}
+	for _, mode := range []string{
+		"view-group-closure",
+		"view-group-closure-diff",
+	} {
+		if !strings.Contains(stderr.String(), mode) {
+			t.Fatalf("help output omits %q: %s", mode, stderr.String())
+		}
+	}
+}
+
 func TestRunContextKeySegmentedAllocationTimeDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-allocation-time.evidence.json"),

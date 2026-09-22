@@ -2725,6 +2725,26 @@ func (e *Environment) validateNode(node *streamNode) error {
 				return NewError(ErrorInvalidRule, fmt.Sprintf("consuming statements to named window %q cannot declare a data window view onto the named window", source))
 			}
 		}
+		if grouped, ok := node.window.(GroupWindowSpec); ok {
+			if node.input != nil && node.input.kind == streamWindow {
+				return NewError(ErrorInvalidRule, "The 'groupwin' declaration must occur in the first position")
+			}
+			if err := e.validateNode(node.input); err != nil {
+				return err
+			}
+			for _, key := range grouped.effectiveKeys() {
+				if key == nil {
+					continue
+				}
+				if err := e.validateExprFields(node.input, key); err != nil {
+					return err
+				}
+				if key.node() != nil && key.node().kind == "null" {
+					return NewError(ErrorInvalidRule, "Group-window received a null-typed criteria expression")
+				}
+			}
+			return nil
+		}
 		if unique, ok := node.window.(UniqueWindowSpec); ok {
 			if err := e.validateNode(node.input); err != nil {
 				return err

@@ -7860,7 +7860,9 @@ type VirtualClock = internalengine.VirtualClock
 type VirtualDataWindowProvider = internalengine.VirtualDataWindowProvider
 
 // WeightedAvg computes sum(value*weight)/sum(weight), ignoring rows where
-// either expression is not numeric or where the total weight is zero.
+// either expression is not numeric. Whenever the total weight is zero —
+// including an empty or all-unusable group — the result is NaN, matching
+// Esper's weighted_avg view contract (WeightedAverageView: sumW==0 -> NaN).
 func WeightedAvg[V Numeric, W Numeric](value Expression[V], weight Expression[W]) AggregateExpression[float64] {
 	return internalengine.WeightedAvg[V, W](value, weight)
 }

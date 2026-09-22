@@ -71,6 +71,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include context-lifecycle and context-lifecycle-diff")
 		fmt.Fprintln(stderr, "runner modes include context-selection-faf and context-selection-faf-diff")
 		fmt.Fprintln(stderr, "runner modes include context-selection-faf-nested and context-selection-faf-nested-diff")
+		fmt.Fprintln(stderr, "runner modes include view-group-closure and view-group-closure-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
@@ -382,6 +383,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraTableInvalidScenario(file)
 	} else if *mode == "infra-table-count-min-sketch" || *mode == "infra-table-count-min-sketch-diff" {
 		scenario, err = loadInfraTableCMSScenario(file)
+	} else if *mode == "view-group-closure" || *mode == "view-group-closure-diff" {
+		scenario, err = loadViewGroupClosureScenario(file)
 	} else {
 		scenario, err = compat.LoadScenario(file)
 	}
@@ -1150,6 +1153,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, viewGroupMergeViewJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, viewGroupMergeViewJavaSources),
 				splitMetadata(*javaExecutions, viewGroupMergeViewJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "view-group-closure" || *mode == "view-group-closure-diff" {
+		trace, err := runViewGroupClosureScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "view-group-closure-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, viewGroupClosureJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, viewGroupClosureSources),
+				splitMetadata(*javaExecutions, viewGroupClosureJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

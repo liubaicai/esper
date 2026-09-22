@@ -2303,7 +2303,7 @@ func (w GroupWindowSpec) validate() error {
 		}
 	}
 	if w.Inner == nil {
-		return fmt.Errorf("esper: group window inner window is required")
+		return NewError(ErrorInvalidRule, "Invalid use of the 'groupwin' view, the view requires one or more child views to group, or consider using the group-by clause")
 	}
 	if _, nested := w.Inner.(GroupWindowSpec); nested {
 		return fmt.Errorf("esper: multiple group-window declarations are not supported")
