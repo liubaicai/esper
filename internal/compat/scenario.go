@@ -60,6 +60,10 @@ type Step struct {
 	// ExpectContains pins a substring assertion for build-error steps whose
 	// Java oracle uses assertMessage contains rather than startsWith.
 	ExpectContains string `json:"expectContains,omitempty"`
+	// ExpectExpansion pins the expanded pattern text for compile-text steps
+	// (RowRecogPatternExpandUtil.expand counterparts): the runner renders the
+	// Go-side expansion and the record carries the pinned Java expansion.
+	ExpectExpansion string `json:"expectExpansion,omitempty"`
 }
 
 func LoadScenario(reader io.Reader) (Scenario, error) {
@@ -212,6 +216,19 @@ func (s Scenario) Validate() error {
 			}
 			if strings.TrimSpace(step.Epl) == "" {
 				return fmt.Errorf("compat: step %d build-error has no epl", i)
+			}
+		case "compile-text":
+			// Pins a compile-time text surface (for example the
+			// RowRecogPatternExpandUtil expansion of a quantified pattern);
+			// expectExpansion carries the pinned Java expansion text.
+			if strings.TrimSpace(step.Statement) == "" {
+				return fmt.Errorf("compat: step %d compile-text has no statement", i)
+			}
+			if strings.TrimSpace(step.Epl) == "" {
+				return fmt.Errorf("compat: step %d compile-text has no epl", i)
+			}
+			if strings.TrimSpace(step.ExpectExpansion) == "" {
+				return fmt.Errorf("compat: step %d compile-text has no expectExpansion", i)
 			}
 		case "deploy-error", "faf-error":
 			// Pins a deploy-time or fire-and-forget failure (for example a

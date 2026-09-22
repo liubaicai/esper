@@ -16803,6 +16803,123 @@ func TestRunRowRecogAfterDiffRejectsTraceMutations(t *testing.T) {
 	}
 }
 
+func TestRunRowRecogRepetitionDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "rowrecog-repetition.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "rowrecog-repetition.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "rowrecog-repetition.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "rowrecog-repetition-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunRowRecogRepetitionDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "repeats-array-measure-drift",
+			mutate: func(trace *compat.Trace) {
+				// Repeated variables bind arrays; drifting the second A
+				// capture means the repeat bound was lost.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "repeats" && rec.Operation == "listener" && len(rec.New) == 1 {
+						if events, ok := rec.New[0].Fields["a"].([]any); ok && len(events) == 2 {
+							events[1].(map[string]any)["fields"].(map[string]any)["theString"] = "drifted"
+							return
+						}
+					}
+				}
+				panic("no repeats 2-event array measure")
+			},
+		},
+		{
+			name: "prev-repeated-capture-drift",
+			mutate: func(trace *compat.Trace) {
+				// A{3} with prev(A.intPrimitive) binds A6/A7/A9; drifting the
+				// third capture means prev() evaluated against the wrong row.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "prev" && rec.Operation == "listener" && len(rec.New) == 1 {
+						if events, ok := rec.New[0].Fields["a"].([]any); ok && len(events) == 3 {
+							events[2].(map[string]any)["fields"].(map[string]any)["theString"] = "drifted"
+							return
+						}
+					}
+				}
+				panic("no prev 3-event array measure")
+			},
+		},
+		{
+			name: "compile-text-expansion-drift",
+			mutate: func(trace *compat.Trace) {
+				// The expansion text is verified against the Go-side
+				// expander; drifting a pinned expansion means the quantifier
+				// model diverged.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "equivalent" && rec.Operation == "compile-text" && rec.Value == "A A A*" {
+						rec.Value = "A A A+"
+						return
+					}
+				}
+				panic("no A{2,} compile-text record")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "rowrecog-repetition.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "rowrecog-repetition.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "rowrecog-repetition.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "rowrecog-repetition-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", evidence)
+			}
+		})
+	}
+}
+
 func TestRunEplOtherWildcardAdditionalDirectReplay(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "testdata", "parity")
 	var stdout, stderr bytes.Buffer

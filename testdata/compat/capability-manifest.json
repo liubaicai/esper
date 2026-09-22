@@ -2042,7 +2042,8 @@
     "internal/esper/match_recognize_parity_test.go",
     "internal/app/parity/match_recognize.go",
     "internal/app/parity/rowrecog_aggregation.go",
-    "internal/app/parity/rowrecog_after.go"
+    "internal/app/parity/rowrecog_after.go",
+    "internal/app/parity/rowrecog_repetition.go"
    ],
    "phase": 5,
    "status": "implemented",
@@ -47744,6 +47745,80 @@
     "RowRecogAfter ords 0-5 replay all six AFTER MATCH SKIP executions (47 records, 0 differences): skip-to-current-row extends the in-flight match, skip-to-next-row suppresses the listener callback on extension while the iterator still reflects it, all-matches chained rows, variable-twice A B A patterns, partitioned matches, and skip-past-last-row non-overlap.",
     "The Go runner maps each pinned deploy EPL to the fluent MatchRecognize builder (FirstMatch for non-all-matches cases, SkipToCurrentRow/SkipToNextRow/SkipPastLastRow, TagField/TagFieldAt measures, PartitionBy, OrderBy); ord0 replays two deploy cycles mirroring compileDeploy + eplToModelCompileDeploy, and the listener sequence resets per deployment."
    ]
+  },
+  {
+   "id": "case.rowrecog-repetition",
+   "javaRuntimeIds": [
+    "java-runtime-d6d3a12949ef3e346d80",
+    "java-runtime-cdf672905648f281ad59",
+    "java-runtime-ad8cb0aeafdfcdced0f2",
+    "java-runtime-941bbeda7e12013505b3",
+    "java-runtime-aa81841e62a62098b578",
+    "java-runtime-a47314c7aeffaf6d632c"
+   ],
+   "javaStaticIds": [
+    "java-46702536af8cb29c4f5c"
+   ],
+   "javaNames": [
+    "RowRecogRepetitionRepeats{soda=false}",
+    "RowRecogRepetitionRepeats{soda=true}",
+    "RowRecogRepetitionPrev",
+    "RowRecogRepetitionInvalid",
+    "RowRecogRepetitionDocSamples",
+    "RowRecogRepetitionEquivalent"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/rowrecog/RowRecogRepetition.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunRowRecogRepetitionDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunRowRecogRepetitionDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "correctness",
+    "rowrecog",
+    "match-recognize",
+    "quantifier",
+    "repetition",
+    "prev",
+    "invalidity",
+    "compile-text",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/rowrecog-repetition.json",
+    "testdata/parity/rowrecog-repetition.trace.json",
+    "testdata/parity/rowrecog-repetition.go.trace.json",
+    "testdata/parity/rowrecog-repetition.evidence.json",
+    "tools/java-oracle/RowRecogRepetitionScenarioOracle.java",
+    "tools/java-oracle/run-rowrecog-repetition.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-d6d3a12949ef3e346d80",
+    "java-runtime-cdf672905648f281ad59",
+    "java-runtime-ad8cb0aeafdfcdced0f2",
+    "java-runtime-941bbeda7e12013505b3",
+    "java-runtime-aa81841e62a62098b578",
+    "java-runtime-a47314c7aeffaf6d632c"
+   ],
+   "notes": [
+    "RowRecogRepetition ords 0-5 replay all six executions (127 records, 0 differences): 28 deploy cycles of quantifier families (single bounds, ranges, open bounds, nested group and alternation repeats) with scalar vs array measures, A{3} with prev(A.intPrimitive), nine invalid-quantifier probes (four unrepresentable expression forms pin the Java message; five numeric bounds gate on the Go builder's own rejection), four doc-sample EPLs over object-array TemperatureSensorEvent, and 62 RowRecogPatternExpandUtil expansion pairs verified by a runner-local expander mirroring expandRepeat over the Go pattern model.",
+    "ord0/ord1 share one runtime trace because soda only switches the compileDeploy path; the repeats-soda case carries only a marker and both runtime IDs map to the same records. Zero shared-core changes; compat.Step gained expectExpansion + the compile-text op for the expansion-text surface."
+   ]
   }
  ],
  "mappings": [
@@ -51034,13 +51109,17 @@
   {
    "capabilityId": "rowrecog.match-recognize",
    "caseId": "case.rowrecog-after"
+  },
+  {
+   "capabilityId": "rowrecog.match-recognize",
+   "caseId": "case.rowrecog-repetition"
   }
  ],
  "summary": {
-  "inventoriedCases": 737,
-  "implementedCases": 735,
-  "differentialVerifiedCases": 363,
-  "differentialVerifiedRuntimeIds": 1429,
+  "inventoriedCases": 738,
+  "implementedCases": 736,
+  "differentialVerifiedCases": 364,
+  "differentialVerifiedRuntimeIds": 1435,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -51050,13 +51129,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3963,
-  "referencedJavaRuntimeIds": 3535,
+  "runtimeAssociationCount": 3969,
+  "referencedJavaRuntimeIds": 3541,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 601,
+  "unreferencedJavaRuntimeIds": 595,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 737,
+  "totalCases": 738,
   "totalCapabilities": 126
  }
 }

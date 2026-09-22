@@ -5331,6 +5331,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "rowrecog-repetition" || *mode == "rowrecog-repetition-diff" {
+		trace, err := runRowRecogRepetitionScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "rowrecog-repetition-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, rowRecogRepetitionJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, rowRecogRepetitionJavaSources),
+				splitMetadata(*javaExecutions, rowRecogRepetitionJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "expr-class-static-method" || *mode == "expr-class-static-method-diff" {
 		trace, err := runEcsmScenario(context.Background(), scenario)
 		if err != nil {

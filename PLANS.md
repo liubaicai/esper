@@ -172,6 +172,31 @@ Active: Draft 4.502 ('expr-enum-sumof-remainder').
   NextJavaContract503; Go surface scout NextGoSurface503b running.
 
 ## Current work unit
+Active: Draft 4.506 ('rowrecog-repetition').
+
+- Selection: `RowRecogRepetition` ords 0-5 (6 unreferenced, quantifier
+  family). flags=[INVALIDITY] for ord3; no virtual time.
+- [x] Contract frozen (NextJavaContract506 + NextGoSurface506): verbatim
+  EPLs, ord0/ord1 share one trace (soda = compile path only), ord3 nine
+  probes (4 unrepresentable + 5 gated), ord5 62 expansion pairs.
+- [x] Parity assets (Assets506): oracle
+  `tools/java-oracle/RowRecogRepetitionScenarioOracle.java`, run.sh,
+  scenario `testdata/parity/rowrecog-repetition.json` (6 cases / 542 steps,
+  127 records). Runner `internal/app/parity/rowrecog_repetition.go` + run.go
+  dispatch + 2-test family (primary agent).
+- [x] Runner decisions: `compile-text` op + `expectExpansion` added to
+  compat.Step/Validate (shared compat surface, not engine); ord5 verified
+  via runner-local AST expander mirroring RowRecogPatternExpandUtil
+  (Go RowPattern cannot model atom-type+repeat combos like A+{2}); scalar
+  vs array measures = PatternEvent vs TagEvents by pattern multiplicity;
+  doc-samples use RegisterObjectArray + SendObjectArray positional sends.
+- [x] Differential replay: Java 127 records / Go 127 records, `passing` /
+  0 differences. Zero shared-core engine changes.
+- [x] Manifest/roadmap/CHANGELOG: `case.rowrecog-repetition` born-DV (6
+  runtime IDs); summary 738 cases / 364 DV / 1435 DV runtime IDs /
+  unreferenced 595.
+
+## Current work unit
 Active: Draft 4.505 ('rowrecog-after').
 
 - Selection: `RowRecogAfter` ords 0-5 (6 unreferenced, AFTER MATCH SKIP
