@@ -6873,6 +6873,7 @@ type rowRecogPartitionState struct {
 	intervalClosed     map[string]struct{}
 	closedBranches     map[string]struct{}
 	alternateNotified  map[string]struct{}
+	terminatedConsumed map[string]struct{}
 	intervalNotified   map[string]struct{}
 	intervalFinal      map[string][]rowRecogMatch
 	activeStarts       map[string]struct{}
@@ -7518,6 +7519,7 @@ func cloneRowRecogPartitionState(source *rowRecogPartitionState) *rowRecogPartit
 	result.intervalClosed = cloneStringSet(source.intervalClosed)
 	result.closedBranches = cloneStringSet(source.closedBranches)
 	result.alternateNotified = cloneStringSet(source.alternateNotified)
+	result.terminatedConsumed = cloneStringSet(source.terminatedConsumed)
 	result.intervalNotified = cloneStringSet(source.intervalNotified)
 	result.intervalFinal = make(map[string][]rowRecogMatch, len(source.intervalFinal))
 	for key, matches := range source.intervalFinal {

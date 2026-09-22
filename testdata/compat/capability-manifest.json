@@ -2044,13 +2044,14 @@
     "internal/app/parity/rowrecog_aggregation.go",
     "internal/app/parity/rowrecog_after.go",
     "internal/app/parity/rowrecog_repetition.go",
-    "internal/app/parity/rowrecog_greedyness_ops.go"
+    "internal/app/parity/rowrecog_greedyness_ops.go",
+    "internal/app/parity/rowrecog_prev.go"
    ],
    "phase": 5,
    "status": "implemented",
    "remaining": [
     "advanced nested/complex NFA semantics",
-    "advanced row-recognize tag-aware prior/prev-reference variants and advanced aggregate measures",
+    "advanced row-recognize tag-aware prior-reference variants and advanced aggregate measures",
     "full Variant/ANY/dynamic member-schema and trace matrix",
     "Java global TimeSource time-unit configuration surface (Go uses explicit time.Duration/time.Time)",
     "remaining complex/dynamic IntervalOrTerminated compositions and calendar termination parity",
@@ -2065,9 +2066,15 @@
     "representative-verified"
    ],
    "differentialVerifiedRuntimeIds": [
-    "java-runtime-ce4e140777e93d5226b5",
+    "java-runtime-0de4e4485dc851b8c4a5",
+    "java-runtime-1200bc1d6899155bac4a",
+    "java-runtime-241336e6d46c14fbcf06",
     "java-runtime-254b2ace6ea437689d15",
-    "java-runtime-0de4e4485dc851b8c4a5"
+    "java-runtime-41c5b0a59540aec34895",
+    "java-runtime-59f7afa17be17f57fbd5",
+    "java-runtime-9c42dd39d70d409a64d7",
+    "java-runtime-c096e55f89e15fcc54b7",
+    "java-runtime-ce4e140777e93d5226b5"
    ],
    "representativeScenarioIds": [
     "match-recognize-simple",
@@ -47898,6 +47905,85 @@
     "RowRecogGreedyness ords 0-2 + RowRecogOps ords 5/7/9 replay all six executions (1015 records, 0 differences): reluctant ??/*?/+? quantifiers bind the minimum needed (A?? skips A so E1 binds to B; A*? grows only as needed; A+? requires at least one), 1000 partitions each completing an A B match past the initial collection size, (A|B)(C|D) alternation-in-concat under all matches with iterator accumulation, and the JVM-only String.matches sanity check pinned as unrepresentable.",
     "Zero shared-core changes; the Go runner maps each pinned deploy EPL to the fluent MatchRecognize builder (Reluctant/Optional/ZeroOrMore/OneOrMore, RowAlternation inside RowSequence, PartitionBy, FirstMatch/AllMatches, TagField/TagFieldAt measures, In/Equal defines). The empty-iterator snapshot omits 'new' matching the Java oracle shape. case.rowrecog-unlimited-partition's runtime ID is attached here; the older implemented-only case note points at this DV case."
    ]
+  },
+  {
+   "id": "case.rowrecog-prev",
+   "javaRuntimeIds": [
+    "java-runtime-c096e55f89e15fcc54b7",
+    "java-runtime-9c42dd39d70d409a64d7",
+    "java-runtime-1200bc1d6899155bac4a",
+    "java-runtime-241336e6d46c14fbcf06",
+    "java-runtime-59f7afa17be17f57fbd5",
+    "java-runtime-41c5b0a59540aec34895"
+   ],
+   "javaStaticIds": [
+    "java-dae4e6476aade13e8fc2",
+    "java-a6baae0faeb7c039b0f9",
+    "java-1f3adaf5cbe5169a8ba9",
+    "java-0c4fd7a54738a6e8389b",
+    "java-ca1e71ff1294e5ca3c62",
+    "java-afe8f36bb6325baadb99"
+   ],
+   "javaNames": [
+    "RowRecogTimeWindowPartitionedSimple",
+    "RowRecogPartitionBy2FieldsKeepall",
+    "RowRecogUnpartitionedKeepAll",
+    "RowRecogTimeWindowUnpartitioned",
+    "RowRecogTimeWindowPartitioned",
+    "RowRecogExampleWithPREV"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/rowrecog/RowRecogPrev.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/rowrecog/RowRecogDataSet.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunRowRecogPrevDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunRowRecogPrevDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "correctness",
+    "rowrecog",
+    "match-recognize",
+    "prev",
+    "partition",
+    "time-window",
+    "virtual-time",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/rowrecog-prev.json",
+    "testdata/parity/rowrecog-prev.trace.json",
+    "testdata/parity/rowrecog-prev.go.trace.json",
+    "testdata/parity/rowrecog-prev.evidence.json",
+    "tools/java-oracle/RowRecogPrevScenarioOracle.java",
+    "tools/java-oracle/run-rowrecog-prev.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-c096e55f89e15fcc54b7",
+    "java-runtime-9c42dd39d70d409a64d7",
+    "java-runtime-1200bc1d6899155bac4a",
+    "java-runtime-241336e6d46c14fbcf06",
+    "java-runtime-59f7afa17be17f57fbd5",
+    "java-runtime-41c5b0a59540aec34895"
+   ],
+   "notes": [
+    "RowRecogPrev (5 executions) + RowRecogDataSet RowRecogExampleWithPREV replay all six executions (58 records, 0 differences): prev()/prev(x,n) inside match_recognize DEFINE over keepall and #time(5) windows, partitioned and unpartitioned, including indexed prev on string and numeric fields, prev(x,0), Math.abs(prev(...)), IN over prev lists, virtual-time window expiry, and the 20-measure A B C* D E* F+ dataset example under all matches + skip-to-current-row.",
+    "Shared core: the result matcher now walks the state-pool NFA in Esper emission order and carries per-node greedy flags for single-match ranking; 'interval or terminated' uses Esper's termination-entry semantics (a dying end-capable NFA state releases every scheduled end entry it prefix-matches, with the dying variable's single slot deassigned and multimatch state surviving) instead of the earlier match-extension heuristic."
+   ]
   }
  ],
  "mappings": [
@@ -51196,13 +51282,17 @@
   {
    "capabilityId": "rowrecog.match-recognize",
    "caseId": "case.rowrecog-greedyness-ops"
+  },
+  {
+   "capabilityId": "rowrecog.match-recognize",
+   "caseId": "case.rowrecog-prev"
   }
  ],
  "summary": {
-  "inventoriedCases": 739,
-  "implementedCases": 737,
-  "differentialVerifiedCases": 365,
-  "differentialVerifiedRuntimeIds": 1441,
+  "inventoriedCases": 740,
+  "implementedCases": 738,
+  "differentialVerifiedCases": 366,
+  "differentialVerifiedRuntimeIds": 1447,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -51212,13 +51302,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3975,
-  "referencedJavaRuntimeIds": 3547,
+  "runtimeAssociationCount": 3981,
+  "referencedJavaRuntimeIds": 3553,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 589,
+  "unreferencedJavaRuntimeIds": 583,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 739,
+  "totalCases": 740,
   "totalCapabilities": 126
  }
 }

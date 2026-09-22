@@ -270,6 +270,7 @@ func TestRowRecogReluctantQuantifiers(t *testing.T) {
 		RowVar("B").Optional(),
 		RowVar("C"),
 	)).
+		FirstMatch().
 		Define("A", Equal[float64](Field[rowRecogTestEvent, float64]("price"), Literal(1.0))).
 		Define("B", Or(
 			Equal[float64](Field[rowRecogTestEvent, float64]("price"), Literal(1.0)),

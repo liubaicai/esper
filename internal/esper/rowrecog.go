@@ -568,6 +568,9 @@ type rowRecogMatch struct {
 	terminal bool
 	branch   string
 	captures map[string][]Event
+	// greedyCounts mirrors Esper's per-NFA-state greedy counters used by
+	// rankEndStates when the query emits a single match.
+	greedyCounts []int
 }
 
 type rowRecogFastABStarCDefinition struct {
@@ -1239,7 +1242,7 @@ func (r *statementRuntime) emitRowRecogMatchesAtEnd(definition *rowRecogDefiniti
 			}
 		}
 		matches := rowRecogMatchesWithPrevious(definition, partition.events, partition.previousByEvent, start, end, now, r.variables)
-		emittedForStart := false
+		candidates := make([]rowRecogMatch, 0, len(matches))
 		for _, match := range matches {
 			if r.rowRecogStatePoolTracking(definition) {
 				if _, allowed := partition.allowedMatchKeys[rowRecogMatchKey(match)]; !allowed {
@@ -1253,6 +1256,24 @@ func (r *statementRuntime) emitRowRecogMatchesAtEnd(definition *rowRecogDefiniti
 			if _, exists := partition.emitted[matchKey]; exists {
 				continue
 			}
+			candidates = append(candidates, match)
+		}
+		emittedForStart := false
+		if !definition.allMatches && len(candidates) > 1 {
+			// Esper ranks end states by greedy counts before emitting a single
+			// match: greedy quantifiers prefer more repetitions, reluctant
+			// quantifiers prefer fewer, compared in NFA node order.
+			best := candidates[0]
+			for _, candidate := range candidates[1:] {
+				if rowRecogGreedyBetter(definition, candidate.greedyCounts, best.greedyCounts) {
+					best = candidate
+				}
+			}
+			candidates = candidates[:0]
+			candidates = append(candidates, best)
+		}
+		for _, match := range candidates {
+			matchKey := rowRecogMatchKey(match)
 			partition.emitted[matchKey] = struct{}{}
 			if partition.emittedMatches == nil {
 				partition.emittedMatches = make(map[string]rowRecogMatch)
@@ -1271,6 +1292,36 @@ func (r *statementRuntime) emitRowRecogMatchesAtEnd(definition *rowRecogDefiniti
 			break
 		}
 	}
+}
+
+// rowRecogGreedyBetter ports Esper's RowRecogNFAView.compare: a candidate is
+// better when any greedy state has more repetitions or any reluctant state
+// has fewer, evaluated in NFA node order.
+func rowRecogGreedyBetter(definition *rowRecogDefinition, current, best []int) bool {
+	nfa := rowRecogStatePoolNFAFor(definition)
+	if nfa == nil {
+		return false
+	}
+	for _, node := range nfa.nodes {
+		if node.greedy == nil {
+			continue
+		}
+		cur, bst := 0, 0
+		if node.id < len(current) {
+			cur = current[node.id]
+		}
+		if node.id < len(best) {
+			bst = best[node.id]
+		}
+		if *node.greedy {
+			if cur > bst {
+				return true
+			}
+		} else if cur < bst {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *statementRuntime) advanceRowRecogSkip(definition *rowRecogDefinition, partition *rowRecogPartitionState, match rowRecogMatch) {
@@ -1504,15 +1555,19 @@ func (r *statementRuntime) resetRowRecogBatchState() {
 	r.rowRecogState = &rowRecogRuntimeState{partitions: make(map[string]*rowRecogPartitionState)}
 }
 
-// emitRowRecogTerminated handles the useful common subset of Esper's
-// "interval ... or terminated" lifecycle. A match that reaches the maximum
-// finite width is terminal immediately. Otherwise, when the newest row no
-// longer produces a match, the latest completed match for the same start row
-// is terminal and is emitted before the interval deadline.
+// emitRowRecogTerminated mirrors Esper's "interval ... or terminated"
+// lifecycle. An end entry whose producing NFA state has no continuation is
+// emitted immediately; every other end entry is scheduled for the interval
+// deadline. When a live NFA state that could have ended the match fails the
+// current event, Esper builds a termination entry from that state's
+// bindings (the dying variable's single-event slot is deassigned, while
+// multimatch state survives) and releases every scheduled end entry it
+// prefix-matches.
 func (r *statementRuntime) emitRowRecogTerminated(definition *rowRecogDefinition, partition *rowRecogPartitionState, end int, plan Plan, now time.Time, batch *ResultBatch) {
 	if r == nil || definition == nil || partition == nil || batch == nil || end < 0 {
 		return
 	}
+	multis := rowRecogMultipleVars(definition.pattern)
 	for start := 0; start <= end; start++ {
 		if !rowRecogStartAllowed(definition, partition, start) {
 			continue
@@ -1544,24 +1599,173 @@ func (r *statementRuntime) emitRowRecogTerminated(definition *rowRecogDefinition
 				terminalCurrent = append(terminalCurrent, match)
 			}
 		}
-		if len(terminalCurrent) > 0 {
-			r.emitRowRecogIntervalMatches(definition, partition, startKey, terminalCurrent, plan, now, batch, true)
+		found := r.rowRecogTerminatedMatches(definition, partition, start, end, now, multis)
+		if len(terminalCurrent) == 0 && len(found) == 0 {
 			continue
 		}
-		if end <= start {
+		r.emitRowRecogIntervalMatches(definition, partition, startKey, append(terminalCurrent, found...), plan, now, batch, true)
+	}
+}
+
+// rowRecogTerminatedMatches returns the scheduled matches released early by
+// NFA states that died on the event at end. A live state that is end-capable
+// (its node is terminal, i.e. EndEval is among its successors) and fails the
+// event produces a termination entry; every scheduled match it
+// prefix-matches is consumed and returned.
+func (r *statementRuntime) rowRecogTerminatedMatches(definition *rowRecogDefinition, partition *rowRecogPartitionState, start, end int, now time.Time, multis map[string]bool) []rowRecogMatch {
+	if end <= start {
+		return nil
+	}
+	matcher := &rowPatternMatchContext{
+		definition:      definition,
+		history:         partition.events,
+		previousByEvent: partition.previousByEvent,
+		end:             end - 1,
+		now:             now,
+		variables:       r.variables,
+		limit:           definition.maxStates,
+	}
+	frontier := make([]rowPatternFrontierPath, 0)
+	matcher.frontier = &frontier
+	matcher.match(start)
+	event := partition.events[end]
+	terms := make([]rowRecogMatch, 0)
+	for _, live := range frontier {
+		if !live.node.terminal {
 			continue
 		}
-		terminated := rowRecogMatchesAtOrBeforeWithPrevious(definition, partition.events, partition.previousByEvent, start, end-1, now, r.variables)
-		if definition.allMatches {
-			terminated = rowRecogAllMatchesAtOrBeforeWithPrevious(definition, partition.events, partition.previousByEvent, start, end-1, now, r.variables)
+		tentative := cloneRowRecogCaptures(live.captures)
+		tentative[live.node.variable] = append(tentative[live.node.variable], event)
+		if matcher.evalNodeDefineProbe(live.node, event, end, tentative, live.captures[live.node.variable], multis[live.node.variable]) {
+			continue
 		}
-		if len(current) > 0 {
-			terminated = rowRecogMatchesForTerminated(definition, partition, startKey, terminated, current)
+		captures := cloneRowRecogCaptures(live.captures)
+		if !multis[live.node.variable] {
+			// Esper deassigns the dying state's stream slot, which erases the
+			// tentative binding for single-match variables; multimatch state
+			// is tracked separately and survives.
+			delete(captures, live.node.variable)
 		}
-		if len(terminated) > 0 {
-			r.emitRowRecogIntervalMatches(definition, partition, startKey, terminated, plan, now, batch, true)
+		terms = append(terms, rowRecogMatch{start: start, end: end - 1, captures: captures})
+	}
+	if len(terms) == 0 {
+		return nil
+	}
+	if partition.terminatedConsumed == nil {
+		partition.terminatedConsumed = make(map[string]struct{})
+	}
+	scheduled := make([]rowRecogMatch, 0)
+	for _, match := range rowRecogAllMatchesAtOrBeforeWithPrevious(definition, partition.events, partition.previousByEvent, start, end, now, r.variables) {
+		if match.terminal || rowRecogMatchAtFiniteWidth(definition.pattern, match) {
+			continue
+		}
+		key := rowRecogMatchKey(match)
+		if _, done := partition.emitted[key]; done {
+			continue
+		}
+		if _, done := partition.terminatedConsumed[key]; done {
+			continue
+		}
+		scheduled = append(scheduled, match)
+	}
+	found := make([]rowRecogMatch, 0)
+	for _, term := range terms {
+		for _, match := range scheduled {
+			key := rowRecogMatchKey(match)
+			if _, done := partition.terminatedConsumed[key]; done {
+				continue
+			}
+			if !rowRecogTerminationMatchesScheduled(term, match, multis) {
+				continue
+			}
+			partition.terminatedConsumed[key] = struct{}{}
+			found = append(found, match)
 		}
 	}
+	return found
+}
+
+// rowRecogTerminationMatchesScheduled mirrors
+// RowRecogPartitionTerminationStateComparator: same match begin, single-match
+// variables equal-or-both-absent, and every bound multimatch variable of the
+// scheduled entry an element-wise prefix of the termination entry's
+// multimatch state.
+func rowRecogTerminationMatchesScheduled(term, scheduled rowRecogMatch, multis map[string]bool) bool {
+	if term.start != scheduled.start {
+		return false
+	}
+	names := make(map[string]struct{}, len(term.captures)+len(scheduled.captures))
+	for name := range term.captures {
+		names[name] = struct{}{}
+	}
+	for name := range scheduled.captures {
+		names[name] = struct{}{}
+	}
+	for name := range names {
+		termEvents := term.captures[name]
+		endEvents := scheduled.captures[name]
+		if multis[name] {
+			if len(endEvents) == 0 {
+				continue
+			}
+			if len(termEvents) == 0 {
+				return false
+			}
+			for index, event := range endEvents {
+				if index < len(termEvents) && !sameEvent(event, termEvents[index]) {
+					return false
+				}
+			}
+			continue
+		}
+		if len(endEvents) == 0 {
+			if len(termEvents) != 0 {
+				return false
+			}
+			continue
+		}
+		if len(termEvents) == 0 || !sameEvent(endEvents[len(endEvents)-1], termEvents[len(termEvents)-1]) {
+			return false
+		}
+	}
+	return true
+}
+
+// rowRecogMultipleVars reports which pattern variables can bind more than one
+// event, i.e. Esper's isMultiple states: a variable quantified beyond a
+// single occurrence, nested inside a repeated subexpression, or bound a
+// second time within the same alternation branch
+// (RowRecogHelper.recursiveInspectVariables keeps fresh per-branch sets for
+// alternation children, so a tag seen once per branch stays single).
+func rowRecogMultipleVars(pattern RowPattern) map[string]bool {
+	result := make(map[string]bool)
+	var walk func(node RowPattern, ancestorMultiple bool, seen map[string]bool)
+	walk = func(node RowPattern, ancestorMultiple bool, seen map[string]bool) {
+		_, maximum := rowPatternBounds(node)
+		multiple := ancestorMultiple || (node.quantified && maximum != 1)
+		if node.kind == rowPatternVariable {
+			if multiple || seen[node.name] {
+				result[node.name] = true
+			}
+			seen[node.name] = true
+			return
+		}
+		if node.kind == rowPatternAlternation {
+			for _, part := range node.parts {
+				branchSeen := make(map[string]bool)
+				walk(part, multiple, branchSeen)
+				for name := range branchSeen {
+					seen[name] = true
+				}
+			}
+			return
+		}
+		for _, part := range node.parts {
+			walk(part, multiple, seen)
+		}
+	}
+	walk(pattern, false, make(map[string]bool))
+	return result
 }
 
 func (r *statementRuntime) emitRowRecogIntervalSnapshot(definition *rowRecogDefinition, partition *rowRecogPartitionState, matches []rowRecogMatch, plan Plan, now time.Time, batch *ResultBatch) {
@@ -1606,9 +1810,19 @@ func (r *statementRuntime) emitRowRecogIntervalMatches(definition *rowRecogDefin
 			}
 		}
 		selected = append(selected, match)
-		if !definition.allMatches {
-			break
+	}
+	if !definition.allMatches && len(selected) > 1 {
+		// Esper ranks end states by greedy counts before emitting a single
+		// match: greedy quantifiers prefer more repetitions, reluctant
+		// quantifiers prefer fewer, compared in NFA node order.
+		best := selected[0]
+		for _, candidate := range selected[1:] {
+			if rowRecogGreedyBetter(definition, candidate.greedyCounts, best.greedyCounts) {
+				best = candidate
+			}
 		}
+		selected = selected[:0]
+		selected = append(selected, best)
 	}
 	if len(selected) == 0 {
 		return
@@ -1745,63 +1959,14 @@ func rowRecogAllMatchesAtOrBeforeWithPrevious(definition *rowRecogDefinition, hi
 	return result
 }
 
-func rowRecogMatchesNotExtendedByCurrent(previous, current []rowRecogMatch) []rowRecogMatch {
-	if len(previous) == 0 || len(current) == 0 {
-		return previous
-	}
-	result := make([]rowRecogMatch, 0, len(previous))
-	for _, candidate := range previous {
-		extended := false
-		for _, later := range current {
-			if rowRecogMatchExtends(candidate, later) {
-				extended = true
-				break
-			}
-		}
-		if !extended {
-			result = append(result, candidate)
-		}
-	}
-	return result
-}
-
-func rowRecogMatchesForTerminated(definition *rowRecogDefinition, partition *rowRecogPartitionState, startKey string, previous, current []rowRecogMatch) []rowRecogMatch {
-	if definition == nil || partition == nil || len(previous) == 0 || len(current) == 0 {
-		return previous
-	}
-	if !rowPatternContainsAlternation(definition.pattern) {
-		return rowRecogMatchesNotExtendedByCurrent(previous, current)
-	}
-	if partition.alternateNotified == nil {
-		partition.alternateNotified = make(map[string]struct{})
-	}
-	result := make([]rowRecogMatch, 0, len(previous))
-	for _, candidate := range previous {
-		extended := false
-		for _, later := range current {
-			if rowRecogMatchExtends(candidate, later) {
-				extended = true
-				break
-			}
-		}
-		if !extended {
-			result = append(result, candidate)
-			continue
-		}
-		key := rowRecogClosedBranchKey(startKey, candidate.branch)
-		if _, notified := partition.alternateNotified[key]; notified {
-			continue
-		}
-		partition.alternateNotified[key] = struct{}{}
-		result = append(result, candidate)
-	}
-	return result
-}
-
 func rowRecogMatchExtends(previous, current rowRecogMatch) bool {
-	if previous.start != current.start || current.end <= previous.end || previous.branch != current.branch {
+	if previous.start != current.start || current.end <= previous.end {
 		return false
 	}
+	// A later match extends an earlier one when it binds the same events for
+	// every variable the earlier match bound, in the same order. The NFA
+	// route (branch) is intentionally not compared: a repeat that grows from
+	// zero to one binding changes the route but still extends the match.
 	for name, events := range previous.captures {
 		later := current.captures[name]
 		if len(later) < len(events) {
@@ -2174,18 +2339,19 @@ func rowRecogMatchesWithPrevious(definition *rowRecogDefinition, history []Event
 		variables:       variables,
 		limit:           definition.maxStates,
 	}
-	paths := matcher.match(definition.pattern, start, nil)
+	paths := matcher.match(start)
 	result := make([]rowRecogMatch, 0, len(paths))
 	for _, path := range paths {
 		if path.position != end+1 {
 			continue
 		}
 		result = append(result, rowRecogMatch{
-			start:    start,
-			end:      end,
-			terminal: path.terminal,
-			branch:   path.branch,
-			captures: cloneRowRecogCaptures(path.captures),
+			start:        start,
+			end:          end,
+			terminal:     path.terminal,
+			branch:       path.branch,
+			captures:     cloneRowRecogCaptures(path.captures),
+			greedyCounts: path.greedy,
 		})
 		if definition.maxStates > 0 && len(result) >= definition.maxStates {
 			break
@@ -2200,6 +2366,18 @@ type rowPatternMatchPath struct {
 	position int
 	terminal bool
 	branch   string
+	captures map[string][]Event
+	greedy   []int
+	node     *rowRecogStatePoolNFANode
+}
+
+// rowPatternFrontierPath is a live NFA state after consuming the event at
+// m.end: the node that matched plus the bindings accumulated so far. Esper's
+// "or terminated" semantics need these partial states because a dying state
+// whose node is end-capable produces a termination entry that can release a
+// scheduled match early.
+type rowPatternFrontierPath struct {
+	node     *rowRecogStatePoolNFANode
 	captures map[string][]Event
 }
 
@@ -2243,16 +2421,6 @@ func rowPatternBranchKey(pattern RowPattern) string {
 	return key
 }
 
-func rowPatternJoinBranch(left, right string) string {
-	if left == "" {
-		return right
-	}
-	if right == "" {
-		return left
-	}
-	return left + "/" + right
-}
-
 type rowPatternMatchContext struct {
 	definition      *rowRecogDefinition
 	history         []Event
@@ -2262,194 +2430,149 @@ type rowPatternMatchContext struct {
 	variables       map[string]Value
 	limit           int
 	steps           int
+	frontier        *[]rowPatternFrontierPath
 }
 
-func (m *rowPatternMatchContext) match(pattern RowPattern, position int, captures map[string][]Event) []rowPatternMatchPath {
-	if m == nil || m.definition == nil || position > m.end+1 || !m.step() {
+// match enumerates complete matches in Esper's NFA emission order. Esper's
+// RowRecogNFAView keeps live (state, bindings) entries in a FIFO list and
+// emits end states in the order their producing entries were created. For
+// matches ending at the same event that order equals a depth-first pre-order
+// walk over the NFA where each state's successors are visited in Esper's
+// construction order: repeat states loop to themselves first, and atom
+// states list passthrough-skip targets before the repeat entry. The shared
+// state-pool NFA compiler already encodes exactly that successor order, so
+// the enumerator walks it directly.
+func (m *rowPatternMatchContext) match(start int) []rowPatternMatchPath {
+	nfa := rowRecogStatePoolNFAFor(m.definition)
+	if nfa == nil || len(nfa.starts) == 0 {
 		return nil
 	}
-	minimum, maximum := rowPatternBounds(pattern)
-	if pattern.quantified && !(minimum == 1 && maximum == 1) {
-		base := pattern
-		base.quantified = false
-		base.minimum = 1
-		base.maximum = 1
-		return m.repeat(base, position, captures, minimum, maximum, pattern.greedy)
-	}
-	if pattern.kind == rowPatternVariable {
-		return m.repeat(pattern, position, captures, minimum, maximum, pattern.greedy)
-	}
-	return m.matchBase(pattern, position, captures)
-}
-
-func (m *rowPatternMatchContext) matchBase(pattern RowPattern, position int, captures map[string][]Event) []rowPatternMatchPath {
-	if m == nil || !m.step() {
-		return nil
-	}
-	switch pattern.kind {
-	case rowPatternVariable:
-		if position > m.end || position >= len(m.history) {
-			return nil
-		}
-		event := m.history[position]
-		next := cloneRowRecogCaptures(captures)
-		next[pattern.name] = append(next[pattern.name], event)
-		predicate := m.definition.defines[pattern.name]
-		if predicate != nil {
-			value := predicate.eval(EvalContext{
-				Event:           event,
-				History:         append([]Event(nil), m.history[:position+1]...),
-				PreviousHistory: rowRecogPreviousHistoryByMap(m.previousByEvent, event, m.history[:position+1]),
-				Tags:            rowRecogLastTags(next),
-				TagValues:       cloneRowRecogCaptures(next),
-				Now:             m.now,
-				Variables:       m.variables,
-			})
-			matched, ok := boolValue(value)
-			if !ok || !matched {
-				return nil
-			}
-		}
-		return []rowPatternMatchPath{{position: position + 1, terminal: true, branch: rowPatternBranchKey(pattern), captures: next}}
-	case rowPatternSequence:
-		paths := []rowPatternMatchPath{{position: position, terminal: true, branch: "seq", captures: cloneRowRecogCaptures(captures)}}
-		for _, part := range pattern.parts {
-			next := make([]rowPatternMatchPath, 0)
-			for _, path := range paths {
-				for _, candidate := range m.match(part, path.position, path.captures) {
-					candidate.terminal = path.terminal && candidate.terminal
-					candidate.branch = rowPatternJoinBranch(path.branch, candidate.branch)
-					next = m.appendLimited(next, []rowPatternMatchPath{candidate})
-					if m.exhausted(len(next)) {
-						break
-					}
-				}
-				if m.exhausted(len(next)) {
-					break
-				}
-			}
-			paths = next
-			if len(paths) == 0 {
-				return nil
-			}
-		}
-		return paths
-	case rowPatternAlternation:
-		result := make([]rowPatternMatchPath, 0)
-		for index, part := range pattern.parts {
-			for _, candidate := range m.match(part, position, captures) {
-				candidate.branch = fmt.Sprintf("alt%d/%s", index, candidate.branch)
-				result = m.appendLimited(result, []rowPatternMatchPath{candidate})
-				if m.exhausted(len(result)) {
-					break
-				}
-			}
-			if m.exhausted(len(result)) {
-				break
-			}
-		}
-		return result
-	case rowPatternPermutation:
-		result := make([]rowPatternMatchPath, 0)
-		for _, order := range rowPatternPermutationOrders(pattern.parts) {
-			paths := []rowPatternMatchPath{{position: position, terminal: true, branch: "perm", captures: cloneRowRecogCaptures(captures)}}
-			for _, part := range order {
-				next := make([]rowPatternMatchPath, 0)
-				for _, path := range paths {
-					for _, candidate := range m.match(part, path.position, path.captures) {
-						candidate.terminal = path.terminal && candidate.terminal
-						candidate.branch = rowPatternJoinBranch(path.branch, candidate.branch)
-						next = m.appendLimited(next, []rowPatternMatchPath{candidate})
-						if m.exhausted(len(next)) {
-							break
-						}
-					}
-					if m.exhausted(len(next)) {
-						break
-					}
-				}
-				paths = next
-				if len(paths) == 0 {
-					break
-				}
-			}
-			result = m.appendLimited(result, paths)
-			if m.exhausted(len(result)) {
-				break
-			}
-		}
-		return result
-	default:
-		return nil
-	}
-}
-
-func (m *rowPatternMatchContext) repeat(base RowPattern, position int, captures map[string][]Event, minimum, maximum int, greedy bool) []rowPatternMatchPath {
-	unbounded := maximum == 0
-	branchPrefix := ""
-	if !(minimum == 1 && maximum == 1) {
-		branchPrefix = fmt.Sprintf("repeat[%d,%d]/", minimum, maximum)
-	}
-	if maximum == 0 {
-		maximum = m.end - position + 1
-		if maximum < minimum {
-			maximum = minimum
-		}
-	}
-	levels := make([][]rowPatternMatchPath, 0, maximum+1)
-	active := []rowPatternMatchPath{{
-		position: position,
-		terminal: !unbounded && minimum == 0,
-		branch:   branchPrefix + rowPatternBranchKey(base),
-		captures: cloneRowRecogCaptures(captures),
-	}}
-	for count := 0; count <= maximum; count++ {
-		if count >= minimum {
-			levels = append(levels, active)
-		}
-		if count == maximum || len(active) == 0 {
-			break
-		}
-		next := make([]rowPatternMatchPath, 0)
-		for _, path := range active {
-			paths := m.matchBase(base, path.position, path.captures)
-			for _, candidate := range paths {
-				// Repeating a zero-width group forever is not a useful NFA
-				// state. Keep the zero-repeat result but require progress for
-				// subsequent iterations.
-				if candidate.position == path.position {
-					continue
-				}
-				candidate.terminal = candidate.terminal && !unbounded
-				candidate.branch = branchPrefix + candidate.branch
-				next = m.appendLimited(next, []rowPatternMatchPath{candidate})
-				if m.exhausted(len(next)) {
-					break
-				}
-			}
-			if m.exhausted(len(next)) {
-				break
-			}
-		}
-		active = next
-	}
-	result := make([]rowPatternMatchPath, 0)
-	if greedy {
-		for index := len(levels) - 1; index >= 0; index-- {
-			result = m.appendLimited(result, levels[index])
-			if m.exhausted(len(result)) {
-				break
-			}
-		}
-		return result
-	}
-	for _, level := range levels {
-		result = m.appendLimited(result, level)
-		if m.exhausted(len(result)) {
+	paths := make([]rowPatternMatchPath, 0)
+	for _, startState := range nfa.starts {
+		m.nfaStep(startState, start, nil, nil, nil, &paths)
+		if m.exhausted(len(paths)) {
 			break
 		}
 	}
-	return result
+	return paths
+}
+
+// nfaStep evaluates one NFA state against the event at position and walks
+// its successors in construction order. A complete path is emitted after
+// the state's real successors, mirroring Esper's EndEval successor which is
+// appended last to every end state.
+func (m *rowPatternMatchContext) evalNodeDefine(node *rowRecogStatePoolNFANode, event Event, position int, captures map[string][]Event) bool {
+	predicate := m.definition.defines[node.variable]
+	if predicate == nil {
+		return true
+	}
+	value := predicate.eval(EvalContext{
+		Event:           event,
+		History:         append([]Event(nil), m.history[:position+1]...),
+		PreviousHistory: rowRecogPreviousHistoryByMap(m.previousByEvent, event, m.history[:position+1]),
+		Tags:            rowRecogLastTags(captures),
+		TagValues:       cloneRowRecogCaptures(captures),
+		Now:             m.now,
+		Variables:       m.variables,
+	})
+	matched, ok := boolValue(value)
+	return ok && matched
+}
+
+// evalNodeDefineProbe evaluates a define for a termination probe: the dying
+// state's variable sees the current event in its single-event slot (Tags),
+// while a multimatch variable's array view (TagValues) keeps the pre-event
+// state — Esper's addTag runs only on the matched branch, so matches() never
+// sees the tentative event inside the multimatch array.
+func (m *rowPatternMatchContext) evalNodeDefineProbe(node *rowRecogStatePoolNFANode, event Event, position int, tentative map[string][]Event, preEvent []Event, multi bool) bool {
+	predicate := m.definition.defines[node.variable]
+	if predicate == nil {
+		return true
+	}
+	tagValues := tentative
+	if multi {
+		tagValues = cloneRowRecogCaptures(tentative)
+		if len(preEvent) == 0 {
+			delete(tagValues, node.variable)
+		} else {
+			tagValues[node.variable] = append([]Event(nil), preEvent...)
+		}
+	}
+	value := predicate.eval(EvalContext{
+		Event:           event,
+		History:         append([]Event(nil), m.history[:position+1]...),
+		PreviousHistory: rowRecogPreviousHistoryByMap(m.previousByEvent, event, m.history[:position+1]),
+		Tags:            rowRecogLastTags(tentative),
+		TagValues:       tagValues,
+		Now:             m.now,
+		Variables:       m.variables,
+	})
+	matched, ok := boolValue(value)
+	return ok && matched
+}
+
+func (m *rowPatternMatchContext) nfaStep(node *rowRecogStatePoolNFANode, position int, captures map[string][]Event, greedy []int, statePath []int, out *[]rowPatternMatchPath) {
+	if m == nil || node == nil || position > m.end || position >= len(m.history) || !m.step() {
+		return
+	}
+	event := m.history[position]
+	next := cloneRowRecogCaptures(captures)
+	next[node.variable] = append(next[node.variable], event)
+	if !m.evalNodeDefine(node, event, position, next) {
+		return
+	}
+	nextGreedy := greedy
+	if node.greedy != nil && *node.greedy {
+		// Esper increments greedycountPerState only for isGreedy()==true
+		// states; reluctant nodes keep count 0 so ties fall back to the
+		// first-created end state.
+		nextGreedy = append([]int(nil), greedy...)
+		for len(nextGreedy) <= node.id {
+			nextGreedy = append(nextGreedy, 0)
+		}
+		nextGreedy[node.id]++
+	}
+	nextPath := append(append([]int(nil), statePath...), node.id)
+	if m.frontier != nil && position == m.end {
+		// Live states after this event are the successors of every matched
+		// node, mirroring Esper's nextStates entries.
+		for _, successor := range node.next {
+			*m.frontier = append(*m.frontier, rowPatternFrontierPath{node: successor, captures: next})
+		}
+	}
+	for _, successor := range node.next {
+		m.nfaStep(successor, position+1, next, nextGreedy, nextPath, out)
+		if m.exhausted(len(*out)) {
+			return
+		}
+	}
+	if node.terminal {
+		*out = append(*out, rowPatternMatchPath{
+			position: position + 1,
+			terminal: len(node.next) == 0,
+			branch:   rowRecogNFAPathBranch(nextPath),
+			captures: next,
+			greedy:   nextGreedy,
+			node:     node,
+		})
+	}
+}
+
+// rowRecogNFAPathBranch renders the traversed NFA states with consecutive
+// repeats collapsed, so a match's branch identifies its NFA route rather
+// than its length. Branch keys feed closedBranches bookkeeping for interval
+// and or-terminated statements.
+func rowRecogNFAPathBranch(statePath []int) string {
+	parts := make([]string, 0, len(statePath))
+	previous := -1
+	for _, id := range statePath {
+		if id == previous {
+			continue
+		}
+		previous = id
+		parts = append(parts, fmt.Sprintf("s%d", id))
+	}
+	return strings.Join(parts, "/")
 }
 
 func rowPatternBounds(pattern RowPattern) (int, int) {
@@ -2469,23 +2592,6 @@ func (m *rowPatternMatchContext) step() bool {
 
 func (m *rowPatternMatchContext) exhausted(size int) bool {
 	return m.limit > 0 && size >= m.limit
-}
-
-func (m *rowPatternMatchContext) appendLimited(dst, src []rowPatternMatchPath) []rowPatternMatchPath {
-	if len(src) == 0 {
-		return dst
-	}
-	if m.limit <= 0 {
-		return append(dst, src...)
-	}
-	remaining := m.limit - len(dst)
-	if remaining <= 0 {
-		return dst
-	}
-	if len(src) > remaining {
-		src = src[:remaining]
-	}
-	return append(dst, src...)
 }
 
 func cloneRowRecogCaptures(captures map[string][]Event) map[string][]Event {

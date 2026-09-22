@@ -12,6 +12,7 @@ func TestRowRecogGreedynessReluctantZeroToOne(t *testing.T) {
 		RowVar("A").Optional().Reluctant(),
 		RowVar("B").Optional(),
 	)).
+		FirstMatch().
 		Define("A", Equal[float64](Field[rowRecogTestEvent, float64]("price"), Literal(1.0))).
 		Define("B", Equal[float64](Field[rowRecogTestEvent, float64]("price"), Literal(1.0))).
 		Measures(
@@ -45,6 +46,7 @@ func TestRowRecogGreedynessReluctantZeroToMany(t *testing.T) {
 		RowVar("B").Optional(),
 		RowVar("C"),
 	)).
+		FirstMatch().
 		Define("A", Equal[float64](price, Literal(1.0))).
 		Define("B", Or(Equal[float64](price, Literal(1.0)), Equal[float64](price, Literal(2.0)))).
 		Define("C", Equal[float64](price, Literal(3.0))).
@@ -128,6 +130,7 @@ func TestRowRecogGreedynessReluctantOneToMany(t *testing.T) {
 		RowVar("B").Optional(),
 		RowVar("C"),
 	)).
+		FirstMatch().
 		Define("A", Equal[float64](price, Literal(1.0))).
 		Define("B", Or(Equal[float64](price, Literal(1.0)), Equal[float64](price, Literal(2.0)))).
 		Define("C", Equal[float64](price, Literal(3.0))).

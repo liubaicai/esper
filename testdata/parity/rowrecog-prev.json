@@ -1,0 +1,1435 @@
+{
+ "version": "esper-parity/v1",
+ "id": "rowrecog-prev",
+ "description": "RowRecogPrev ordinals 0-4 plus RowRecogDataSet RowRecogExampleWithPREV (six executions, the PREV() family inside match_recognize DEFINE): timewindow-partitioned-simple runs under virtual time and shows prev history surviving time-window eviction; partition-by-2-fields-keepall partitions by theString,cat including a null-cat partition that produces no output; unpartitioned-keepall replays two sequential deployments (undeployModuleContaining plus redeploy) covering plain and indexed prev; timewindow-unpartitioned and timewindow-partitioned exercise multi-index prev on string and numeric fields, prev(x,0) under Math.abs and IN over prev under virtual time; example-with-prev replays the 20-measure-column dataset example with after match skip to current row and an undefined A variable. Each case deploys s0 with the verbatim Java EPL, advances the clock where Java sends timers, sends SupportRecogBean events and snapshots the statement iterator where Java asserts it.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/rowrecog/RowRecogPrev.java",
+ "javaSource2": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/rowrecog/RowRecogDataSet.java",
+ "javaRuntimes": [
+  "java-runtime-c096e55f89e15fcc54b7",
+  "java-runtime-9c42dd39d70d409a64d7",
+  "java-runtime-1200bc1d6899155bac4a",
+  "java-runtime-241336e6d46c14fbcf06",
+  "java-runtime-59f7afa17be17f57fbd5",
+  "java-runtime-41c5b0a59540aec34895"
+ ],
+ "javaNames": [
+  "RowRecogTimeWindowPartitionedSimple",
+  "RowRecogPartitionBy2FieldsKeepall",
+  "RowRecogUnpartitionedKeepAll",
+  "RowRecogTimeWindowUnpartitioned",
+  "RowRecogTimeWindowPartitioned",
+  "RowRecogExampleWithPREV"
+ ],
+ "javaStaticIds": [
+  "java-0c4fd7a54738a6e8389b",
+  "java-afe8f36bb6325baadb99"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "timewindow-partitioned-simple",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-c096e55f89e15fcc54b7",
+   "executionName": "RowRecogTimeWindowPartitionedSimple",
+   "observation": "listener+iterator; virtual time; prev history survives time-window eviction (E4 matches at 6200 against E1 sent at 1000); time-window expiry shrinks the iterator at 11200/11600/16000",
+   "epl": "@name('s0') select * from SupportRecogBean#time(5 sec) match_recognize (  partition by cat   measures A.cat as cat, A.theString as a_string  all matches pattern (A)   define     A as PREV(A.value) = (A.value - 1)) order by a_string"
+  },
+  {
+   "case": "partition-by-2-fields-keepall",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-9c42dd39d70d409a64d7",
+   "executionName": "RowRecogPartitionBy2FieldsKeepall",
+   "observation": "listener+iterator; keepall partitioned by theString,cat; the null-cat S1 partition produces no output",
+   "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize (  partition by theString, cat  measures A.theString as a_string, A.cat as a_cat, A.value as a_value, B.value as b_value   all matches pattern (A B)   define     A as (A.value > PREV(A.value)),    B as (B.value > PREV(B.value))) order by a_string, a_cat"
+  },
+  {
+   "case": "unpartitioned-keepall",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-1200bc1d6899155bac4a",
+   "executionName": "RowRecogUnpartitionedKeepAll",
+   "observation": "listener+iterator; two sequential deployments mirroring undeployModuleContaining plus redeploy: stmt1 defines A.value > PREV(A.value), stmt2 defines PREV(A.value, 2) = 5 (indexed prev)",
+   "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize (  measures A.theString as a_string  all matches pattern (A)   define A as (A.value > PREV(A.value))) order by a_string"
+  },
+  {
+   "case": "timewindow-unpartitioned",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-241336e6d46c14fbcf06",
+   "executionName": "RowRecogTimeWindowUnpartitioned",
+   "observation": "listener+iterator; virtual time; multi-index prev on string and numeric fields, prev(x,0) under Math.abs, IN over prev; iterator expiry at 9500/11500",
+   "epl": "@name('s0') select * from SupportRecogBean#time(5) match_recognize (  measures A.theString as a_string, B.theString as b_string  all matches pattern (A B)   define     A as PREV(A.theString, 3) = 'P3' and PREV(A.theString, 2) = 'P2' and PREV(A.theString, 4) = 'P4' and Math.abs(prev(A.value, 0)) >= 0,    B as B.value in (PREV(B.value, 4), PREV(B.value, 2)))"
+  },
+  {
+   "case": "timewindow-partitioned",
+   "ordinal": 4,
+   "runtimeId": "java-runtime-59f7afa17be17f57fbd5",
+   "executionName": "RowRecogTimeWindowPartitioned",
+   "observation": "listener+iterator; virtual time; the timewindow-unpartitioned shape partitioned by cat with per-partition prev history and per-partition time expiry",
+   "epl": "@name('s0') select * from SupportRecogBean#time(5) match_recognize (  partition by cat  measures A.cat as cat, A.theString as a_string, B.theString as b_string  all matches pattern (A B)   define     A as PREV(A.theString, 3) = 'P3' and PREV(A.theString, 2) = 'P2' and PREV(A.theString, 4) = 'P4',    B as B.value in (PREV(B.value, 4), PREV(B.value, 2))) order by cat"
+  },
+  {
+   "case": "example-with-prev",
+   "ordinal": 5,
+   "runtimeId": "java-runtime-41c5b0a59540aec34895",
+   "executionName": "RowRecogExampleWithPREV",
+   "observation": "listener; keepall with 20 measure columns and after match skip to current row over ( A B C* D E* F+ ); A is undefined (matches any row); E7 produces 1 row, E8 3 rows, E9 5 rows",
+   "epl": "@name('s0') SELECT * FROM SupportRecogBean#keepall   MATCH_RECOGNIZE (       MEASURES A.theString AS a_string,         A.value AS a_value,         B.theString AS b_string,         B.value AS b_value,         C[0].theString AS c0_string,         C[0].value AS c0_value,         C[1].theString AS c1_string,         C[1].value AS c1_value,         C[2].theString AS c2_string,         C[2].value AS c2_value,         D.theString AS d_string,         D.value AS d_value,         E[0].theString AS e0_string,         E[0].value AS e0_value,         E[1].theString AS e1_string,         E[1].value AS e1_value,         F[0].theString AS f0_string,         F[0].value AS f0_value,         F[1].theString AS f1_string,         F[1].value AS f1_value       ALL MATCHES       after match skip to current row       PATTERN ( A B C* D E* F+ )       DEFINE /* A is unspecified, defaults to TRUE, matches any row */            B AS (B.value < PREV (B.value)),            C AS (C.value <= PREV (C.value)),            D AS (D.value < PREV (D.value)),            E AS (E.value >= PREV (E.value)),            F AS (F.value >= PREV (F.value) and F.value > A.value))"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "timewindow-partitioned-simple"
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-partitioned-simple",
+   "at": "1970-01-01T00:00:00.000Z"
+  },
+  {
+   "op": "deploy",
+   "case": "timewindow-partitioned-simple",
+   "statement": "s0",
+   "epl": "@name('s0') select * from SupportRecogBean#time(5 sec) match_recognize (  partition by cat   measures A.cat as cat, A.theString as a_string  all matches pattern (A)   define     A as PREV(A.value) = (A.value - 1)) order by a_string"
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-partitioned-simple",
+   "at": "1970-01-01T00:00:01.000Z"
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned-simple",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E1",
+    "value": 100,
+    "cat": "S1"
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-partitioned-simple",
+   "at": "1970-01-01T00:00:02.000Z"
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned-simple",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E2",
+    "value": 100,
+    "cat": "S3"
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-partitioned-simple",
+   "at": "1970-01-01T00:00:02.500Z"
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned-simple",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E3",
+    "value": 102,
+    "cat": "S2"
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-partitioned-simple",
+   "at": "1970-01-01T00:00:06.200Z"
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned-simple",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E4",
+    "value": 101,
+    "cat": "S1"
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "timewindow-partitioned-simple",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-partitioned-simple",
+   "at": "1970-01-01T00:00:06.500Z"
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned-simple",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E5",
+    "value": 101,
+    "cat": "S3"
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "timewindow-partitioned-simple",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-partitioned-simple",
+   "at": "1970-01-01T00:00:07.000Z"
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned-simple",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E6",
+    "value": 102,
+    "cat": "S1"
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "timewindow-partitioned-simple",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-partitioned-simple",
+   "at": "1970-01-01T00:00:10.000Z"
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned-simple",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E7",
+    "value": 103,
+    "cat": "S2"
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "timewindow-partitioned-simple",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned-simple",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E8",
+    "value": 102,
+    "cat": "S2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned-simple",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E8",
+    "value": 101,
+    "cat": "S1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned-simple",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E8",
+    "value": 104,
+    "cat": "S2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned-simple",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E8",
+    "value": 105,
+    "cat": "S1"
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-partitioned-simple",
+   "at": "1970-01-01T00:00:11.199Z"
+  },
+  {
+   "op": "snapshot",
+   "case": "timewindow-partitioned-simple",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-partitioned-simple",
+   "at": "1970-01-01T00:00:11.200Z"
+  },
+  {
+   "op": "snapshot",
+   "case": "timewindow-partitioned-simple",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-partitioned-simple",
+   "at": "1970-01-01T00:00:11.600Z"
+  },
+  {
+   "op": "snapshot",
+   "case": "timewindow-partitioned-simple",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-partitioned-simple",
+   "at": "1970-01-01T00:00:16.000Z"
+  },
+  {
+   "op": "snapshot",
+   "case": "timewindow-partitioned-simple",
+   "statement": "s0"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "timewindow-partitioned-simple"
+  },
+  {
+   "op": "case",
+   "case": "partition-by-2-fields-keepall"
+  },
+  {
+   "op": "deploy",
+   "case": "partition-by-2-fields-keepall",
+   "statement": "s0",
+   "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize (  partition by theString, cat  measures A.theString as a_string, A.cat as a_cat, A.value as a_value, B.value as b_value   all matches pattern (A B)   define     A as (A.value > PREV(A.value)),    B as (B.value > PREV(B.value))) order by a_string, a_cat"
+  },
+  {
+   "op": "send",
+   "case": "partition-by-2-fields-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S1",
+    "value": 5,
+    "cat": "T1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "partition-by-2-fields-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S2",
+    "value": 110,
+    "cat": "T1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "partition-by-2-fields-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S1",
+    "value": 21,
+    "cat": "T2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "partition-by-2-fields-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S1",
+    "value": 7,
+    "cat": "T1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "partition-by-2-fields-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S2",
+    "value": 111,
+    "cat": "T1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "partition-by-2-fields-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S1",
+    "value": 20,
+    "cat": "T2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "partition-by-2-fields-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S2",
+    "value": 110,
+    "cat": "T1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "partition-by-2-fields-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S2",
+    "value": 1000,
+    "cat": "T2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "partition-by-2-fields-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S2",
+    "value": 1001,
+    "cat": "T2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "partition-by-2-fields-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S1",
+    "value": 9,
+    "cat": null
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "partition-by-2-fields-keepall",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "partition-by-2-fields-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S1",
+    "value": 9,
+    "cat": "T1"
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "partition-by-2-fields-keepall",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "partition-by-2-fields-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S2",
+    "value": 1001,
+    "cat": "T2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "partition-by-2-fields-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S2",
+    "value": 109,
+    "cat": "T1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "partition-by-2-fields-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S1",
+    "value": 25,
+    "cat": "T2"
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "partition-by-2-fields-keepall",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "partition-by-2-fields-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S2",
+    "value": 1002,
+    "cat": "T2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "partition-by-2-fields-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S2",
+    "value": 1003,
+    "cat": "T2"
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "partition-by-2-fields-keepall",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "partition-by-2-fields-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S1",
+    "value": 28,
+    "cat": "T2"
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "partition-by-2-fields-keepall",
+   "statement": "s0"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "partition-by-2-fields-keepall"
+  },
+  {
+   "op": "case",
+   "case": "unpartitioned-keepall"
+  },
+  {
+   "op": "deploy",
+   "case": "unpartitioned-keepall",
+   "statement": "s0",
+   "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize (  measures A.theString as a_string  all matches pattern (A)   define A as (A.value > PREV(A.value))) order by a_string"
+  },
+  {
+   "op": "send",
+   "case": "unpartitioned-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E1",
+    "value": 5,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "unpartitioned-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E2",
+    "value": 3,
+    "cat": null
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "unpartitioned-keepall",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "unpartitioned-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E3",
+    "value": 6,
+    "cat": null
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "unpartitioned-keepall",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "unpartitioned-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E4",
+    "value": 4,
+    "cat": null
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "unpartitioned-keepall",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "unpartitioned-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E5",
+    "value": 6,
+    "cat": null
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "unpartitioned-keepall",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "unpartitioned-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E6",
+    "value": 10,
+    "cat": null
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "unpartitioned-keepall",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "unpartitioned-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E7",
+    "value": 9,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "unpartitioned-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E8",
+    "value": 4,
+    "cat": null
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "unpartitioned-keepall",
+   "statement": "s0"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "unpartitioned-keepall"
+  },
+  {
+   "op": "deploy",
+   "case": "unpartitioned-keepall",
+   "statement": "s0",
+   "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize (  measures A.theString as a_string  all matches pattern (A)   define A as (PREV(A.value, 2) = 5)) order by a_string"
+  },
+  {
+   "op": "send",
+   "case": "unpartitioned-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E1",
+    "value": 5,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "unpartitioned-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E2",
+    "value": 4,
+    "cat": null
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "unpartitioned-keepall",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "unpartitioned-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E3",
+    "value": 6,
+    "cat": null
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "unpartitioned-keepall",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "unpartitioned-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E4",
+    "value": 3,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "unpartitioned-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E5",
+    "value": 3,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "unpartitioned-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E5",
+    "value": 5,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "unpartitioned-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E6",
+    "value": 5,
+    "cat": null
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "unpartitioned-keepall",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "unpartitioned-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E7",
+    "value": 6,
+    "cat": null
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "unpartitioned-keepall",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "unpartitioned-keepall",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E8",
+    "value": 6,
+    "cat": null
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "unpartitioned-keepall",
+   "statement": "s0"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "unpartitioned-keepall"
+  },
+  {
+   "op": "case",
+   "case": "timewindow-unpartitioned"
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-unpartitioned",
+   "at": "1970-01-01T00:00:00.000Z"
+  },
+  {
+   "op": "deploy",
+   "case": "timewindow-unpartitioned",
+   "statement": "s0",
+   "epl": "@name('s0') select * from SupportRecogBean#time(5) match_recognize (  measures A.theString as a_string, B.theString as b_string  all matches pattern (A B)   define     A as PREV(A.theString, 3) = 'P3' and PREV(A.theString, 2) = 'P2' and PREV(A.theString, 4) = 'P4' and Math.abs(prev(A.value, 0)) >= 0,    B as B.value in (PREV(B.value, 4), PREV(B.value, 2)))"
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-unpartitioned",
+   "at": "1970-01-01T00:00:01.000Z"
+  },
+  {
+   "op": "send",
+   "case": "timewindow-unpartitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "P2",
+    "value": 1,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-unpartitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "P1",
+    "value": 2,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-unpartitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "P3",
+    "value": 3,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-unpartitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "P4",
+    "value": 4,
+    "cat": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-unpartitioned",
+   "at": "1970-01-01T00:00:02.000Z"
+  },
+  {
+   "op": "send",
+   "case": "timewindow-unpartitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "P2",
+    "value": 1,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-unpartitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E1",
+    "value": 3,
+    "cat": null
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "timewindow-unpartitioned",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-unpartitioned",
+   "at": "1970-01-01T00:00:03.000Z"
+  },
+  {
+   "op": "send",
+   "case": "timewindow-unpartitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "P4",
+    "value": 11,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-unpartitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "P3",
+    "value": 12,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-unpartitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "P2",
+    "value": 13,
+    "cat": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-unpartitioned",
+   "at": "1970-01-01T00:00:04.000Z"
+  },
+  {
+   "op": "send",
+   "case": "timewindow-unpartitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "xx",
+    "value": 4,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-unpartitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E2",
+    "value": -1,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-unpartitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E3",
+    "value": 12,
+    "cat": null
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "timewindow-unpartitioned",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-unpartitioned",
+   "at": "1970-01-01T00:00:05.000Z"
+  },
+  {
+   "op": "send",
+   "case": "timewindow-unpartitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "P4",
+    "value": 21,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-unpartitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "P3",
+    "value": 22,
+    "cat": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-unpartitioned",
+   "at": "1970-01-01T00:00:06.000Z"
+  },
+  {
+   "op": "send",
+   "case": "timewindow-unpartitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "P2",
+    "value": 23,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-unpartitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "xx",
+    "value": -2,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-unpartitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E5",
+    "value": -1,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-unpartitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E6",
+    "value": -2,
+    "cat": null
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "timewindow-unpartitioned",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-unpartitioned",
+   "at": "1970-01-01T00:00:08.500Z"
+  },
+  {
+   "op": "snapshot",
+   "case": "timewindow-unpartitioned",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-unpartitioned",
+   "at": "1970-01-01T00:00:09.500Z"
+  },
+  {
+   "op": "snapshot",
+   "case": "timewindow-unpartitioned",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-unpartitioned",
+   "at": "1970-01-01T00:00:10.500Z"
+  },
+  {
+   "op": "snapshot",
+   "case": "timewindow-unpartitioned",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-unpartitioned",
+   "at": "1970-01-01T00:00:11.500Z"
+  },
+  {
+   "op": "snapshot",
+   "case": "timewindow-unpartitioned",
+   "statement": "s0"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "timewindow-unpartitioned"
+  },
+  {
+   "op": "case",
+   "case": "timewindow-partitioned"
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-partitioned",
+   "at": "1970-01-01T00:00:00.000Z"
+  },
+  {
+   "op": "deploy",
+   "case": "timewindow-partitioned",
+   "statement": "s0",
+   "epl": "@name('s0') select * from SupportRecogBean#time(5) match_recognize (  partition by cat  measures A.cat as cat, A.theString as a_string, B.theString as b_string  all matches pattern (A B)   define     A as PREV(A.theString, 3) = 'P3' and PREV(A.theString, 2) = 'P2' and PREV(A.theString, 4) = 'P4',    B as B.value in (PREV(B.value, 4), PREV(B.value, 2))) order by cat"
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-partitioned",
+   "at": "1970-01-01T00:00:01.000Z"
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "P4",
+    "value": 1,
+    "cat": "c2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "P3",
+    "value": 2,
+    "cat": "c1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "P2",
+    "value": 3,
+    "cat": "c2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "xx",
+    "value": 4,
+    "cat": "c1"
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-partitioned",
+   "at": "1970-01-01T00:00:02.000Z"
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "P2",
+    "value": 1,
+    "cat": "c1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E1",
+    "value": 3,
+    "cat": "c1"
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "timewindow-partitioned",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-partitioned",
+   "at": "1970-01-01T00:00:03.000Z"
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "P4",
+    "value": 11,
+    "cat": "c1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "P3",
+    "value": 12,
+    "cat": "c1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "P2",
+    "value": 13,
+    "cat": "c1"
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-partitioned",
+   "at": "1970-01-01T00:00:04.000Z"
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "xx",
+    "value": 4,
+    "cat": "c1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E2",
+    "value": -1,
+    "cat": "c1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E3",
+    "value": 12,
+    "cat": "c1"
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "timewindow-partitioned",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-partitioned",
+   "at": "1970-01-01T00:00:05.000Z"
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "P4",
+    "value": 21,
+    "cat": "c2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "P3",
+    "value": 22,
+    "cat": "c2"
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-partitioned",
+   "at": "1970-01-01T00:00:06.000Z"
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "P2",
+    "value": 23,
+    "cat": "c2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "xx",
+    "value": -2,
+    "cat": "c2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E5",
+    "value": -1,
+    "cat": "c2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "timewindow-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E6",
+    "value": -2,
+    "cat": "c2"
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "timewindow-partitioned",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-partitioned",
+   "at": "1970-01-01T00:00:08.500Z"
+  },
+  {
+   "op": "snapshot",
+   "case": "timewindow-partitioned",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-partitioned",
+   "at": "1970-01-01T00:00:09.500Z"
+  },
+  {
+   "op": "snapshot",
+   "case": "timewindow-partitioned",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-partitioned",
+   "at": "1970-01-01T00:00:10.500Z"
+  },
+  {
+   "op": "snapshot",
+   "case": "timewindow-partitioned",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "case": "timewindow-partitioned",
+   "at": "1970-01-01T00:00:11.500Z"
+  },
+  {
+   "op": "snapshot",
+   "case": "timewindow-partitioned",
+   "statement": "s0"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "timewindow-partitioned"
+  },
+  {
+   "op": "case",
+   "case": "example-with-prev"
+  },
+  {
+   "op": "deploy",
+   "case": "example-with-prev",
+   "statement": "s0",
+   "epl": "@name('s0') SELECT * FROM SupportRecogBean#keepall   MATCH_RECOGNIZE (       MEASURES A.theString AS a_string,         A.value AS a_value,         B.theString AS b_string,         B.value AS b_value,         C[0].theString AS c0_string,         C[0].value AS c0_value,         C[1].theString AS c1_string,         C[1].value AS c1_value,         C[2].theString AS c2_string,         C[2].value AS c2_value,         D.theString AS d_string,         D.value AS d_value,         E[0].theString AS e0_string,         E[0].value AS e0_value,         E[1].theString AS e1_string,         E[1].value AS e1_value,         F[0].theString AS f0_string,         F[0].value AS f0_value,         F[1].theString AS f1_string,         F[1].value AS f1_value       ALL MATCHES       after match skip to current row       PATTERN ( A B C* D E* F+ )       DEFINE /* A is unspecified, defaults to TRUE, matches any row */            B AS (B.value < PREV (B.value)),            C AS (C.value <= PREV (C.value)),            D AS (D.value < PREV (D.value)),            E AS (E.value >= PREV (E.value)),            F AS (F.value >= PREV (F.value) and F.value > A.value))"
+  },
+  {
+   "op": "send",
+   "case": "example-with-prev",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E1",
+    "value": 100,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "example-with-prev",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E2",
+    "value": 98,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "example-with-prev",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E3",
+    "value": 75,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "example-with-prev",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E4",
+    "value": 61,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "example-with-prev",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E5",
+    "value": 50,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "example-with-prev",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E6",
+    "value": 49,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "example-with-prev",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E7",
+    "value": 64,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "example-with-prev",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E8",
+    "value": 78,
+    "cat": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "example-with-prev",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E9",
+    "value": 84,
+    "cat": null
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "example-with-prev"
+  }
+ ]
+}

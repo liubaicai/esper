@@ -304,7 +304,7 @@ func scenarioForCase(scenario compat.Scenario, wanted string) (compat.Scenario, 
 		}
 	}
 	if !active && len(result.Steps) == 0 {
-		return compat.Scenario{}, fmt.Errorf("context hash scenario %q has no case %q", scenario.ID, wanted)
+		return compat.Scenario{}, fmt.Errorf("scenario %q has no case %q", scenario.ID, wanted)
 	}
 	if err := result.Validate(); err != nil {
 		return compat.Scenario{}, err

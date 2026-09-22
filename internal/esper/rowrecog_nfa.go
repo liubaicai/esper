@@ -14,6 +14,10 @@ type rowRecogStatePoolNFANode struct {
 	variable string
 	next     []*rowRecogStatePoolNFANode
 	terminal bool
+	// greedy mirrors Esper's RowRecogNFAState.isGreedy: non-nil only on
+	// quantifier nodes, true for greedy and false for reluctant. The result
+	// matcher uses it for Esper's greedy-count ranking of single matches.
+	greedy *bool
 }
 
 type rowRecogStatePoolNFAFragment struct {
@@ -125,6 +129,18 @@ func (c *rowRecogStatePoolNFACompiler) compileQuantified(base RowPattern, minimu
 		return rowRecogStatePoolNFAFragment{}
 	}
 
+	// Esper carries the greedy/reluctant flag on the quantifier node itself.
+	// Only atom (variable) quantifiers own an NFA state with the flag; nested
+	// repeats loop through back-edges and have no flag of their own.
+	quantifierGreedy := func(fragment rowRecogStatePoolNFAFragment) {
+		if base.kind == rowPatternVariable {
+			for _, node := range fragment.starts {
+				flag := base.greedy
+				node.greedy = &flag
+			}
+		}
+	}
+
 	if maximum == 0 {
 		// Esper represents A+ and A* with one looping NFA node/strand. For
 		// larger lower bounds it expands the mandatory copies followed by a
@@ -133,6 +149,7 @@ func (c *rowRecogStatePoolNFACompiler) compileQuantified(base RowPattern, minimu
 			fragment := c.compileBase(base)
 			c.connect(fragment.ends, fragment.starts)
 			fragment.passthrough = fragment.passthrough || minimum == 0
+			quantifierGreedy(fragment)
 			return fragment
 		}
 		mandatory := make([]rowRecogStatePoolNFAFragment, 0, minimum+1)
@@ -142,6 +159,7 @@ func (c *rowRecogStatePoolNFACompiler) compileQuantified(base RowPattern, minimu
 		tail := c.compileBase(base)
 		c.connect(tail.ends, tail.starts)
 		tail.passthrough = true
+		quantifierGreedy(tail)
 		mandatory = append(mandatory, tail)
 		return c.concatenate(mandatory)
 	}
@@ -151,6 +169,7 @@ func (c *rowRecogStatePoolNFACompiler) compileQuantified(base RowPattern, minimu
 		fragment := c.compileBase(base)
 		if index >= minimum {
 			fragment.passthrough = true
+			quantifierGreedy(fragment)
 		}
 		parts = append(parts, fragment)
 	}

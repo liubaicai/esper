@@ -17033,6 +17033,120 @@ func TestRunRowRecogGreedynessOpsDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+func TestRunRowRecogPrevDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "rowrecog-prev.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "rowrecog-prev.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "rowrecog-prev.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "rowrecog-prev-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunRowRecogPrevDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "timewindow-partitioned-prev-value-drift",
+			mutate: func(trace *compat.Trace) {
+				// A matches only when PREV(A.value) = A.value - 1; drifting
+				// a_string means the prev comparison bound the wrong event.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "timewindow-partitioned-simple" && rec.Operation == "listener" && rec.Sequence == 1 {
+						if rec.New[0].Fields["a_string"] == "E4" {
+							rec.New[0].Fields["a_string"] = "drifted"
+							return
+						}
+					}
+				}
+				panic("no timewindow-partitioned-simple sequence-1 record")
+			},
+		},
+		{
+			name: "example-with-prev-row-count-drift",
+			mutate: func(trace *compat.Trace) {
+				// E9 completes five all-matches rows; dropping one means
+				// prev-aware define evaluation lost a branch.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "example-with-prev" && rec.Operation == "listener" && rec.Sequence == 3 && len(rec.New) == 5 {
+						rec.New = rec.New[:4]
+						return
+					}
+				}
+				panic("no example-with-prev 5-row record")
+			},
+		},
+		{
+			name: "unpartitioned-plain-prev-drift",
+			mutate: func(trace *compat.Trace) {
+				// Statement 1 requires A.value > PREV(A.value); mutating the
+				// first non-empty snapshot row means plain prev read the
+				// wrong event.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "unpartitioned-keepall" && rec.Operation == "snapshot" && len(rec.New) > 0 {
+						rec.New[0].Fields["a_string"] = "drifted"
+						return
+					}
+				}
+				panic("no unpartitioned-keepall snapshot record")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "rowrecog-prev.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "rowrecog-prev.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "rowrecog-prev.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "rowrecog-prev-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", evidence)
+			}
+		})
+	}
+}
 
 func TestRunEplOtherWildcardAdditionalDirectReplay(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "testdata", "parity")
