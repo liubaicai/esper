@@ -123,6 +123,27 @@ Active: Draft 4.495 ('resultset-output-when-then-closure').
 - [x] Shipped; Git owns identity. Draft 4.495 committed and pushed as `98d55664e`.
 
 ## Current work unit
+Active: Draft 4.497 ('resultset-orderby-simple-descending-om').
+
+- Selection: `ResultSetOrderBySimple` ordinals 3 `ResultSetDescendingOM`
+  (`java-runtime-df8ea61ff025609ce309`) and 4 `ResultSetDescending`
+  (`java-runtime-9668909b2b2f00769dab`, variants 2-6). Ord 3 runtime flow
+  identical to ord 4 variant 1; OM text/serialization unrepresentable.
+- [x] Contract frozen (JavaContract497-2 + GoSurface497-2): all 5 ordinals
+  replayable; ord 3 OM assertions unrepresentable; ord 4 needs 5 more
+  variants, zero engine work.
+- [x] Parity assets (Assets497): runner, scenario (6 cases / 44 steps),
+  oracle, run.sh, run.go/run_test.go wiring. Java trace via oracle, Go
+  trace, diff `passing` / 0 differences (8 records each).
+- [x] Manifest: `case.resultset-orderby-simple` upgraded to
+  differential-verified (+2 DV runtime IDs). Summary 735 cases / 358 DV /
+  1414 DV runtime IDs, unreferenced 623.
+- [x] Gates + parity review: `make check` green (parity 79s, esper 114s).
+  Reviewer ParityReview497: PASS with 3 P3-only findings (all fixed:
+  manifest notes leading space, missing goTests entries, static-ID
+  convention documented).
+
+## Current work unit
 Active: Draft 4.496 ('resultset-aggregate-invalid-closure').
 
 - Selection: 4 invalid-form executions across 4 files, all aggregate-function

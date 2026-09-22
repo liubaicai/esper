@@ -47,6 +47,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include orderby-rowperevent-iterator and orderby-rowperevent-iterator-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-querytype-aggregate-grouped-having and resultset-querytype-aggregate-grouped-having-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-orderby-aggregate-grouped and resultset-orderby-aggregate-grouped-diff")
+		fmt.Fprintln(stderr, "runner modes include resultset-orderby-simple-descending-om and resultset-orderby-simple-descending-om-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-output-limit-row-limit-context-grouped and resultset-output-limit-row-limit-context-grouped-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-output-limit-row-limit and resultset-output-limit-row-limit-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-output-limit-row-limit-negative-rowcount and resultset-output-limit-row-limit-negative-rowcount-diff")
@@ -103,6 +104,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultsetOrderbyJoinScenario(file)
 	} else if *mode == "resultset-orderby-multi-delivery" || *mode == "resultset-orderby-multi-delivery-diff" {
 		scenario, err = loadResultsetOrderbyMultiDeliveryScenario(file)
+	} else if *mode == "resultset-orderby-simple-descending-om" || *mode == "resultset-orderby-simple-descending-om-diff" {
+		scenario, err = loadResultsetOrderbySimpleDescendingOMScenario(file)
 	} else if *mode == "resultset-orderby-self-join" || *mode == "resultset-orderby-self-join-diff" {
 		scenario, err = loadResultsetOrderbySelfJoinScenario(file)
 	} else if *mode == "output-after-events" || *mode == "output-after-events-diff" {
@@ -3739,6 +3742,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, resultsetOrderbyMultiDeliveryJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, resultsetOrderbyMultiDeliveryJavaSources),
 				splitMetadata(*javaExecutions, resultsetOrderbyMultiDeliveryJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-orderby-simple-descending-om" || *mode == "resultset-orderby-simple-descending-om-diff" {
+		trace, err := runResultsetOrderbySimpleDescendingOMScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-orderby-simple-descending-om-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetOrderbySimpleDescendingOMJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetOrderbySimpleDescendingOMJavaSources),
+				splitMetadata(*javaExecutions, resultsetOrderbySimpleDescendingOMJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

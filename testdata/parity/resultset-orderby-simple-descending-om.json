@@ -1,0 +1,127 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-orderby-simple-descending-om",
+  "description": "ResultSetOrderBySimple ordinals 3-4: descending order-by over a length(5) window with output every 6 events; ordinal 3's SODA object-model assertions (toEPL text, serialization) are pinned as unrepresentable records while its runtime flow replays identically to ordinal 4 variant 1, and ordinal 4 variants 2-6 cover price desc+symbol asc, price asc, symbol desc, symbol desc+price desc, and symbol+price.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/orderby/ResultSetOrderBySimple.java",
+  "javaRuntimes": [
+    "java-runtime-df8ea61ff025609ce309",
+    "java-runtime-9668909b2b2f00769dab"
+  ],
+  "javaNames": [
+    "ResultSetDescendingOM",
+    "ResultSetDescending"
+  ],
+  "javaStaticIds": [
+    "java-042c1b302e7183feb8a6",
+    "java-042c1b302e7183feb8a6"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "descending-om",
+      "ordinal": 3,
+      "runtimeId": "java-runtime-df8ea61ff025609ce309",
+      "executionName": "ResultSetDescendingOM",
+      "observation": "unrepresentable+listener; the SODA object-model assertions (serialization round-trip, toEPL text) have no typed Go boundary so they pin unrepresentable records; the deployed statement is annotated @name('s0') and its runtime flow is identical to ordinal 4 variant 1, delivering one six-row batch ordered by price desc",
+      "iteratorSnapshots": 0,
+      "epl": "select symbol from SupportMarketDataBean#length(5) output every 6 events order by price desc"
+    },
+    {
+      "case": "descending-v2",
+      "ordinal": 4,
+      "runtimeId": "java-runtime-9668909b2b2f00769dab",
+      "executionName": "ResultSetDescending",
+      "observation": "listener; ordinal 4 variant 2 orders the six-row output batch by price desc, symbol asc so the price-6 tie resolves CAT before IBM",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select symbol from SupportMarketDataBean#length(5) output every 6 events order by price desc, symbol asc"
+    },
+    {
+      "case": "descending-v3",
+      "ordinal": 4,
+      "runtimeId": "java-runtime-9668909b2b2f00769dab",
+      "executionName": "ResultSetDescending",
+      "observation": "listener; ordinal 4 variant 3 orders the six-row output batch by price asc",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select symbol from SupportMarketDataBean#length(5) output every 6 events order by price asc"
+    },
+    {
+      "case": "descending-v4",
+      "ordinal": 4,
+      "runtimeId": "java-runtime-9668909b2b2f00769dab",
+      "executionName": "ResultSetDescending",
+      "observation": "listener; ordinal 4 variant 4 selects symbol, volume and orders the six-row output batch by symbol desc",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select symbol, volume from SupportMarketDataBean#length(5) output every 6 events order by symbol desc"
+    },
+    {
+      "case": "descending-v5",
+      "ordinal": 4,
+      "runtimeId": "java-runtime-9668909b2b2f00769dab",
+      "executionName": "ResultSetDescending",
+      "observation": "listener; ordinal 4 variant 5 selects symbol, price and orders the six-row output batch by symbol desc, price desc",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select symbol, price from SupportMarketDataBean#length(5) output every 6 events order by symbol desc, price desc"
+    },
+    {
+      "case": "descending-v6",
+      "ordinal": 4,
+      "runtimeId": "java-runtime-9668909b2b2f00769dab",
+      "executionName": "ResultSetDescending",
+      "observation": "listener; ordinal 4 variant 6 selects symbol, price and orders the six-row output batch by symbol, price",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select symbol, price from SupportMarketDataBean#length(5) output every 6 events order by symbol, price"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "descending-om"},
+    {"op": "unrepresentable", "case": "descending-om", "statement": "object-model-serialization", "expectError": "SerializableObjectCopier.copyMayFail round-trips the EPStatementObjectModel through Java serialization; no Go object-model serialization boundary exists"},
+    {"op": "unrepresentable", "case": "descending-om", "statement": "object-model-to-epl", "expectError": "EPStatementObjectModel.toEPL() renders 'select symbol from SupportMarketDataBean#length(5) output every 6 events order by price desc'; EPL text is not the typed Go entry point"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 2}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "KGB", "volume": 0, "price": 1}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CMU", "volume": 0, "price": 3}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 5}},
+
+    {"op": "case", "case": "descending-v2"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 2}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "KGB", "volume": 0, "price": 1}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CMU", "volume": 0, "price": 3}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 5}},
+
+    {"op": "case", "case": "descending-v3"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 2}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "KGB", "volume": 0, "price": 1}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CMU", "volume": 0, "price": 3}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 5}},
+
+    {"op": "case", "case": "descending-v4"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 2}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "KGB", "volume": 0, "price": 1}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CMU", "volume": 0, "price": 3}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 5}},
+
+    {"op": "case", "case": "descending-v5"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 2}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "KGB", "volume": 0, "price": 1}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CMU", "volume": 0, "price": 3}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 5}},
+
+    {"op": "case", "case": "descending-v6"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 2}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "KGB", "volume": 0, "price": 1}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CMU", "volume": 0, "price": 3}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 5}}
+  ]
+}

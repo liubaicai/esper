@@ -34921,6 +34921,425 @@ func assertResultsetOrderbyMultiDeliveryTrace(t *testing.T, trace compat.Trace) 
 	}
 }
 
+func TestRunResultsetOrderbySimpleDescendingOMDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", resultsetOrderbySimpleDescendingOMID,
+		"-scenario", filepath.Join(root, resultsetOrderbySimpleDescendingOMID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertResultsetOrderbySimpleDescendingOMTrace(t, trace)
+}
+
+func TestRunResultsetOrderbySimpleDescendingOMDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), resultsetOrderbySimpleDescendingOMID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", resultsetOrderbySimpleDescendingOMID + "-diff",
+		"-scenario", filepath.Join(root, resultsetOrderbySimpleDescendingOMID+".json"),
+		"-java-trace", filepath.Join(root, resultsetOrderbySimpleDescendingOMID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != resultsetOrderbySimpleDescendingOMJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetOrderbySimpleDescendingOMJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{resultsetOrderbySimpleDescendingOMSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetOrderbySimpleDescendingOMJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertResultsetOrderbySimpleDescendingOMTrace(t, evidence.JavaTrace)
+	assertResultsetOrderbySimpleDescendingOMTrace(t, evidence.GoTrace)
+}
+
+func TestRunResultsetOrderbySimpleDescendingOMDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "unrepresentable-note",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Value = "drifted note"
+			},
+		},
+		{
+			name: "unrepresentable-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0], trace.Records[1] = trace.Records[1], trace.Records[0]
+			},
+		},
+		{
+			name: "om-symbol-value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].New[0].Fields["symbol"] = "Z"
+			},
+		},
+		{
+			name: "om-symbol-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].New[0], trace.Records[2].New[1] = trace.Records[2].New[1], trace.Records[2].New[0]
+			},
+		},
+		{
+			name: "v2-tie-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].New[0], trace.Records[3].New[1] = trace.Records[3].New[1], trace.Records[3].New[0]
+			},
+		},
+		{
+			name: "v4-volume-value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[5].New[0].Fields["volume"] = json.Number("9")
+			},
+		},
+		{
+			name: "v5-price-value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[6].New[0].Fields["price"] = json.Number("9")
+			},
+		},
+		{
+			name: "v6-row-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[7].New[0], trace.Records[7].New[1] = trace.Records[7].New[1], trace.Records[7].New[0]
+			},
+		},
+		{
+			name: "record-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3], trace.Records[4] = trace.Records[4], trace.Records[3]
+			},
+		},
+		{
+			name: "record-count",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+		{
+			name: "time-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].Time = "1970-01-01T00:00:01Z"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join(root, resultsetOrderbySimpleDescendingOMID+".evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), resultsetOrderbySimpleDescendingOMID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", resultsetOrderbySimpleDescendingOMID + "-diff",
+				"-scenario", filepath.Join(root, resultsetOrderbySimpleDescendingOMID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunResultsetOrderbySimpleDescendingOMCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, resultsetOrderbySimpleDescendingOMID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, resultsetOrderbySimpleDescendingOMID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, resultsetOrderbySimpleDescendingOMID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if evidence.JavaCommit != resultsetOrderbySimpleDescendingOMJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetOrderbySimpleDescendingOMJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{resultsetOrderbySimpleDescendingOMSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetOrderbySimpleDescendingOMJavaExecutions) {
+		t.Fatalf("checked-in Java metadata = %#v", evidence)
+	}
+	assertResultsetOrderbySimpleDescendingOMTrace(t, javaTrace)
+	assertResultsetOrderbySimpleDescendingOMTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, resultsetOrderbySimpleDescendingOMID+".json")
+	scenarioData, err := os.ReadFile(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rawScenario struct {
+		Version string        `json:"version"`
+		ID      string        `json:"id"`
+		Steps   []compat.Step `json:"steps"`
+	}
+	if err := json.Unmarshal(scenarioData, &rawScenario); err != nil {
+		t.Fatal(err)
+	}
+	scenario := compat.Scenario{Version: rawScenario.Version, ID: rawScenario.ID, Steps: rawScenario.Steps}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		resultsetOrderbySimpleDescendingOMJavaCommit,
+		resultsetOrderbySimpleDescendingOMJavaRuntimeIDs,
+		[]string{resultsetOrderbySimpleDescendingOMSource},
+		resultsetOrderbySimpleDescendingOMJavaExecutions,
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", resultsetOrderbySimpleDescendingOMID,
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, replayed); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertResultsetOrderbySimpleDescendingOMTrace(t, replayed)
+}
+
+func TestRunResultsetOrderbySimpleDescendingOMRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, resultsetOrderbySimpleDescendingOMID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "descending-om",`), []byte(`"case": "descending-om", "extra": 0,`), 1)
+		}},
+		{name: "case-ordinal-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 3`), []byte(`"ordinal": 9`), 1)
+		}},
+		{name: "unrepresentable-note-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"object-model-serialization"`), []byte(`"object-model-drift"`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"symbol": "IBM", "volume": 0, "price": 2`), []byte(`"symbol": "IBM", "volume": 0, "price": 2, "extra": 0`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"symbol": "IBM", "volume": 0, "price": 2`), []byte(`"symbol": "IBM", "volume": 0, "price": 2, "symbol": "KGB"`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportMarketDataBean"`), []byte(`"eventType": "WrongEvent"`), 1)
+		}},
+		{name: "volume-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"symbol": "IBM", "volume": 0, "price": 2`), []byte(`"symbol": "IBM", "volume": 1, "price": 2`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", resultsetOrderbySimpleDescendingOMID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunResultsetOrderbySimpleDescendingOMRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", resultsetOrderbySimpleDescendingOMID+".json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Version       string   `json:"version"`
+		ID            string   `json:"id"`
+		Description   string   `json:"description"`
+		JavaCommit    string   `json:"javaCommit"`
+		JavaSource    string   `json:"javaSource"`
+		JavaRuntimes  []string `json:"javaRuntimes"`
+		JavaNames     []string `json:"javaNames"`
+		JavaStaticIDs []string `json:"javaStaticIds"`
+		JavaFlags     []string `json:"javaFlags"`
+		Cases         []struct {
+			Case              string `json:"case"`
+			Ordinal           int    `json:"ordinal"`
+			RuntimeID         string `json:"runtimeId"`
+			ExecutionName     string `json:"executionName"`
+			Observation       string `json:"observation"`
+			IteratorSnapshots int    `json:"iteratorSnapshots"`
+			EPL               string `json:"epl"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if document.Version != compat.ScenarioVersion || document.ID != resultsetOrderbySimpleDescendingOMID ||
+		document.Description != resultsetOrderbySimpleDescendingOMDescription ||
+		document.JavaCommit != resultsetOrderbySimpleDescendingOMJavaCommit ||
+		document.JavaSource != resultsetOrderbySimpleDescendingOMSource ||
+		!reflect.DeepEqual(document.JavaRuntimes, resultsetOrderbySimpleDescendingOMJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, resultsetOrderbySimpleDescendingOMJavaExecutions) ||
+		!reflect.DeepEqual(document.JavaStaticIDs, resultsetOrderbySimpleDescendingOMJavaStaticIDs) ||
+		len(document.JavaFlags) != 0 || len(document.Cases) != len(resultsetOrderbySimpleDescendingOMCases) {
+		t.Fatalf("scenario metadata = %#v", document)
+	}
+	for index, entry := range document.Cases {
+		if entry.Case != resultsetOrderbySimpleDescendingOMCases[index] ||
+			entry.Ordinal != resultsetOrderbySimpleDescendingOMOrdinals[index] ||
+			entry.RuntimeID != resultsetOrderbySimpleDescendingOMRuntimeID(entry.Case) ||
+			entry.ExecutionName != resultsetOrderbySimpleDescendingOMExecutionName(entry.Case) ||
+			entry.Observation != resultsetOrderbySimpleDescendingOMObservations[index] ||
+			entry.IteratorSnapshots != 0 ||
+			entry.EPL != resultsetOrderbySimpleDescendingOMEPLs[index] {
+			t.Fatalf("scenario case %d metadata = %#v", index, entry)
+		}
+	}
+}
+
+func assertResultsetOrderbySimpleDescendingOMTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != resultsetOrderbySimpleDescendingOMID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 8 {
+		t.Fatalf("trace records = %d, want 8", len(trace.Records))
+	}
+	for index, pinned := range resultsetOrderbySimpleDescendingOMUnrepresentable {
+		record := trace.Records[index]
+		if record.Case != "descending-om" || record.Operation != "unrepresentable" ||
+			record.Statement != pinned.statement || record.Sequence != 0 ||
+			record.Time != "" || len(record.New) != 0 || len(record.Old) != 0 ||
+			record.Value != pinned.note {
+			t.Fatalf("unrepresentable record %d = %#v", index, record)
+		}
+	}
+	batches := []struct {
+		caseName string
+		fields   []string
+		symbols  []string
+		prices   []float64
+		volumes  []int64
+	}{
+		{caseName: "descending-om", fields: []string{"symbol"}, symbols: []string{"IBM", "CAT", "CAT", "CMU", "IBM", "KGB"}},
+		{caseName: "descending-v2", fields: []string{"symbol"}, symbols: []string{"CAT", "IBM", "CAT", "CMU", "IBM", "KGB"}},
+		{caseName: "descending-v3", fields: []string{"symbol"}, symbols: []string{"KGB", "IBM", "CMU", "CAT", "IBM", "CAT"}},
+		{caseName: "descending-v4", fields: []string{"symbol", "volume"}, symbols: []string{"KGB", "IBM", "IBM", "CMU", "CAT", "CAT"}, volumes: []int64{0, 0, 0, 0, 0, 0}},
+		{caseName: "descending-v5", fields: []string{"price", "symbol"}, symbols: []string{"KGB", "IBM", "IBM", "CMU", "CAT", "CAT"}, prices: []float64{1, 6, 2, 3, 6, 5}},
+		{caseName: "descending-v6", fields: []string{"price", "symbol"}, symbols: []string{"CAT", "CAT", "CMU", "IBM", "IBM", "KGB"}, prices: []float64{5, 6, 3, 2, 6, 1}},
+	}
+	for batchIndex, batch := range batches {
+		record := trace.Records[batchIndex+2]
+		if record.Case != batch.caseName ||
+			record.Operation != "listener" || record.Statement != "s0" ||
+			record.Sequence != 1 || record.Time != "1970-01-01T00:00:00Z" ||
+			len(record.New) != len(batch.symbols) || len(record.Old) != 0 {
+			t.Fatalf("record %d metadata/shape = %#v", batchIndex+2, record)
+		}
+		for rowIndex, row := range record.New {
+			if row.Kind != "row" || len(row.Fields) != len(batch.fields) ||
+				row.Fields["symbol"] != batch.symbols[rowIndex] {
+				t.Fatalf("record %d row %d shape/identity = %#v", batchIndex+2, rowIndex, row)
+			}
+			if batch.prices != nil {
+				assertResultsetOrderbySimpleDescendingOMNumber(t, row.Fields["price"], batch.prices[rowIndex], batchIndex+2, rowIndex, "price")
+			}
+			if batch.volumes != nil {
+				assertResultsetOrderbySimpleDescendingOMNumber(t, row.Fields["volume"], float64(batch.volumes[rowIndex]), batchIndex+2, rowIndex, "volume")
+			}
+		}
+	}
+}
+
+func assertResultsetOrderbySimpleDescendingOMNumber(t *testing.T, value any, want float64, recordIndex, rowIndex int, field string) {
+	t.Helper()
+	number, ok := value.(json.Number)
+	if !ok {
+		t.Fatalf("record %d row %d %s type = %T, value = %#v", recordIndex, rowIndex, field, value, value)
+	}
+	got, err := number.Float64()
+	if err != nil || got != want {
+		t.Fatalf("record %d row %d %s = %v (err=%v), want %v", recordIndex, rowIndex, field, number, err, want)
+	}
+}
+
 func TestRunResultsetOrderbySelfJoinDirectReplay(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "testdata", "parity")
 	var stdout, stderr bytes.Buffer

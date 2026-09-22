@@ -26271,7 +26271,13 @@
     "TestResultSetOrderByDescendingParity",
     "TestResultSetOrderByMultipleKeysParity",
     "TestResultSetOrderByExpressionParity",
-    "TestResultSetOrderByInvalidParity"
+    "TestResultSetOrderByInvalidParity",
+    "TestRunResultsetOrderbySimpleDescendingOMDirectReplay",
+    "TestRunResultsetOrderbySimpleDescendingOMDiffWritesPassingEvidence",
+    "TestRunResultsetOrderbySimpleDescendingOMDiffRejectsTraceMutations",
+    "TestRunResultsetOrderbySimpleDescendingOMCheckedInEvidenceMatchesTraceAndReplay",
+    "TestRunResultsetOrderbySimpleDescendingOMRejectsMalformedRawScenario",
+    "TestRunResultsetOrderbySimpleDescendingOMRuntimeIDMappingMatchesScenario"
    ],
    "tags": [
     "orderby",
@@ -26280,7 +26286,10 @@
    ],
    "status": "differential-verified",
    "evidence": [
-    "5 Go parity tests covering aggregate GroupBy + ORDER BY ascending/descending/multi-key-tiebreak/expression-key and unknown-field build-time rejection"
+    "differential-evidence",
+    "5 Go parity tests covering aggregate GroupBy + ORDER BY ascending/descending/multi-key-tiebreak/expression-key and unknown-field build-time rejection",
+    "go-trace",
+    "java-trace"
    ],
    "difference": "Go tests use LengthBatch + GroupBy aggregate path (output rate limiting not yet ported); join, wildcard and FAF ORDER BY paths remain open",
    "verification": [
@@ -26291,8 +26300,10 @@
    "differentialVerifiedRuntimeIds": [
     "java-runtime-d530652f60616c332431",
     "java-runtime-9668909b2b2f00769dab",
-    "java-runtime-92e69b0657b10a656fdc"
-   ]
+    "java-runtime-92e69b0657b10a656fdc",
+    "java-runtime-df8ea61ff025609ce309"
+   ],
+   "notes": "Draft 4.497: ord 3 DescendingOM + ord 4 variants 2-6 DV'd; OM text/serialization unrepresentable."
   },
   {
    "id": "case.infra-table-access-filter",
@@ -50776,7 +50787,7 @@
   "inventoriedCases": 735,
   "implementedCases": 733,
   "differentialVerifiedCases": 359,
-  "differentialVerifiedRuntimeIds": 1391,
+  "differentialVerifiedRuntimeIds": 1392,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
