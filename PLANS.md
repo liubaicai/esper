@@ -93,6 +93,15 @@ Active: Draft 4.508 ('rowrecog-prev').
   javaStaticIds pinned + oracle STATIC_IDS + trace regenerated; PLANS.md
   wording, dead rowPatternJoinBranch, mutation comment, shared
   scenarioForCase error text all fixed. Confirmation review: PASS.
+- [x] Shipped; Git owns identity. Draft 4.508 committed and pushed as
+  `69354a522`.
+- [x] N+1 prefetch: `RowRecogInterval` ords 0-3 + `RowRecogIntervalOrTerminated`
+  ord 0 (5 unreferenced, interval family). Java contract frozen by
+  NextJavaContract509 (verbatim EPLs, virtual-time sequences, termination
+  semantics confirmed against RowRecogNFAView); Go surface scout
+  NextGoSurface509 confirms zero predicted shared-core change — the 4.508
+  termination-entry rewrite already covers or-terminated; runner needs an
+  object-array send branch for TemperatureSensorEvent.
 
 ## Current work unit
 Active: Draft 4.494 ('view-group-closure').
