@@ -172,6 +172,30 @@ Active: Draft 4.502 ('expr-enum-sumof-remainder').
   NextJavaContract503; Go surface scout NextGoSurface503b running.
 
 ## Current work unit
+Active: Draft 4.507 ('rowrecog-greedyness-ops').
+
+- Selection: `RowRecogGreedyness` ords 0-2 + `RowRecogOps` ords 5/7/9 (6
+  unreferenced, pattern-semantics cluster). No flags, no virtual time.
+- [x] Contract frozen (NextJavaContract507 + NextGoSurface507): verbatim
+  EPLs, reluctant minimum-binding semantics, 2000-send partition stress,
+  ord9 JVM-only pinned as unrepresentable. Predicted zero shared-core —
+  confirmed.
+- [x] Parity assets (Assets507): oracle
+  `tools/java-oracle/RowRecogGreedynessOpsScenarioOracle.java`, run.sh,
+  scenario `testdata/parity/rowrecog-greedyness-ops.json` (6 cases / 2054
+  steps, 1015 records). Runner `internal/app/parity/rowrecog_greedyness_ops.go`
+  + run.go dispatch + 2-test family (primary agent).
+- [x] Runner decisions: empty-iterator snapshot omits 'new' (Java oracle
+  shape); unrepresentable op emits pinned note; FirstMatch for
+  non-all-matches EPLs, AllMatches for ord7.
+- [x] Differential replay: Java 1015 records / Go 1015 records, `passing`
+  / 0 differences. Zero shared-core changes.
+- [x] Manifest/roadmap/CHANGELOG: `case.rowrecog-greedyness-ops` born-DV
+  (6 runtime IDs); `case.rowrecog-unlimited-partition` note points at the
+  DV case. Summary 739 cases / 365 DV / 1441 DV runtime IDs /
+  unreferenced 589.
+
+## Current work unit
 Active: Draft 4.506 ('rowrecog-repetition').
 
 - Selection: `RowRecogRepetition` ords 0-5 (6 unreferenced, quantifier

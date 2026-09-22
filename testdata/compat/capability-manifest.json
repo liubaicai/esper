@@ -2043,7 +2043,8 @@
     "internal/app/parity/match_recognize.go",
     "internal/app/parity/rowrecog_aggregation.go",
     "internal/app/parity/rowrecog_after.go",
-    "internal/app/parity/rowrecog_repetition.go"
+    "internal/app/parity/rowrecog_repetition.go",
+    "internal/app/parity/rowrecog_greedyness_ops.go"
    ],
    "phase": 5,
    "status": "implemented",
@@ -17486,6 +17487,9 @@
    "verification": [
     "inventoried",
     "implemented"
+   ],
+   "notes": [
+    "Superseded for differential purposes by case.rowrecog-greedyness-ops (Draft 4.507): the RowRecogUnlimitedPartition execution (java-runtime-ca4a83fa8b88dd4d2b32) is now differential-verified there with the full 1000-partition Java trace; this case remains as the implemented-only Go unit coverage record."
    ]
   },
   {
@@ -47819,6 +47823,81 @@
     "RowRecogRepetition ords 0-5 replay all six executions (127 records, 0 differences): 28 deploy cycles of quantifier families (single bounds, ranges, open bounds, nested group and alternation repeats) with scalar vs array measures, A{3} with prev(A.intPrimitive), nine invalid-quantifier probes (four unrepresentable expression forms pin the Java message; five numeric bounds gate on the Go builder's own rejection), four doc-sample EPLs over object-array TemperatureSensorEvent, and 62 RowRecogPatternExpandUtil expansion pairs verified by a runner-local expander mirroring expandRepeat over the Go pattern model.",
     "ord0/ord1 share one runtime trace because soda only switches the compileDeploy path; the repeats-soda case carries only a marker and both runtime IDs map to the same records. Zero shared-core changes; compat.Step gained expectExpansion + the compile-text op for the expansion-text surface."
    ]
+  },
+  {
+   "id": "case.rowrecog-greedyness-ops",
+   "javaRuntimeIds": [
+    "java-runtime-6db0d9ba9099e88cb87c",
+    "java-runtime-20afb4135dd06ce5fb8c",
+    "java-runtime-470384aabd98754fe4f4",
+    "java-runtime-ca4a83fa8b88dd4d2b32",
+    "java-runtime-2e6e0566fe07043c23c7",
+    "java-runtime-c489386411c57214eb75"
+   ],
+   "javaStaticIds": [
+    "java-26ecc8f683281497dc04",
+    "java-03abe565af0f2440f2bd"
+   ],
+   "javaNames": [
+    "RowRecogReluctantZeroToOne",
+    "RowRecogReluctantZeroToMany",
+    "RowRecogReluctantOneToMany",
+    "RowRecogUnlimitedPartition",
+    "RowRecogAlterWithinConcat",
+    "RowRecogRegex"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/rowrecog/RowRecogGreedyness.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/rowrecog/RowRecogOps.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunRowRecogGreedynessOpsDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunRowRecogGreedynessOpsDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "correctness",
+    "rowrecog",
+    "match-recognize",
+    "reluctant",
+    "greedyness",
+    "partition",
+    "alternation",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/rowrecog-greedyness-ops.json",
+    "testdata/parity/rowrecog-greedyness-ops.trace.json",
+    "testdata/parity/rowrecog-greedyness-ops.go.trace.json",
+    "testdata/parity/rowrecog-greedyness-ops.evidence.json",
+    "tools/java-oracle/RowRecogGreedynessOpsScenarioOracle.java",
+    "tools/java-oracle/run-rowrecog-greedyness-ops.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-6db0d9ba9099e88cb87c",
+    "java-runtime-20afb4135dd06ce5fb8c",
+    "java-runtime-470384aabd98754fe4f4",
+    "java-runtime-ca4a83fa8b88dd4d2b32",
+    "java-runtime-2e6e0566fe07043c23c7",
+    "java-runtime-c489386411c57214eb75"
+   ],
+   "notes": [
+    "RowRecogGreedyness ords 0-2 + RowRecogOps ords 5/7/9 replay all six executions (1015 records, 0 differences): reluctant ??/*?/+? quantifiers bind the minimum needed (A?? skips A so E1 binds to B; A*? grows only as needed; A+? requires at least one), 1000 partitions each completing an A B match past the initial collection size, (A|B)(C|D) alternation-in-concat under all matches with iterator accumulation, and the JVM-only String.matches sanity check pinned as unrepresentable.",
+    "Zero shared-core changes; the Go runner maps each pinned deploy EPL to the fluent MatchRecognize builder (Reluctant/Optional/ZeroOrMore/OneOrMore, RowAlternation inside RowSequence, PartitionBy, FirstMatch/AllMatches, TagField/TagFieldAt measures, In/Equal defines). The empty-iterator snapshot omits 'new' matching the Java oracle shape. case.rowrecog-unlimited-partition's runtime ID is attached here; the older implemented-only case note points at this DV case."
+   ]
   }
  ],
  "mappings": [
@@ -51113,13 +51192,17 @@
   {
    "capabilityId": "rowrecog.match-recognize",
    "caseId": "case.rowrecog-repetition"
+  },
+  {
+   "capabilityId": "rowrecog.match-recognize",
+   "caseId": "case.rowrecog-greedyness-ops"
   }
  ],
  "summary": {
-  "inventoriedCases": 738,
-  "implementedCases": 736,
-  "differentialVerifiedCases": 364,
-  "differentialVerifiedRuntimeIds": 1435,
+  "inventoriedCases": 739,
+  "implementedCases": 737,
+  "differentialVerifiedCases": 365,
+  "differentialVerifiedRuntimeIds": 1441,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -51129,13 +51212,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3969,
-  "referencedJavaRuntimeIds": 3541,
+  "runtimeAssociationCount": 3975,
+  "referencedJavaRuntimeIds": 3547,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 595,
+  "unreferencedJavaRuntimeIds": 589,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 738,
+  "totalCases": 739,
   "totalCapabilities": 126
  }
 }

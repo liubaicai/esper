@@ -16920,6 +16920,120 @@ func TestRunRowRecogRepetitionDiffRejectsTraceMutations(t *testing.T) {
 	}
 }
 
+func TestRunRowRecogGreedynessOpsDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "rowrecog-greedyness-ops.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "rowrecog-greedyness-ops.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "rowrecog-greedyness-ops.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "rowrecog-greedyness-ops-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunRowRecogGreedynessOpsDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "reluctant-minimum-binding-drift",
+			mutate: func(trace *compat.Trace) {
+				// A*? binds the minimum needed: E1,E2 to A and E3 to B;
+				// drifting b means reluctant ordering was lost.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "reluctant-zero-to-many" && rec.Operation == "listener" && len(rec.New) == 1 {
+						if rec.New[0].Fields["b"] == "E3" {
+							rec.New[0].Fields["b"] = "drifted"
+							return
+						}
+					}
+				}
+				panic("no reluctant-zero-to-many b=E3 record")
+			},
+		},
+		{
+			name: "unlimited-partition-count-drift",
+			mutate: func(trace *compat.Trace) {
+				// 1000 partitions each complete one A B match; dropping a
+				// listener record means partition state was lost.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "unlimited-partition" && rec.Operation == "listener" && rec.Sequence == 500 {
+						trace.Records = append(trace.Records[:index], trace.Records[index+1:]...)
+						return
+					}
+				}
+				panic("no unlimited-partition sequence-500 record")
+			},
+		},
+		{
+			name: "alter-within-concat-iterator-drift",
+			mutate: func(trace *compat.Trace) {
+				// The iterator accumulates both all-matches rows; dropping
+				// the second row means alternation-in-concat broke.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "alter-within-concat" && rec.Operation == "snapshot" && len(rec.New) == 2 {
+						rec.New = rec.New[:1]
+						return
+					}
+				}
+				panic("no alter-within-concat 2-row snapshot")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "rowrecog-greedyness-ops.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "rowrecog-greedyness-ops.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "rowrecog-greedyness-ops.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "rowrecog-greedyness-ops-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", evidence)
+			}
+		})
+	}
+}
+
 func TestRunEplOtherWildcardAdditionalDirectReplay(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "testdata", "parity")
 	var stdout, stderr bytes.Buffer
