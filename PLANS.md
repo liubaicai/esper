@@ -172,6 +172,38 @@ Active: Draft 4.502 ('expr-enum-sumof-remainder').
   NextJavaContract503; Go surface scout NextGoSurface503b running.
 
 ## Current work unit
+Active: Draft 4.503 ('epl-other-wildcard-additional').
+
+- Selection: `EPLOtherSelectWildcardWAdditional` ordinals 0/2/3/4/5/6 (the
+  six unreferenced executions; ords 1/7/8 already dispositioned). One file,
+  wildcard+additional-column family, no flags, no virtual time.
+- [x] Contract frozen (NextJavaContract503 + NextGoSurface503b): verbatim
+  EPLs, Pair underlying, join stream-name props, ambiguous shared props
+  suppressed, combined-props nested materialization. Predicted zero
+  shared-core change — confirmed.
+- [x] Oracle fixes: join-no-common gained the s1 where variant (the original
+  oracle dropped Java's second deploy cycle); rows() emits `<unreadable>`
+  for indexed-only properties (Java get("indexed") throws
+  PropertyAccessException inside the listener, which Esper swallows —
+  combined-props produced zero records before the fix).
+- [x] Runner extended to 9 cases; scenario 9 cases / 22 steps; Java/Go 13
+  records each, `passing` / 0 differences. Test family extended to the
+  standard six tests.
+- [x] Manifest/roadmap: case.epl-other-wildcard-additional javaRuntimeIds
+  9, DV IDs 8 (ord 8 stays intentionally-different under its own case);
+  summary 361 DV / 1417 DV runtime IDs / unreferenced 613.
+- [x] Gates + parity review: `make check` exit 0 (twice — before and after
+  P3 fixes). Independent parity review (ParityReview503): OVERALL PASS, two
+  P3s — combined-props-nested-drift now drifts a real nested leaf
+  (array[0].mapprop['0ma'].value), and CheckedInEvidence upgraded to the full
+  sibling convention (DiffTraces, metadata constants, scenario embedding,
+  canonical rebuild, fresh replay diff). Confirmation re-check clean.
+- [x] N+1 prefetch: `EventObjectArrayEventNested` ords 0-4 +
+  EventObjectArrayEventNestedPojo (6 unreferenced, object-array nested
+  property family). Java contract frozen by NextJavaContract504; Go surface
+  scout NextGoSurface504 running.
+
+## Current work unit
 Active: Draft 4.501 ('resultset-outputlimit-simple-none').
 
 - Selection: `ResultSetOutputLimitSimple` ordinals 0-3 (none variants:

@@ -3,14 +3,44 @@
  "id": "epl-other-wildcard-additional",
  "description": "Select-wildcard-with-additional scenarios replaying EPLOtherSelectWildcardWAdditional executions: SODA object-model twin and EPL text form over SupportBeanSimple, insert-into replay of wildcard-plus-concat over single and joined streams, A/B equijoin concat with and without where, nested indexed-mapped combined props, map event type concat and the compile-only duplicate-column rejection",
  "javaRuntimes": [
+  "java-runtime-bcacb282274dc1ea256b",
   "java-runtime-0d7fa958a52fab1f4f47",
+  "java-runtime-0fe48a706db1e3cde7f0",
+  "java-runtime-d85b62bf7cff58f9ed71",
+  "java-runtime-948405f7925b1af087bd",
+  "java-runtime-98f8ad1516096842f30d",
+  "java-runtime-e9caf805d44d7a1f0ad1",
   "java-runtime-e9aa163116193bbd7106",
   "java-runtime-33e95a630f502ba99b94"
  ],
  "cases": [
   {
+   "case": "single-om",
+   "runtimeId": "java-runtime-bcacb282274dc1ea256b"
+  },
+  {
    "case": "single",
    "runtimeId": "java-runtime-0d7fa958a52fab1f4f47"
+  },
+  {
+   "case": "single-insert-into",
+   "runtimeId": "java-runtime-0fe48a706db1e3cde7f0"
+  },
+  {
+   "case": "join-insert-into",
+   "runtimeId": "java-runtime-d85b62bf7cff58f9ed71"
+  },
+  {
+   "case": "join-no-common",
+   "runtimeId": "java-runtime-948405f7925b1af087bd"
+  },
+  {
+   "case": "join-common",
+   "runtimeId": "java-runtime-98f8ad1516096842f30d"
+  },
+  {
+   "case": "combined-props",
+   "runtimeId": "java-runtime-e9caf805d44d7a1f0ad1"
   },
   {
    "case": "wildcard-map",
@@ -24,6 +54,18 @@
  "steps": [
   {
    "op": "case",
+   "case": "single-om"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBeanSimple",
+   "payload": {
+    "myString": "string",
+    "myInt": 0
+   }
+  },
+  {
+   "op": "case",
    "case": "single"
   },
   {
@@ -32,6 +74,105 @@
    "payload": {
     "myString": "string",
     "myInt": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "single-insert-into"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBeanSimple",
+   "payload": {
+    "myString": "string",
+    "myInt": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "join-insert-into"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBeanSimple",
+   "payload": {
+    "myString": "string",
+    "myInt": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "string",
+    "price": 0.0,
+    "volume": 0,
+    "feed": null
+   }
+  },
+  {
+   "op": "case",
+   "case": "join-no-common"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBeanSimple",
+   "payload": {
+    "myString": "string",
+    "myInt": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "string",
+    "price": 0.0,
+    "volume": 0,
+    "feed": null
+   }
+  },
+  {
+   "op": "case",
+   "case": "join-common"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "string"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_B",
+   "payload": {
+    "id": "string"
+   }
+  },
+  {
+   "op": "case",
+   "case": "combined-props"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBeanCombinedProps",
+   "payload": {
+    "indexed": [
+     {
+      "0ma": "0ma0",
+      "0mb": "0ma1"
+     },
+     {
+      "1ma": "1ma0",
+      "1mb": "1ma1"
+     },
+     {
+      "2ma": "valueOne",
+      "2mb": "2ma1"
+     },
+     null
+    ]
    }
   },
   {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 
 	esper "github.com/liubaicai/esper"
 	"github.com/liubaicai/esper/internal/compat"
@@ -11,7 +12,14 @@ import (
 
 // Parity coverage for EPLOtherSelectWildcardWAdditional.
 // Approved differences: Java Pair underlying vs Go flat rows; SODA OM has no
-// Go counterpart; InvalidRepeatedProperties message text unasserted.
+// Go counterpart (single-om replays the same listener contract as single);
+// InvalidRepeatedProperties message text unasserted; Java's two sequential
+// deploy cycles for join-no-common/join-common flatten into one module with
+// s0 (no where) + s1 (where) deployed together; insert-into targets are
+// pre-registered map types (Go requires the target type to exist).
+
+const eplOtherWildcardAdditionalJavaCommit = "9e1b9f1cc9117fea4bf33ab043762c045d73839c"
+
 var eplOtherWildcardAdditionalJavaSources = []string{
 	"regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherSelectWildcardWAdditional.java",
 }
@@ -41,14 +49,47 @@ type wcwMapEvent struct {
 	Int       int32  `esper:"int"`
 }
 
+// wcwNestedTwo mirrors SupportBeanCombinedProps.NestedLevTwo.
+type wcwNestedTwo struct {
+	Value string `esper:"value"`
+}
+
+// wcwNestedOne mirrors SupportBeanCombinedProps.NestedLevOne: the Java
+// getMapped(key) method is expressed as the mapprop map field, and
+// getNestLevOneVal() is a constant "abc" supplied by the runner.
+type wcwNestedOne struct {
+	Mapprop       map[string]wcwNestedTwo `esper:"mapprop"`
+	NestLevOneVal string                  `esper:"nestLevOneVal"`
+}
+
+// wcwCombined mirrors SupportBeanCombinedProps. getIndexed(int) and
+// getArray() both expose the same slice; Java's wildcard row carries both
+// columns but plain get("indexed") is unreadable (indexed-only property).
+type wcwCombined struct {
+	Indexed []*wcwNestedOne `esper:"indexed"`
+	Array   []*wcwNestedOne `esper:"array"`
+}
+
 var eplOtherWildcardAdditionalJavaRuntimeIDs = []string{
+	"java-runtime-bcacb282274dc1ea256b",
 	"java-runtime-0d7fa958a52fab1f4f47",
+	"java-runtime-0fe48a706db1e3cde7f0",
+	"java-runtime-d85b62bf7cff58f9ed71",
+	"java-runtime-948405f7925b1af087bd",
+	"java-runtime-98f8ad1516096842f30d",
+	"java-runtime-e9caf805d44d7a1f0ad1",
 	"java-runtime-e9aa163116193bbd7106",
 	"java-runtime-33e95a630f502ba99b94",
 }
 
 var eplOtherWildcardAdditionalJavaExecutions = []string{
+	"EPLOtherSingleOM",
 	"EPLOtherSingle",
+	"EPLOtherSingleInsertInto",
+	"EPLOtherJoinInsertInto",
+	"EPLOtherJoinNoCommonProperties",
+	"EPLOtherJoinCommonProperties",
+	"EPLOtherCombinedProperties",
 	"EPLOtherWildcardMapEvent",
 	"EPLOtherInvalidRepeatedProperties",
 }
@@ -58,7 +99,11 @@ func runEplOtherWildcardAdditionalScenario(ctx context.Context, scenario compat.
 		return compat.Trace{}, err
 	}
 	trace := compat.Trace{Version: scenario.Version, ID: scenario.ID}
-	for _, caseName := range []string{"single", "wildcard-map", "invalid-repeated"} {
+	for _, caseName := range []string{
+		"single-om", "single", "single-insert-into", "join-insert-into",
+		"join-no-common", "join-common", "combined-props", "wildcard-map",
+		"invalid-repeated",
+	} {
 		if !scenarioHasCase(scenario, caseName) {
 			continue
 		}
@@ -86,10 +131,32 @@ func runEplOtherWildcardAdditionalCase(ctx context.Context, scenario compat.Scen
 	if _, err := esper.RegisterStruct[wcwMarket](env, "SupportMarketDataBean"); err != nil {
 		return compat.Trace{}, err
 	}
-	if caseName == "wildcard-map" {
-		if _, err := esper.RegisterStruct[wcwMapEvent](env, "MyMapEventIntString"); err != nil {
-			return compat.Trace{}, err
-		}
+	if _, err := esper.RegisterStruct[wcwBeanA](env, "SupportBean_A"); err != nil {
+		return compat.Trace{}, err
+	}
+	if _, err := esper.RegisterStruct[wcwBeanB](env, "SupportBean_B"); err != nil {
+		return compat.Trace{}, err
+	}
+	if _, err := esper.RegisterStruct[wcwCombined](env, "SupportBeanCombinedProps"); err != nil {
+		return compat.Trace{}, err
+	}
+	if _, err := esper.RegisterStruct[wcwMapEvent](env, "MyMapEventIntString"); err != nil {
+		return compat.Trace{}, err
+	}
+	eventType := reflect.TypeOf(esper.Event{})
+	if _, err := esper.RegisterMap(env, "SomeEvent", []esper.FieldSpec{
+		esper.FieldDef("myString", reflect.TypeOf("")),
+		esper.FieldDef("myInt", reflect.TypeOf(int32(0))),
+		esper.FieldDef("concat", reflect.TypeOf("")),
+	}); err != nil {
+		return compat.Trace{}, err
+	}
+	if _, err := esper.RegisterMap(env, "SomeJoinEvent", []esper.FieldSpec{
+		esper.FieldDef("eventOne", eventType),
+		esper.FieldDef("eventTwo", eventType),
+		esper.FieldDef("concat", reflect.TypeOf("")),
+	}); err != nil {
+		return compat.Trace{}, err
 	}
 
 	var plans []esper.Plan
@@ -103,15 +170,115 @@ func runEplOtherWildcardAdditionalCase(ctx context.Context, scenario compat.Scen
 	}
 
 	trace := compat.Trace{Version: caseScenario.Version, ID: caseScenario.ID}
-	switch caseName {
-	case "single":
+	simpleWildcard := func() esper.Query {
 		ms := esper.Field[wcwSimple, string]("myString")
 		mi := esper.Field[wcwSimple, int32]("myInt")
-		err = build(esper.Select(
+		return esper.Select(
 			esper.From[wcwSimple](env, "SupportBeanSimple").Window(esper.LengthWindow(5)),
 			esper.Alias("myString", ms),
 			esper.Alias("myInt", mi),
 			esper.Alias("concat", esper.Concat(ms, ms)),
+		).Query(esper.StatementName("s0"))
+	}
+	switch caseName {
+	case "single-om":
+		// Go has no SODA object model; the Java oracle emits only listener
+		// records for this case, so the EPL twin replays the same contract.
+		err = build(simpleWildcard())
+	case "single":
+		err = build(simpleWildcard())
+	case "single-insert-into":
+		ms := esper.Field[wcwSimple, string]("myString")
+		mi := esper.Field[wcwSimple, int32]("myInt")
+		if err = build(esper.Select(
+			esper.From[wcwSimple](env, "SupportBeanSimple").Window(esper.LengthWindow(5)),
+			esper.Alias("myString", ms),
+			esper.Alias("myInt", mi),
+			esper.Alias("concat", esper.Concat(ms, ms)),
+		).InsertInto("SomeEvent", esper.StatementName("insert"))); err != nil {
+			break
+		}
+		err = build(esper.FromAny(env, "SomeEvent").Window(esper.LengthWindow(5)).
+			Select(
+				esper.Alias("myString", esper.Field[any, string]("myString")),
+				esper.Alias("myInt", esper.Field[any, int32]("myInt")),
+				esper.Alias("concat", esper.Field[any, string]("concat")),
+			).Query(esper.StatementName("s0")))
+	case "join-insert-into":
+		ms := esper.JoinField[string](0, "myString")
+		if err = build(esper.JoinMany(
+			esper.JoinSource(esper.From[wcwSimple](env, "SupportBeanSimple").Window(esper.LengthWindow(5))),
+			esper.JoinSource(esper.From[wcwMarket](env, "SupportMarketDataBean").Window(esper.LengthWindow(5))),
+		).Select(
+			esper.SelectSourceEvent(0, "eventOne"),
+			esper.SelectSourceEvent(1, "eventTwo"),
+			esper.SelectFrom(0, "concat", esper.Concat(ms, ms)),
+		).InsertInto("SomeJoinEvent", esper.StatementName("insert"))); err != nil {
+			break
+		}
+		err = build(esper.FromAny(env, "SomeJoinEvent").Window(esper.LengthWindow(5)).
+			Select(
+				esper.Alias("eventOne", esper.Field[any, esper.Event]("eventOne")),
+				esper.Alias("eventTwo", esper.Field[any, esper.Event]("eventTwo")),
+				esper.Alias("concat", esper.Field[any, string]("concat")),
+			).Query(esper.StatementName("s0")))
+	case "join-no-common":
+		ms := esper.JoinField[string](0, "myString")
+		join := func() esper.MultiJoinStream {
+			return esper.JoinMany(
+				esper.JoinSource(esper.From[wcwSimple](env, "SupportBeanSimple").Window(esper.LengthWindow(5))),
+				esper.JoinSource(esper.From[wcwMarket](env, "SupportMarketDataBean").Window(esper.LengthWindow(5))),
+			)
+		}
+		selections := func() []esper.JoinSelection {
+			return []esper.JoinSelection{
+				esper.SelectSourceEvent(0, "eventOne"),
+				esper.SelectSourceEvent(1, "eventTwo"),
+				esper.SelectFrom(0, "concat", esper.Concat(ms, ms)),
+			}
+		}
+		if err = build(join().Select(selections()...).Query(esper.StatementName("s0"))); err != nil {
+			break
+		}
+		err = build(join().Select(selections()...).
+			Where(esper.Equal[string](
+				esper.JoinField[string](0, "myString"),
+				esper.JoinField[string](1, "symbol"))).
+			Query(esper.StatementName("s1")))
+	case "join-common":
+		join := func() esper.MultiJoinStream {
+			return esper.JoinMany(
+				esper.JoinSource(esper.From[wcwBeanA](env, "SupportBean_A").Window(esper.LengthWindow(5))),
+				esper.JoinSource(esper.From[wcwBeanB](env, "SupportBean_B").Window(esper.LengthWindow(5))),
+			)
+		}
+		selections := func() []esper.JoinSelection {
+			return []esper.JoinSelection{
+				esper.SelectSourceEvent(0, "eventOne"),
+				esper.SelectSourceEvent(1, "eventTwo"),
+				esper.SelectFrom(0, "concat", esper.Concat(
+					esper.JoinField[string](0, "id"),
+					esper.JoinField[string](1, "id"))),
+			}
+		}
+		if err = build(join().Select(selections()...).Query(esper.StatementName("s0"))); err != nil {
+			break
+		}
+		err = build(join().Select(selections()...).
+			Where(esper.Equal[string](
+				esper.JoinField[string](0, "id"),
+				esper.JoinField[string](1, "id"))).
+			Query(esper.StatementName("s1")))
+	case "combined-props":
+		indexed := esper.Field[wcwCombined, []*wcwNestedOne]("indexed")
+		array := esper.Field[wcwCombined, []*wcwNestedOne]("array")
+		err = build(esper.Select(
+			esper.From[wcwCombined](env, "SupportBeanCombinedProps").Window(esper.LengthWindow(5)),
+			esper.Alias("indexed", indexed),
+			esper.Alias("array", array),
+			esper.Alias("concat", esper.Concat(
+				wcwMappedValue(indexed, 0, "0ma"),
+				wcwMappedValue(indexed, 0, "0mb"))),
 		).Query(esper.StatementName("s0")))
 	case "wildcard-map":
 		mapStr := esper.Field[wcwMapEvent, string]("theString")
@@ -158,9 +325,6 @@ func runEplOtherWildcardAdditionalCase(ctx context.Context, scenario compat.Scen
 		}
 		for _, st := range deployment.Statements() {
 			st := st
-			if st.Name() != "s0" {
-				continue
-			}
 			if _, subErr := st.Subscribe(func(_ context.Context, batch esper.ResultBatch) error {
 				if len(batch.New) == 0 && len(batch.Old) == 0 {
 					return nil
@@ -173,8 +337,20 @@ func runEplOtherWildcardAdditionalCase(ctx context.Context, scenario compat.Scen
 					Sequence:  seq,
 					Time:      "1970-01-01T00:00:00Z",
 				}
-				record.New = compat.NormalizeResults(batch.New)
-				record.Old = compat.NormalizeResults(batch.Old)
+				if caseName == "combined-props" {
+					var renderErr error
+					record.New, renderErr = wcwCombinedRows(batch.New)
+					if renderErr != nil {
+						return renderErr
+					}
+					record.Old, renderErr = wcwCombinedRows(batch.Old)
+					if renderErr != nil {
+						return renderErr
+					}
+				} else {
+					record.New = compat.NormalizeResults(batch.New)
+					record.Old = compat.NormalizeResults(batch.Old)
+				}
 				trace.Records = append(trace.Records, record)
 				return nil
 			}); subErr != nil {
@@ -188,6 +364,12 @@ func runEplOtherWildcardAdditionalCase(ctx context.Context, scenario compat.Scen
 		case "case":
 			continue
 		case "send":
+			if caseName == "combined-props" {
+				if sendErr := wcwSendCombined(ctx, engine, step); sendErr != nil {
+					return trace, sendErr
+				}
+				continue
+			}
 			var payload map[string]any
 			if err := json.Unmarshal(step.Payload, &payload); err != nil {
 				return trace, err
@@ -200,4 +382,101 @@ func runEplOtherWildcardAdditionalCase(ctx context.Context, scenario compat.Scen
 		}
 	}
 	return trace, nil
+}
+
+// wcwMappedValue mirrors the Java nested path indexed[i].mapped('k').value:
+// the bean's getMapped(key) method is expressed as the mapprop map field.
+func wcwMappedValue(indexed esper.Expression[[]*wcwNestedOne], index int, key string) esper.Expression[string] {
+	return esper.Property[string](
+		esper.MapValue[wcwNestedTwo](
+			esper.Property[map[string]wcwNestedTwo](
+				esper.ArrayAt[wcwNestedOne](indexed, esper.Literal(index)),
+				"mapprop"),
+			esper.Literal(key)),
+		"value")
+}
+
+// wcwSendCombined decodes the pinned combined-props payload into the typed
+// mirror bean. The trailing null slot stays nil, mirroring
+// SupportBeanCombinedProps.makeDefaultBean's empty [3] slot.
+func wcwSendCombined(ctx context.Context, engine *esper.Engine, step compat.Step) error {
+	if step.EventType != "SupportBeanCombinedProps" {
+		return fmt.Errorf("combined-props: unexpected eventType %q", step.EventType)
+	}
+	var payload struct {
+		Indexed []map[string]string `json:"indexed"`
+	}
+	if err := json.Unmarshal(step.Payload, &payload); err != nil {
+		return err
+	}
+	indexed := make([]*wcwNestedOne, len(payload.Indexed))
+	for i, entry := range payload.Indexed {
+		if entry == nil {
+			continue
+		}
+		nested := &wcwNestedOne{
+			Mapprop:       make(map[string]wcwNestedTwo, len(entry)),
+			NestLevOneVal: "abc",
+		}
+		for key, value := range entry {
+			nested.Mapprop[key] = wcwNestedTwo{Value: value}
+		}
+		indexed[i] = nested
+	}
+	return engine.SendEvent(ctx, wcwCombined{Indexed: indexed, Array: indexed})
+}
+
+// wcwCombinedRows renders combined-props rows to the Java trace shape:
+// array is a nested row array (mapprop -> key -> {value}, nestLevOneVal),
+// indexed is the pinned "<unreadable>" marker (Java's indexed-only property
+// rejects plain get("indexed")), concat is the string value.
+func wcwCombinedRows(results []esper.Result) ([]compat.ResultRecord, error) {
+	if len(results) == 0 {
+		return nil, nil
+	}
+	records := make([]compat.ResultRecord, 0, len(results))
+	for _, result := range results {
+		arrayValue, err := esper.As[[]*wcwNestedOne](result.Get("array"))
+		if err != nil {
+			return nil, fmt.Errorf("combined-props: array column: %w", err)
+		}
+		concat, err := esper.As[string](result.Get("concat"))
+		if err != nil {
+			return nil, fmt.Errorf("combined-props: concat column: %w", err)
+		}
+		records = append(records, compat.ResultRecord{
+			Kind: "row",
+			Fields: map[string]any{
+				"array":   wcwNestedArrayRows(arrayValue),
+				"indexed": "<unreadable>",
+				"concat":  concat,
+			},
+		})
+	}
+	return records, nil
+}
+
+func wcwNestedArrayRows(indexed []*wcwNestedOne) []any {
+	rows := make([]any, 0, len(indexed))
+	for _, nested := range indexed {
+		if nested == nil {
+			rows = append(rows, map[string]any{"state": "null"})
+			continue
+		}
+		mapprop := make(map[string]any, len(nested.Mapprop))
+		for key, value := range nested.Mapprop {
+			mapprop[key] = map[string]any{
+				"kind":   "row",
+				"fields": map[string]any{"value": value.Value},
+			}
+		}
+		rows = append(rows, map[string]any{
+			"kind": "row",
+			"fields": map[string]any{
+				"mapprop":       map[string]any{"kind": "row", "fields": mapprop},
+				"nestLevOneVal": nested.NestLevOneVal,
+			},
+		})
+	}
+	return rows
 }

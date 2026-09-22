@@ -37311,16 +37311,33 @@
    "id": "case.epl-other-wildcard-additional",
    "javaRuntimeIds": [
     "java-runtime-0d7fa958a52fab1f4f47",
+    "java-runtime-0fe48a706db1e3cde7f0",
+    "java-runtime-33e95a630f502ba99b94",
+    "java-runtime-948405f7925b1af087bd",
+    "java-runtime-98f8ad1516096842f30d",
+    "java-runtime-bcacb282274dc1ea256b",
+    "java-runtime-d85b62bf7cff58f9ed71",
     "java-runtime-e9aa163116193bbd7106",
-    "java-runtime-33e95a630f502ba99b94"
+    "java-runtime-e9caf805d44d7a1f0ad1"
    ],
    "javaNames": [
+    "EPLOtherSingleOM",
     "EPLOtherSingle",
+    "EPLOtherSingleInsertInto",
+    "EPLOtherJoinInsertInto",
+    "EPLOtherJoinNoCommonProperties",
+    "EPLOtherJoinCommonProperties",
+    "EPLOtherCombinedProperties",
     "EPLOtherWildcardMapEvent",
     "EPLOtherInvalidRepeatedProperties"
    ],
    "goTests": [
-    "internal/app/parity/run_test.go:TestRunEplOtherWildcardAdditionalDiffWritesPassingEvidence"
+    "internal/app/parity/run_test.go:TestRunEplOtherWildcardAdditionalDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunEplOtherWildcardAdditionalDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunEplOtherWildcardAdditionalDirectReplay",
+    "internal/app/parity/run_test.go:TestRunEplOtherWildcardAdditionalCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunEplOtherWildcardAdditionalRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunEplOtherWildcardAdditionalRuntimeIDMappingMatchesScenario"
    ],
    "tags": [
     "epl",
@@ -37335,8 +37352,8 @@
     "testdata/parity/epl-other-wildcard-additional.trace.json",
     "testdata/parity/epl-other-wildcard-additional.evidence.json"
    ],
-   "notes": "Draft 4.243: 3 cases; Java/Go each 3 records, 0 differences. Covers wildcard+additional concat projection, map event type, and compile-only duplicate column rejection.",
-   "difference": "InvalidRepeatedProperties is approved difference: message text unasserted ('skip' sentinel). SingleOM deferred (SODA OM has no Go counterpart). JoinInsertInto/JoinNoCommon/JoinCommon/CombinedProperties deferred: join-aggregate wildcard+additional emission semantics diverge.",
+   "notes": "Draft 4.243: 3 cases; Java/Go each 3 records, 0 differences. Draft 4.503: extended to all 9 executions; Java/Go each 13 records, 0 differences.",
+   "difference": "InvalidRepeatedProperties is approved difference: message text unasserted ('skip' sentinel). SingleOM replays the listener contract only (SODA OM has no Go counterpart; the oracle emits no OM-text records). Java's two sequential deploy cycles for join-no-common/join-common flatten into one module (s0 no-where + s1 where). Insert-into targets are pre-registered map types. SupportBeanCombinedProps.indexed is unreadable via plain get() in Java (indexed-only property); both sides pin the <unreadable> marker.",
    "verification": [
     "inventoried",
     "implemented",
@@ -37344,7 +37361,13 @@
    ],
    "differentialVerifiedRuntimeIds": [
     "java-runtime-0d7fa958a52fab1f4f47",
-    "java-runtime-e9aa163116193bbd7106"
+    "java-runtime-0fe48a706db1e3cde7f0",
+    "java-runtime-948405f7925b1af087bd",
+    "java-runtime-98f8ad1516096842f30d",
+    "java-runtime-bcacb282274dc1ea256b",
+    "java-runtime-d85b62bf7cff58f9ed71",
+    "java-runtime-e9aa163116193bbd7106",
+    "java-runtime-e9caf805d44d7a1f0ad1"
    ]
   },
   {
@@ -50853,7 +50876,7 @@
   "inventoriedCases": 735,
   "implementedCases": 733,
   "differentialVerifiedCases": 361,
-  "differentialVerifiedRuntimeIds": 1411,
+  "differentialVerifiedRuntimeIds": 1417,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -50863,10 +50886,10 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3945,
-  "referencedJavaRuntimeIds": 3517,
+  "runtimeAssociationCount": 3951,
+  "referencedJavaRuntimeIds": 3523,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 619,
+  "unreferencedJavaRuntimeIds": 613,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
   "totalCases": 735,

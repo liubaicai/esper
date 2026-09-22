@@ -16482,6 +16482,310 @@ func TestRunEplOtherWildcardAdditionalDiffWritesPassingEvidence(t *testing.T) {
 	}
 }
 
+func TestRunEplOtherWildcardAdditionalDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "join-insert-into-event-row-drift",
+			mutate: func(trace *compat.Trace) {
+				// The join-insert-into insert record carries eventOne/
+				// eventTwo as nested event rows; drifting the nested
+				// myString means the wildcard source-event shape broke.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "join-insert-into" && rec.Statement == "insert" {
+						rec.New[0].Fields["eventOne"] = map[string]any{
+							"kind":   "row",
+							"fields": map[string]any{"myInt": int64(0), "myString": "drifted"},
+						}
+						return
+					}
+				}
+				panic("no join-insert-into insert record")
+			},
+		},
+		{
+			name: "join-common-where-record-missing",
+			mutate: func(trace *compat.Trace) {
+				// join-common s1 is the where-filtered twin; dropping its
+				// row means the equijoin variant was lost.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "join-common" && rec.Statement == "s1" {
+						rec.New = rec.New[1:]
+						return
+					}
+				}
+				panic("no join-common s1 record")
+			},
+		},
+		{
+			name: "combined-props-nested-drift",
+			mutate: func(trace *compat.Trace) {
+				// The combined-props array column renders nested
+				// indexed/mapped rows; drifting a leaf value means the
+				// nested materialization broke.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "combined-props" {
+						array := rec.New[0].Fields["array"].([]any)
+						first := array[0].(map[string]any)["fields"].(map[string]any)
+						mapprop := first["mapprop"].(map[string]any)["fields"].(map[string]any)
+						mapprop["0ma"].(map[string]any)["fields"].(map[string]any)["value"] = "drifted"
+						return
+					}
+				}
+				panic("no combined-props record")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-wildcard-additional.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "epl-other-wildcard-additional.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-wildcard-additional.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "epl-other-wildcard-additional-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunEplOtherWildcardAdditionalDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "epl-other-wildcard-additional",
+		"-scenario", filepath.Join(root, "epl-other-wildcard-additional.json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(trace.Records) != 13 {
+		t.Fatalf("records = %d, want 13", len(trace.Records))
+	}
+}
+
+func TestRunEplOtherWildcardAdditionalCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTraceFile, err := os.Open(filepath.Join(root, "epl-other-wildcard-additional.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	javaTrace, err := compat.LoadTrace(javaTraceFile)
+	closeErr := javaTraceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	goTraceFile, err := os.Open(filepath.Join(root, "epl-other-wildcard-additional.go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkedInGoTrace, err := compat.LoadTrace(goTraceFile)
+	closeErr = goTraceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, "epl-other-wildcard-additional.evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr = evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(checkedInGoTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in Go trace differs from evidence Go trace: %#v", differences)
+	}
+
+	scenarioPath := filepath.Join(root, "epl-other-wildcard-additional.json")
+	scenarioFile, err := os.Open(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := compat.LoadScenario(scenarioFile)
+	closeErr = scenarioFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.JavaCommit != eplOtherWildcardAdditionalJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, eplOtherWildcardAdditionalJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, eplOtherWildcardAdditionalJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, eplOtherWildcardAdditionalJavaExecutions) {
+		t.Fatalf("checked-in evidence Java metadata = %#v", evidence)
+	}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		eplOtherWildcardAdditionalJavaCommit,
+		eplOtherWildcardAdditionalJavaRuntimeIDs,
+		eplOtherWildcardAdditionalJavaSources,
+		eplOtherWildcardAdditionalJavaExecutions,
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "epl-other-wildcard-additional", "-scenario", scenarioPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	goTrace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, goTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+}
+
+func TestRunEplOtherWildcardAdditionalRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "epl-other-wildcard-additional.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "version-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"version": "esper-parity/v1"`), []byte(`"version": "bogus"`), 1)
+		}},
+		{name: "missing-id", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"id": "epl-other-wildcard-additional"`), []byte(`"id": ""`), 1)
+		}},
+		{name: "bad-op", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "send"`), []byte(`"op": "bogus"`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportBeanSimple"`), []byte(`"eventType": "bogus"`), 1)
+		}},
+		{name: "malformed-payload", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"payload": {
+    "myString": "string",
+    "myInt": 0
+   }`), []byte(`"payload": {`), 1)
+		}},
+		{name: "case-op-empty", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "case",
+   "case": "single-om"`), []byte(`"op": "case",
+   "case": ""`), 1)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{"-mode", "epl-other-wildcard-additional", "-scenario", scenarioPath}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunEplOtherWildcardAdditionalRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-wildcard-additional.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if len(document.JavaRuntimes) != 9 {
+		t.Fatalf("javaRuntimes = %d, want 9", len(document.JavaRuntimes))
+	}
+	seen := make(map[string]bool, len(document.JavaRuntimes))
+	for _, id := range document.JavaRuntimes {
+		seen[id] = true
+	}
+	for _, c := range document.Cases {
+		if c.RuntimeID == "" {
+			t.Fatalf("case %q missing runtimeId", c.Case)
+		}
+		if !seen[c.RuntimeID] {
+			t.Fatalf("case %q runtimeId %q not in javaRuntimes", c.Case, c.RuntimeID)
+		}
+	}
+}
+
 func TestRunRollupDimensionalityDiffRejectsTraceMutations(t *testing.T) {
 	tests := []struct {
 		name   string

@@ -267,7 +267,10 @@ public class EPLOtherSelectWildcardWAdditionalScenarioOracle {
                     "@name('s0') select * from SomeJoinEvent#length(5)";
             case "join-no-common" ->
                 "@name('s0') select *, myString||myString as concat " +
-                    "from SupportBeanSimple#length(5) as eventOne, SupportMarketDataBean#length(5) as eventTwo";
+                    "from SupportBeanSimple#length(5) as eventOne, SupportMarketDataBean#length(5) as eventTwo;\n" +
+                    "@name('s1') select *, myString||myString as concat " +
+                    "from SupportBeanSimple#length(5) as eventOne, SupportMarketDataBean#length(5) as eventTwo " +
+                    "where eventOne.myString = eventTwo.symbol";
             case "join-common" ->
                 "@name('s0') select *, eventOne.id||eventTwo.id as concat " +
                     "from SupportBean_A#length(5) as eventOne, SupportBean_B#length(5) as eventTwo;\n" +
@@ -307,13 +310,35 @@ public class EPLOtherSelectWildcardWAdditionalScenarioOracle {
             item.add("kind", "row");
             JsonObject fields = new JsonObject();
             for (String prop : new TreeSet<>(java.util.Arrays.asList(event.getEventType().getPropertyNames()))) {
-                fields.add(prop, normalize(event.get(prop)));
+                fields.add(prop, normalize(readProperty(event, prop)));
             }
             item.add("fields", fields);
             arr.add(item);
         }
         return arr;
     }
+
+    /**
+     * Reads one wildcard column. SupportBeanCombinedProps.indexed is an
+     * indexed-only property: plain get("indexed") throws
+     * PropertyAccessException (the regression test only reads nested paths
+     * like indexed[0].mapped('0ma').value). Emit a deterministic marker so
+     * the column stays visible in the trace; the Go runner mirrors it.
+     */
+    private static Object readProperty(EventBean event, String prop) {
+        try {
+            return event.get(prop);
+        } catch (com.espertech.esper.common.client.PropertyAccessException unreadable) {
+            return UNREADABLE;
+        }
+    }
+
+    private static final Object UNREADABLE = new Object() {
+        @Override
+        public String toString() {
+            return "<unreadable>";
+        }
+    };
 
     private static JsonValue normalize(Object value) {
         if (value == null) {

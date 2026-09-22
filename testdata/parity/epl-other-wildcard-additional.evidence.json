@@ -2,7 +2,13 @@
   "version": "esper-differential/v1",
   "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
   "javaRuntimeIds": [
+    "java-runtime-bcacb282274dc1ea256b",
     "java-runtime-0d7fa958a52fab1f4f47",
+    "java-runtime-0fe48a706db1e3cde7f0",
+    "java-runtime-d85b62bf7cff58f9ed71",
+    "java-runtime-948405f7925b1af087bd",
+    "java-runtime-98f8ad1516096842f30d",
+    "java-runtime-e9caf805d44d7a1f0ad1",
     "java-runtime-e9aa163116193bbd7106",
     "java-runtime-33e95a630f502ba99b94"
   ],
@@ -10,7 +16,13 @@
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherSelectWildcardWAdditional.java"
   ],
   "javaExecutions": [
+    "EPLOtherSingleOM",
     "EPLOtherSingle",
+    "EPLOtherSingleInsertInto",
+    "EPLOtherJoinInsertInto",
+    "EPLOtherJoinNoCommonProperties",
+    "EPLOtherJoinCommonProperties",
+    "EPLOtherCombinedProperties",
     "EPLOtherWildcardMapEvent",
     "EPLOtherInvalidRepeatedProperties"
   ],
@@ -18,6 +30,18 @@
     "version": "esper-parity/v1",
     "id": "epl-other-wildcard-additional",
     "steps": [
+      {
+        "op": "case",
+        "case": "single-om"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanSimple",
+        "payload": {
+          "myString": "string",
+          "myInt": 0
+        }
+      },
       {
         "op": "case",
         "case": "single"
@@ -28,6 +52,105 @@
         "payload": {
           "myString": "string",
           "myInt": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "single-insert-into"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanSimple",
+        "payload": {
+          "myString": "string",
+          "myInt": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "join-insert-into"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanSimple",
+        "payload": {
+          "myString": "string",
+          "myInt": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "string",
+          "price": 0.0,
+          "volume": 0,
+          "feed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "join-no-common"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanSimple",
+        "payload": {
+          "myString": "string",
+          "myInt": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "string",
+          "price": 0.0,
+          "volume": 0,
+          "feed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "join-common"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "string"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "string"
+        }
+      },
+      {
+        "op": "case",
+        "case": "combined-props"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanCombinedProps",
+        "payload": {
+          "indexed": [
+            {
+              "0ma": "0ma0",
+              "0mb": "0ma1"
+            },
+            {
+              "1ma": "1ma0",
+              "1mb": "1ma1"
+            },
+            {
+              "2ma": "valueOne",
+              "2mb": "2ma1"
+            },
+            null
+          ]
         }
       },
       {
@@ -57,6 +180,23 @@
     "id": "epl-other-wildcard-additional",
     "records": [
       {
+        "case": "single-om",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "concat": "stringstring",
+              "myInt": 0,
+              "myString": "string"
+            }
+          }
+        ]
+      },
+      {
         "case": "single",
         "operation": "listener",
         "statement": "s0",
@@ -69,6 +209,316 @@
               "concat": "stringstring",
               "myInt": 0,
               "myString": "string"
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-insert-into",
+        "operation": "listener",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "concat": "stringstring",
+              "myInt": 0,
+              "myString": "string"
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-insert-into",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "concat": "stringstring",
+              "myInt": 0,
+              "myString": "string"
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-insert-into",
+        "operation": "listener",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "concat": "stringstring",
+              "eventOne": {
+                "fields": {
+                  "myInt": 0,
+                  "myString": "string"
+                },
+                "kind": "row"
+              },
+              "eventTwo": {
+                "fields": {
+                  "feed": {
+                    "state": "null"
+                  },
+                  "price": 0,
+                  "symbol": "string",
+                  "volume": 0
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-insert-into",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "concat": "stringstring",
+              "eventOne": {
+                "fields": {
+                  "myInt": 0,
+                  "myString": "string"
+                },
+                "kind": "row"
+              },
+              "eventTwo": {
+                "fields": {
+                  "feed": {
+                    "state": "null"
+                  },
+                  "price": 0,
+                  "symbol": "string",
+                  "volume": 0
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-no-common",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "concat": "stringstring",
+              "eventOne": {
+                "fields": {
+                  "myInt": 0,
+                  "myString": "string"
+                },
+                "kind": "row"
+              },
+              "eventTwo": {
+                "fields": {
+                  "feed": {
+                    "state": "null"
+                  },
+                  "price": 0,
+                  "symbol": "string",
+                  "volume": 0
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-no-common",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "concat": "stringstring",
+              "eventOne": {
+                "fields": {
+                  "myInt": 0,
+                  "myString": "string"
+                },
+                "kind": "row"
+              },
+              "eventTwo": {
+                "fields": {
+                  "feed": {
+                    "state": "null"
+                  },
+                  "price": 0,
+                  "symbol": "string",
+                  "volume": 0
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-common",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "concat": "stringstring",
+              "eventOne": {
+                "fields": {
+                  "id": "string"
+                },
+                "kind": "row"
+              },
+              "eventTwo": {
+                "fields": {
+                  "id": "string"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-common",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "concat": "stringstring",
+              "eventOne": {
+                "fields": {
+                  "id": "string"
+                },
+                "kind": "row"
+              },
+              "eventTwo": {
+                "fields": {
+                  "id": "string"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "combined-props",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "array": [
+                {
+                  "fields": {
+                    "mapprop": {
+                      "fields": {
+                        "0ma": {
+                          "fields": {
+                            "value": "0ma0"
+                          },
+                          "kind": "row"
+                        },
+                        "0mb": {
+                          "fields": {
+                            "value": "0ma1"
+                          },
+                          "kind": "row"
+                        }
+                      },
+                      "kind": "row"
+                    },
+                    "nestLevOneVal": "abc"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "mapprop": {
+                      "fields": {
+                        "1ma": {
+                          "fields": {
+                            "value": "1ma0"
+                          },
+                          "kind": "row"
+                        },
+                        "1mb": {
+                          "fields": {
+                            "value": "1ma1"
+                          },
+                          "kind": "row"
+                        }
+                      },
+                      "kind": "row"
+                    },
+                    "nestLevOneVal": "abc"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "mapprop": {
+                      "fields": {
+                        "2ma": {
+                          "fields": {
+                            "value": "valueOne"
+                          },
+                          "kind": "row"
+                        },
+                        "2mb": {
+                          "fields": {
+                            "value": "2ma1"
+                          },
+                          "kind": "row"
+                        }
+                      },
+                      "kind": "row"
+                    },
+                    "nestLevOneVal": "abc"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "state": "null"
+                }
+              ],
+              "concat": "0ma00ma1",
+              "indexed": "\u003cunreadable\u003e"
             }
           }
         ]
@@ -103,6 +553,23 @@
     "id": "epl-other-wildcard-additional",
     "records": [
       {
+        "case": "single-om",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "concat": "stringstring",
+              "myInt": 0,
+              "myString": "string"
+            }
+          }
+        ]
+      },
+      {
         "case": "single",
         "operation": "listener",
         "statement": "s0",
@@ -115,6 +582,316 @@
               "concat": "stringstring",
               "myInt": 0,
               "myString": "string"
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-insert-into",
+        "operation": "listener",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "concat": "stringstring",
+              "myInt": 0,
+              "myString": "string"
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-insert-into",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "concat": "stringstring",
+              "myInt": 0,
+              "myString": "string"
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-insert-into",
+        "operation": "listener",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "concat": "stringstring",
+              "eventOne": {
+                "fields": {
+                  "myInt": 0,
+                  "myString": "string"
+                },
+                "kind": "row"
+              },
+              "eventTwo": {
+                "fields": {
+                  "feed": {
+                    "state": "null"
+                  },
+                  "price": 0,
+                  "symbol": "string",
+                  "volume": 0
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-insert-into",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "concat": "stringstring",
+              "eventOne": {
+                "fields": {
+                  "myInt": 0,
+                  "myString": "string"
+                },
+                "kind": "row"
+              },
+              "eventTwo": {
+                "fields": {
+                  "feed": {
+                    "state": "null"
+                  },
+                  "price": 0,
+                  "symbol": "string",
+                  "volume": 0
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-no-common",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "concat": "stringstring",
+              "eventOne": {
+                "fields": {
+                  "myInt": 0,
+                  "myString": "string"
+                },
+                "kind": "row"
+              },
+              "eventTwo": {
+                "fields": {
+                  "feed": {
+                    "state": "null"
+                  },
+                  "price": 0,
+                  "symbol": "string",
+                  "volume": 0
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-no-common",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "concat": "stringstring",
+              "eventOne": {
+                "fields": {
+                  "myInt": 0,
+                  "myString": "string"
+                },
+                "kind": "row"
+              },
+              "eventTwo": {
+                "fields": {
+                  "feed": {
+                    "state": "null"
+                  },
+                  "price": 0,
+                  "symbol": "string",
+                  "volume": 0
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-common",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "concat": "stringstring",
+              "eventOne": {
+                "fields": {
+                  "id": "string"
+                },
+                "kind": "row"
+              },
+              "eventTwo": {
+                "fields": {
+                  "id": "string"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-common",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "concat": "stringstring",
+              "eventOne": {
+                "fields": {
+                  "id": "string"
+                },
+                "kind": "row"
+              },
+              "eventTwo": {
+                "fields": {
+                  "id": "string"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "combined-props",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "array": [
+                {
+                  "fields": {
+                    "mapprop": {
+                      "fields": {
+                        "0ma": {
+                          "fields": {
+                            "value": "0ma0"
+                          },
+                          "kind": "row"
+                        },
+                        "0mb": {
+                          "fields": {
+                            "value": "0ma1"
+                          },
+                          "kind": "row"
+                        }
+                      },
+                      "kind": "row"
+                    },
+                    "nestLevOneVal": "abc"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "mapprop": {
+                      "fields": {
+                        "1ma": {
+                          "fields": {
+                            "value": "1ma0"
+                          },
+                          "kind": "row"
+                        },
+                        "1mb": {
+                          "fields": {
+                            "value": "1ma1"
+                          },
+                          "kind": "row"
+                        }
+                      },
+                      "kind": "row"
+                    },
+                    "nestLevOneVal": "abc"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "mapprop": {
+                      "fields": {
+                        "2ma": {
+                          "fields": {
+                            "value": "valueOne"
+                          },
+                          "kind": "row"
+                        },
+                        "2mb": {
+                          "fields": {
+                            "value": "2ma1"
+                          },
+                          "kind": "row"
+                        }
+                      },
+                      "kind": "row"
+                    },
+                    "nestLevOneVal": "abc"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "state": "null"
+                }
+              ],
+              "concat": "0ma00ma1",
+              "indexed": "\u003cunreadable\u003e"
             }
           }
         ]
