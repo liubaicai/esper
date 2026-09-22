@@ -73,6 +73,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include context-selection-faf-nested and context-selection-faf-nested-diff")
 		fmt.Fprintln(stderr, "runner modes include view-group-closure and view-group-closure-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-output-limit-crontab-when-closure and resultset-output-limit-crontab-when-closure-diff")
+		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-invalid-closure and resultset-aggregate-invalid-closure-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
@@ -386,6 +387,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraTableCMSScenario(file)
 	} else if *mode == "resultset-output-limit-crontab-when-closure" || *mode == "resultset-output-limit-crontab-when-closure-diff" {
 		scenario, err = loadResultSetOutputLimitCrontabWhenClosureScenario(file)
+	} else if *mode == "resultset-aggregate-invalid-closure" || *mode == "resultset-aggregate-invalid-closure-diff" {
+		scenario, err = loadResultSetAggregateInvalidClosureScenario(file)
 	} else if *mode == "view-group-closure" || *mode == "view-group-closure-diff" {
 		scenario, err = loadViewGroupClosureScenario(file)
 	} else {
@@ -5002,6 +5005,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, resultsetOutputLimitCrontabWhenClosureJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, resultsetOutputLimitCrontabWhenClosureSources),
 				splitMetadata(*javaExecutions, resultsetOutputLimitCrontabWhenClosureJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-aggregate-invalid-closure" || *mode == "resultset-aggregate-invalid-closure-diff" {
+		trace, err := runResultSetAggregateInvalidClosureScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-aggregate-invalid-closure-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, resultsetAggregateInvalidClosureJavaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetAggregateInvalidClosureJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetAggregateInvalidClosureSources),
+				splitMetadata(*javaExecutions, resultsetAggregateInvalidClosureJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

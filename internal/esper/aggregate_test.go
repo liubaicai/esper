@@ -752,7 +752,7 @@ func TestLocalGroupByAggregateUsesCurrentEventAndOuterGroup(t *testing.T) {
 func TestStatisticalAndCollectionAggregateFunctions(t *testing.T) {
 	env, engine := newRuntimeTest(t)
 	price := Field[runtimeTestTrade, float64]("price")
-	plan, err := env.Build(From[runtimeTestTrade](env, "Trade").GroupBy(
+	plan, err := env.Build(From[runtimeTestTrade](env, "Trade").Window(LengthWindow(4)).GroupBy(
 		Field[runtimeTestTrade, string]("symbol"),
 	).Select(
 		Alias("avedev", Avedev[float64](price)),

@@ -1,0 +1,174 @@
+{
+ "version": "esper-parity/v1",
+ "id": "resultset-aggregate-invalid-closure",
+ "description": "ResultSetAggregate invalid-closure surface (4 executions across 4 files, 10 compile-time probes): ext-invalid replays ResultSetAggregateExtInvalid \u2014 `select rate(10) from SupportBean` under extendedAggregation=false fails name resolution (unrepresentable: Go has no extended-aggregation toggle and Rate compiles); aggregate-invalid replays ResultSetAggregateSortedMinMaxBy ord 7 ResultSetAggregateInvalid \u2014 `maxBy(p00||p10)` spanning SupportBean_S0/SupportBean_S1 fails the same-stream criteria check and `sorted(p00)` over a windowless stream fails the data-window requirement; window-invalid replays ResultSetAggregationMethodWindow ord 4 ResultSetAggregateWindowInvalid \u2014 the @public MyTable(windowcol window(*) @type('SupportBean')) deploy precedes two path-carrying probes, `windowcol.first(id)` (argument validated against the contained type, SupportBean has no id) and `windowcol.listReference(intPrimitive)` (zero-parameter arity check), both unrepresentable in the typed API; filter-named-param-invalid replays ResultSetAggregateFilterNamedParameter ord 20 ResultSetAggregateFilterNamedParamInvalid \u2014 multi-value, multiple and non-boolean filter named parameters are unrepresentable (FilterAggregate takes one Expression[bool]), `create table MyTable(totals sum(int, filter:true))` is rejected by CreateTable, and the correlated `filter:s0.p00='a'` subquery aggregate is rejected by the existing subselect check. compile-error records carry the pinned Java message prefixes; unrepresentable records pin the probe EPL and prefix; the deployed record marks the MyTable module deploy (Java sources regression-lib/.../ResultSetAggregateExtInvalid.java, ResultSetAggregateSortedMinMaxBy.java, ResultSetAggregationMethodWindow.java, ResultSetAggregateFilterNamedParameter.java).",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateExtInvalid.java",
+ "javaSource2": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateSortedMinMaxBy.java",
+ "javaSource3": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregationMethodWindow.java",
+ "javaSource4": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFilterNamedParameter.java",
+ "javaRuntimes": [
+  "java-runtime-98f0ac5299780e2d6656",
+  "java-runtime-09530eec55a704b01c96",
+  "java-runtime-fbbdc48ea2da6d4bc426",
+  "java-runtime-50935b7efcc1fdced314"
+ ],
+ "javaNames": [
+  "ResultSetAggregateExtInvalid",
+  "ResultSetAggregateInvalid",
+  "ResultSetAggregateWindowInvalid",
+  "ResultSetAggregateFilterNamedParamInvalid"
+ ],
+ "javaStaticIds": [
+  "java-9c4ed42f2a9b55c3fd1c",
+  "java-553516b9d01c12a13172",
+  "java-313287657d14b5c686f8",
+  "java-0c29efb6d43971aba5c4"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "ext-invalid",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-98f0ac5299780e2d6656",
+   "executionName": "ResultSetAggregateExtInvalid",
+   "observation": "unrepresentable; the single path-less tryInvalidCompile probe pins the rate(10) unknown-function rejection the suite produces under extendedAggregation=false (Go has no toggle and Rate compiles, so the record carries the pinned message verbatim)",
+   "epl": "select rate(10) from SupportBean"
+  },
+  {
+   "case": "aggregate-invalid",
+   "ordinal": 7,
+   "runtimeId": "java-runtime-09530eec55a704b01c96",
+   "executionName": "ResultSetAggregateInvalid",
+   "observation": "compile-error; two path-less tryInvalidCompile probes pin the sorted/minmax-by rejections: maxBy over a criteria expression spanning SupportBean_S0 and SupportBean_S1 (same-stream check), and sorted over a stream with no declared data window",
+   "epl": "select maxBy(p00||p10) from SupportBean_S0#lastevent, SupportBean_S1#lastevent"
+  },
+  {
+   "case": "window-invalid",
+   "ordinal": 4,
+   "runtimeId": "java-runtime-fbbdc48ea2da6d4bc426",
+   "executionName": "ResultSetAggregateWindowInvalid",
+   "observation": "deployed+unrepresentable; the @public MyTable(windowcol window(*) @type('SupportBean')) deploy precedes two path-carrying probes \u2014 windowcol.first(id) validates the argument against the contained type (SupportBean has no id) and windowcol.listReference(intPrimitive) fails the zero-parameter arity check; both pin verbatim (no typed-API form)",
+   "epl": "@public create table MyTable(windowcol window(*) @type('SupportBean'));\n"
+  },
+  {
+   "case": "filter-named-param-invalid",
+   "ordinal": 20,
+   "runtimeId": "java-runtime-50935b7efcc1fdced314",
+   "executionName": "ResultSetAggregateFilterNamedParamInvalid",
+   "observation": "compile-error+unrepresentable; five path-less tryInvalidCompile probes pin the filter named-parameter rejections: multi-value filter tuple, multiple filter expressions and non-boolean filter (pinned-only; FilterAggregate takes one Expression[bool]), create-table filter:true rejected by CreateTable, and the correlated filter:s0.p00='a' subquery aggregate rejected by the subselect-correlation check",
+   "epl": "select sum(intPrimitive, filter:(intPrimitive, doublePrimitive)) from SupportBean"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "ext-invalid"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "ext-invalid",
+   "statement": "rate-unknown-function",
+   "epl": "select rate(10) from SupportBean",
+   "expectError": "Failed to validate select-clause expression 'rate(10)': Unknown single-row function, aggregation function or mapped or indexed property named 'rate' could not be resolved [select rate(10) from SupportBean]",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "case",
+   "case": "aggregate-invalid"
+  },
+  {
+   "op": "build-error",
+   "case": "aggregate-invalid",
+   "statement": "maxby-cross-stream",
+   "epl": "select maxBy(p00||p10) from SupportBean_S0#lastevent, SupportBean_S1#lastevent",
+   "expectError": "Failed to validate select-clause expression 'maxby(p00||p10)': The 'maxby' aggregation function requires that any parameter expressions evaluate properties of the same stream",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "build-error",
+   "case": "aggregate-invalid",
+   "statement": "sorted-no-window",
+   "epl": "select sorted(p00) from SupportBean_S0",
+   "expectError": "Failed to validate select-clause expression 'sorted(p00)': The 'sorted' aggregation function requires that a data window is declared for the stream",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "case",
+   "case": "window-invalid"
+  },
+  {
+   "op": "deploy",
+   "case": "window-invalid",
+   "statement": "create-table",
+   "epl": "@public create table MyTable(windowcol window(*) @type('SupportBean'));\n"
+  },
+  {
+   "op": "deployed",
+   "case": "window-invalid",
+   "statement": "create-table"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "window-invalid",
+   "statement": "windowcol-first-id",
+   "epl": "select MyTable.windowcol.first(id) from SupportBean_S0",
+   "expectError": "Failed to validate select-clause expression 'MyTable.windowcol.first(id)': Failed to validate aggregation function parameter expression 'id': Property named 'id' is not valid in any stream"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "window-invalid",
+   "statement": "windowcol-listreference-arity",
+   "epl": "select MyTable.windowcol.listReference(intPrimitive) from SupportBean_S0",
+   "expectError": "Failed to validate select-clause expression 'MyTable.windowcol.listReference(int...(45 chars)': Invalid number of parameters"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "window-invalid"
+  },
+  {
+   "op": "case",
+   "case": "filter-named-param-invalid"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "filter-named-param-invalid",
+   "statement": "filter-multi-value",
+   "epl": "select sum(intPrimitive, filter:(intPrimitive, doublePrimitive)) from SupportBean",
+   "expectError": "Failed to validate select-clause expression 'sum(intPrimitive,filter:(intPrimiti...(55 chars)': Filter named parameter requires a single expression returning a boolean-typed value",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "unrepresentable",
+   "case": "filter-named-param-invalid",
+   "statement": "filter-multiple",
+   "epl": "select sum(intPrimitive, intPrimitive > 0, filter:intPrimitive < 0) from SupportBean",
+   "expectError": "Failed to validate select-clause expression 'sum(intPrimitive,intPrimitive>0,fil...(54 chars)': Only a single filter expression can be provided",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "unrepresentable",
+   "case": "filter-named-param-invalid",
+   "statement": "filter-non-bool",
+   "epl": "select sum(intPrimitive, filter:intPrimitive) from SupportBean",
+   "expectError": "Failed to validate select-clause expression 'sum(intPrimitive,filter:intPrimitive)': Filter named parameter requires a single expression returning a boolean-typed value",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "unrepresentable",
+   "case": "filter-named-param-invalid",
+   "statement": "create-table-filter",
+   "epl": "create table MyTable(totals sum(int, filter:true))",
+   "expectError": "Failed to validate table-column expression 'sum(int,filter:true)': The 'group_by' and 'filter' parameter is not allowed in create-table statements",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "build-error",
+   "case": "filter-named-param-invalid",
+   "statement": "filter-correlated-subquery",
+   "epl": "select (select sum(intPrimitive, filter:s0.p00='a') from SupportBean) from SupportBean_S0 as s0",
+   "expectError": "Failed to plan subquery number 1 querying SupportBean: Subselect aggregation functions cannot aggregate across correlated properties",
+   "compileWithoutPath": true
+  }
+ ]
+}

@@ -701,7 +701,7 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 			return Plan{}, WrapError(ErrorInvalidRule, "pattern", err)
 		}
 	} else if query.aggregate != nil {
-		if err := e.validateAggregate(query.aggregate); err != nil {
+		if err := e.validateAggregate(query.aggregate, query.tableTarget != ""); err != nil {
 			return Plan{}, WrapError(ErrorInvalidRule, "aggregate", err)
 		}
 	} else if query.updateStream != nil {
@@ -2497,6 +2497,9 @@ func (e *Environment) validateQueryModifiers(query Query) error {
 		input := query.input
 		if query.aggregate != nil {
 			input = query.aggregate.input
+			if err := validateSortedMinMaxByScope(key.Expr.node(), query.aggregate, query.tableTarget != ""); err != nil {
+				return fmt.Errorf("order-by key %d: %w", index, err)
+			}
 		}
 		var err error
 		if query.aggregate != nil && query.aggregate.join != nil {
@@ -2653,7 +2656,7 @@ func (e *Environment) validateNode(node *streamNode) error {
 		if node.derived.aggregate.join != nil {
 			return NewError(ErrorInvalidRule, "derived aggregate source cannot wrap a join aggregate")
 		}
-		return e.validateAggregate(node.derived.aggregate)
+		return e.validateAggregate(node.derived.aggregate, false)
 	case streamContained:
 		if node.contained == nil || node.contained.property == nil {
 			return NewError(ErrorInvalidRule, "unnest stream requires a contained property expression")
@@ -3337,6 +3340,14 @@ func (e *Environment) validateSubquery(definition *subqueryDefinition) error {
 		if err := e.validateExprFields(definition.source, definition.projection); err != nil {
 			return WrapError(ErrorInvalidRule, "subquery projection", err)
 		}
+		if err := validateSortedMinMaxByScopeSubquery(definition.projection.node(), definition.source); err != nil {
+			return err
+		}
+	}
+	if definition.having != nil {
+		if err := validateSortedMinMaxByScopeSubquery(definition.having.node(), definition.source); err != nil {
+			return err
+		}
 	}
 	if definition.having != nil && !definition.grouped {
 		// Esper also accepts a non-aggregated having without group-by: it
@@ -3393,6 +3404,9 @@ func (e *Environment) validateSubquery(definition *subqueryDefinition) error {
 			seen[selection.Name] = struct{}{}
 			if err := e.validateExprFields(definition.source, selection.Expr); err != nil {
 				return WrapError(ErrorInvalidRule, fmt.Sprintf("subquery column %q", selection.Name), err)
+			}
+			if err := validateSortedMinMaxByScopeSubquery(selection.Expr.node(), definition.source); err != nil {
+				return err
 			}
 			aggregate := isAggregateExpression(selection.Expr)
 			hasAggregate = hasAggregate || aggregate
@@ -5332,7 +5346,7 @@ func (e *Environment) validateUpdateStreamMapEntry(input *streamNode, assignment
 	return nil
 }
 
-func (e *Environment) validateAggregate(definition *aggregateDefinition) error {
+func (e *Environment) validateAggregate(definition *aggregateDefinition, intoTable bool) error {
 	if definition == nil || (definition.input == nil && definition.join == nil) {
 		return NewError(ErrorInvalidRule, "aggregate requires a source")
 	}
@@ -5384,6 +5398,9 @@ func (e *Environment) validateAggregate(definition *aggregateDefinition) error {
 		if definition.where.Type() != typeOf[bool]() {
 			return NewError(ErrorTypeMismatch, "aggregate where expression must return bool")
 		}
+		if err := validateSortedMinMaxByScope(definition.where.node(), definition, intoTable); err != nil {
+			return err
+		}
 		if definition.join != nil {
 			if err := e.validateJoinScopedExpression(definition.join, definition.where, "join aggregate where"); err != nil {
 				return err
@@ -5404,6 +5421,9 @@ func (e *Environment) validateAggregate(definition *aggregateDefinition) error {
 		if err := validateAggregateExpressionNodes(selection.Expr.node()); err != nil {
 			return err
 		}
+		if err := validateSortedMinMaxByScope(selection.Expr.node(), definition, intoTable); err != nil {
+			return err
+		}
 		if err := e.validateAggregatePluginNodes(selection.Expr.node()); err != nil {
 			return err
 		}
@@ -5421,6 +5441,9 @@ func (e *Environment) validateAggregate(definition *aggregateDefinition) error {
 		if err := validateAggregateExpressionNodes(definition.having.node()); err != nil {
 			return err
 		}
+		if err := validateSortedMinMaxByScope(definition.having.node(), definition, intoTable); err != nil {
+			return err
+		}
 		if err := e.validateAggregatePluginNodes(definition.having.node()); err != nil {
 			return err
 		}
@@ -5431,6 +5454,185 @@ func (e *Environment) validateAggregate(definition *aggregateDefinition) error {
 			return err
 		}
 		if err := e.validateAggregateHavingContainment(definition); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateSortedMinMaxByScope mirrors Java's
+// ExprAggMultiFunctionSortedMinMaxByNode validation: (a) every criteria/key
+// expression of a min-by/max-by/sorted aggregate must reference fields of a
+// single stream (same-stream check), and (b) a sorted aggregate requires the
+// source stream to declare a data window. Into-table and create-table
+// declarations are exempt from the window check (Java handleIntoTable/
+// handleCreateTable skip it).
+func validateSortedMinMaxByScope(node *exprNode, definition *aggregateDefinition, intoTable bool) error {
+	if node == nil {
+		return nil
+	}
+	switch node.kind {
+	case "min-by", "max-by", "min-by-ever", "max-by-ever", "sorted":
+		if err := validateSameStreamCriteria(node); err != nil {
+			return err
+		}
+		if node.kind == "sorted" && !intoTable {
+			streamNum := criteriaStreamNum(node)
+			var source *streamNode
+			if definition.join != nil && streamNum >= 0 && streamNum < len(definition.join.sources) {
+				source = definition.join.sources[streamNum]
+			} else {
+				source = definition.input
+			}
+			if !streamNodeHasWindow(source) {
+				return NewError(ErrorInvalidRule, "The 'sorted' aggregation function requires that a data window is declared for the stream")
+			}
+		}
+	}
+	for _, child := range node.children {
+		if err := validateSortedMinMaxByScope(child, definition, intoTable); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// criteriaStreamNum returns the single stream number referenced by the
+// aggregate's criteria expression, or -1 when the criteria references no
+// stream or multiple streams (the same-stream check rejects those first).
+func criteriaStreamNum(node *exprNode) int {
+	var criteria *exprNode
+	switch node.kind {
+	case "min-by", "max-by", "min-by-ever", "max-by-ever":
+		if len(node.children) < 2 {
+			return -1
+		}
+		criteria = node.children[1]
+	case "sorted":
+		if len(node.children) == 0 {
+			return -1
+		}
+		criteria = node.children[0]
+	default:
+		return -1
+	}
+	sources := make(map[int]struct{})
+	var collect func(*exprNode)
+	collect = func(n *exprNode) {
+		if n == nil {
+			return
+		}
+		switch n.kind {
+		case "join-field", "join-event":
+			sources[n.joinSource] = struct{}{}
+		case "field", "event-value":
+			sources[0] = struct{}{}
+		case "outer-field":
+			sources[-1] = struct{}{}
+		}
+		for _, child := range n.children {
+			collect(child)
+		}
+	}
+	collect(criteria)
+	if len(sources) != 1 {
+		return -1
+	}
+	for streamNum := range sources {
+		return streamNum
+	}
+	return -1
+}
+
+// streamNodeHasWindow reports whether the stream chain carries a data window
+// or is inherently window-bound (named window, table). Pattern sources are
+// window-bound only when JoinInput.Window set patternWindow; contained
+// (unnest) sources are transparent and defer to their parent.
+func streamNodeHasWindow(node *streamNode) bool {
+	for node != nil {
+		switch node.kind {
+		case streamWindow, streamNamedWindow, streamTable:
+			return true
+		case streamPattern:
+			return node.patternWindow != nil
+		}
+		node = node.input
+	}
+	return false
+}
+
+// validateSameStreamCriteria reports an error when a min-by/max-by/sorted
+// aggregate's criteria expressions reference join fields of more than one
+// stream, matching Java's same-stream requirement. Java tests only the first
+// positional parameter's stream set and rejects when it is empty or spans
+// more than one stream. For min-by/max-by the criteria is children[1] (the
+// key); for sorted it is children[0] (the value doubles as the criteria).
+// Multi-criteria forms (MinByMulti/MaxByMulti/SortedEvents) test only the
+// first key child, mirroring Java's positionalParams[0].
+func validateSameStreamCriteria(node *exprNode) error {
+	var criteria *exprNode
+	switch node.kind {
+	case "min-by", "max-by", "min-by-ever", "max-by-ever":
+		if len(node.children) < 2 {
+			return nil
+		}
+		criteria = node.children[1]
+	case "sorted":
+		if len(node.children) == 0 {
+			return nil
+		}
+		criteria = node.children[0]
+	default:
+		return nil
+	}
+	// Java tests only positionalParams[0]; for multi-key wrappers that is the
+	// first key child.
+	if criteria != nil && (criteria.kind == "multi-key" || criteria.kind == "sorted-multi-key") && len(criteria.children) > 0 {
+		criteria = criteria.children[0]
+	}
+	sources := make(map[int]struct{})
+	var collect func(*exprNode)
+	collect = func(n *exprNode) {
+		if n == nil {
+			return
+		}
+		switch n.kind {
+		case "join-field", "join-event":
+			sources[n.joinSource] = struct{}{}
+		case "field", "event-value":
+			sources[0] = struct{}{}
+		case "outer-field":
+			sources[-1] = struct{}{}
+		}
+		for _, child := range n.children {
+			collect(child)
+		}
+	}
+	collect(criteria)
+	if len(sources) != 1 {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("The '%s' aggregation function requires that any parameter expressions evaluate properties of the same stream", node.kind))
+	}
+	return nil
+}
+
+// validateSortedMinMaxByScopeSubquery applies the same sorted/min-by/max-by
+// checks to a subquery's own source stream. The subquery's source is a single
+// stream (no join), so the criteria stream is always stream 0.
+func validateSortedMinMaxByScopeSubquery(node *exprNode, source *streamNode) error {
+	if node == nil {
+		return nil
+	}
+	switch node.kind {
+	case "min-by", "max-by", "min-by-ever", "max-by-ever", "sorted":
+		if err := validateSameStreamCriteria(node); err != nil {
+			return err
+		}
+		if node.kind == "sorted" && !streamNodeHasWindow(source) {
+			return NewError(ErrorInvalidRule, "The 'sorted' aggregation function requires that a data window is declared for the stream")
+		}
+	}
+	for _, child := range node.children {
+		if err := validateSortedMinMaxByScopeSubquery(child, source); err != nil {
 			return err
 		}
 	}

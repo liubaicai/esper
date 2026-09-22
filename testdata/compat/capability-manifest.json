@@ -5657,6 +5657,57 @@
     "differential-verified"
    ],
    "notes": "All three remaining ResultSetOutputLimitCrontabWhen executions differential-verified; the file is fully covered."
+  },
+  {
+   "id": "resultset.aggregate-invalid-closure",
+   "domain": "resultset",
+   "level": "S",
+   "summary": "Aggregate-function invalid-form diagnostics: unknown function, same-stream criteria, sorted window, table window-column, filter named-parameter",
+   "javaRefs": [
+    "ResultSetAggregateExtInvalid",
+    "ResultSetAggregateInvalid",
+    "ResultSetAggregateWindowInvalid",
+    "ResultSetAggregateFilterNamedParamInvalid"
+   ],
+   "javaRuntimeIds": [
+    "java-runtime-98f0ac5299780e2d6656",
+    "java-runtime-09530eec55a704b01c96",
+    "java-runtime-fbbdc48ea2da6d4bc426",
+    "java-runtime-50935b7efcc1fdced314"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-98f0ac5299780e2d6656",
+    "java-runtime-09530eec55a704b01c96",
+    "java-runtime-fbbdc48ea2da6d4bc426",
+    "java-runtime-50935b7efcc1fdced314"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateExtInvalid.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateSortedMinMaxBy.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregationMethodWindow.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFilterNamedParameter.java"
+   ],
+   "goRefs": [
+    "internal/esper/expr.go",
+    "internal/esper/plan.go",
+    "internal/esper/state.go",
+    "internal/app/parity/resultset_aggregate_invalid_closure.go"
+   ],
+   "tags": [
+    "resultset",
+    "aggregate",
+    "invalid"
+   ],
+   "status": "differential-verified",
+   "cases": [
+    "case.resultset-aggregate-invalid-closure"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "notes": "4 invalid-form executions differential-verified; ResultSetAggregateExtInvalid.java fully covered."
   }
  ],
  "cases": [
@@ -47369,6 +47420,74 @@
     "java-runtime-54ed0a4e11d7714b8289"
    ],
    "notes": "Draft 4.495: ResultSetOutputLimitCrontabWhen ordinals 9/10/13 \u2014 the last three unreferenced executions of the file. Java/Go each 15 records, 0 differences. Covers the SODA when-then deploy smoke (toEPL text pinned unrepresentable), the same-variable-twice output-last-when listener pair (engine fix: whenPending reduces to last row per key for OutputLastPolicy), and 8 invalid probes (3 new validations: aggregate-in-when, aggregate-in-then-set, prev-in-when; 1 unrepresentable 'then set 1')."
+  },
+  {
+   "id": "case.resultset-aggregate-invalid-closure",
+   "javaRuntimeIds": [
+    "java-runtime-98f0ac5299780e2d6656",
+    "java-runtime-09530eec55a704b01c96",
+    "java-runtime-fbbdc48ea2da6d4bc426",
+    "java-runtime-50935b7efcc1fdced314"
+   ],
+   "javaStaticIds": [
+    "java-9c4ed42f2a9b55c3fd1c",
+    "java-553516b9d01c12a13172",
+    "java-313287657d14b5c686f8",
+    "java-0c29efb6d43971aba5c4"
+   ],
+   "javaNames": [
+    "ResultSetAggregateExtInvalid",
+    "ResultSetAggregateInvalid",
+    "ResultSetAggregateWindowInvalid",
+    "ResultSetAggregateFilterNamedParamInvalid"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateExtInvalid.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateSortedMinMaxBy.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregationMethodWindow.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFilterNamedParameter.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateInvalidClosureDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateInvalidClosureDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateInvalidClosureRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateInvalidClosureRuntimeIDMappingMatchesScenario",
+    "internal/app/parity/run_test.go:TestRunHelpIncludesResultSetAggregateInvalidClosure",
+    "internal/esper/agg_invalid_test.go:TestAggregateRejectsSortedNoWindow",
+    "internal/esper/agg_invalid_test.go:TestAggregateRejectsMaxByCrossStream"
+   ],
+   "tags": [
+    "resultset",
+    "aggregate",
+    "invalid",
+    "compile-error",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "testdata/parity/resultset-aggregate-invalid-closure.json",
+    "testdata/parity/resultset-aggregate-invalid-closure.trace.json",
+    "testdata/parity/resultset-aggregate-invalid-closure.go.trace.json",
+    "testdata/parity/resultset-aggregate-invalid-closure.evidence.json",
+    "tools/java-oracle/ResultSetAggregateInvalidClosureScenarioOracle.java",
+    "tools/java-oracle/run-resultset-aggregate-invalid-closure.sh"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-98f0ac5299780e2d6656",
+    "java-runtime-09530eec55a704b01c96",
+    "java-runtime-fbbdc48ea2da6d4bc426",
+    "java-runtime-50935b7efcc1fdced314"
+   ],
+   "notes": "Draft 4.496: 4 invalid-form executions across 4 files, all aggregate-function compile-time validation (10 probes). Java/Go each 11 records, 0 differences. Covers rate(10) unknown-function (unrepresentable \u2014 no extended-aggregation toggle), maxby cross-stream + sorted no-window (new validations), windowcol.first/listReference (unrepresentable \u2014 Method escape hatch), and 5 filter probes (3 unrepresentable typed-API, create-table filter unrepresentable (TableAggDecl.Filter is a declared filtered aggregation, not the EPL filter: parameter), correlated subquery covered). ResultSetAggregateExtInvalid.java closed (single execution)."
   }
  ],
  "mappings": [
@@ -50647,29 +50766,33 @@
   {
    "capabilityId": "resultset.output-when-then-closure",
    "caseId": "case.resultset-output-limit-crontab-when-closure"
+  },
+  {
+   "capabilityId": "resultset.aggregate-invalid-closure",
+   "caseId": "case.resultset-aggregate-invalid-closure"
   }
  ],
  "summary": {
-  "inventoriedCases": 734,
-  "implementedCases": 732,
-  "differentialVerifiedCases": 358,
-  "differentialVerifiedRuntimeIds": 1387,
+  "inventoriedCases": 735,
+  "implementedCases": 733,
+  "differentialVerifiedCases": 359,
+  "differentialVerifiedRuntimeIds": 1391,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
-  "inventoriedCapabilities": 125,
-  "implementedCapabilities": 124,
-  "differentialVerifiedCapabilities": 44,
+  "inventoriedCapabilities": 126,
+  "implementedCapabilities": 125,
+  "differentialVerifiedCapabilities": 45,
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3937,
-  "referencedJavaRuntimeIds": 3509,
+  "runtimeAssociationCount": 3941,
+  "referencedJavaRuntimeIds": 3513,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 627,
+  "unreferencedJavaRuntimeIds": 623,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 734,
-  "totalCapabilities": 125
+  "totalCases": 735,
+  "totalCapabilities": 126
  }
 }

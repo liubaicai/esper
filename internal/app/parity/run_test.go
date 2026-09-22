@@ -71169,3 +71169,238 @@ func TestRunHelpIncludesResultSetOutputLimitCrontabWhenClosure(t *testing.T) {
 		}
 	}
 }
+
+func TestRunResultSetAggregateInvalidClosureDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-invalid-closure.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-invalid-closure.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-invalid-closure.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-aggregate-invalid-closure-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	if len(evidence.JavaRuntimeIDs) != 4 {
+		t.Fatalf("runtime ids = %d, want 4", len(evidence.JavaRuntimeIDs))
+	}
+}
+
+func TestRunResultSetAggregateInvalidClosureDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "rate-prefix-drift",
+			mutate: func(trace *compat.Trace) {
+				// The ext-invalid unrepresentable record pins the full
+				// rate(10) unknown-function message including the
+				// ' [<original EPL>]' suffix.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "ext-invalid" && rec.Operation == "unrepresentable" {
+						rec.Value = "different error"
+						return
+					}
+				}
+				panic("no rate-unknown-function record")
+			},
+		},
+		{
+			name: "maxby-prefix-drift",
+			mutate: func(trace *compat.Trace) {
+				// The maxby-cross-stream compile-error record pins the
+				// same-stream criteria prefix.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "aggregate-invalid" && rec.Statement == "maxby-cross-stream" {
+						rec.Value = "different error"
+						return
+					}
+				}
+				panic("no maxby-cross-stream record")
+			},
+		},
+		{
+			name: "windowcol-arity-drift",
+			mutate: func(trace *compat.Trace) {
+				// The listReference unrepresentable record pins the
+				// truncated-expression arity prefix.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "window-invalid" && rec.Statement == "windowcol-listreference-arity" {
+						rec.Value = "different error"
+						return
+					}
+				}
+				panic("no windowcol-listreference-arity record")
+			},
+		},
+		{
+			name: "record-dropped",
+			mutate: func(trace *compat.Trace) {
+				// All eleven records must replay.
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-invalid-closure.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-invalid-closure.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-invalid-closure.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-aggregate-invalid-closure-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunResultSetAggregateInvalidClosureRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "resultset-aggregate-invalid-closure.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "resultset-aggregate-invalid-closure"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "resultset-aggregate-invalid-closure"`)...), 1)
+		}},
+		{name: "case-metadata", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 20`), []byte(`"ordinal": 21`), 1)
+		}},
+		{name: "step-field-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "deploy",
+   "case": "window-invalid",
+   "statement": "create-table"`), []byte(`"op": "deploy",
+   "case": "window-invalid",
+   "statement": "create-table",
+   "extra": 0`), 1)
+		}},
+		{name: "step-field-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"statement": "maxby-cross-stream",`), []byte(`"statement": "maxby-cross-stream",
+      "statement": "maxby-cross-stream",`), 1)
+		}},
+		{name: "step-path-mutated", mutate: func(data []byte) []byte {
+			// The window-invalid probes compile against the accumulated
+			// path; marking one compileWithoutPath breaks the pinned key.
+			return bytes.Replace(data, []byte(`"statement": "windowcol-first-id",
+   "epl": "select MyTable.windowcol.first(id) from SupportBean_S0",
+   "expectError": "Failed to validate select-clause expression 'MyTable.windowcol.first(id)': Failed to validate aggregation function parameter expression 'id': Property named 'id' is not valid in any stream"
+  }`), []byte(`"statement": "windowcol-first-id",
+   "epl": "select MyTable.windowcol.first(id) from SupportBean_S0",
+   "expectError": "Failed to validate select-clause expression 'MyTable.windowcol.first(id)': Failed to validate aggregation function parameter expression 'id': Property named 'id' is not valid in any stream",
+   "compileWithoutPath": true
+  }`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", "resultset-aggregate-invalid-closure",
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunResultSetAggregateInvalidClosureRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-invalid-closure.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, resultsetAggregateInvalidClosureJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, resultsetAggregateInvalidClosureJavaExecutions) {
+		t.Fatalf("scenario metadata runtimes=%v names=%v", document.JavaRuntimes, document.JavaNames)
+	}
+	for _, entry := range document.Cases {
+		if resultsetAggregateInvalidClosureCaseRuntimeIDs[entry.Case] != entry.RuntimeID {
+			t.Fatalf("case %q runtimeId = %q, want %q", entry.Case, entry.RuntimeID, resultsetAggregateInvalidClosureCaseRuntimeIDs[entry.Case])
+		}
+	}
+}
+
+func TestRunHelpIncludesResultSetAggregateInvalidClosure(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-h"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("help exit code = %d, stderr = %q", code, stderr.String())
+	}
+	for _, mode := range []string{
+		"resultset-aggregate-invalid-closure",
+		"resultset-aggregate-invalid-closure-diff",
+	} {
+		if !strings.Contains(stderr.String(), mode) {
+			t.Fatalf("help output omits %q: %s", mode, stderr.String())
+		}
+	}
+}
