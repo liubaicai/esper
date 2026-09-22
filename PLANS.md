@@ -55,29 +55,30 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly') committed and pushed as 9ac32d036; Git owns identity. Parity review PASS, two P3s fixed.
 
 ## Current work unit
-Active: Draft 4.510 ('rowrecog-multikey-warray').
+Active: Draft 4.511 ('view-systime-trio').
 
-- Selection: `RowRecogMultikeyWArray` ords 0-1 (2 unreferenced) —
-  multikey partition family (int[] deep-equals key + two-scalar tuple).
-  Contract at `.omp/contract-510.md` (scouts NextJavaContract510 +
-  NextGoSurface510; zero predicted shared-core delta — encodeKey already
-  canonicalizes []int content and multi-component keys).
-- [x] Go runner `internal/app/parity/rowrecog_multikey_warray.go` +
-  run.go dispatch + run_test.go 2-test family (2 cases / 7 records).
-- [x] Parity assets (Assets510): oracle
-  `tools/java-oracle/RowRecogMultikeyWArrayScenarioOracle.java`, run.sh,
-  scenario `testdata/parity/rowrecog-multikey-warray.json` (2 cases /
-  20 steps).
-- [x] Differential replay: Java 7 records / Go 7 records, `passing` /
-  0 differences. Evidence `rowrecog-multikey-warray.evidence.json` +
-  2-test family (passing-evidence + 2 mutations).
-- [x] Manifest/roadmap/CHANGELOG: `case.rowrecog-multikey-warray`
-  born-DV (2 runtime IDs); `rowrecog.match-recognize` goRefs + DV IDs
-  extended. Summary 742 cases / 368 DV / 1454 DV runtime IDs /
-  unreferenced 576.
-- [x] Gates: `make check` exit 0 (parity 93s, esper 112s); compat manifest
-  validation green.
-- [x] Parity review (ParityReview510): PASS, zero findings.
+- Selection: `ViewTimeBatchRefPoint` (ord 9) + `ViewTimeBatchWSystemTime`
+  + `ViewTimeWinWSystemTime` (3 unreferenced) — time-view ref-point and
+  system-time family. Contract at `.omp/contract-511.md` (scouts
+  NextJavaContract511 + NextGoSurface511).
+- [x] Shared core: `TimeBatchRefPoint(duration, refPoint)` API
+  (TimeBatchWindowSpec.ReferencePoint + strictly-greater grid boundary
+  helper `timeBatchRefPointBoundary`); flush re-anchor fix — the next
+  callback is the smallest grid boundary strictly after now, so a late
+  flush no longer skips an intermediate boundary (Java deltaAddWReference).
+- [x] Go runner `internal/app/parity/view_systime_trio.go` + run.go
+  dispatch + run_test.go 2-test family (3 cases / 30 records; uni six
+  stats fields, weighted_avg LastEver passthrough, types op).
+- [x] Parity assets (Assets511): oracle
+  `tools/java-oracle/ViewSystimeTrioScenarioOracle.java`, run.sh, scenario
+  `testdata/parity/view-systime-trio.json` (3 cases / 57 steps).
+- [x] Differential replay: Java 30 records / Go 30 records, `passing` /
+  0 differences. Evidence `view-systime-trio.evidence.json` + 2-test
+  family (passing-evidence + 3 mutations).
+- [x] Manifest/roadmap/CHANGELOG: `case.view-systime-trio` born-DV (3
+  runtime IDs); `view.basic-windows` goRefs + DV IDs extended. Summary
+  743 cases / 369 DV / 1457 DV runtime IDs / unreferenced 573.
+- [ ] Gates + parity review pending.
 
 ## Current work unit
 Active: Draft 4.494 ('view-group-closure').

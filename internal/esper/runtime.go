@@ -17775,8 +17775,17 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 	case TimeBatchWindowSpec:
 		if !state.started {
 			state.started = true
-			state.start = now
-			state.scheduleAt = timeBatchBoundary(window, state.exprDurationValue, state.start)
+			if window.ReferencePoint != nil {
+				// Esper time_batch(period, refPoint): the boundary grid is
+				// anchored at the absolute reference instant and the first
+				// callback is the smallest grid boundary strictly after now
+				// (deltaAddWReference skips a boundary exactly at now).
+				state.start = *window.ReferencePoint
+				state.scheduleAt = timeBatchRefPointBoundary(window, state.exprDurationValue, state.start, now)
+			} else {
+				state.start = now
+				state.scheduleAt = timeBatchBoundary(window, state.exprDurationValue, state.start)
+			}
 		}
 		state.pendingNew = append(state.pendingNew, stored)
 		state.pendingNewEvents = append(state.pendingNewEvents, event)
@@ -18203,10 +18212,10 @@ func (r *statementRuntime) expireWindowState(spec WindowSpec, state *windowRunti
 		if state.started && !now.Before(state.scheduleAt) {
 			flush := flushPendingBatch(state)
 			result = mergeDelta(result, flush)
-			// The boundary schedule stays anchored: advance from the old
-			// reference, never re-anchor at the current time (deltaAddWReference).
-			state.start = advanceTimeBatchReference(state.start, window, state.exprDurationValue, now)
-			state.scheduleAt = timeBatchBoundary(window, state.exprDurationValue, state.start)
+			// The boundary schedule stays anchored: the next callback is the
+			// smallest grid boundary strictly after now (deltaAddWReference),
+			// so a late flush still fires every intermediate boundary.
+			state.scheduleAt = timeBatchRefPointBoundary(window, state.exprDurationValue, state.start, now)
 			// Only keep the schedule armed while the flushed batch or the
 			// previous batch still holds events, or force-update is enabled;
 			// an all-empty callback does not post and does not reschedule
@@ -18346,28 +18355,48 @@ func timeLengthBatchDeadline(window TimeLengthBatchWindowSpec, resolved time.Dur
 	return timeLengthBatchBoundary(window, resolved, from)
 }
 
-// advanceTimeBatchReference advances a fixed anchored boundary schedule past
-// the current time, matching Esper's deltaAddWReference (boundaries stay at
-// reference + n*period and never re-anchor at now).
-func advanceTimeBatchReference(reference time.Time, window TimeBatchWindowSpec, resolved time.Duration, now time.Time) time.Time {
+// timeBatchRefPointBoundary returns the next grid boundary for a
+// reference-point-anchored time batch, matching Esper's deltaAddWReference
+// (TimePeriodUtil): for a fixed period the boundary is
+// reference + (n+1)*period with n = (now-reference)/period, minus one more
+// period when the reference lies in the future; for a calendar period the
+// grid is walked backward until it reaches now, then forward to the first
+// grid point strictly after now.
+func timeBatchRefPointBoundary(window TimeBatchWindowSpec, resolved time.Duration, reference, now time.Time) time.Time {
 	period := window.Duration
 	if resolved != 0 {
 		period = resolved
 	}
 	years, months, days := window.CalendarYears, window.CalendarMonths, window.CalendarDays
-	for reference.Before(now) {
-		if years != 0 || months != 0 || days != 0 {
-			next := reference.AddDate(years, months, days)
-			if !next.After(reference) {
-				return reference.Add(period)
-			}
-			reference = next
-			continue
-		}
+	if years == 0 && months == 0 && days == 0 {
 		if period <= 0 {
-			return reference.Add(time.Second)
+			return now.Add(time.Second)
 		}
-		reference = reference.Add(period)
+		n := now.Sub(reference) / period
+		if reference.After(now) {
+			n--
+		}
+		boundary := reference.Add((n + 1) * period)
+		if !boundary.After(now) {
+			// deltaAddWReference returns msec when solution == 0: a boundary
+			// exactly at now is skipped.
+			boundary = boundary.Add(period)
+		}
+		return boundary
+	}
+	for reference.After(now) {
+		prev := reference.AddDate(-years, -months, -days)
+		if !prev.Before(reference) {
+			return reference
+		}
+		reference = prev
+	}
+	for !reference.After(now) {
+		next := reference.AddDate(years, months, days)
+		if !next.After(reference) {
+			return reference.Add(period)
+		}
+		reference = next
 	}
 	return reference
 }

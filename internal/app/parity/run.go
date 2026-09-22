@@ -5411,6 +5411,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "view-systime-trio" || *mode == "view-systime-trio-diff" {
+		trace, err := runViewSystimeTrioScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "view-systime-trio-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, viewSystimeTrioJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, viewSystimeTrioJavaSources),
+				splitMetadata(*javaExecutions, viewSystimeTrioJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "expr-class-static-method" || *mode == "expr-class-static-method-diff" {
 		trace, err := runEcsmScenario(context.Background(), scenario)
 		if err != nil {

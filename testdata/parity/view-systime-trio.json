@@ -1,0 +1,112 @@
+{
+ "version": "esper-parity/v1",
+ "id": "view-systime-trio",
+ "description": "ViewTimeBatchRefPoint (ViewTimeBatch ord 9) plus the two wall-clock executions ViewTimeBatchWSystemTime and ViewTimeWinWSystemTime (three executions, the time-view system-time trio): timebatch-refpoint anchors time_batch(10 minutes, 10L) at the absolute epoch-ms reference point latched on first-event arrival, so the bare SupportBean flushes at 600010 and not one millisecond earlier; timebatch-uni-systime replays the Thread.sleep schedule of ViewTimeBatchWSystemTime as advance-time steps at cumulative instants 1000/2500/3500/5000/7000 over #time_batch(2)#uni(volume), the iterator always yielding one stats row (NaN zero-state) and each 2-second batch boundary posting one listener update with new=[stats] and old=[prev stats] at 925.0, 575.0 and 1200.0; timewin-weightedavg-systime replays ViewTimeWinWSystemTime's sleeps as advance-time steps at cumulative instants 1500/3500/6000/7000 over #time(3.0)#weighted_avg(price, volume, symbol, feed), asserting property average is Double, posting one listener record per send and one per expiry advance (E1+E2 expire together in a single update) and ending on the NaN row that retains the last event's symbol/feed passthrough props. Each case deploys s0 with the verbatim Java EPL, advances the clock where Java sleeps or sends timers, sends events and snapshots the statement iterator where Java asserts it.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewTimeBatch.java",
+ "javaSource2": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewTimeBatchWSystemTime.java",
+ "javaSource3": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewTimeWinWSystemTime.java",
+ "javaRuntimes": [
+  "java-runtime-7d3c38fa4d2477a0be87",
+  "java-runtime-90902912cde58a38fafd",
+  "java-runtime-486b77a63e1a3518f362"
+ ],
+ "javaNames": [
+  "ViewTimeBatchRefPoint",
+  "ViewTimeBatchWSystemTime",
+  "ViewTimeWinWSystemTime"
+ ],
+ "javaStaticIds": [
+  "java-890952520f19d33fb6d9",
+  "java-6020404113b2fcd36186",
+  "java-949fe2671907c0c3e961"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "timebatch-refpoint",
+   "ordinal": 9,
+   "runtimeId": "java-runtime-7d3c38fa4d2477a0be87",
+   "executionName": "ViewTimeBatchRefPoint",
+   "observation": "listener; time_batch(10 minutes, 10L) anchors boundaries at refPoint + k*interval with the strictly-greater rule (a boundary exactly at now is skipped) and the anchor latches on first-event arrival; the bare SupportBean sent at 10ms flushes at 600010 and not at 600009",
+   "epl": "@name('s0') select * from SupportBean#time_batch(10 minutes, 10L)"
+  },
+  {
+   "case": "timebatch-uni-systime",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-90902912cde58a38fafd",
+   "executionName": "ViewTimeBatchWSystemTime",
+   "observation": "listener+iterator; Java wall-clock sleeps replayed as advance-time at cumulative instants 1000/2500/3500/5000/7000; the #uni(volume) iterator always yields one stats row (NaN zero-state before the first release) and each 2-second batch boundary posts one listener update new=[stats] old=[prev stats] at 925.0, 575.0 and 1200.0",
+   "epl": "@name('s0') select * from SupportMarketDataBean(symbol='CSCO.O')#time_batch(2)#uni(volume)"
+  },
+  {
+   "case": "timewin-weightedavg-systime",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-486b77a63e1a3518f362",
+   "executionName": "ViewTimeWinWSystemTime",
+   "observation": "listener+iterator+types; Java wall-clock sleeps replayed as advance-time at cumulative instants 1500/3500/6000/7000; property average is Double; each send and each expiry advance posts one listener record (E1+E2 expire together in a single update) with weighted averages 10.0, 10.5, 10.25, 10.375, 10.333333333, 10.3, 10.2 and NaN; params >=3 are passthrough props evaluated on the last new event and retained on the NaN row",
+   "epl": "@name('s0') select * from SupportMarketDataBean(symbol='CSCO.O')#time(3.0)#weighted_avg(price, volume, symbol, feed)"
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "timebatch-refpoint"},
+  {"op": "advance-time", "case": "timebatch-refpoint", "at": "1970-01-01T00:00:00.000Z"},
+  {"op": "deploy", "case": "timebatch-refpoint", "statement": "s0", "epl": "@name('s0') select * from SupportBean#time_batch(10 minutes, 10L)"},
+  {"op": "advance-time", "case": "timebatch-refpoint", "at": "1970-01-01T00:00:00.010Z"},
+  {"op": "send", "case": "timebatch-refpoint", "eventType": "SupportBean", "payload": {"theString": null, "intPrimitive": 0}},
+  {"op": "advance-time", "case": "timebatch-refpoint", "at": "1970-01-01T00:10:00.009Z"},
+  {"op": "advance-time", "case": "timebatch-refpoint", "at": "1970-01-01T00:10:00.010Z"},
+  {"op": "undeploy-all", "case": "timebatch-refpoint"},
+
+  {"op": "case", "case": "timebatch-uni-systime"},
+  {"op": "advance-time", "case": "timebatch-uni-systime", "at": "1970-01-01T00:00:00.000Z"},
+  {"op": "deploy", "case": "timebatch-uni-systime", "statement": "s0", "epl": "@name('s0') select * from SupportMarketDataBean(symbol='CSCO.O')#time_batch(2)#uni(volume)"},
+  {"op": "snapshot", "case": "timebatch-uni-systime", "statement": "s0"},
+  {"op": "send", "case": "timebatch-uni-systime", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CSCO.O", "price": 0, "volume": 500, "feed": ""}},
+  {"op": "send", "case": "timebatch-uni-systime", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CSCO.O", "price": 0, "volume": 1000, "feed": ""}},
+  {"op": "snapshot", "case": "timebatch-uni-systime", "statement": "s0"},
+  {"op": "advance-time", "case": "timebatch-uni-systime", "at": "1970-01-01T00:00:01.000Z"},
+  {"op": "send", "case": "timebatch-uni-systime", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CSCO.O", "price": 0, "volume": 1000, "feed": ""}},
+  {"op": "send", "case": "timebatch-uni-systime", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CSCO.O", "price": 0, "volume": 1200, "feed": ""}},
+  {"op": "snapshot", "case": "timebatch-uni-systime", "statement": "s0"},
+  {"op": "advance-time", "case": "timebatch-uni-systime", "at": "1970-01-01T00:00:02.500Z"},
+  {"op": "snapshot", "case": "timebatch-uni-systime", "statement": "s0"},
+  {"op": "send", "case": "timebatch-uni-systime", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CSCO.O", "price": 0, "volume": 500, "feed": ""}},
+  {"op": "send", "case": "timebatch-uni-systime", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CSCO.O", "price": 0, "volume": 600, "feed": ""}},
+  {"op": "send", "case": "timebatch-uni-systime", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CSCO.O", "price": 0, "volume": 1000, "feed": ""}},
+  {"op": "snapshot", "case": "timebatch-uni-systime", "statement": "s0"},
+  {"op": "advance-time", "case": "timebatch-uni-systime", "at": "1970-01-01T00:00:03.500Z"},
+  {"op": "send", "case": "timebatch-uni-systime", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CSCO.O", "price": 0, "volume": 200, "feed": ""}},
+  {"op": "snapshot", "case": "timebatch-uni-systime", "statement": "s0"},
+  {"op": "advance-time", "case": "timebatch-uni-systime", "at": "1970-01-01T00:00:05.000Z"},
+  {"op": "snapshot", "case": "timebatch-uni-systime", "statement": "s0"},
+  {"op": "send", "case": "timebatch-uni-systime", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CSCO.O", "price": 0, "volume": 1200, "feed": ""}},
+  {"op": "snapshot", "case": "timebatch-uni-systime", "statement": "s0"},
+  {"op": "advance-time", "case": "timebatch-uni-systime", "at": "1970-01-01T00:00:07.000Z"},
+  {"op": "snapshot", "case": "timebatch-uni-systime", "statement": "s0"},
+  {"op": "undeploy-all", "case": "timebatch-uni-systime"},
+
+  {"op": "case", "case": "timewin-weightedavg-systime"},
+  {"op": "advance-time", "case": "timewin-weightedavg-systime", "at": "1970-01-01T00:00:00.000Z"},
+  {"op": "deploy", "case": "timewin-weightedavg-systime", "statement": "s0", "epl": "@name('s0') select * from SupportMarketDataBean(symbol='CSCO.O')#time(3.0)#weighted_avg(price, volume, symbol, feed)"},
+  {"op": "types", "case": "timewin-weightedavg-systime", "statement": "s0"},
+  {"op": "send", "case": "timewin-weightedavg-systime", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CSCO.O", "price": 10, "volume": 500, "feed": "feed1"}},
+  {"op": "snapshot", "case": "timewin-weightedavg-systime", "statement": "s0"},
+  {"op": "send", "case": "timewin-weightedavg-systime", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CSCO.O", "price": 11, "volume": 500, "feed": "feed1"}},
+  {"op": "snapshot", "case": "timewin-weightedavg-systime", "statement": "s0"},
+  {"op": "advance-time", "case": "timewin-weightedavg-systime", "at": "1970-01-01T00:00:01.500Z"},
+  {"op": "send", "case": "timewin-weightedavg-systime", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CSCO.O", "price": 10, "volume": 1000, "feed": "feed1"}},
+  {"op": "snapshot", "case": "timewin-weightedavg-systime", "statement": "s0"},
+  {"op": "send", "case": "timewin-weightedavg-systime", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CSCO.O", "price": 10.5, "volume": 2000, "feed": "feed1"}},
+  {"op": "snapshot", "case": "timewin-weightedavg-systime", "statement": "s0"},
+  {"op": "advance-time", "case": "timewin-weightedavg-systime", "at": "1970-01-01T00:00:03.500Z"},
+  {"op": "snapshot", "case": "timewin-weightedavg-systime", "statement": "s0"},
+  {"op": "send", "case": "timewin-weightedavg-systime", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CSCO.O", "price": 10.2, "volume": 1000, "feed": "feed1"}},
+  {"op": "snapshot", "case": "timewin-weightedavg-systime", "statement": "s0"},
+  {"op": "advance-time", "case": "timewin-weightedavg-systime", "at": "1970-01-01T00:00:06.000Z"},
+  {"op": "snapshot", "case": "timewin-weightedavg-systime", "statement": "s0"},
+  {"op": "advance-time", "case": "timewin-weightedavg-systime", "at": "1970-01-01T00:00:07.000Z"},
+  {"op": "snapshot", "case": "timewin-weightedavg-systime", "statement": "s0"},
+  {"op": "undeploy-all", "case": "timewin-weightedavg-systime"}
+ ]
+}

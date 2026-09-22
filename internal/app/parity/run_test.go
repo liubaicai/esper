@@ -17357,6 +17357,118 @@ func TestRunRowRecogMultikeyWArrayDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+func TestRunViewSystimeTrioDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "view-systime-trio.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "view-systime-trio.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "view-systime-trio.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "view-systime-trio-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunViewSystimeTrioDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "refpoint-boundary-drift",
+			mutate: func(trace *compat.Trace) {
+				// The ref-point grid fires at 600010 (10 + 10min); drifting
+				// the emission row means the boundary anchored wrong.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "timebatch-refpoint" && rec.Operation == "listener" && len(rec.New) > 0 {
+						rec.New[0].Fields["theString"] = "drifted"
+						return
+					}
+				}
+				panic("no timebatch-refpoint listener record")
+			},
+		},
+		{
+			name: "uni-average-drift",
+			mutate: func(trace *compat.Trace) {
+				// Batch 1 {500,1000,1000,1200} averages 925.0; drifting it
+				// means the uni stats or the batch boundary is wrong.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "timebatch-uni-systime" && rec.Operation == "listener" && len(rec.New) > 0 {
+						rec.New[0].Fields["average"] = float64(-1)
+						return
+					}
+				}
+				panic("no timebatch-uni-systime listener record")
+			},
+		},
+		{
+			name: "weightedavg-expiry-drift",
+			mutate: func(trace *compat.Trace) {
+				// E1+E2 expire together at T0+3000 posting 10.333...;
+				// drifting it means the expiry emission or the weighted
+				// average is wrong.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "timewin-weightedavg-systime" && rec.Operation == "listener" && len(rec.New) > 0 {
+						rec.New[0].Fields["average"] = float64(-1)
+						return
+					}
+				}
+				panic("no timewin-weightedavg-systime listener record")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "view-systime-trio.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "view-systime-trio.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "view-systime-trio.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "view-systime-trio-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", evidence)
+			}
+		})
+	}
+}
 
 func TestRunEplOtherWildcardAdditionalDirectReplay(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "testdata", "parity")

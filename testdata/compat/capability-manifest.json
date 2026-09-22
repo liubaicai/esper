@@ -4500,7 +4500,8 @@
     "internal/esper/view_length_batch_parity_test.go",
     "internal/esper/view_union_parity_test.go",
     "internal/esper/view_time_win_parity_test.go",
-    "internal/app/parity/view_first_last_event.go"
+    "internal/app/parity/view_first_last_event.go",
+    "internal/app/parity/view_systime_trio.go"
    ],
    "phase": 2,
    "status": "implemented",
@@ -4562,7 +4563,10 @@
     "java-runtime-d99cd0eba0b2e2ca64ba",
     "java-runtime-2389705da83584b445a1",
     "java-runtime-260c9f5af6a4a10d5c80",
-    "java-runtime-af419392d33ae4b948d8"
+    "java-runtime-af419392d33ae4b948d8",
+    "java-runtime-7d3c38fa4d2477a0be87",
+    "java-runtime-90902912cde58a38fafd",
+    "java-runtime-486b77a63e1a3518f362"
    ]
   },
   {
@@ -47486,6 +47490,72 @@
    "notes": "Draft 4.494: ViewGroup ordinals 7/8/19 — the last three unreferenced executions of the file. Java/Go each 11 records, 0 differences. Covers five groupwin invalid probes (multiple declarations, no child views, not-first-position, merge+multi-window [pinned-only, unrepresentable], null-typed key), the groupwin/length/weighted_avg performance smoke (thin trace: deployed + sent markers), and the escaped mapped-property groupwin compile+deploy smoke. Shared core: WeightedAvg emits NaN on zero total weight; weighted-avg joins groupwin implicit grouping; groupwin first-position and null-key validation added."
   },
   {
+   "id": "case.view-systime-trio",
+   "javaRuntimeIds": [
+    "java-runtime-7d3c38fa4d2477a0be87",
+    "java-runtime-90902912cde58a38fafd",
+    "java-runtime-486b77a63e1a3518f362"
+   ],
+   "javaStaticIds": [
+    "java-890952520f19d33fb6d9",
+    "java-6020404113b2fcd36186",
+    "java-949fe2671907c0c3e961"
+   ],
+   "javaNames": [
+    "ViewTimeBatchRefPoint",
+    "ViewTimeBatchWSystemTime",
+    "ViewTimeWinWSystemTime"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewTimeBatch.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewTimeBatchWSystemTime.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewTimeWinWSystemTime.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunViewSystimeTrioDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunViewSystimeTrioDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "correctness",
+    "view",
+    "time-batch",
+    "time-window",
+    "derived-view",
+    "virtual-time",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/view-systime-trio.json",
+    "testdata/parity/view-systime-trio.trace.json",
+    "testdata/parity/view-systime-trio.go.trace.json",
+    "testdata/parity/view-systime-trio.evidence.json",
+    "tools/java-oracle/ViewSystimeTrioScenarioOracle.java",
+    "tools/java-oracle/run-view-systime-trio.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-7d3c38fa4d2477a0be87",
+    "java-runtime-90902912cde58a38fafd",
+    "java-runtime-486b77a63e1a3518f362"
+   ],
+   "notes": [
+    "View system-time trio (3 executions, 30 records, 0 differences): time_batch(10 minutes, 10L) reference-point anchoring (new TimeBatchRefPoint API + strictly-greater grid boundary), time_batch(2)#uni(volume) replayed under the virtual clock at the cumulative Thread.sleep instants (uni zero-state NaN row, per-boundary stats updates), and #time(3.0)#weighted_avg(price,volume,symbol,feed) with LastEver passthrough props retained on the expiry NaN row. Shared-core fix: the time-batch flush re-anchor now schedules the smallest grid boundary strictly after now instead of skipping one boundary on overshoot."
+   ]
+  },
+  {
    "id": "case.resultset-output-limit-crontab-when-closure",
    "javaRuntimeIds": [
     "java-runtime-c8af5811fef1d7f582d6",
@@ -51435,13 +51505,17 @@
   {
    "capabilityId": "rowrecog.match-recognize",
    "caseId": "case.rowrecog-multikey-warray"
+  },
+  {
+   "capabilityId": "view.basic-windows",
+   "caseId": "case.view-systime-trio"
   }
  ],
  "summary": {
-  "inventoriedCases": 742,
-  "implementedCases": 740,
-  "differentialVerifiedCases": 368,
-  "differentialVerifiedRuntimeIds": 1454,
+  "inventoriedCases": 743,
+  "implementedCases": 741,
+  "differentialVerifiedCases": 369,
+  "differentialVerifiedRuntimeIds": 1457,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -51451,13 +51525,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3988,
-  "referencedJavaRuntimeIds": 3560,
+  "runtimeAssociationCount": 3991,
+  "referencedJavaRuntimeIds": 3563,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 576,
+  "unreferencedJavaRuntimeIds": 573,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 742,
+  "totalCases": 743,
   "totalCapabilities": 126
  }
 }

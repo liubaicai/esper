@@ -7375,9 +7375,17 @@ func TimeBatchExpr(expr Expr) TimeBatchWindowSpec {
 // flags. ForceUpdate delivers the update callback at every boundary even when
 // both the current and previous batch are empty; StartEager seeds the first
 // boundary at deployment time and implies ForceUpdate (Esper TimeBatchFlags:
-// start_eager sets force_update=true).
+// start_eager sets force_update=true). StartEager ignores ReferencePoint,
+// mirroring Esper's eager anchor at deployment time.
 func TimeBatchForce(duration time.Duration, forceUpdate, startEager bool) TimeBatchWindowSpec {
 	return internalengine.TimeBatchForce(duration, forceUpdate, startEager)
+}
+
+// TimeBatchRefPoint anchors the batch boundary grid at an absolute instant:
+// boundaries fall at refPoint + n*period and the first boundary strictly
+// after the first event fires (Esper time_batch(10 minutes, 10L)).
+func TimeBatchRefPoint(duration time.Duration, refPoint time.Time) TimeBatchWindowSpec {
+	return internalengine.TimeBatchRefPoint(duration, refPoint)
 }
 
 type TimeBatchWindowSpec = internalengine.TimeBatchWindowSpec

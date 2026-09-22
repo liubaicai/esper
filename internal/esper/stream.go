@@ -1896,6 +1896,9 @@ type TimeBatchWindowSpec struct {
 	CalendarYears  int
 	CalendarMonths int
 	CalendarDays   int
+	// ReferencePoint anchors the boundary grid at an absolute instant
+	// (Esper time_batch(period, refPoint)); nil anchors at the first event.
+	ReferencePoint *time.Time
 	// Expr evaluates to a duration when the batch period is
 	// context-parameterized (time_batch(context.miewl.intSize)).
 	Expr Expr
@@ -1903,6 +1906,13 @@ type TimeBatchWindowSpec struct {
 
 func TimeBatch(duration time.Duration) TimeBatchWindowSpec {
 	return TimeBatchWindowSpec{Duration: duration}
+}
+
+// TimeBatchRefPoint anchors the batch boundary grid at an absolute instant:
+// boundaries fall at refPoint + n*period and the first boundary strictly
+// after the first event fires (Esper time_batch(10 minutes, 10L)).
+func TimeBatchRefPoint(duration time.Duration, refPoint time.Time) TimeBatchWindowSpec {
+	return TimeBatchWindowSpec{Duration: duration, ReferencePoint: &refPoint}
 }
 
 // TimeBatchExpr sizes the time-batch period by an expression evaluated once
@@ -1915,7 +1925,8 @@ func TimeBatchExpr(expr Expr) TimeBatchWindowSpec {
 // flags. ForceUpdate delivers the update callback at every boundary even when
 // both the current and previous batch are empty; StartEager seeds the first
 // boundary at deployment time and implies ForceUpdate (Esper TimeBatchFlags:
-// start_eager sets force_update=true).
+// start_eager sets force_update=true). StartEager ignores ReferencePoint,
+// mirroring Esper's eager anchor at deployment time.
 func TimeBatchForce(duration time.Duration, forceUpdate, startEager bool) TimeBatchWindowSpec {
 	return TimeBatchWindowSpec{Duration: duration, ForceUpdate: forceUpdate || startEager, StartEager: startEager}
 }
@@ -1927,9 +1938,13 @@ func TimeBatchCalendar(years, months, days int) TimeBatchWindowSpec {
 }
 
 func (TimeBatchWindowSpec) windowSpec() {}
+
 func (w TimeBatchWindowSpec) description() string {
 	if w.CalendarYears != 0 || w.CalendarMonths != 0 || w.CalendarDays != 0 {
 		return fmt.Sprintf("time-batch(%dY%dM%dD)", w.CalendarYears, w.CalendarMonths, w.CalendarDays)
+	}
+	if w.ReferencePoint != nil {
+		return fmt.Sprintf("time-batch(%s,ref=%s)", w.Duration, w.ReferencePoint.UTC().Format(time.RFC3339Nano))
 	}
 	if !w.ForceUpdate && !w.StartEager {
 		return "time-batch(" + w.Duration.String() + ")"
