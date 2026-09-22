@@ -1,0 +1,61 @@
+{
+ "version": "esper-parity/v1",
+ "id": "rowrecog-multikey-warray",
+ "description": "RowRecogMultikeyWArray ordinals 0-1 (two executions, the match_recognize multi-key partition family): partition-multikey-warray partitions by a primitive int[] property so Java selects MultiKeyArrayInt with deep content equality - distinct array instances with equal content share one partition, null arrays share a single partition and null is distinct from empty; partition-multikey-plain partitions by intPrimitive,longPrimitive as a generated multi-key over boxed components. Each case deploys s0 with the verbatim Java EPL, sends the assertion events and undeploys; there are no timers and no iterator assertions.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/rowrecog/RowRecogMultikeyWArray.java",
+ "javaRuntimes": [
+  "java-runtime-7a2e1b6edbc6c814817e",
+  "java-runtime-11baac617fb4b4f194c6"
+ ],
+ "javaNames": [
+  "RowRecogPartitionMultikeyWArray",
+  "RowRecogPartitionMultikeyPlain"
+ ],
+ "javaStaticIds": [
+  "java-fa41ea09e7c778bf34af",
+  "java-cec9c8f3503e647e5830"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "partition-multikey-warray",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-7a2e1b6edbc6c814817e",
+   "executionName": "RowRecogPartitionMultikeyWArray",
+   "observation": "listener; partition by array selects MultiKeyArrayInt with deep content equality; null arrays share one partition distinct from empty; emits {E1,E10}, {E4,E11}, {E2,E12} and {E3,E13}",
+   "epl": "@name('s0') select * from SupportEventWithIntArray match_recognize ( partition by array measures A.id as a, B.id as b pattern (A B) define A as A.value = 1, B as B.value = 2)"
+  },
+  {
+   "case": "partition-multikey-plain",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-11baac617fb4b4f194c6",
+   "executionName": "RowRecogPartitionMultikeyPlain",
+   "observation": "listener; partition by intPrimitive,longPrimitive over a generated multi-key of boxed components; emits {E3,E10}, {E2,E11} and {E1,E12}",
+   "epl": "@name('s0') select * from SupportBean match_recognize ( partition by intPrimitive, longPrimitive measures A.theString as a, B.theString as b pattern (A B) define A as A.doublePrimitive = 1, B as B.doublePrimitive = 2)"
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "partition-multikey-warray"},
+  {"op": "deploy", "case": "partition-multikey-warray", "statement": "s0", "epl": "@name('s0') select * from SupportEventWithIntArray match_recognize ( partition by array measures A.id as a, B.id as b pattern (A B) define A as A.value = 1, B as B.value = 2)"},
+  {"op": "send", "case": "partition-multikey-warray", "eventType": "SupportEventWithIntArray", "payload": {"id": "E1", "array": [1, 2], "value": 1}},
+  {"op": "send", "case": "partition-multikey-warray", "eventType": "SupportEventWithIntArray", "payload": {"id": "E2", "array": [1], "value": 1}},
+  {"op": "send", "case": "partition-multikey-warray", "eventType": "SupportEventWithIntArray", "payload": {"id": "E3", "array": null, "value": 1}},
+  {"op": "send", "case": "partition-multikey-warray", "eventType": "SupportEventWithIntArray", "payload": {"id": "E4", "array": [], "value": 1}},
+  {"op": "send", "case": "partition-multikey-warray", "eventType": "SupportEventWithIntArray", "payload": {"id": "E10", "array": [1, 2], "value": 2}},
+  {"op": "send", "case": "partition-multikey-warray", "eventType": "SupportEventWithIntArray", "payload": {"id": "E11", "array": [], "value": 2}},
+  {"op": "send", "case": "partition-multikey-warray", "eventType": "SupportEventWithIntArray", "payload": {"id": "E12", "array": [1], "value": 2}},
+  {"op": "send", "case": "partition-multikey-warray", "eventType": "SupportEventWithIntArray", "payload": {"id": "E13", "array": null, "value": 2}},
+  {"op": "undeploy-all", "case": "partition-multikey-warray"},
+
+  {"op": "case", "case": "partition-multikey-plain"},
+  {"op": "deploy", "case": "partition-multikey-plain", "statement": "s0", "epl": "@name('s0') select * from SupportBean match_recognize ( partition by intPrimitive, longPrimitive measures A.theString as a, B.theString as b pattern (A B) define A as A.doublePrimitive = 1, B as B.doublePrimitive = 2)"},
+  {"op": "send", "case": "partition-multikey-plain", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1, "longPrimitive": 2, "doublePrimitive": 1}},
+  {"op": "send", "case": "partition-multikey-plain", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 1, "longPrimitive": 3, "doublePrimitive": 1}},
+  {"op": "send", "case": "partition-multikey-plain", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 2, "longPrimitive": 2, "doublePrimitive": 1}},
+  {"op": "send", "case": "partition-multikey-plain", "eventType": "SupportBean", "payload": {"theString": "E10", "intPrimitive": 2, "longPrimitive": 2, "doublePrimitive": 2}},
+  {"op": "send", "case": "partition-multikey-plain", "eventType": "SupportBean", "payload": {"theString": "E11", "intPrimitive": 1, "longPrimitive": 3, "doublePrimitive": 2}},
+  {"op": "send", "case": "partition-multikey-plain", "eventType": "SupportBean", "payload": {"theString": "E12", "intPrimitive": 1, "longPrimitive": 2, "doublePrimitive": 2}},
+  {"op": "undeploy-all", "case": "partition-multikey-plain"}
+ ]
+}

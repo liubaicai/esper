@@ -17260,6 +17260,104 @@ func TestRunRowRecogIntervalDiffRejectsTraceMutations(t *testing.T) {
 	}
 }
 
+func TestRunRowRecogMultikeyWArrayDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "rowrecog-multikey-warray.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "rowrecog-multikey-warray.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "rowrecog-multikey-warray.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "rowrecog-multikey-warray-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunRowRecogMultikeyWArrayDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "warray-partition-pairing-drift",
+			mutate: func(trace *compat.Trace) {
+				// E10 pairs with E1 because [1,2] deep-equals E1's array
+				// key; drifting 'a' means the array partition key matched
+				// the wrong strand.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "partition-multikey-warray" && rec.Operation == "listener" && len(rec.New) > 0 {
+						rec.New[0].Fields["a"] = "drifted"
+						return
+					}
+				}
+				panic("no partition-multikey-warray listener record")
+			},
+		},
+		{
+			name: "plain-partition-pairing-drift",
+			mutate: func(trace *compat.Trace) {
+				// E10 pairs with E3 via the (2,2) int/long tuple; drifting
+				// 'a' means the multikey partition matched the wrong strand.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "partition-multikey-plain" && rec.Operation == "listener" && len(rec.New) > 0 {
+						rec.New[0].Fields["a"] = "drifted"
+						return
+					}
+				}
+				panic("no partition-multikey-plain listener record")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "rowrecog-multikey-warray.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "rowrecog-multikey-warray.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "rowrecog-multikey-warray.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "rowrecog-multikey-warray-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", evidence)
+			}
+		})
+	}
+}
+
 func TestRunEplOtherWildcardAdditionalDirectReplay(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "testdata", "parity")
 	var stdout, stderr bytes.Buffer

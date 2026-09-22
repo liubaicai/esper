@@ -2046,7 +2046,8 @@
     "internal/app/parity/rowrecog_repetition.go",
     "internal/app/parity/rowrecog_greedyness_ops.go",
     "internal/app/parity/rowrecog_prev.go",
-    "internal/app/parity/rowrecog_interval.go"
+    "internal/app/parity/rowrecog_interval.go",
+    "internal/app/parity/rowrecog_multikey_warray.go"
    ],
    "phase": 5,
    "status": "implemented",
@@ -2079,7 +2080,9 @@
     "java-runtime-b9a2b0afe61a2bfabcd0",
     "java-runtime-1361f7530aa059720913",
     "java-runtime-373cb011a639d99148f0",
-    "java-runtime-bd18c2cfd8ff34a0b5a3"
+    "java-runtime-bd18c2cfd8ff34a0b5a3",
+    "java-runtime-7a2e1b6edbc6c814817e",
+    "java-runtime-11baac617fb4b4f194c6"
    ],
    "representativeScenarioIds": [
     "match-recognize-simple",
@@ -48063,6 +48066,65 @@
    "notes": [
     "RowRecogInterval (4 executions) + RowRecogIntervalOrTerminated (1 execution, 10 sub-scenarios) replay all five executions (49 records, 0 differences): begin-anchored inclusive interval deadlines, scheduled-vs-iterator visibility, partition-shared schedule keys, silent strand death on misfit, calendar month interval on SupportBean, and the or-terminated family (termination claims, dead-end immediate emission, alternation branch survival, B+ silent death, all-matches any-order batching, object-array TemperatureSensorEvent doc sample)."
    ]
+  },
+  {
+   "id": "case.rowrecog-multikey-warray",
+   "javaRuntimeIds": [
+    "java-runtime-7a2e1b6edbc6c814817e",
+    "java-runtime-11baac617fb4b4f194c6"
+   ],
+   "javaStaticIds": [
+    "java-fa41ea09e7c778bf34af",
+    "java-cec9c8f3503e647e5830"
+   ],
+   "javaNames": [
+    "RowRecogPartitionMultikeyWArray",
+    "RowRecogPartitionMultikeyPlain"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/rowrecog/RowRecogMultikeyWArray.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunRowRecogMultikeyWArrayDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunRowRecogMultikeyWArrayDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "correctness",
+    "rowrecog",
+    "match-recognize",
+    "partition",
+    "multikey",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/rowrecog-multikey-warray.json",
+    "testdata/parity/rowrecog-multikey-warray.trace.json",
+    "testdata/parity/rowrecog-multikey-warray.go.trace.json",
+    "testdata/parity/rowrecog-multikey-warray.evidence.json",
+    "tools/java-oracle/RowRecogMultikeyWArrayScenarioOracle.java",
+    "tools/java-oracle/run-rowrecog-multikey-warray.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-7a2e1b6edbc6c814817e",
+    "java-runtime-11baac617fb4b4f194c6"
+   ],
+   "notes": [
+    "RowRecogMultikeyWArray (2 executions) replays both (7 records, 0 differences): int[] array partition key with deep content equality (null and empty arrays are distinct partitions, E3/E13 share the null partition) and a plain two-scalar (intPrimitive,longPrimitive) tuple key."
+   ]
   }
  ],
  "mappings": [
@@ -51369,13 +51431,17 @@
   {
    "capabilityId": "rowrecog.match-recognize",
    "caseId": "case.rowrecog-interval"
+  },
+  {
+   "capabilityId": "rowrecog.match-recognize",
+   "caseId": "case.rowrecog-multikey-warray"
   }
  ],
  "summary": {
-  "inventoriedCases": 741,
-  "implementedCases": 739,
-  "differentialVerifiedCases": 367,
-  "differentialVerifiedRuntimeIds": 1452,
+  "inventoriedCases": 742,
+  "implementedCases": 740,
+  "differentialVerifiedCases": 368,
+  "differentialVerifiedRuntimeIds": 1454,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -51385,13 +51451,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3986,
-  "referencedJavaRuntimeIds": 3558,
+  "runtimeAssociationCount": 3988,
+  "referencedJavaRuntimeIds": 3560,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 578,
+  "unreferencedJavaRuntimeIds": 576,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 741,
+  "totalCases": 742,
   "totalCapabilities": 126
  }
 }

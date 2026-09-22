@@ -55,32 +55,29 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly') committed and pushed as 9ac32d036; Git owns identity. Parity review PASS, two P3s fixed.
 
 ## Current work unit
-Active: Draft 4.509 ('rowrecog-interval').
+Active: Draft 4.510 ('rowrecog-multikey-warray').
 
-- Selection: `RowRecogInterval` ords 0-3 (4 unreferenced) +
-  `RowRecogIntervalOrTerminated` ord 0 (1) — 5 executions sharing
-  match_recognize interval semantics (begin-anchored inclusive deadlines,
-  scheduled-vs-iterator visibility, or-terminated termination claims).
-  Contract at `.omp/contract-509.md` (scouts NextJavaContract509 +
-  NextGoSurface509; zero predicted shared-core delta — the 4.508
-  termination-entry rewrite covers or-terminated).
-- [x] Go runner `internal/app/parity/rowrecog_interval.go` + run.go
-  dispatch + run_test.go 2-test family (14 cases: 4 interval + 10
-  or-terminated sub-scenarios; TemperatureSensorEvent via object-array).
-- [x] Parity assets (Assets509): oracle
-  `tools/java-oracle/RowRecogIntervalScenarioOracle.java`, run.sh, scenario
-  `testdata/parity/rowrecog-interval.json` (14 cases / 235 steps).
-- [x] Differential replay: Java 49 records / Go 49 records, `passing` /
-  0 differences. Evidence `rowrecog-interval.evidence.json` + 2-test family
-  (passing-evidence + 3 mutations).
-- [x] Manifest/roadmap/CHANGELOG: `case.rowrecog-interval` born-DV (5
-  runtime IDs); `rowrecog.match-recognize` goRefs + DV IDs extended,
-  IntervalOrTerminated `remaining` phrase dropped. Summary 741 cases /
-  367 DV / 1452 DV runtime IDs / unreferenced 578.
-- [x] Gates: `make check` exit 0 (parity 93s, esper 111s); compat manifest
+- Selection: `RowRecogMultikeyWArray` ords 0-1 (2 unreferenced) —
+  multikey partition family (int[] deep-equals key + two-scalar tuple).
+  Contract at `.omp/contract-510.md` (scouts NextJavaContract510 +
+  NextGoSurface510; zero predicted shared-core delta — encodeKey already
+  canonicalizes []int content and multi-component keys).
+- [x] Go runner `internal/app/parity/rowrecog_multikey_warray.go` +
+  run.go dispatch + run_test.go 2-test family (2 cases / 7 records).
+- [x] Parity assets (Assets510): oracle
+  `tools/java-oracle/RowRecogMultikeyWArrayScenarioOracle.java`, run.sh,
+  scenario `testdata/parity/rowrecog-multikey-warray.json` (2 cases /
+  20 steps).
+- [x] Differential replay: Java 7 records / Go 7 records, `passing` /
+  0 differences. Evidence `rowrecog-multikey-warray.evidence.json` +
+  2-test family (passing-evidence + 2 mutations).
+- [x] Manifest/roadmap/CHANGELOG: `case.rowrecog-multikey-warray`
+  born-DV (2 runtime IDs); `rowrecog.match-recognize` goRefs + DV IDs
+  extended. Summary 742 cases / 368 DV / 1454 DV runtime IDs /
+  unreferenced 576.
+- [x] Gates: `make check` exit 0 (parity 93s, esper 112s); compat manifest
   validation green.
-- [x] Parity review (ParityReview509): PASS, no P0-P2; two P3 doc nits
-  fixed (PLANS.md checklist staleness, mutation comment accuracy).
+- [x] Parity review (ParityReview510): PASS, zero findings.
 
 ## Current work unit
 Active: Draft 4.494 ('view-group-closure').
