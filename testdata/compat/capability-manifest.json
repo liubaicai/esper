@@ -26277,7 +26277,13 @@
     "TestRunResultsetOrderbySimpleDescendingOMDiffRejectsTraceMutations",
     "TestRunResultsetOrderbySimpleDescendingOMCheckedInEvidenceMatchesTraceAndReplay",
     "TestRunResultsetOrderbySimpleDescendingOMRejectsMalformedRawScenario",
-    "TestRunResultsetOrderbySimpleDescendingOMRuntimeIDMappingMatchesScenario"
+    "TestRunResultsetOrderbySimpleDescendingOMRuntimeIDMappingMatchesScenario",
+    "TestRunResultsetOrderbySimpleExpressionsAliasesDirectReplay",
+    "TestRunResultsetOrderbySimpleExpressionsAliasesDiffWritesPassingEvidence",
+    "TestRunResultsetOrderbySimpleExpressionsAliasesDiffRejectsTraceMutations",
+    "TestRunResultsetOrderbySimpleExpressionsAliasesCheckedInEvidenceMatchesTraceAndReplay",
+    "TestRunResultsetOrderbySimpleExpressionsAliasesRejectsMalformedRawScenario",
+    "TestRunResultsetOrderbySimpleExpressionsAliasesRuntimeIDMappingMatchesScenario"
    ],
    "tags": [
     "orderby",
@@ -26301,9 +26307,13 @@
     "java-runtime-d530652f60616c332431",
     "java-runtime-9668909b2b2f00769dab",
     "java-runtime-92e69b0657b10a656fdc",
-    "java-runtime-df8ea61ff025609ce309"
+    "java-runtime-df8ea61ff025609ce309",
+    "java-runtime-0a7a2ff59087a96fe0e1",
+    "java-runtime-fc69777a3bedc3ad6c52",
+    "java-runtime-b0f39fb300a33fa7ddbf",
+    "java-runtime-178a1d0412982958a3cc"
    ],
-   "notes": "Draft 4.497: ord 3 DescendingOM + ord 4 variants 2-6 DV'd; OM text/serialization unrepresentable."
+   "notes": "Draft 4.497: ord 3 DescendingOM + ord 4 variants 2-6 DV'd; OM text/serialization unrepresentable. Draft 4.498: ord 5-9 expressions/aliases/multikey DV'd."
   },
   {
    "id": "case.infra-table-access-filter",
@@ -50787,7 +50797,7 @@
   "inventoriedCases": 735,
   "implementedCases": 733,
   "differentialVerifiedCases": 359,
-  "differentialVerifiedRuntimeIds": 1392,
+  "differentialVerifiedRuntimeIds": 1396,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
