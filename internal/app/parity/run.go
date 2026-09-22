@@ -49,6 +49,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include resultset-orderby-aggregate-grouped and resultset-orderby-aggregate-grouped-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-orderby-simple-descending-om and resultset-orderby-simple-descending-om-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-orderby-simple-expressions-aliases and resultset-orderby-simple-expressions-aliases-diff")
+		fmt.Fprintln(stderr, "runner modes include resultset-orderby-simple-join-wildcard and resultset-orderby-simple-join-wildcard-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-output-limit-row-limit-context-grouped and resultset-output-limit-row-limit-context-grouped-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-output-limit-row-limit and resultset-output-limit-row-limit-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-output-limit-row-limit-negative-rowcount and resultset-output-limit-row-limit-negative-rowcount-diff")
@@ -109,6 +110,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultsetOrderbySimpleDescendingOMScenario(file)
 	} else if *mode == "resultset-orderby-simple-expressions-aliases" || *mode == "resultset-orderby-simple-expressions-aliases-diff" {
 		scenario, err = loadResultsetOrderbySimpleExpressionsAliasesScenario(file)
+	} else if *mode == "resultset-orderby-simple-join-wildcard" || *mode == "resultset-orderby-simple-join-wildcard-diff" {
+		scenario, err = loadResultsetOrderbySimpleJoinWildcardScenario(file)
 	} else if *mode == "resultset-orderby-self-join" || *mode == "resultset-orderby-self-join-diff" {
 		scenario, err = loadResultsetOrderbySelfJoinScenario(file)
 	} else if *mode == "output-after-events" || *mode == "output-after-events-diff" {
@@ -3777,6 +3780,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, resultsetOrderbySimpleExpressionsAliasesJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, resultsetOrderbySimpleExpressionsAliasesJavaSources),
 				splitMetadata(*javaExecutions, resultsetOrderbySimpleExpressionsAliasesJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-orderby-simple-join-wildcard" || *mode == "resultset-orderby-simple-join-wildcard-diff" {
+		trace, err := runResultsetOrderbySimpleJoinWildcardScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-orderby-simple-join-wildcard-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetOrderbySimpleJoinWildcardJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetOrderbySimpleJoinWildcardJavaSources),
+				splitMetadata(*javaExecutions, resultsetOrderbySimpleJoinWildcardJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

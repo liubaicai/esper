@@ -5108,7 +5108,6 @@
    "status": "differential-verified",
    "remaining": [
     "SODA object-model ORDER BY path",
-    "wildcard projection with ORDER BY",
     "ORDER BY on Named Window FAF snapshot"
    ],
    "verification": [
@@ -26283,7 +26282,14 @@
     "TestRunResultsetOrderbySimpleExpressionsAliasesDiffRejectsTraceMutations",
     "TestRunResultsetOrderbySimpleExpressionsAliasesCheckedInEvidenceMatchesTraceAndReplay",
     "TestRunResultsetOrderbySimpleExpressionsAliasesRejectsMalformedRawScenario",
-    "TestRunResultsetOrderbySimpleExpressionsAliasesRuntimeIDMappingMatchesScenario"
+    "TestRunResultsetOrderbySimpleExpressionsAliasesRuntimeIDMappingMatchesScenario",
+    "TestRunResultsetOrderbySimpleJoinWildcardDirectReplay",
+    "TestRunResultsetOrderbySimpleJoinWildcardDiffWritesPassingEvidence",
+    "TestRunResultsetOrderbySimpleJoinWildcardDiffRejectsTraceMutations",
+    "TestRunResultsetOrderbySimpleJoinWildcardCheckedInEvidenceMatchesTraceAndReplay",
+    "TestRunResultsetOrderbySimpleJoinWildcardRejectsMalformedRawScenario",
+    "TestRunResultsetOrderbySimpleJoinWildcardRuntimeIDMappingMatchesScenario",
+    "TestRunHelpIncludesResultsetOrderbySimpleJoinWildcard"
    ],
    "tags": [
     "orderby",
@@ -26297,7 +26303,7 @@
     "go-trace",
     "java-trace"
    ],
-   "difference": "Go tests use LengthBatch + GroupBy aggregate path (output rate limiting not yet ported); join, wildcard and FAF ORDER BY paths remain open",
+   "difference": "Go tests use LengthBatch + GroupBy aggregate path (output rate limiting not yet ported); FAF and no-output-clause ORDER BY paths remain open",
    "verification": [
     "inventoried",
     "implemented",
@@ -26311,9 +26317,13 @@
     "java-runtime-0a7a2ff59087a96fe0e1",
     "java-runtime-fc69777a3bedc3ad6c52",
     "java-runtime-b0f39fb300a33fa7ddbf",
-    "java-runtime-178a1d0412982958a3cc"
+    "java-runtime-178a1d0412982958a3cc",
+    "java-runtime-6c1c5e581115d83acac7",
+    "java-runtime-2524d06789dd35e36c8e",
+    "java-runtime-9455a5a72c84baa7bdc2",
+    "java-runtime-4aaec5e95dbea839ece3"
    ],
-   "notes": "Draft 4.497: ord 3 DescendingOM + ord 4 variants 2-6 DV'd; OM text/serialization unrepresentable. Draft 4.498: ord 5-9 expressions/aliases/multikey DV'd."
+   "notes": "Draft 4.497: ord 3 DescendingOM + ord 4 variants 2-6 DV'd; OM text/serialization unrepresentable. Draft 4.498: ord 5-9 expressions/aliases/multikey DV'd. Draft 4.499: ord 10-14 join/wildcard DV'd."
   },
   {
    "id": "case.infra-table-access-filter",
@@ -50797,7 +50807,7 @@
   "inventoriedCases": 735,
   "implementedCases": 733,
   "differentialVerifiedCases": 359,
-  "differentialVerifiedRuntimeIds": 1396,
+  "differentialVerifiedRuntimeIds": 1400,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,

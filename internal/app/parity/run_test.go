@@ -72288,3 +72288,512 @@ func TestRunHelpIncludesResultSetAggregateInvalidClosure(t *testing.T) {
 		}
 	}
 }
+
+func TestRunResultsetOrderbySimpleJoinWildcardDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", resultsetOrderbySimpleJoinWildcardID,
+		"-scenario", filepath.Join(root, resultsetOrderbySimpleJoinWildcardID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertResultsetOrderbySimpleJoinWildcardTrace(t, trace)
+}
+
+func TestRunResultsetOrderbySimpleJoinWildcardDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), resultsetOrderbySimpleJoinWildcardID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", resultsetOrderbySimpleJoinWildcardID + "-diff",
+		"-scenario", filepath.Join(root, resultsetOrderbySimpleJoinWildcardID+".json"),
+		"-java-trace", filepath.Join(root, resultsetOrderbySimpleJoinWildcardID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != resultsetOrderbySimpleJoinWildcardJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetOrderbySimpleJoinWildcardJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{resultsetOrderbySimpleJoinWildcardSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetOrderbySimpleJoinWildcardJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertResultsetOrderbySimpleJoinWildcardTrace(t, evidence.JavaTrace)
+	assertResultsetOrderbySimpleJoinWildcardTrace(t, evidence.GoTrace)
+}
+
+func TestRunResultsetOrderbySimpleJoinWildcardDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "symbol-value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["symbol"] = "Z"
+			},
+		},
+		{
+			name: "symbol-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0], trace.Records[0].New[2] = trace.Records[0].New[2], trace.Records[0].New[0]
+			},
+		},
+		{
+			name: "computed-name",
+			mutate: func(trace *compat.Trace) {
+				row := trace.Records[2].New[0].Fields
+				row["drifted"] = row["volume*2"]
+				delete(row, "volume*2")
+			},
+		},
+		{
+			name: "join-tie-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[9].New[3], trace.Records[9].New[5] = trace.Records[9].New[5], trace.Records[9].New[3]
+			},
+		},
+		{
+			name: "wildcard-id-null",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[15].New[0].Fields["id"] = "drifted"
+			},
+		},
+		{
+			name: "wildcard-join-nested",
+			mutate: func(trace *compat.Trace) {
+				nested := trace.Records[17].New[0].Fields["one"].(map[string]any)
+				nestedFields := nested["fields"].(map[string]any)
+				nestedFields["symbol"] = "Z"
+			},
+		},
+		{
+			name: "record-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0], trace.Records[1] = trace.Records[1], trace.Records[0]
+			},
+		},
+		{
+			name: "record-count",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+		{
+			name: "time-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Time = "1970-01-01T00:00:01Z"
+			},
+		},
+		{
+			name: "sequence-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[18].Sequence = 2
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join(root, resultsetOrderbySimpleJoinWildcardID+".evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), resultsetOrderbySimpleJoinWildcardID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", resultsetOrderbySimpleJoinWildcardID + "-diff",
+				"-scenario", filepath.Join(root, resultsetOrderbySimpleJoinWildcardID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunResultsetOrderbySimpleJoinWildcardCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, resultsetOrderbySimpleJoinWildcardID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, resultsetOrderbySimpleJoinWildcardID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, resultsetOrderbySimpleJoinWildcardID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if evidence.JavaCommit != resultsetOrderbySimpleJoinWildcardJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetOrderbySimpleJoinWildcardJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{resultsetOrderbySimpleJoinWildcardSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetOrderbySimpleJoinWildcardJavaExecutions) {
+		t.Fatalf("checked-in Java metadata = %#v", evidence)
+	}
+	assertResultsetOrderbySimpleJoinWildcardTrace(t, javaTrace)
+	assertResultsetOrderbySimpleJoinWildcardTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, resultsetOrderbySimpleJoinWildcardID+".json")
+	scenarioData, err := os.ReadFile(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rawScenario struct {
+		Version string        `json:"version"`
+		ID      string        `json:"id"`
+		Steps   []compat.Step `json:"steps"`
+	}
+	if err := json.Unmarshal(scenarioData, &rawScenario); err != nil {
+		t.Fatal(err)
+	}
+	scenario := compat.Scenario{Version: rawScenario.Version, ID: rawScenario.ID, Steps: rawScenario.Steps}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		resultsetOrderbySimpleJoinWildcardJavaCommit,
+		resultsetOrderbySimpleJoinWildcardJavaRuntimeIDs,
+		[]string{resultsetOrderbySimpleJoinWildcardSource},
+		resultsetOrderbySimpleJoinWildcardJavaExecutions,
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", resultsetOrderbySimpleJoinWildcardID,
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, replayed); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertResultsetOrderbySimpleJoinWildcardTrace(t, replayed)
+}
+
+func TestRunResultsetOrderbySimpleJoinWildcardRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, resultsetOrderbySimpleJoinWildcardID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "multiple-keys-join-v1",`), []byte(`"case": "multiple-keys-join-v1", "extra": 0,`), 1)
+		}},
+		{name: "case-ordinal-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 10`), []byte(`"ordinal": 14`), 1)
+		}},
+		{name: "runtime-id-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"java-runtime-6c1c5e581115d83acac7"`), []byte(`"java-runtime-0000000000000000000000"`), 1)
+		}},
+		{name: "epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`order by symbol, price"`), []byte(`order by symbol, volume"`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"symbol": "IBM", "volume": 0, "price": 2`), []byte(`"symbol": "IBM", "volume": 0, "price": 2, "extra": 0`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"symbol": "IBM", "volume": 0, "price": 2`), []byte(`"symbol": "IBM", "volume": 0, "price": 2, "symbol": "KGB"`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportMarketDataBean"`), []byte(`"eventType": "WrongEvent"`), 1)
+		}},
+		{name: "volume-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"symbol": "IBM", "volume": 0, "price": 2`), []byte(`"symbol": "IBM", "volume": 1, "price": 2`), 1)
+		}},
+		{name: "string-payload-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "CAT"`), []byte(`"theString": "ZZZ"`), 1)
+		}},
+		{name: "step-count", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "DOG"}}
+  ]`), []byte(`]`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", resultsetOrderbySimpleJoinWildcardID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunResultsetOrderbySimpleJoinWildcardRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", resultsetOrderbySimpleJoinWildcardID+".json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Version       string   `json:"version"`
+		ID            string   `json:"id"`
+		Description   string   `json:"description"`
+		JavaCommit    string   `json:"javaCommit"`
+		JavaSource    string   `json:"javaSource"`
+		JavaRuntimes  []string `json:"javaRuntimes"`
+		JavaNames     []string `json:"javaNames"`
+		JavaStaticIDs []string `json:"javaStaticIds"`
+		JavaFlags     []string `json:"javaFlags"`
+		Cases         []struct {
+			Case              string `json:"case"`
+			Ordinal           int    `json:"ordinal"`
+			RuntimeID         string `json:"runtimeId"`
+			ExecutionName     string `json:"executionName"`
+			Observation       string `json:"observation"`
+			IteratorSnapshots int    `json:"iteratorSnapshots"`
+			EPL               string `json:"epl"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if document.Version != compat.ScenarioVersion || document.ID != resultsetOrderbySimpleJoinWildcardID ||
+		document.Description != resultsetOrderbySimpleJoinWildcardDescription ||
+		document.JavaCommit != resultsetOrderbySimpleJoinWildcardJavaCommit ||
+		document.JavaSource != resultsetOrderbySimpleJoinWildcardSource ||
+		!reflect.DeepEqual(document.JavaRuntimes, resultsetOrderbySimpleJoinWildcardJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, resultsetOrderbySimpleJoinWildcardJavaExecutions) ||
+		!reflect.DeepEqual(document.JavaStaticIDs, resultsetOrderbySimpleJoinWildcardJavaStaticIDs) ||
+		len(document.JavaFlags) != 0 || len(document.Cases) != len(resultsetOrderbySimpleJoinWildcardCases) {
+		t.Fatalf("scenario metadata = %#v", document)
+	}
+	for index, entry := range document.Cases {
+		if entry.Case != resultsetOrderbySimpleJoinWildcardCases[index] ||
+			entry.Ordinal != resultsetOrderbySimpleJoinWildcardOrdinals[index] ||
+			entry.RuntimeID != resultsetOrderbySimpleJoinWildcardRuntimeID(entry.Case) ||
+			entry.ExecutionName != resultsetOrderbySimpleJoinWildcardExecutionName(entry.Case) ||
+			entry.Observation != resultsetOrderbySimpleJoinWildcardObservations[index] ||
+			entry.IteratorSnapshots != 0 ||
+			entry.EPL != resultsetOrderbySimpleJoinWildcardEPLs[index] {
+			t.Fatalf("scenario case %d metadata = %#v", index, entry)
+		}
+	}
+}
+
+func TestRunHelpIncludesResultsetOrderbySimpleJoinWildcard(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-h"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("help exit code = %d, stderr = %q", code, stderr.String())
+	}
+	for _, mode := range []string{
+		"resultset-orderby-simple-join-wildcard",
+		"resultset-orderby-simple-join-wildcard-diff",
+	} {
+		if !strings.Contains(stderr.String(), mode) {
+			t.Fatalf("help output omits %q: %s", mode, stderr.String())
+		}
+	}
+}
+
+func assertResultsetOrderbySimpleJoinWildcardTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != resultsetOrderbySimpleJoinWildcardID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 19 {
+		t.Fatalf("trace records = %d, want 19", len(trace.Records))
+	}
+	batches := []struct {
+		caseName   string
+		fields     []string
+		symbols    []string
+		prices     []float64
+		extraField string
+		extra      []int64
+	}{
+		{caseName: "multiple-keys-join-v1", fields: []string{"symbol"}, symbols: []string{"CAT", "CAT", "CMU", "IBM", "IBM", "KGB"}},
+		{caseName: "multiple-keys-join-v2", fields: []string{"symbol"}, symbols: []string{"KGB", "IBM", "CMU", "CAT", "CAT", "IBM"}},
+		{caseName: "multiple-keys-join-v3", fields: []string{"symbol", "volume*2"}, symbols: []string{"KGB", "IBM", "CMU", "CAT", "CAT", "IBM"}, extraField: "volume*2", extra: []int64{0, 0, 0, 0, 0, 0}},
+		{caseName: "simple-v1", fields: []string{"symbol"}, symbols: []string{"KGB", "IBM", "CMU", "CAT", "IBM", "CAT"}},
+		{caseName: "simple-v2", fields: []string{"price", "symbol"}, symbols: []string{"KGB", "IBM", "CMU", "CAT", "IBM", "CAT"}, prices: []float64{1, 2, 3, 5, 6, 6}},
+		{caseName: "simple-v3", fields: []string{"symbol", "volume"}, symbols: []string{"KGB", "IBM", "CMU", "CAT", "IBM", "CAT"}, extraField: "volume", extra: []int64{0, 0, 0, 0, 0, 0}},
+		{caseName: "simple-v4", fields: []string{"symbol", "volume*2"}, symbols: []string{"KGB", "IBM", "CMU", "CAT", "IBM", "CAT"}, extraField: "volume*2", extra: []int64{0, 0, 0, 0, 0, 0}},
+		{caseName: "simple-v5", fields: []string{"symbol", "volume"}, symbols: []string{"CAT", "CAT", "CMU", "IBM", "IBM", "KGB"}, extraField: "volume", extra: []int64{0, 0, 0, 0, 0, 0}},
+		{caseName: "simple-v6", fields: []string{"price"}, prices: []float64{6, 5, 3, 2, 6, 1}},
+		{caseName: "simple-join-v1", fields: []string{"symbol"}, symbols: []string{"KGB", "IBM", "CMU", "CAT", "CAT", "IBM"}},
+		{caseName: "simple-join-v2", fields: []string{"price", "symbol"}, symbols: []string{"KGB", "IBM", "CMU", "CAT", "CAT", "IBM"}, prices: []float64{1, 2, 3, 5, 6, 6}},
+		{caseName: "simple-join-v3", fields: []string{"symbol", "volume"}, symbols: []string{"KGB", "IBM", "CMU", "CAT", "CAT", "IBM"}, extraField: "volume", extra: []int64{0, 0, 0, 0, 0, 0}},
+		{caseName: "simple-join-v4", fields: []string{"symbol", "volume*2"}, symbols: []string{"KGB", "IBM", "CMU", "CAT", "CAT", "IBM"}, extraField: "volume*2", extra: []int64{0, 0, 0, 0, 0, 0}},
+		{caseName: "simple-join-v5", fields: []string{"symbol", "volume"}, symbols: []string{"CAT", "CAT", "CMU", "IBM", "IBM", "KGB"}, extraField: "volume", extra: []int64{0, 0, 0, 0, 0, 0}},
+		{caseName: "simple-join-v6", fields: []string{"price"}, prices: []float64{5, 6, 3, 2, 6, 1}},
+		{caseName: "wildcard-v1", fields: []string{"feed", "id", "price", "symbol", "volume"}, symbols: []string{"KGB", "IBM", "CMU", "CAT", "IBM", "CAT"}, prices: []float64{1, 2, 3, 5, 6, 6}, extraField: "volume", extra: []int64{0, 0, 0, 0, 0, 0}},
+		{caseName: "wildcard-v2", fields: []string{"feed", "id", "price", "symbol", "volume"}, symbols: []string{"CAT", "CAT", "CMU", "IBM", "IBM", "KGB"}, prices: []float64{6, 5, 3, 2, 6, 1}, extraField: "volume", extra: []int64{0, 0, 0, 0, 0, 0}},
+	}
+	for batchIndex, batch := range batches {
+		record := trace.Records[batchIndex]
+		if record.Case != batch.caseName ||
+			record.Operation != "listener" || record.Statement != "s0" ||
+			record.Sequence != 1 || record.Time != "1970-01-01T00:00:00Z" ||
+			len(record.New) != 6 || len(record.Old) != 0 {
+			t.Fatalf("record %d metadata/shape = %#v", batchIndex, record)
+		}
+		for rowIndex, row := range record.New {
+			if row.Kind != "row" || len(row.Fields) != len(batch.fields) {
+				t.Fatalf("record %d row %d shape = %#v", batchIndex, rowIndex, row)
+			}
+			for _, field := range batch.fields {
+				if _, ok := row.Fields[field]; !ok {
+					t.Fatalf("record %d row %d missing field %q: %#v", batchIndex, rowIndex, field, row)
+				}
+			}
+			if batch.symbols != nil && row.Fields["symbol"] != batch.symbols[rowIndex] {
+				t.Fatalf("record %d row %d symbol = %#v", batchIndex, rowIndex, row.Fields["symbol"])
+			}
+			if batch.prices != nil {
+				assertResultsetOrderbySimpleJoinWildcardNumber(t, row.Fields["price"], batch.prices[rowIndex], batchIndex, rowIndex, "price")
+			}
+			if batch.extra != nil {
+				assertResultsetOrderbySimpleJoinWildcardNumber(t, row.Fields[batch.extraField], float64(batch.extra[rowIndex]), batchIndex, rowIndex, batch.extraField)
+			}
+			if batch.caseName == "wildcard-v1" || batch.caseName == "wildcard-v2" {
+				assertResultsetOrderbySimpleJoinWildcardNull(t, row.Fields["id"], batchIndex, rowIndex, "id")
+				assertResultsetOrderbySimpleJoinWildcardNull(t, row.Fields["feed"], batchIndex, rowIndex, "feed")
+			}
+		}
+	}
+	wildcardJoinSymbols := [][]string{
+		{"KGB", "IBM", "CMU", "CAT", "CAT", "IBM"},
+		{"CAT", "CAT", "CMU", "IBM", "IBM", "KGB"},
+	}
+	for offset, caseName := range []string{"wildcard-join-v1", "wildcard-join-v2"} {
+		record := trace.Records[17+offset]
+		if record.Case != caseName ||
+			record.Operation != "listener" || record.Statement != "s0" ||
+			record.Sequence != 1 || record.Time != "1970-01-01T00:00:00Z" ||
+			len(record.New) != 6 || len(record.Old) != 0 {
+			t.Fatalf("record %d metadata/shape = %#v", 17+offset, record)
+		}
+		for rowIndex, row := range record.New {
+			if row.Kind != "row" || len(row.Fields) != 2 {
+				t.Fatalf("record %d row %d shape = %#v", 17+offset, rowIndex, row)
+			}
+			one, ok := row.Fields["one"].(map[string]any)
+			if !ok {
+				t.Fatalf("record %d row %d one is not a nested row: %#v", 17+offset, rowIndex, row.Fields["one"])
+			}
+			if one["kind"] != "row" {
+				t.Fatalf("record %d row %d one kind = %#v", 17+offset, rowIndex, one)
+			}
+			oneFields, ok := one["fields"].(map[string]any)
+			if !ok || len(oneFields) != 5 {
+				t.Fatalf("record %d row %d one fields = %#v", 17+offset, rowIndex, one)
+			}
+			if oneFields["symbol"] != wildcardJoinSymbols[offset][rowIndex] {
+				t.Fatalf("record %d row %d one.symbol = %#v", 17+offset, rowIndex, oneFields["symbol"])
+			}
+			assertResultsetOrderbySimpleJoinWildcardNull(t, oneFields["id"], 17+offset, rowIndex, "one.id")
+			assertResultsetOrderbySimpleJoinWildcardNull(t, oneFields["feed"], 17+offset, rowIndex, "one.feed")
+			two, ok := row.Fields["two"].(map[string]any)
+			if !ok {
+				t.Fatalf("record %d row %d two is not a nested row: %#v", 17+offset, rowIndex, row.Fields["two"])
+			}
+			if two["kind"] != "row" {
+				t.Fatalf("record %d row %d two kind = %#v", 17+offset, rowIndex, two)
+			}
+			twoFields, ok := two["fields"].(map[string]any)
+			if !ok || len(twoFields) != 1 || twoFields["theString"] != wildcardJoinSymbols[offset][rowIndex] {
+				t.Fatalf("record %d row %d two fields = %#v", 17+offset, rowIndex, two)
+			}
+		}
+	}
+}
+
+func assertResultsetOrderbySimpleJoinWildcardNumber(t *testing.T, value any, want float64, recordIndex, rowIndex int, field string) {
+	t.Helper()
+	number, ok := value.(json.Number)
+	if !ok {
+		t.Fatalf("record %d row %d %s type = %T, value = %#v", recordIndex, rowIndex, field, value, value)
+	}
+	got, err := number.Float64()
+	if err != nil || got != want {
+		t.Fatalf("record %d row %d %s = %v, want %v", recordIndex, rowIndex, field, got, want)
+	}
+}
+
+func assertResultsetOrderbySimpleJoinWildcardNull(t *testing.T, value any, recordIndex, rowIndex int, field string) {
+	t.Helper()
+	marker, ok := value.(map[string]any)
+	if !ok || marker["state"] != "null" {
+		t.Fatalf("record %d row %d %s = %#v, want null marker", recordIndex, rowIndex, field, value)
+	}
+}

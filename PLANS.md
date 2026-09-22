@@ -123,6 +123,24 @@ Active: Draft 4.495 ('resultset-output-when-then-closure').
 - [x] Shipped; Git owns identity. Draft 4.495 committed and pushed as `98d55664e`.
 
 ## Current work unit
+Active: Draft 4.499 ('resultset-orderby-simple-join-wildcard').
+
+- Selection: `ResultSetOrderBySimple` ordinals 10-14 (multiple-keys-join,
+  simple, simple-join, wildcard, wildcard-join). All replayable, no flags,
+  no virtual time.
+- [x] Contract frozen (JavaContract499 + GoSurface499): all 5 ordinals
+  replayable; join/wildcard order-by fully expressible.
+- [x] Parity assets (Assets499): runner, scenario (19 cases / 188 steps),
+  oracle, run.sh, run.go/run_test.go wiring. Java trace via oracle, Go
+  trace, diff `passing` / 0 differences (19 records each).
+- [x] Manifest: `case.resultset-orderby-simple` extended (+4 net-new DV
+  runtime IDs; ord 12 already listed). Summary 735 cases / 359 DV / 1400 DV
+  runtime IDs, unreferenced 623.
+- [x] Gates + parity review: `make check` green (parity 84s, esper 111s).
+  Reviewer ParityReview499: PASS with 2 P3 findings (manifest prose
+  staleness, both fixed).
+
+## Current work unit
 Active: Draft 4.498 ('resultset-orderby-simple-expressions-aliases').
 
 - Selection: `ResultSetOrderBySimple` ordinals 5-9 (expressions,
