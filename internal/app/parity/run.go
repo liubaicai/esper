@@ -5299,6 +5299,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "event-objectarray-nested" || *mode == "event-objectarray-nested-diff" {
+		trace, err := runEventObjectArrayNestedScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "event-objectarray-nested-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, eventObjectArrayNestedJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, eventObjectArrayNestedJavaSources),
+				splitMetadata(*javaExecutions, eventObjectArrayNestedJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "expr-class-static-method" || *mode == "expr-class-static-method-diff" {
 		trace, err := runEcsmScenario(context.Background(), scenario)
 		if err != nil {

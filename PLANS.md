@@ -172,6 +172,49 @@ Active: Draft 4.502 ('expr-enum-sumof-remainder').
   NextJavaContract503; Go surface scout NextGoSurface503b running.
 
 ## Current work unit
+Active: Draft 4.504 ('event-objectarray-nested').
+
+- Selection: `EventObjectArrayEventNested` ords 0-4 + `EventObjectArrayEventNestedPojo`
+  ord 0 (6 unreferenced, object-array nested property family). No flags, no
+  virtual time.
+- [x] Contract frozen (NextJavaContract504 + NextGoSurface504): verbatim EPLs
+  incl. the byte-exact 22-column pojo projection (missing space after `as c2,`),
+  per-case Configuration event types, `_bean`/`_long` payload tags, oa-nested
+  iterator-only (no listener). Predicted zero shared-core change — confirmed.
+- [x] Parity assets (Assets504): oracle
+  `tools/java-oracle/EventObjectArrayNestedScenarioOracle.java`, run.sh,
+  scenario `testdata/parity/event-objectarray-nested.json` (6 cases / 43
+  steps, 12 records). Runner `internal/app/parity/event_objectarray_nested.go`
+  + run.go dispatch + 2-test family (primary agent).
+- [x] Runner fixes during integration: OA fields declared `any` (strict
+  assignability rejects `[]any` for typed slices); `esper.Select` idiom →
+  `FromAny(...).Select(...)`; `CoalesceOf[any]` explicit type arg; `nil` →
+  `esper.Query{}` return; `Result` has no `Schema()` — use `Event()`/`Row()`;
+  oa-nested skips listener (Java asserts iterator only); fragment rendering
+  via `GetFragment`/`GetFragments` + `NestedSchema` fallback (`TypeLev0` for
+  `p0`); `_bean`/`_long` decode + `map[string]oaNestedLevTwo` render case.
+- [x] Differential replay: Java 12 records / Go 12 records, `passing` /
+  0 differences. Checked-in traces + evidence under testdata/parity/.
+- [x] Manifest/roadmap/CHANGELOG: `case.event-objectarray-nested` born-DV
+  (6 runtime IDs); `event.object-array` → differential-verified (runtime IDs
+  added, `Java parity trace` removed from remaining). Summary 736 cases /
+  362 DV / 1423 DV runtime IDs / unreferenced 607. Roadmap + CHANGELOG
+  entries added.
+- [x] Gates + parity review: `make check` exit 0 (twice — before and after
+  P3 fixes). Independent parity review (ParityReview504): OVERALL PASS, three
+  P3s — mutation retargeted to pojo a3 (was mislabeled map-name-nested),
+  header comment now notes the mapped('k') -> mapprop('k') adaptation, and
+  oaRenderNested disambiguates []any-of-maps as array-of-rows (latent shape
+  bug, not exercised by the pinned scenario). Diff re-run passing /
+  0 differences, Go trace byte-identical.
+- [x] N+1 prefetch: `RowRecogAfter` ords 0-5 (6 unreferenced, AFTER MATCH
+  SKIP family). Java contract frozen by NextJavaContract505 (verbatim EPLs,
+  listener+iterator dual assertions, ord1 listener-suppression pitfall,
+  ord5 skip-past-last non-overlap contrast); Go surface scout NextGoSurface505
+  confirms zero shared-core change (all skip strategies, tag measures,
+  partition-by, all-matches, order-by, snapshot iterator exist).
+
+## Current work unit
 Active: Draft 4.503 ('epl-other-wildcard-additional').
 
 - Selection: `EPLOtherSelectWildcardWAdditional` ordinals 0/2/3/4/5/6 (the

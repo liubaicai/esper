@@ -16573,6 +16573,119 @@ func TestRunEplOtherWildcardAdditionalDiffRejectsTraceMutations(t *testing.T) {
 	}
 }
 
+func TestRunEventObjectArrayNestedDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "event-objectarray-nested.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "event-objectarray-nested.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "event-objectarray-nested.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "event-objectarray-nested-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunEventObjectArrayNestedDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "oa-nested-snapshot-p0id-drift",
+			mutate: func(trace *compat.Trace) {
+				// The oa-nested snapshot renders p0 as a nested row;
+				// drifting p0id means positional nested resolution broke.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "oa-nested" && rec.Operation == "snapshot" {
+						p0 := rec.New[0].Fields["p0"].(map[string]any)
+						p0["fields"].(map[string]any)["p0id"] = int64(999)
+						return
+					}
+				}
+				panic("no oa-nested snapshot record")
+			},
+		},
+		{
+			name: "pojo-mapped-value-drift",
+			mutate: func(trace *compat.Trace) {
+				// f1 resolves map.mapOne.objectTwo.array[1].mapped('1ma').value;
+				// drifting it means mapped-property resolution broke.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "pojo" && rec.Operation == "listener" {
+						rec.New[0].Fields["f1"] = "drifted"
+						return
+					}
+				}
+				panic("no pojo listener record")
+			},
+		},
+		{
+			name: "pojo-optional-null-drift",
+			mutate: func(trace *compat.Trace) {
+				// a3 is nodefmap.key2? — absent key renders {state:null};
+				// a value means optional-map resolution broke.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "pojo" && rec.Operation == "listener" {
+						rec.New[0].Fields["a3"] = "drifted"
+						return
+					}
+				}
+				panic("no pojo listener record")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "event-objectarray-nested.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "event-objectarray-nested.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "event-objectarray-nested.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "event-objectarray-nested-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", evidence)
+			}
+		})
+	}
+}
+
 func TestRunEplOtherWildcardAdditionalDirectReplay(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "testdata", "parity")
 	var stdout, stderr bytes.Buffer
