@@ -1,0 +1,4302 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-02e57a7f151323edc4be",
+    "java-runtime-b9a2b0afe61a2bfabcd0",
+    "java-runtime-1361f7530aa059720913",
+    "java-runtime-373cb011a639d99148f0",
+    "java-runtime-bd18c2cfd8ff34a0b5a3"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/rowrecog/RowRecogInterval.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/rowrecog/RowRecogIntervalOrTerminated.java"
+  ],
+  "javaExecutions": [
+    "RowRecogIntervalSimple",
+    "RowRecogPartitioned",
+    "RowRecogMultiCompleted",
+    "RowRecogMonthScoped",
+    "RowRecogIntervalOrTerminated"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "rowrecog-interval",
+    "steps": [
+      {
+        "op": "case",
+        "case": "interval-simple"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-simple",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "interval-simple",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize ( measures A.theString as a, B[0].theString as b0, B[1].theString as b1, last(B.theString) as lastb pattern (A B*) interval 10 seconds define A as A.theString like \"A%\", B as B.theString like \"B%\") order by a, b0, b1, lastb"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-simple",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "send",
+        "case": "interval-simple",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A1",
+          "value": 1,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-simple",
+        "at": "1970-01-01T00:00:10.999Z"
+      },
+      {
+        "op": "snapshot",
+        "case": "interval-simple",
+        "statement": "s0"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-simple",
+        "at": "1970-01-01T00:00:11.000Z"
+      },
+      {
+        "op": "snapshot",
+        "case": "interval-simple",
+        "statement": "s0"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-simple",
+        "at": "1970-01-01T00:00:13.000Z"
+      },
+      {
+        "op": "send",
+        "case": "interval-simple",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A2",
+          "value": 2,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-simple",
+        "at": "1970-01-01T00:00:15.000Z"
+      },
+      {
+        "op": "send",
+        "case": "interval-simple",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B1",
+          "value": 3,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-simple",
+        "at": "1970-01-01T00:00:22.999Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-simple",
+        "at": "1970-01-01T00:00:23.000Z"
+      },
+      {
+        "op": "snapshot",
+        "case": "interval-simple",
+        "statement": "s0"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-simple",
+        "at": "1970-01-01T00:00:25.000Z"
+      },
+      {
+        "op": "send",
+        "case": "interval-simple",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A3",
+          "value": 4,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-simple",
+        "at": "1970-01-01T00:00:26.000Z"
+      },
+      {
+        "op": "send",
+        "case": "interval-simple",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B2",
+          "value": 5,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-simple",
+        "at": "1970-01-01T00:00:29.000Z"
+      },
+      {
+        "op": "send",
+        "case": "interval-simple",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B3",
+          "value": 6,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-simple",
+        "at": "1970-01-01T00:00:34.999Z"
+      },
+      {
+        "op": "send",
+        "case": "interval-simple",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B4",
+          "value": 7,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-simple",
+        "at": "1970-01-01T00:00:35.000Z"
+      },
+      {
+        "op": "snapshot",
+        "case": "interval-simple",
+        "statement": "s0"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "interval-simple"
+      },
+      {
+        "op": "deploy",
+        "case": "interval-simple",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize ( measures A.theString as a, B[0].theString as b0, B[1].theString as b1, last(B.theString) as lastb pattern (A B*) interval 10 seconds define A as A.theString like \"A%\", B as B.theString like \"B%\") order by a, b0, b1, lastb"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-simple",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "send",
+        "case": "interval-simple",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A1",
+          "value": 1,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-simple",
+        "at": "1970-01-01T00:00:10.999Z"
+      },
+      {
+        "op": "snapshot",
+        "case": "interval-simple",
+        "statement": "s0"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-simple",
+        "at": "1970-01-01T00:00:11.000Z"
+      },
+      {
+        "op": "snapshot",
+        "case": "interval-simple",
+        "statement": "s0"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-simple",
+        "at": "1970-01-01T00:00:13.000Z"
+      },
+      {
+        "op": "send",
+        "case": "interval-simple",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A2",
+          "value": 2,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-simple",
+        "at": "1970-01-01T00:00:15.000Z"
+      },
+      {
+        "op": "send",
+        "case": "interval-simple",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B1",
+          "value": 3,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-simple",
+        "at": "1970-01-01T00:00:22.999Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-simple",
+        "at": "1970-01-01T00:00:23.000Z"
+      },
+      {
+        "op": "snapshot",
+        "case": "interval-simple",
+        "statement": "s0"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-simple",
+        "at": "1970-01-01T00:00:25.000Z"
+      },
+      {
+        "op": "send",
+        "case": "interval-simple",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A3",
+          "value": 4,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-simple",
+        "at": "1970-01-01T00:00:26.000Z"
+      },
+      {
+        "op": "send",
+        "case": "interval-simple",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B2",
+          "value": 5,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-simple",
+        "at": "1970-01-01T00:00:29.000Z"
+      },
+      {
+        "op": "send",
+        "case": "interval-simple",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B3",
+          "value": 6,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-simple",
+        "at": "1970-01-01T00:00:34.999Z"
+      },
+      {
+        "op": "send",
+        "case": "interval-simple",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B4",
+          "value": 7,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-simple",
+        "at": "1970-01-01T00:00:35.000Z"
+      },
+      {
+        "op": "snapshot",
+        "case": "interval-simple",
+        "statement": "s0"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "interval-simple"
+      },
+      {
+        "op": "case",
+        "case": "interval-partitioned"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-partitioned",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "interval-partitioned",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize (  partition by cat   measures A.theString as a, B[0].theString as b0, B[1].theString as b1, last(B.theString) as lastb  pattern (A B*)   INTERVAL 10 seconds   define     A as A.theString like 'A%',    B as B.theString like 'B%') order by a, b0, b1, lastb"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-partitioned",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "send",
+        "case": "interval-partitioned",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A1",
+          "value": 1,
+          "cat": "C1"
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-partitioned",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "send",
+        "case": "interval-partitioned",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A2",
+          "value": 2,
+          "cat": "C2"
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-partitioned",
+        "at": "1970-01-01T00:00:02.000Z"
+      },
+      {
+        "op": "send",
+        "case": "interval-partitioned",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A3",
+          "value": 3,
+          "cat": "C3"
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-partitioned",
+        "at": "1970-01-01T00:00:03.000Z"
+      },
+      {
+        "op": "send",
+        "case": "interval-partitioned",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A4",
+          "value": 4,
+          "cat": "C4"
+        }
+      },
+      {
+        "op": "send",
+        "case": "interval-partitioned",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B1",
+          "value": 5,
+          "cat": "C3"
+        }
+      },
+      {
+        "op": "send",
+        "case": "interval-partitioned",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B2",
+          "value": 6,
+          "cat": "C1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "interval-partitioned",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B3",
+          "value": 7,
+          "cat": "C1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "interval-partitioned",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B4",
+          "value": 7,
+          "cat": "C4"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "interval-partitioned",
+        "statement": "s0"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-partitioned",
+        "at": "1970-01-01T00:00:10.999Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-partitioned",
+        "at": "1970-01-01T00:00:11.000Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-partitioned",
+        "at": "1970-01-01T00:00:11.999Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-partitioned",
+        "at": "1970-01-01T00:00:12.000Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-partitioned",
+        "at": "1970-01-01T00:00:13.000Z"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "interval-partitioned"
+      },
+      {
+        "op": "case",
+        "case": "interval-multicompleted"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-multicompleted",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "interval-multicompleted",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize (  measures A.theString as a, B[0].theString as b0, B[1].theString as b1, last(B.theString) as lastb  pattern (A B*)   interval 10 seconds   define     A as A.theString like 'A%',    B as B.theString like 'B%') order by a, b0, b1, lastb"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-multicompleted",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "send",
+        "case": "interval-multicompleted",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A1",
+          "value": 1,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-multicompleted",
+        "at": "1970-01-01T00:00:05.000Z"
+      },
+      {
+        "op": "send",
+        "case": "interval-multicompleted",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A2",
+          "value": 2,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-multicompleted",
+        "at": "1970-01-01T00:00:10.999Z"
+      },
+      {
+        "op": "snapshot",
+        "case": "interval-multicompleted",
+        "statement": "s0"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-multicompleted",
+        "at": "1970-01-01T00:00:11.000Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-multicompleted",
+        "at": "1970-01-01T00:00:15.000Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-multicompleted",
+        "at": "1970-01-01T00:00:21.000Z"
+      },
+      {
+        "op": "send",
+        "case": "interval-multicompleted",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A3",
+          "value": 3,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-multicompleted",
+        "at": "1970-01-01T00:00:22.000Z"
+      },
+      {
+        "op": "send",
+        "case": "interval-multicompleted",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A4",
+          "value": 4,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-multicompleted",
+        "at": "1970-01-01T00:00:23.000Z"
+      },
+      {
+        "op": "send",
+        "case": "interval-multicompleted",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B1",
+          "value": 5,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "interval-multicompleted",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B2",
+          "value": 6,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "interval-multicompleted",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B3",
+          "value": 7,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "interval-multicompleted",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B4",
+          "value": 8,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-multicompleted",
+        "at": "1970-01-01T00:00:31.000Z"
+      },
+      {
+        "op": "snapshot",
+        "case": "interval-multicompleted",
+        "statement": "s0"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-multicompleted",
+        "at": "1970-01-01T00:00:32.000Z"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "interval-multicompleted"
+      },
+      {
+        "op": "case",
+        "case": "interval-monthscoped"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-monthscoped",
+        "at": "2002-02-01T09:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "interval-monthscoped",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportBean match_recognize ( measures A.theString as a, B[0].theString as b0, B[1].theString as b1  pattern (A B*) interval 1 month define A as A.theString like \"A%\", B as B.theString like \"B%\")"
+      },
+      {
+        "op": "send",
+        "case": "interval-monthscoped",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "interval-monthscoped",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-monthscoped",
+        "at": "2002-03-01T08:59:59.999Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-monthscoped",
+        "at": "2002-03-01T09:00:00.000Z"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "interval-monthscoped"
+      },
+      {
+        "op": "case",
+        "case": "orterminated-doc-sample"
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-doc-sample",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "orterminated-doc-sample",
+        "statement": "s0",
+        "epl": "@name('s0') select * from TemperatureSensorEvent\nmatch_recognize (\n  partition by device\n  measures A.id as a_id, count(B.id) as count_b, first(B.id) as first_b, last(B.id) as last_b\n  pattern (A B*)\n  interval 5 seconds or terminated\n  define\n    A as A.temp \u003e 100,\n    B as B.temp \u003e 100)"
+      },
+      {
+        "op": "send",
+        "case": "orterminated-doc-sample",
+        "eventType": "TemperatureSensorEvent",
+        "payload": [
+          "E1",
+          1,
+          98
+        ]
+      },
+      {
+        "op": "send",
+        "case": "orterminated-doc-sample",
+        "eventType": "TemperatureSensorEvent",
+        "payload": [
+          "E2",
+          1,
+          101
+        ]
+      },
+      {
+        "op": "send",
+        "case": "orterminated-doc-sample",
+        "eventType": "TemperatureSensorEvent",
+        "payload": [
+          "E3",
+          1,
+          102
+        ]
+      },
+      {
+        "op": "send",
+        "case": "orterminated-doc-sample",
+        "eventType": "TemperatureSensorEvent",
+        "payload": [
+          "E4",
+          1,
+          101
+        ]
+      },
+      {
+        "op": "send",
+        "case": "orterminated-doc-sample",
+        "eventType": "TemperatureSensorEvent",
+        "payload": [
+          "E5",
+          1,
+          100
+        ]
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-doc-sample",
+        "at": "1970-01-25T20:31:23.647Z"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "orterminated-doc-sample"
+      },
+      {
+        "op": "case",
+        "case": "orterminated-a-b"
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-a-b",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "orterminated-a-b",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize ( measures A.theString as a, B.theString as b pattern (A B) interval 10 seconds or terminated define A as A.theString like 'A%', B as B.theString like 'B%')"
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-b",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-b",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-b",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A2",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-b",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A3",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-b",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B2",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "orterminated-a-b"
+      },
+      {
+        "op": "case",
+        "case": "orterminated-a-bstar"
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-a-bstar",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "orterminated-a-bstar",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize ( measures A.theString as a, B[0].theString as b0, B[1].theString as b1, B[2].theString as b2 pattern (A B*) interval 10 seconds or terminated define A as A.theString like \"A%\", B as B.theString like \"B%\")"
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "X1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-a-bstar",
+        "at": "1970-01-01T00:00:20.000Z"
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A2",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B2",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-a-bstar",
+        "at": "1970-01-01T00:00:29.999Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-a-bstar",
+        "at": "1970-01-01T00:00:30.000Z"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "orterminated-a-bstar"
+      },
+      {
+        "op": "case",
+        "case": "orterminated-a-bstar-allmatches",
+        "mode": "any"
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-a-bstar-allmatches",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "orterminated-a-bstar-allmatches",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize ( measures A.theString as a, B[0].theString as b0, B[1].theString as b1, B[2].theString as b2 all matches pattern (A B*) interval 10 seconds or terminated define A as A.theString like \"A%\", B as B.theString like \"B%\")"
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bstar-allmatches",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bstar-allmatches",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bstar-allmatches",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "X1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-a-bstar-allmatches",
+        "at": "1970-01-01T00:00:20.000Z"
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bstar-allmatches",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A2",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bstar-allmatches",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B2",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-a-bstar-allmatches",
+        "at": "1970-01-01T00:00:29.999Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-a-bstar-allmatches",
+        "at": "1970-01-01T00:00:30.000Z"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "orterminated-a-bstar-allmatches"
+      },
+      {
+        "op": "case",
+        "case": "orterminated-a-bstar-or-c"
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-a-bstar-or-c",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "orterminated-a-bstar-or-c",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize ( measures A.theString as a, B[0].theString as b0, B[1].theString as b1, B[2].theString as b2, C.theString as c  pattern (A (B* | C)) interval 10 seconds or terminated define A as A.theString like 'A%', B as B.theString like 'B%', C as C.theString like 'C%')"
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bstar-or-c",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bstar-or-c",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "C1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bstar-or-c",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A2",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bstar-or-c",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bstar-or-c",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B2",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bstar-or-c",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "X1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bstar-or-c",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A3",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-a-bstar-or-c",
+        "at": "1970-01-01T00:00:10.000Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-a-bstar-or-c",
+        "at": "1970-01-25T20:31:23.647Z"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "orterminated-a-bstar-or-c"
+      },
+      {
+        "op": "case",
+        "case": "orterminated-a-bstar-or-cstar"
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-a-bstar-or-cstar",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "orterminated-a-bstar-or-cstar",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize ( measures A.theString as a, B[0].theString as b0, B[1].theString as b1, C[0].theString as c0, C[1].theString as c1  pattern (A (B* | C*)) interval 10 seconds or terminated define A as A.theString like 'A%', B as B.theString like 'B%', C as C.theString like 'C%')"
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bstar-or-cstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bstar-or-cstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "X1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bstar-or-cstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A2",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bstar-or-cstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "C1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bstar-or-cstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bstar-or-cstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "C2",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "orterminated-a-bstar-or-cstar"
+      },
+      {
+        "op": "case",
+        "case": "orterminated-a-b-cstar"
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-a-b-cstar",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "orterminated-a-b-cstar",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize ( measures A.theString as a, B.theString as b, C[0].theString as c0, C[1].theString as c1, C[2].theString as c2  pattern (A B C*) interval 10 seconds or terminated define A as A.theString like 'A%', B as B.theString like 'B%', C as C.theString like 'C%')"
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-b-cstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-b-cstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-b-cstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "C1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-b-cstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "C2",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-b-cstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B2",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-b-cstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A2",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-b-cstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "X1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-b-cstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B3",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-b-cstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "X2",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-b-cstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A3",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-b-cstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B4",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-b-cstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "X3",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-a-b-cstar",
+        "at": "1970-01-01T00:00:20.000Z"
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-b-cstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A4",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-b-cstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B5",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-b-cstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "C3",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-a-b-cstar",
+        "at": "1970-01-01T00:00:30.000Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-a-b-cstar",
+        "at": "1970-01-25T20:31:23.647Z"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "orterminated-a-b-cstar"
+      },
+      {
+        "op": "case",
+        "case": "orterminated-a-bplus"
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-a-bplus",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "orterminated-a-bplus",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize ( measures A.theString as a, B[0].theString as b0, B[1].theString as b1, B[2].theString as b2 pattern (A B+) interval 10 seconds or terminated define A as A.theString like 'A%', B as B.theString like 'B%')"
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bplus",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bplus",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "X1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bplus",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A2",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bplus",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B2",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bplus",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "X2",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bplus",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A3",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bplus",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A4",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bplus",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B3",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bplus",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B4",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-bplus",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "X3",
+          "value": -1,
+          "cat": null
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "orterminated-a-bplus"
+      },
+      {
+        "op": "case",
+        "case": "orterminated-astar"
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-astar",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "orterminated-astar",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize ( measures A[0].theString as a0, A[1].theString as a1, A[2].theString as a2, A[3].theString as a3, A[4].theString as a4 pattern (A*) interval 10 seconds or terminated define A as theString like 'A%')"
+      },
+      {
+        "op": "send",
+        "case": "orterminated-astar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-astar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A2",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-astar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-astar",
+        "at": "1970-01-01T00:00:02.000Z"
+      },
+      {
+        "op": "send",
+        "case": "orterminated-astar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A3",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-astar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A4",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-astar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A5",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-astar",
+        "at": "1970-01-01T00:00:12.000Z"
+      },
+      {
+        "op": "send",
+        "case": "orterminated-astar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A6",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-astar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B2",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-astar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B3",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "orterminated-astar"
+      },
+      {
+        "op": "case",
+        "case": "orterminated-a-parens-bstar"
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-a-parens-bstar",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "orterminated-a-parens-bstar",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize ( measures A.theString as a, B[0].theString as b0, B[1].theString as b1, B[2].theString as b2 pattern (A (B)*) interval 10 seconds or terminated define A as A.theString like \"A%\", B as B.theString like \"B%\")"
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-parens-bstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-parens-bstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-parens-bstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "X1",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-a-parens-bstar",
+        "at": "1970-01-01T00:00:20.000Z"
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-parens-bstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "A2",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "orterminated-a-parens-bstar",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "B2",
+          "value": 0,
+          "cat": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-a-parens-bstar",
+        "at": "1970-01-01T00:00:29.999Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "orterminated-a-parens-bstar",
+        "at": "1970-01-01T00:00:30.000Z"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "orterminated-a-parens-bstar"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "rowrecog-interval",
+    "records": [
+      {
+        "case": "interval-simple",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:10.999Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:23Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": "B1",
+              "b1": {
+                "state": "null"
+              },
+              "lastb": "B1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:23Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": "B1",
+              "b1": {
+                "state": "null"
+              },
+              "lastb": "B1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A3",
+              "b0": "B2",
+              "b1": "B3",
+              "lastb": "B4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": "B1",
+              "b1": {
+                "state": "null"
+              },
+              "lastb": "B1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A3",
+              "b0": "B2",
+              "b1": "B3",
+              "lastb": "B4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:10.999Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:23Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": "B1",
+              "b1": {
+                "state": "null"
+              },
+              "lastb": "B1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:23Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": "B1",
+              "b1": {
+                "state": "null"
+              },
+              "lastb": "B1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A3",
+              "b0": "B2",
+              "b1": "B3",
+              "lastb": "B4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": "B1",
+              "b1": {
+                "state": "null"
+              },
+              "lastb": "B1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A3",
+              "b0": "B2",
+              "b1": "B3",
+              "lastb": "B4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-partitioned",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:03Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": "B2",
+              "b1": "B3",
+              "lastb": "B3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A3",
+              "b0": "B1",
+              "b1": {
+                "state": "null"
+              },
+              "lastb": "B1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A4",
+              "b0": "B4",
+              "b1": {
+                "state": "null"
+              },
+              "lastb": "B4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-partitioned",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": "B2",
+              "b1": "B3",
+              "lastb": "B3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-partitioned",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:12Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A3",
+              "b0": "B1",
+              "b1": {
+                "state": "null"
+              },
+              "lastb": "B1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-partitioned",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:13Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A4",
+              "b0": "B4",
+              "b1": {
+                "state": "null"
+              },
+              "lastb": "B4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-multicompleted",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:10.999Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-multicompleted",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-multicompleted",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:15Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-multicompleted",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:31Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A3",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-multicompleted",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:31Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A3",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A4",
+              "b0": "B1",
+              "b1": "B2",
+              "lastb": "B4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-multicompleted",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:32Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A4",
+              "b0": "B1",
+              "b1": "B2",
+              "lastb": "B4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-monthscoped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-03-01T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": "B1",
+              "b1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-doc-sample",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_id": "E2",
+              "count_b": 2,
+              "first_b": "E3",
+              "last_b": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-b",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b": "B1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-b",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A3",
+              "b": "B2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bstar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": "B1",
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bstar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:30Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": "B2",
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bstar-allmatches",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": "B1",
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bstar-allmatches",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:30Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": "B2",
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bstar-or-c",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              },
+              "c": "C1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bstar-or-c",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              },
+              "c": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bstar-or-c",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": "B1",
+              "b1": "B2",
+              "b2": {
+                "state": "null"
+              },
+              "c": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bstar-or-c",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A3",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              },
+              "c": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bstar-or-cstar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bstar-or-cstar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bstar-or-cstar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "c0": "C1",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-b-cstar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b": "B1",
+              "c0": "C1",
+              "c1": "C2",
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-b-cstar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A3",
+              "b": "B4",
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-b-cstar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:30Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A4",
+              "b": "B5",
+              "c0": "C3",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bplus",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": "B2",
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bplus",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A4",
+              "b0": "B3",
+              "b1": "B4",
+              "b2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-astar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a0": "A1",
+              "a1": "A2",
+              "a2": {
+                "state": "null"
+              },
+              "a3": {
+                "state": "null"
+              },
+              "a4": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-astar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:12Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a0": "A3",
+              "a1": "A4",
+              "a2": "A5",
+              "a3": {
+                "state": "null"
+              },
+              "a4": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-astar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:12Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a0": "A3",
+              "a1": "A4",
+              "a2": "A5",
+              "a3": "A6",
+              "a4": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-parens-bstar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": "B1",
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-parens-bstar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:30Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": "B2",
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "rowrecog-interval",
+    "records": [
+      {
+        "case": "interval-simple",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:10.999Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:23Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": "B1",
+              "b1": {
+                "state": "null"
+              },
+              "lastb": "B1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:23Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": "B1",
+              "b1": {
+                "state": "null"
+              },
+              "lastb": "B1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A3",
+              "b0": "B2",
+              "b1": "B3",
+              "lastb": "B4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": "B1",
+              "b1": {
+                "state": "null"
+              },
+              "lastb": "B1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A3",
+              "b0": "B2",
+              "b1": "B3",
+              "lastb": "B4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:10.999Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:23Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": "B1",
+              "b1": {
+                "state": "null"
+              },
+              "lastb": "B1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:23Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": "B1",
+              "b1": {
+                "state": "null"
+              },
+              "lastb": "B1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A3",
+              "b0": "B2",
+              "b1": "B3",
+              "lastb": "B4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-simple",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": "B1",
+              "b1": {
+                "state": "null"
+              },
+              "lastb": "B1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A3",
+              "b0": "B2",
+              "b1": "B3",
+              "lastb": "B4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-partitioned",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:03Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": "B2",
+              "b1": "B3",
+              "lastb": "B3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A3",
+              "b0": "B1",
+              "b1": {
+                "state": "null"
+              },
+              "lastb": "B1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A4",
+              "b0": "B4",
+              "b1": {
+                "state": "null"
+              },
+              "lastb": "B4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-partitioned",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": "B2",
+              "b1": "B3",
+              "lastb": "B3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-partitioned",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:12Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A3",
+              "b0": "B1",
+              "b1": {
+                "state": "null"
+              },
+              "lastb": "B1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-partitioned",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:13Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A4",
+              "b0": "B4",
+              "b1": {
+                "state": "null"
+              },
+              "lastb": "B4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-multicompleted",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:10.999Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-multicompleted",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-multicompleted",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:15Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-multicompleted",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:31Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A3",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-multicompleted",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:31Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A3",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A4",
+              "b0": "B1",
+              "b1": "B2",
+              "lastb": "B4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-multicompleted",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:32Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A4",
+              "b0": "B1",
+              "b1": "B2",
+              "lastb": "B4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-monthscoped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-03-01T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": "B1",
+              "b1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-doc-sample",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_id": "E2",
+              "count_b": 2,
+              "first_b": "E3",
+              "last_b": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-b",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b": "B1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-b",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A3",
+              "b": "B2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bstar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": "B1",
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bstar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:30Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": "B2",
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bstar-allmatches",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": "B1",
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bstar-allmatches",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:30Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": "B2",
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bstar-or-c",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              },
+              "c": "C1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bstar-or-c",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              },
+              "c": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bstar-or-c",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": "B1",
+              "b1": "B2",
+              "b2": {
+                "state": "null"
+              },
+              "c": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bstar-or-c",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A3",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              },
+              "c": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bstar-or-cstar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bstar-or-cstar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bstar-or-cstar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "c0": "C1",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-b-cstar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b": "B1",
+              "c0": "C1",
+              "c1": "C2",
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-b-cstar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A3",
+              "b": "B4",
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-b-cstar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:30Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A4",
+              "b": "B5",
+              "c0": "C3",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bplus",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": "B2",
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-bplus",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A4",
+              "b0": "B3",
+              "b1": "B4",
+              "b2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-astar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a0": "A1",
+              "a1": "A2",
+              "a2": {
+                "state": "null"
+              },
+              "a3": {
+                "state": "null"
+              },
+              "a4": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-astar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:12Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a0": "A3",
+              "a1": "A4",
+              "a2": "A5",
+              "a3": {
+                "state": "null"
+              },
+              "a4": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-astar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:12Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a0": "A3",
+              "a1": "A4",
+              "a2": "A5",
+              "a3": "A6",
+              "a4": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-parens-bstar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A1",
+              "b0": "B1",
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "orterminated-a-parens-bstar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:30Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "A2",
+              "b0": "B2",
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

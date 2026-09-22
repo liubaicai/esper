@@ -17147,6 +17147,118 @@ func TestRunRowRecogPrevDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+func TestRunRowRecogIntervalDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "rowrecog-interval.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "rowrecog-interval.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "rowrecog-interval.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "rowrecog-interval-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunRowRecogIntervalDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "interval-simple-boundary-drift",
+			mutate: func(trace *compat.Trace) {
+				// The interval deadline is begin-anchored and inclusive:
+				// drifting the t=11000 emission row means the flush fired
+				// at the wrong boundary or ranked the wrong match.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "interval-simple" && rec.Operation == "listener" && len(rec.New) > 0 {
+						rec.New[0].Fields["a"] = "drifted"
+						return
+					}
+				}
+				panic("no interval-simple listener record")
+			},
+		},
+		{
+			name: "orterminated-doc-sample-count-drift",
+			mutate: func(trace *compat.Trace) {
+				// count(B.id) must be 2 (E3,E4); drifting it means the
+				// termination claim or the multimatch array is wrong.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "orterminated-doc-sample" && rec.Operation == "listener" && len(rec.New) > 0 {
+						rec.New[0].Fields["count_b"] = float64(99)
+						return
+					}
+				}
+				panic("no orterminated-doc-sample listener record")
+			},
+		},
+		{
+			name: "orterminated-a-bstar-or-cstar-prefix-drift",
+			mutate: func(trace *compat.Trace) {
+				// X1 terminates A1's match; the emitted prefix row must
+				// carry no C captures (c0/c1 stay null).
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "orterminated-a-bstar-or-cstar" && rec.Operation == "listener" && len(rec.New) > 0 {
+						rec.New[0].Fields["c0"] = "drifted"
+						return
+					}
+				}
+				panic("no orterminated-a-bstar-or-cstar listener record")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "rowrecog-interval.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "rowrecog-interval.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "rowrecog-interval.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "rowrecog-interval-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", evidence)
+			}
+		})
+	}
+}
 
 func TestRunEplOtherWildcardAdditionalDirectReplay(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "testdata", "parity")

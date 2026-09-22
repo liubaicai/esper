@@ -5379,6 +5379,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "rowrecog-interval" || *mode == "rowrecog-interval-diff" {
+		trace, err := runRowRecogIntervalScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "rowrecog-interval-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, rowRecogIntervalJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, rowRecogIntervalJavaSources),
+				splitMetadata(*javaExecutions, rowRecogIntervalJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "expr-class-static-method" || *mode == "expr-class-static-method-diff" {
 		trace, err := runEcsmScenario(context.Background(), scenario)
 		if err != nil {

@@ -55,53 +55,32 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly') committed and pushed as 9ac32d036; Git owns identity. Parity review PASS, two P3s fixed.
 
 ## Current work unit
-Active: Draft 4.508 ('rowrecog-prev').
+Active: Draft 4.509 ('rowrecog-interval').
 
-- Selection: `RowRecogPrev` ords 0-4 (5 unreferenced) +
-  `RowRecogDataSet.RowRecogExampleWithPREV` (1) — 6 executions sharing
-  prev() inside match_recognize DEFINE. Three carry virtual time. Contract
-  at `.omp/contract-508.md` (scouts NextJavaContract508 + NextGoSurface508).
-- [x] Parity assets (Assets508): oracle
-  `tools/java-oracle/RowRecogPrevScenarioOracle.java`, run.sh, scenario
-  `testdata/parity/rowrecog-prev.json` (6 cases), runner
-  `internal/app/parity/rowrecog_prev.go` + run.go dispatch.
-- [x] Shared core (contract predicted zero; integration found two real
-  gaps): result matcher now walks the state-pool NFA in Esper emission
-  order with per-quantifier greedy flags for single-match ranking;
-  "interval or terminated" reimplemented as Esper termination-entry
-  semantics — a live end-capable NFA state failing the current event
-  produces a termination entry (dying variable's single slot deassigned,
-  multimatch state kept) that releases every scheduled end entry it
-  prefix-matches; replaces the match-extension heuristic. Four Go-authored
-  reluctant-quantifier tests needed `FirstMatch()` to mirror Java's
-  single-match default.
-- [x] Differential replay: Java 58 records / Go 58 records, `passing` /
-  0 differences. Evidence `rowrecog-prev.evidence.json` + 2-test family
+- Selection: `RowRecogInterval` ords 0-3 (4 unreferenced) +
+  `RowRecogIntervalOrTerminated` ord 0 (1) — 5 executions sharing
+  match_recognize interval semantics (begin-anchored inclusive deadlines,
+  scheduled-vs-iterator visibility, or-terminated termination claims).
+  Contract at `.omp/contract-509.md` (scouts NextJavaContract509 +
+  NextGoSurface509; zero predicted shared-core delta — the 4.508
+  termination-entry rewrite covers or-terminated).
+- [x] Go runner `internal/app/parity/rowrecog_interval.go` + run.go
+  dispatch + run_test.go 2-test family (14 cases: 4 interval + 10
+  or-terminated sub-scenarios; TemperatureSensorEvent via object-array).
+- [x] Parity assets (Assets509): oracle
+  `tools/java-oracle/RowRecogIntervalScenarioOracle.java`, run.sh, scenario
+  `testdata/parity/rowrecog-interval.json` (14 cases / 235 steps).
+- [x] Differential replay: Java 49 records / Go 49 records, `passing` /
+  0 differences. Evidence `rowrecog-interval.evidence.json` + 2-test family
   (passing-evidence + 3 mutations).
-- [x] Manifest/roadmap/CHANGELOG: `case.rowrecog-prev` born-DV (6 runtime
-  IDs); `rowrecog.match-recognize` goRefs + DV IDs extended, prev-reference
-  phrase narrowed to prior-reference. Summary 740 cases / 366 DV / 1447 DV
-  runtime IDs / unreferenced 583.
-- [x] Gates: `make check` exit 0 (parity 89s, esper 112s); compat manifest
+- [x] Manifest/roadmap/CHANGELOG: `case.rowrecog-interval` born-DV (5
+  runtime IDs); `rowrecog.match-recognize` goRefs + DV IDs extended,
+  IntervalOrTerminated `remaining` phrase dropped. Summary 741 cases /
+  367 DV / 1452 DV runtime IDs / unreferenced 578.
+- [x] Gates: `make check` exit 0 (parity 93s, esper 111s); compat manifest
   validation green.
-- [x] Parity review (ParityReview508): first pass FAIL on 2 P2 + 4 P3 —
-  reluctant greedy counts incremented where Esper keeps them 0 (fixed:
-  increment only for isGreedy==true nodes); rowRecogMultipleVars missed
-  Esper's bound-more-than-once rule (fixed: seen-name promotion, then
-  scoped per alternation branch per confirmation P3); probe multimatch
-  view (fixed: evalNodeDefineProbe keeps pre-event TagValues); scenario
-  javaStaticIds pinned + oracle STATIC_IDS + trace regenerated; PLANS.md
-  wording, dead rowPatternJoinBranch, mutation comment, shared
-  scenarioForCase error text all fixed. Confirmation review: PASS.
-- [x] Shipped; Git owns identity. Draft 4.508 committed and pushed as
-  `69354a522`.
-- [x] N+1 prefetch: `RowRecogInterval` ords 0-3 + `RowRecogIntervalOrTerminated`
-  ord 0 (5 unreferenced, interval family). Java contract frozen by
-  NextJavaContract509 (verbatim EPLs, virtual-time sequences, termination
-  semantics confirmed against RowRecogNFAView); Go surface scout
-  NextGoSurface509 confirms zero predicted shared-core change — the 4.508
-  termination-entry rewrite already covers or-terminated; runner needs an
-  object-array send branch for TemperatureSensorEvent.
+- [x] Parity review (ParityReview509): PASS, no P0-P2; two P3 doc nits
+  fixed (PLANS.md checklist staleness, mutation comment accuracy).
 
 ## Current work unit
 Active: Draft 4.494 ('view-group-closure').

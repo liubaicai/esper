@@ -2045,7 +2045,8 @@
     "internal/app/parity/rowrecog_after.go",
     "internal/app/parity/rowrecog_repetition.go",
     "internal/app/parity/rowrecog_greedyness_ops.go",
-    "internal/app/parity/rowrecog_prev.go"
+    "internal/app/parity/rowrecog_prev.go",
+    "internal/app/parity/rowrecog_interval.go"
    ],
    "phase": 5,
    "status": "implemented",
@@ -2054,7 +2055,6 @@
     "advanced row-recognize tag-aware prior-reference variants and advanced aggregate measures",
     "full Variant/ANY/dynamic member-schema and trace matrix",
     "Java global TimeSource time-unit configuration surface (Go uses explicit time.Duration/time.Time)",
-    "remaining complex/dynamic IntervalOrTerminated compositions and calendar termination parity",
     "exact full NFA state repository counts beyond admitted start branches and complete prevent-start transition semantics",
     "Java-scale RowRecogPerf threshold and benchmark harness",
     "complete delete/update OOSD repository ordering and iterator/order-by semantics"
@@ -2074,7 +2074,12 @@
     "java-runtime-59f7afa17be17f57fbd5",
     "java-runtime-9c42dd39d70d409a64d7",
     "java-runtime-c096e55f89e15fcc54b7",
-    "java-runtime-ce4e140777e93d5226b5"
+    "java-runtime-ce4e140777e93d5226b5",
+    "java-runtime-02e57a7f151323edc4be",
+    "java-runtime-b9a2b0afe61a2bfabcd0",
+    "java-runtime-1361f7530aa059720913",
+    "java-runtime-373cb011a639d99148f0",
+    "java-runtime-bd18c2cfd8ff34a0b5a3"
    ],
    "representativeScenarioIds": [
     "match-recognize-simple",
@@ -47984,6 +47989,80 @@
     "RowRecogPrev (5 executions) + RowRecogDataSet RowRecogExampleWithPREV replay all six executions (58 records, 0 differences): prev()/prev(x,n) inside match_recognize DEFINE over keepall and #time(5) windows, partitioned and unpartitioned, including indexed prev on string and numeric fields, prev(x,0), Math.abs(prev(...)), IN over prev lists, virtual-time window expiry, and the 20-measure A B C* D E* F+ dataset example under all matches + skip-to-current-row.",
     "Shared core: the result matcher now walks the state-pool NFA in Esper emission order and carries per-node greedy flags for single-match ranking; 'interval or terminated' uses Esper's termination-entry semantics (a dying end-capable NFA state releases every scheduled end entry it prefix-matches, with the dying variable's single slot deassigned and multimatch state surviving) instead of the earlier match-extension heuristic."
    ]
+  },
+  {
+   "id": "case.rowrecog-interval",
+   "javaRuntimeIds": [
+    "java-runtime-02e57a7f151323edc4be",
+    "java-runtime-b9a2b0afe61a2bfabcd0",
+    "java-runtime-1361f7530aa059720913",
+    "java-runtime-373cb011a639d99148f0",
+    "java-runtime-bd18c2cfd8ff34a0b5a3"
+   ],
+   "javaStaticIds": [
+    "java-4f72d1e9bd1e9e0e91c3",
+    "java-2b80de56360cd5f89976",
+    "java-ecc5ea69ce7531fba427",
+    "java-a3bc77ab51a1c2e468a8",
+    "java-9c1e0161596faa9a387e"
+   ],
+   "javaNames": [
+    "RowRecogIntervalSimple",
+    "RowRecogPartitioned",
+    "RowRecogMultiCompleted",
+    "RowRecogMonthScoped",
+    "RowRecogIntervalOrTerminated"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/rowrecog/RowRecogInterval.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/rowrecog/RowRecogIntervalOrTerminated.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunRowRecogIntervalDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunRowRecogIntervalDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "correctness",
+    "rowrecog",
+    "match-recognize",
+    "interval",
+    "or-terminated",
+    "partition",
+    "virtual-time",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/rowrecog-interval.json",
+    "testdata/parity/rowrecog-interval.trace.json",
+    "testdata/parity/rowrecog-interval.go.trace.json",
+    "testdata/parity/rowrecog-interval.evidence.json",
+    "tools/java-oracle/RowRecogIntervalScenarioOracle.java",
+    "tools/java-oracle/run-rowrecog-interval.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-02e57a7f151323edc4be",
+    "java-runtime-b9a2b0afe61a2bfabcd0",
+    "java-runtime-1361f7530aa059720913",
+    "java-runtime-373cb011a639d99148f0",
+    "java-runtime-bd18c2cfd8ff34a0b5a3"
+   ],
+   "notes": [
+    "RowRecogInterval (4 executions) + RowRecogIntervalOrTerminated (1 execution, 10 sub-scenarios) replay all five executions (49 records, 0 differences): begin-anchored inclusive interval deadlines, scheduled-vs-iterator visibility, partition-shared schedule keys, silent strand death on misfit, calendar month interval on SupportBean, and the or-terminated family (termination claims, dead-end immediate emission, alternation branch survival, B+ silent death, all-matches any-order batching, object-array TemperatureSensorEvent doc sample)."
+   ]
   }
  ],
  "mappings": [
@@ -51286,13 +51365,17 @@
   {
    "capabilityId": "rowrecog.match-recognize",
    "caseId": "case.rowrecog-prev"
+  },
+  {
+   "capabilityId": "rowrecog.match-recognize",
+   "caseId": "case.rowrecog-interval"
   }
  ],
  "summary": {
-  "inventoriedCases": 740,
-  "implementedCases": 738,
-  "differentialVerifiedCases": 366,
-  "differentialVerifiedRuntimeIds": 1447,
+  "inventoriedCases": 741,
+  "implementedCases": 739,
+  "differentialVerifiedCases": 367,
+  "differentialVerifiedRuntimeIds": 1452,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -51302,13 +51385,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3981,
-  "referencedJavaRuntimeIds": 3553,
+  "runtimeAssociationCount": 3986,
+  "referencedJavaRuntimeIds": 3558,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 583,
+  "unreferencedJavaRuntimeIds": 578,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 740,
+  "totalCases": 741,
   "totalCapabilities": 126
  }
 }
