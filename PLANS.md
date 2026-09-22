@@ -172,6 +172,31 @@ Active: Draft 4.502 ('expr-enum-sumof-remainder').
   NextJavaContract503; Go surface scout NextGoSurface503b running.
 
 ## Current work unit
+Active: Draft 4.505 ('rowrecog-after').
+
+- Selection: `RowRecogAfter` ords 0-5 (6 unreferenced, AFTER MATCH SKIP
+  family). No flags, no virtual time, listener+iterator dual assertions.
+- [x] Contract frozen (NextJavaContract505 + NextGoSurface505): verbatim
+  EPLs incl. irregular whitespace, ord1 listener-suppression pitfall, ord5
+  skip-past-last non-overlap contrast. Predicted zero shared-core change —
+  confirmed.
+- [x] Parity assets (Assets505): oracle
+  `tools/java-oracle/RowRecogAfterScenarioOracle.java`, run.sh, scenario
+  `testdata/parity/rowrecog-after.json` (6 cases / 102 steps, 47 records).
+  Runner `internal/app/parity/rowrecog_after.go` + run.go dispatch + 2-test
+  family (primary agent).
+- [x] Runner fixes during integration: `.FirstMatch()` required for ord0/ord1
+  (MatchRecognize defaults allMatches=true; non-all-matches EPLs emit only
+  the first/longest match per start); listener sequence resets per deploy
+  cycle (Java attaches a fresh listener per deployment). No engine change.
+- [x] Differential replay: Java 47 records / Go 47 records, `passing` /
+  0 differences. Checked-in traces + evidence under testdata/parity/.
+- [x] Manifest/roadmap/CHANGELOG: `case.rowrecog-after` born-DV (6 runtime
+  IDs); `rowrecog.match-recognize` goRefs + `full Java mapping and trace
+  parity` removed from remaining. Summary 737 cases / 363 DV / 1429 DV
+  runtime IDs / unreferenced 601.
+
+## Current work unit
 Active: Draft 4.504 ('event-objectarray-nested').
 
 - Selection: `EventObjectArrayEventNested` ords 0-4 + `EventObjectArrayEventNestedPojo`
@@ -213,6 +238,7 @@ Active: Draft 4.504 ('event-objectarray-nested').
   ord5 skip-past-last non-overlap contrast); Go surface scout NextGoSurface505
   confirms zero shared-core change (all skip strategies, tag measures,
   partition-by, all-matches, order-by, snapshot iterator exist).
+- [x] Shipped; Git owns identity. Draft 4.504 committed and pushed as `1f08478c4`.
 
 ## Current work unit
 Active: Draft 4.503 ('epl-other-wildcard-additional').

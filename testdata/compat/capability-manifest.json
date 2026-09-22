@@ -2041,7 +2041,8 @@
     "internal/esper/rowrecog_nfa_state_pool_test.go",
     "internal/esper/match_recognize_parity_test.go",
     "internal/app/parity/match_recognize.go",
-    "internal/app/parity/rowrecog_aggregation.go"
+    "internal/app/parity/rowrecog_aggregation.go",
+    "internal/app/parity/rowrecog_after.go"
    ],
    "phase": 5,
    "status": "implemented",
@@ -2053,8 +2054,7 @@
     "remaining complex/dynamic IntervalOrTerminated compositions and calendar termination parity",
     "exact full NFA state repository counts beyond admitted start branches and complete prevent-start transition semantics",
     "Java-scale RowRecogPerf threshold and benchmark harness",
-    "complete delete/update OOSD repository ordering and iterator/order-by semantics",
-    "full Java mapping and trace parity"
+    "complete delete/update OOSD repository ordering and iterator/order-by semantics"
    ],
    "verification": [
     "inventoried",
@@ -47672,6 +47672,78 @@
     "EventObjectArrayEventNested ords 0-4 plus EventObjectArrayEventNestedPojo ord 0 replay six nested object-array executions (12 records, 0 differences): array-property positional OA fields, mapped-property named-map OA columns, map-name-nested optional '?' accessors, map-name, oa-nested TypeRoot#lastevent iterator snapshot, and the 22-column pojo projection over a three-level anonymous nested map def.",
     "The Go runner registers the same OA/map/bean schemas (nested property schemas plus AllowDynamicFields), renders fragments and nested schemas as {kind:row,fields} rows, and decodes _bean/_long payload tags into typed mirrors; the oa-nested case attaches no listener and asserts the iterator via a snapshot record, matching the Java oracle."
    ]
+  },
+  {
+   "id": "case.rowrecog-after",
+   "javaRuntimeIds": [
+    "java-runtime-040bbf4e7c7c45f3cd76",
+    "java-runtime-ad336d2b8e1195e4abf6",
+    "java-runtime-ebf5f4119f980f7d9258",
+    "java-runtime-3ff12edd4f2bb4ecec9b",
+    "java-runtime-21259f97372ba54fe074",
+    "java-runtime-a960711a30045575a880"
+   ],
+   "javaStaticIds": [
+    "java-41b5fd1eb615163a8c32"
+   ],
+   "javaNames": [
+    "RowRecogAfterCurrentRow",
+    "RowRecogAfterNextRow",
+    "RowRecogSkipToNextRow",
+    "RowRecogVariableMoreThenOnce",
+    "RowRecogSkipToNextRowPartitioned",
+    "RowRecogAfterSkipPastLast"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/rowrecog/RowRecogAfter.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunRowRecogAfterDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunRowRecogAfterDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "correctness",
+    "rowrecog",
+    "match-recognize",
+    "after-match-skip",
+    "all-matches",
+    "partition-by",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/rowrecog-after.json",
+    "testdata/parity/rowrecog-after.trace.json",
+    "testdata/parity/rowrecog-after.go.trace.json",
+    "testdata/parity/rowrecog-after.evidence.json",
+    "tools/java-oracle/RowRecogAfterScenarioOracle.java",
+    "tools/java-oracle/run-rowrecog-after.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-040bbf4e7c7c45f3cd76",
+    "java-runtime-ad336d2b8e1195e4abf6",
+    "java-runtime-ebf5f4119f980f7d9258",
+    "java-runtime-3ff12edd4f2bb4ecec9b",
+    "java-runtime-21259f97372ba54fe074",
+    "java-runtime-a960711a30045575a880"
+   ],
+   "notes": [
+    "RowRecogAfter ords 0-5 replay all six AFTER MATCH SKIP executions (47 records, 0 differences): skip-to-current-row extends the in-flight match, skip-to-next-row suppresses the listener callback on extension while the iterator still reflects it, all-matches chained rows, variable-twice A B A patterns, partitioned matches, and skip-past-last-row non-overlap.",
+    "The Go runner maps each pinned deploy EPL to the fluent MatchRecognize builder (FirstMatch for non-all-matches cases, SkipToCurrentRow/SkipToNextRow/SkipPastLastRow, TagField/TagFieldAt measures, PartitionBy, OrderBy); ord0 replays two deploy cycles mirroring compileDeploy + eplToModelCompileDeploy, and the listener sequence resets per deployment."
+   ]
   }
  ],
  "mappings": [
@@ -50958,13 +51030,17 @@
   {
    "capabilityId": "event.object-array",
    "caseId": "case.event-objectarray-nested"
+  },
+  {
+   "capabilityId": "rowrecog.match-recognize",
+   "caseId": "case.rowrecog-after"
   }
  ],
  "summary": {
-  "inventoriedCases": 736,
-  "implementedCases": 734,
-  "differentialVerifiedCases": 362,
-  "differentialVerifiedRuntimeIds": 1423,
+  "inventoriedCases": 737,
+  "implementedCases": 735,
+  "differentialVerifiedCases": 363,
+  "differentialVerifiedRuntimeIds": 1429,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -50974,13 +51050,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3957,
-  "referencedJavaRuntimeIds": 3529,
+  "runtimeAssociationCount": 3963,
+  "referencedJavaRuntimeIds": 3535,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 607,
+  "unreferencedJavaRuntimeIds": 601,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 736,
+  "totalCases": 737,
   "totalCapabilities": 126
  }
 }

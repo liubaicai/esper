@@ -1,0 +1,795 @@
+{
+ "version": "esper-parity/v1",
+ "id": "rowrecog-after",
+ "description": "RowRecogAfter ordinals 0-5 (all six executions, the AFTER MATCH SKIP family): after-current-row runs skip-to-current-row twice, mirroring the Java compileDeploy then eplToModelCompileDeploy cycle as undeploy-all plus redeploy; after-next-row shows incremental-mode listener suppression on the B1 send while the iterator still reports the extended match; skip-to-next-row, variable-more-then-once and skip-to-next-row-partitioned cover all-matches tag sequences including a 22-event four-partition interleave; skip-past-last contrasts skip-to-next-row by forbidding the overlapping E5-E6 match. Each case deploys s0 with the verbatim Java EPL, sends SupportRecogBean events and snapshots the statement iterator.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/rowrecog/RowRecogAfter.java",
+ "javaRuntimes": [
+  "java-runtime-040bbf4e7c7c45f3cd76",
+  "java-runtime-ad336d2b8e1195e4abf6",
+  "java-runtime-ebf5f4119f980f7d9258",
+  "java-runtime-3ff12edd4f2bb4ecec9b",
+  "java-runtime-21259f97372ba54fe074",
+  "java-runtime-a960711a30045575a880"
+ ],
+ "javaNames": [
+  "RowRecogAfterCurrentRow",
+  "RowRecogAfterNextRow",
+  "RowRecogSkipToNextRow",
+  "RowRecogVariableMoreThenOnce",
+  "RowRecogSkipToNextRowPartitioned",
+  "RowRecogAfterSkipPastLast"
+ ],
+ "javaStaticIds": [
+  "java-41b5fd1eb615163a8c32"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "after-current-row",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-040bbf4e7c7c45f3cd76",
+   "executionName": "RowRecogAfterCurrentRow",
+   "observation": "listener+iterator; runs two deploy cycles mirroring the Java compileDeploy then eplToModelCompileDeploy replay",
+   "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize ( measures A.theString as a, B[0].theString as b0, B[1].theString as b1 after match skip to current row pattern (A B*) define A as A.theString like \"A%\", B as B.theString like \"B%\")"
+  },
+  {
+   "case": "after-next-row",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-ad336d2b8e1195e4abf6",
+   "executionName": "RowRecogAfterNextRow",
+   "observation": "listener+iterator; the B1 send produces no listener callback (incremental skip-to-next-row) while the iterator still reports the extended match",
+   "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize (  measures A.theString as a, B[0].theString as b0, B[1].theString as b1  AFTER MATCH SKIP TO NEXT ROW   pattern (A B*)   define     A as A.theString like 'A%',    B as B.theString like 'B%')"
+  },
+  {
+   "case": "skip-to-next-row",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-ebf5f4119f980f7d9258",
+   "executionName": "RowRecogSkipToNextRow",
+   "observation": "listener+iterator",
+   "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize (  measures A.theString as a_string, B.theString as b_string   all matches   after match skip to next row   pattern (A B)   define B as B.value > A.value) order by a_string, b_string"
+  },
+  {
+   "case": "variable-more-then-once",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-3ff12edd4f2bb4ecec9b",
+   "executionName": "RowRecogVariableMoreThenOnce",
+   "observation": "listener+iterator",
+   "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize (  measures A[0].theString as a0, B.theString as b, A[1].theString as a1   all matches   after match skip to next row   pattern ( A B A )   define     A as (A.value = 1),    B as (B.value = 2))"
+  },
+  {
+   "case": "skip-to-next-row-partitioned",
+   "ordinal": 4,
+   "runtimeId": "java-runtime-21259f97372ba54fe074",
+   "executionName": "RowRecogSkipToNextRowPartitioned",
+   "observation": "listener+iterator",
+   "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize (  partition by theString  measures A.theString as a_string, A.value as a_value, B.value as b_value   all matches   after match skip to next row   pattern (A B)   define B as (B.value > A.value)) order by a_string"
+  },
+  {
+   "case": "skip-past-last",
+   "ordinal": 5,
+   "runtimeId": "java-runtime-a960711a30045575a880",
+   "executionName": "RowRecogAfterSkipPastLast",
+   "observation": "listener+iterator; E6 produces no match since skip-past-last forbids the overlapping E5-E6 match (contrast skip-to-next-row)",
+   "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize (  measures A.theString as a_string, B.theString as b_string   all matches   after match skip past last row  pattern (A B)   define B as B.value > A.value) order by a_string, b_string"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "after-current-row"
+  },
+  {
+   "op": "deploy",
+   "case": "after-current-row",
+   "statement": "s0",
+   "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize ( measures A.theString as a, B[0].theString as b0, B[1].theString as b1 after match skip to current row pattern (A B*) define A as A.theString like \"A%\", B as B.theString like \"B%\")"
+  },
+  {
+   "op": "send",
+   "case": "after-current-row",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "A1",
+    "value": 1
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "after-current-row",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "after-current-row",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "B1",
+    "value": 2
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "after-current-row",
+   "statement": "s0"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "after-current-row"
+  },
+  {
+   "op": "deploy",
+   "case": "after-current-row",
+   "statement": "s0",
+   "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize ( measures A.theString as a, B[0].theString as b0, B[1].theString as b1 after match skip to current row pattern (A B*) define A as A.theString like \"A%\", B as B.theString like \"B%\")"
+  },
+  {
+   "op": "send",
+   "case": "after-current-row",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "A1",
+    "value": 1
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "after-current-row",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "after-current-row",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "B1",
+    "value": 2
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "after-current-row",
+   "statement": "s0"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "after-current-row"
+  },
+  {
+   "op": "case",
+   "case": "after-next-row"
+  },
+  {
+   "op": "deploy",
+   "case": "after-next-row",
+   "statement": "s0",
+   "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize (  measures A.theString as a, B[0].theString as b0, B[1].theString as b1  AFTER MATCH SKIP TO NEXT ROW   pattern (A B*)   define     A as A.theString like 'A%',    B as B.theString like 'B%')"
+  },
+  {
+   "op": "send",
+   "case": "after-next-row",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "A1",
+    "value": 1
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "after-next-row",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "after-next-row",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "B1",
+    "value": 2
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "after-next-row",
+   "statement": "s0"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "after-next-row"
+  },
+  {
+   "op": "case",
+   "case": "skip-to-next-row"
+  },
+  {
+   "op": "deploy",
+   "case": "skip-to-next-row",
+   "statement": "s0",
+   "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize (  measures A.theString as a_string, B.theString as b_string   all matches   after match skip to next row   pattern (A B)   define B as B.value > A.value) order by a_string, b_string"
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E1",
+    "value": 5
+   }
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E2",
+    "value": 3
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "skip-to-next-row",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E3",
+    "value": 6
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "skip-to-next-row",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E4",
+    "value": 4
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "skip-to-next-row",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E5",
+    "value": 6
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "skip-to-next-row",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E6",
+    "value": 10
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "skip-to-next-row",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E7",
+    "value": 9
+   }
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E8",
+    "value": 4
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "skip-to-next-row",
+   "statement": "s0"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "skip-to-next-row"
+  },
+  {
+   "op": "case",
+   "case": "variable-more-then-once"
+  },
+  {
+   "op": "deploy",
+   "case": "variable-more-then-once",
+   "statement": "s0",
+   "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize (  measures A[0].theString as a0, B.theString as b, A[1].theString as a1   all matches   after match skip to next row   pattern ( A B A )   define     A as (A.value = 1),    B as (B.value = 2))"
+  },
+  {
+   "op": "send",
+   "case": "variable-more-then-once",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E1",
+    "value": 3
+   }
+  },
+  {
+   "op": "send",
+   "case": "variable-more-then-once",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E2",
+    "value": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "variable-more-then-once",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E3",
+    "value": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "variable-more-then-once",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E4",
+    "value": 5
+   }
+  },
+  {
+   "op": "send",
+   "case": "variable-more-then-once",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E5",
+    "value": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "variable-more-then-once",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E6",
+    "value": 2
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "variable-more-then-once",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "variable-more-then-once",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E7",
+    "value": 1
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "variable-more-then-once",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "variable-more-then-once",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E8",
+    "value": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "variable-more-then-once",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E9",
+    "value": 1
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "variable-more-then-once",
+   "statement": "s0"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "variable-more-then-once"
+  },
+  {
+   "op": "case",
+   "case": "skip-to-next-row-partitioned"
+  },
+  {
+   "op": "deploy",
+   "case": "skip-to-next-row-partitioned",
+   "statement": "s0",
+   "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize (  partition by theString  measures A.theString as a_string, A.value as a_value, B.value as b_value   all matches   after match skip to next row   pattern (A B)   define B as (B.value > A.value)) order by a_string"
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S1",
+    "value": 5
+   }
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S2",
+    "value": 6
+   }
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S3",
+    "value": 3
+   }
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S4",
+    "value": 4
+   }
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S1",
+    "value": 5
+   }
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S2",
+    "value": 5
+   }
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S1",
+    "value": 4
+   }
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S4",
+    "value": -1
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "skip-to-next-row-partitioned",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S1",
+    "value": 6
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "skip-to-next-row-partitioned",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S4",
+    "value": 10
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "skip-to-next-row-partitioned",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S4",
+    "value": 11
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "skip-to-next-row-partitioned",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S3",
+    "value": 3
+   }
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S4",
+    "value": -1
+   }
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S3",
+    "value": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S1",
+    "value": 4
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "skip-to-next-row-partitioned",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S1",
+    "value": 7
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "skip-to-next-row-partitioned",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S4",
+    "value": 12
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "skip-to-next-row-partitioned",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S4",
+    "value": 12
+   }
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S1",
+    "value": 7
+   }
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S2",
+    "value": 4
+   }
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S1",
+    "value": 5
+   }
+  },
+  {
+   "op": "send",
+   "case": "skip-to-next-row-partitioned",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "S2",
+    "value": 5
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "skip-to-next-row-partitioned",
+   "statement": "s0"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "skip-to-next-row-partitioned"
+  },
+  {
+   "op": "case",
+   "case": "skip-past-last"
+  },
+  {
+   "op": "deploy",
+   "case": "skip-past-last",
+   "statement": "s0",
+   "epl": "@name('s0') select * from SupportRecogBean#keepall match_recognize (  measures A.theString as a_string, B.theString as b_string   all matches   after match skip past last row  pattern (A B)   define B as B.value > A.value) order by a_string, b_string"
+  },
+  {
+   "op": "send",
+   "case": "skip-past-last",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E1",
+    "value": 5
+   }
+  },
+  {
+   "op": "send",
+   "case": "skip-past-last",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E2",
+    "value": 3
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "skip-past-last",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "skip-past-last",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E3",
+    "value": 6
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "skip-past-last",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "skip-past-last",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E4",
+    "value": 4
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "skip-past-last",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "skip-past-last",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E5",
+    "value": 6
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "skip-past-last",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "skip-past-last",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E6",
+    "value": 10
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "skip-past-last",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "skip-past-last",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E7",
+    "value": 9
+   }
+  },
+  {
+   "op": "send",
+   "case": "skip-past-last",
+   "eventType": "SupportRecogBean",
+   "payload": {
+    "theString": "E8",
+    "value": 4
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "skip-past-last",
+   "statement": "s0"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "skip-past-last"
+  }
+ ]
+}

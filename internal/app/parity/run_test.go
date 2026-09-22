@@ -16686,6 +16686,123 @@ func TestRunEventObjectArrayNestedDiffRejectsTraceMutations(t *testing.T) {
 	}
 }
 
+func TestRunRowRecogAfterDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "rowrecog-after.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "rowrecog-after.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "rowrecog-after.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "rowrecog-after-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunRowRecogAfterDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "after-current-row-extended-match-drift",
+			mutate: func(trace *compat.Trace) {
+				// B1 extends the in-flight match under skip-to-current-row;
+				// drifting b0 means the extension was lost.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "after-current-row" && rec.Operation == "snapshot" && len(rec.New) == 1 {
+						fields := rec.New[0].Fields
+						if fields["b0"] == "B1" {
+							fields["b0"] = "drifted"
+							return
+						}
+					}
+				}
+				panic("no after-current-row extended snapshot")
+			},
+		},
+		{
+			name: "skip-to-next-row-chained-match-drift",
+			mutate: func(trace *compat.Trace) {
+				// E5-E6 chains off E4-E5 under all-matches skip-to-next-row;
+				// drifting the third iterator row means chaining broke.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "skip-to-next-row" && rec.Operation == "snapshot" && len(rec.New) == 3 {
+						rec.New[2].Fields["a_string"] = "drifted"
+						return
+					}
+				}
+				panic("no skip-to-next-row 3-row snapshot")
+			},
+		},
+		{
+			name: "skip-past-last-non-overlap-drift",
+			mutate: func(trace *compat.Trace) {
+				// skip-past-last forbids the overlapping E5-E6 match; adding
+				// it means non-overlap broke.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "skip-past-last" && rec.Operation == "snapshot" && len(rec.New) == 2 {
+						rec.New = append(rec.New, compat.ResultRecord{Kind: "row", Fields: map[string]any{
+							"a_string": "E5", "b_string": "E6",
+						}})
+						return
+					}
+				}
+				panic("no skip-past-last 2-row snapshot")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "rowrecog-after.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "rowrecog-after.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "rowrecog-after.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "rowrecog-after-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", evidence)
+			}
+		})
+	}
+}
+
 func TestRunEplOtherWildcardAdditionalDirectReplay(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "testdata", "parity")
 	var stdout, stderr bytes.Buffer
