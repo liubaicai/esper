@@ -72,6 +72,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include context-selection-faf and context-selection-faf-diff")
 		fmt.Fprintln(stderr, "runner modes include context-selection-faf-nested and context-selection-faf-nested-diff")
 		fmt.Fprintln(stderr, "runner modes include view-group-closure and view-group-closure-diff")
+		fmt.Fprintln(stderr, "runner modes include resultset-output-limit-crontab-when-closure and resultset-output-limit-crontab-when-closure-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
@@ -383,6 +384,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraTableInvalidScenario(file)
 	} else if *mode == "infra-table-count-min-sketch" || *mode == "infra-table-count-min-sketch-diff" {
 		scenario, err = loadInfraTableCMSScenario(file)
+	} else if *mode == "resultset-output-limit-crontab-when-closure" || *mode == "resultset-output-limit-crontab-when-closure-diff" {
+		scenario, err = loadResultSetOutputLimitCrontabWhenClosureScenario(file)
 	} else if *mode == "view-group-closure" || *mode == "view-group-closure-diff" {
 		scenario, err = loadViewGroupClosureScenario(file)
 	} else {
@@ -4983,6 +4986,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaSourceFiles, resultsetOutputLimitRowPerGroupFirstJavaSources),
 				splitMetadata(*javaExecutions, resultsetOutputLimitRowPerGroupFirstJavaExecutions), scenario, trace,
 				normalizeResultSetOutputLimitRowPerGroupFirstTrace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-output-limit-crontab-when-closure" || *mode == "resultset-output-limit-crontab-when-closure-diff" {
+		trace, err := runResultSetOutputLimitCrontabWhenClosureScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-output-limit-crontab-when-closure-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, resultsetOutputLimitCrontabWhenClosureJavaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetOutputLimitCrontabWhenClosureJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetOutputLimitCrontabWhenClosureSources),
+				splitMetadata(*javaExecutions, resultsetOutputLimitCrontabWhenClosureJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

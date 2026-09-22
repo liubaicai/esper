@@ -70944,3 +70944,228 @@ func TestRunHelpIncludesContextKeySegmentedAllocationTime(t *testing.T) {
 		}
 	}
 }
+
+func TestRunResultSetOutputLimitCrontabWhenClosureDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-output-limit-crontab-when-closure.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-output-limit-crontab-when-closure.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-output-limit-crontab-when-closure.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-output-limit-crontab-when-closure-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	if len(evidence.JavaRuntimeIDs) != 3 {
+		t.Fatalf("runtime ids = %d, want 3", len(evidence.JavaRuntimeIDs))
+	}
+}
+
+func TestRunResultSetOutputLimitCrontabWhenClosureDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "soda-to-epl-drift",
+			mutate: func(trace *compat.Trace) {
+				// The when-then-soda unrepresentable record pins the
+				// asserted SODA toEPL text.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "when-then-soda" && rec.Operation == "unrepresentable" {
+						rec.Value = "select symbol from SupportMarketDataBean#length(2)"
+						return
+					}
+				}
+				panic("no soda-to-epl record")
+			},
+		},
+		{
+			name: "same-var-extra-row",
+			mutate: func(trace *compat.Trace) {
+				// The s1 listener record must carry exactly the last
+				// buffered row E2; a second row means output-last leaked
+				// the whole buffer.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "same-var-twice" && rec.Statement == "s1" && rec.Operation == "listener" {
+						rec.New = append(rec.New, rec.New[0])
+						return
+					}
+				}
+				panic("no s1 listener record")
+			},
+		},
+		{
+			name: "every-zero-prefix-drift",
+			mutate: func(trace *compat.Trace) {
+				// The final invalid probe pins the zero-interval prefix.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "invalid" && rec.Statement == "every-zero-seconds" {
+						rec.Value = "different error"
+						return
+					}
+				}
+				panic("no every-zero-seconds record")
+			},
+		},
+		{
+			name: "record-dropped",
+			mutate: func(trace *compat.Trace) {
+				// All fifteen records must replay.
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "resultset-output-limit-crontab-when-closure.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-output-limit-crontab-when-closure.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-output-limit-crontab-when-closure.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-output-limit-crontab-when-closure-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunResultSetOutputLimitCrontabWhenClosureRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "resultset-output-limit-crontab-when-closure.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "resultset-output-limit-crontab-when-closure"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "resultset-output-limit-crontab-when-closure"`)...), 1)
+		}},
+		{name: "case-metadata", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 13`), []byte(`"ordinal": 14`), 1)
+		}},
+		{name: "step-field-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "deploy",
+   "case": "same-var-twice",
+   "statement": "s1"`), []byte(`"op": "deploy",
+   "case": "same-var-twice",
+   "statement": "s1",
+   "extra": 0`), 1)
+		}},
+		{name: "step-field-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"statement": "when-non-bool",`), []byte(`"statement": "when-non-bool",
+      "statement": "when-non-bool",`), 1)
+		}},
+		{name: "step-at-mutated", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"at": "1970-01-01T00:00:02Z"`), []byte(`"at": "1970-01-01T00:00:03Z"`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", "resultset-output-limit-crontab-when-closure",
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunResultSetOutputLimitCrontabWhenClosureRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-output-limit-crontab-when-closure.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, resultsetOutputLimitCrontabWhenClosureJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, resultsetOutputLimitCrontabWhenClosureJavaExecutions) {
+		t.Fatalf("scenario metadata runtimes=%v names=%v", document.JavaRuntimes, document.JavaNames)
+	}
+	for _, entry := range document.Cases {
+		if resultsetOutputLimitCrontabWhenClosureCaseRuntimeIDs[entry.Case] != entry.RuntimeID {
+			t.Fatalf("case %q runtimeId = %q, want %q", entry.Case, entry.RuntimeID, resultsetOutputLimitCrontabWhenClosureCaseRuntimeIDs[entry.Case])
+		}
+	}
+}
+
+func TestRunHelpIncludesResultSetOutputLimitCrontabWhenClosure(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-h"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("help exit code = %d, stderr = %q", code, stderr.String())
+	}
+	for _, mode := range []string{
+		"resultset-output-limit-crontab-when-closure",
+		"resultset-output-limit-crontab-when-closure-diff",
+	} {
+		if !strings.Contains(stderr.String(), mode) {
+			t.Fatalf("help output omits %q: %s", mode, stderr.String())
+		}
+	}
+}

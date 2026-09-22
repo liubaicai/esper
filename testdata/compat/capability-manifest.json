@@ -5611,6 +5611,52 @@
     "differential-verified"
    ],
    "notes": "All three remaining ViewGroup executions differential-verified; ViewGroup.java fully covered."
+  },
+  {
+   "id": "resultset.output-when-then-closure",
+   "domain": "resultset",
+   "level": "S",
+   "summary": "Output-when-then closure: SODA deploy smoke, same-variable-twice output-last-when, invalid-form diagnostics",
+   "javaRefs": [
+    "ResultSetOutputWhenThenExpressionSODA",
+    "ResultSetOutputWhenThenSameVarTwice",
+    "ResultSetInvalid"
+   ],
+   "javaRuntimeIds": [
+    "java-runtime-c8af5811fef1d7f582d6",
+    "java-runtime-feee4a26544010fc7fed",
+    "java-runtime-54ed0a4e11d7714b8289"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-c8af5811fef1d7f582d6",
+    "java-runtime-feee4a26544010fc7fed",
+    "java-runtime-54ed0a4e11d7714b8289"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitCrontabWhen.java"
+   ],
+   "goRefs": [
+    "internal/esper/stream.go",
+    "internal/esper/expr.go",
+    "internal/esper/plan.go",
+    "internal/esper/runtime.go",
+    "internal/app/parity/resultset_output_limit_crontab_when_closure.go"
+   ],
+   "tags": [
+    "resultset",
+    "output-limit",
+    "when-then"
+   ],
+   "status": "differential-verified",
+   "cases": [
+    "case.resultset-output-limit-crontab-when-closure"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "notes": "All three remaining ResultSetOutputLimitCrontabWhen executions differential-verified; the file is fully covered."
   }
  ],
  "cases": [
@@ -47258,6 +47304,71 @@
     "java-runtime-d9b2e762c318369875e5"
    ],
    "notes": "Draft 4.494: ViewGroup ordinals 7/8/19 \u2014 the last three unreferenced executions of the file. Java/Go each 11 records, 0 differences. Covers five groupwin invalid probes (multiple declarations, no child views, not-first-position, merge+multi-window [pinned-only, unrepresentable], null-typed key), the groupwin/length/weighted_avg performance smoke (thin trace: deployed + sent markers), and the escaped mapped-property groupwin compile+deploy smoke. Shared core: WeightedAvg emits NaN on zero total weight; weighted-avg joins groupwin implicit grouping; groupwin first-position and null-key validation added."
+  },
+  {
+   "id": "case.resultset-output-limit-crontab-when-closure",
+   "javaRuntimeIds": [
+    "java-runtime-c8af5811fef1d7f582d6",
+    "java-runtime-feee4a26544010fc7fed",
+    "java-runtime-54ed0a4e11d7714b8289"
+   ],
+   "javaStaticIds": [
+    "java-1ebf6ec5d07196df180e",
+    "java-40115e717917aa787855",
+    "java-ecf17baa44d87226cc82"
+   ],
+   "javaNames": [
+    "ResultSetOutputWhenThenExpressionSODA",
+    "ResultSetOutputWhenThenSameVarTwice",
+    "ResultSetInvalid"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitCrontabWhen.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetOutputLimitCrontabWhenClosureDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetOutputLimitCrontabWhenClosureDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultSetOutputLimitCrontabWhenClosureRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultSetOutputLimitCrontabWhenClosureRuntimeIDMappingMatchesScenario",
+    "internal/app/parity/run_test.go:TestRunHelpIncludesResultSetOutputLimitCrontabWhenClosure",
+    "internal/esper/when_valid_test.go:TestOutputWhenRejectsAggregate",
+    "internal/esper/when_valid_test.go:TestOutputWhenRejectsPrev",
+    "internal/esper/when_valid_test.go:TestOutputThenRejectsAggregate",
+    "internal/esper/when_valid_test.go:TestOutputLastWhenEmitsLastRowOnly",
+    "internal/esper/when_valid_test.go:TestOutputLastWhenGroupedEmitsLastRowPerKey"
+   ],
+   "tags": [
+    "resultset",
+    "output-limit",
+    "when-then",
+    "output-last",
+    "invalid",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "testdata/parity/resultset-output-limit-crontab-when-closure.json",
+    "testdata/parity/resultset-output-limit-crontab-when-closure.trace.json",
+    "testdata/parity/resultset-output-limit-crontab-when-closure.go.trace.json",
+    "testdata/parity/resultset-output-limit-crontab-when-closure.evidence.json",
+    "tools/java-oracle/ResultSetOutputLimitCrontabWhenClosureScenarioOracle.java",
+    "tools/java-oracle/run-resultset-output-limit-crontab-when-closure.sh"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-c8af5811fef1d7f582d6",
+    "java-runtime-feee4a26544010fc7fed",
+    "java-runtime-54ed0a4e11d7714b8289"
+   ],
+   "notes": "Draft 4.495: ResultSetOutputLimitCrontabWhen ordinals 9/10/13 \u2014 the last three unreferenced executions of the file. Java/Go each 15 records, 0 differences. Covers the SODA when-then deploy smoke (toEPL text pinned unrepresentable), the same-variable-twice output-last-when listener pair (engine fix: whenPending reduces to last row per key for OutputLastPolicy), and 8 invalid probes (3 new validations: aggregate-in-when, aggregate-in-then-set, prev-in-when; 1 unrepresentable 'then set 1')."
   }
  ],
  "mappings": [
@@ -50532,29 +50643,33 @@
   {
    "capabilityId": "view.group-closure",
    "caseId": "case.view-group-closure"
+  },
+  {
+   "capabilityId": "resultset.output-when-then-closure",
+   "caseId": "case.resultset-output-limit-crontab-when-closure"
   }
  ],
  "summary": {
-  "inventoriedCases": 733,
-  "implementedCases": 731,
-  "differentialVerifiedCases": 357,
-  "differentialVerifiedRuntimeIds": 1384,
+  "inventoriedCases": 734,
+  "implementedCases": 732,
+  "differentialVerifiedCases": 358,
+  "differentialVerifiedRuntimeIds": 1387,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
-  "inventoriedCapabilities": 124,
-  "implementedCapabilities": 123,
-  "differentialVerifiedCapabilities": 43,
+  "inventoriedCapabilities": 125,
+  "implementedCapabilities": 124,
+  "differentialVerifiedCapabilities": 44,
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3934,
-  "referencedJavaRuntimeIds": 3506,
+  "runtimeAssociationCount": 3937,
+  "referencedJavaRuntimeIds": 3509,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 630,
+  "unreferencedJavaRuntimeIds": 627,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 733,
-  "totalCapabilities": 124
+  "totalCases": 734,
+  "totalCapabilities": 125
  }
 }

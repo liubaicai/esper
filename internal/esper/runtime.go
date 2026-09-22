@@ -205,6 +205,7 @@ func (b ResultBatch) clone() ResultBatch {
 	b.New = append([]Result(nil), b.New...)
 	b.Old = append([]Result(nil), b.Old...)
 	b.outputKeysNew = append([]string(nil), b.outputKeysNew...)
+	b.outputKeysOld = append([]string(nil), b.outputKeysOld...)
 	b.inputKeysNew = append([]string(nil), b.inputKeysNew...)
 	b.removedGroupKeys = append([]string(nil), b.removedGroupKeys...)
 	b.updatedGroupKeys = append([]string(nil), b.updatedGroupKeys...)
@@ -11666,6 +11667,13 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 			return ResultBatch{}
 		}
 		batch = r.takeWhenPending(batch)
+		if policy.Kind == OutputLastPolicy {
+			// `output last when` retains only the last row per output key,
+			// matching Java's processOutputLimitedLastAllNonBufferedView:
+			// rows buffered while the condition was false collapse to each
+			// key's final row instead of replaying every buffered row.
+			batch = lastOutputRows(batch)
+		}
 	}
 	if policy.When != nil && policy.Kind == OutputSnapshotPolicy {
 		return r.finishOutput(policy, batch, now, plans...)
@@ -14441,6 +14449,11 @@ func (r *statementRuntime) appendWhenPending(batch ResultBatch) {
 	}
 	r.outputState.whenPending.New = append(r.outputState.whenPending.New, batch.New...)
 	r.outputState.whenPending.Old = append(r.outputState.whenPending.Old, batch.Old...)
+	r.outputState.whenPending.outputKeysNew = append(r.outputState.whenPending.outputKeysNew, batch.outputKeysNew...)
+	r.outputState.whenPending.outputKeysOld = append(r.outputState.whenPending.outputKeysOld, batch.outputKeysOld...)
+	r.outputState.whenPending.inputKeysNew = append(r.outputState.whenPending.inputKeysNew, batch.inputKeysNew...)
+	r.outputState.whenPending.removedGroupKeys = append(r.outputState.whenPending.removedGroupKeys, batch.removedGroupKeys...)
+	r.outputState.whenPending.updatedGroupKeys = append(r.outputState.whenPending.updatedGroupKeys, batch.updatedGroupKeys...)
 	r.outputState.whenPending.Time = batch.Time
 }
 

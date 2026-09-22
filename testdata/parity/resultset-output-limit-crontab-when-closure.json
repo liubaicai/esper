@@ -1,0 +1,250 @@
+{
+ "version": "esper-parity/v1",
+ "id": "resultset-output-limit-crontab-when-closure",
+ "description": "ResultSetOutputLimitCrontabWhen closure surface (ords 9, 10, 13): when-then-soda replays ResultSetOutputWhenThenExpressionSODA \u2014 runtimeSetVariable(myvar,0), advance to 2008-02-01T08:00, deploy the inert `on SupportBean set myvar = intPrimitive` trigger and the s0 `select symbol from SupportMarketDataBean#length(2) output when myvar=1 then set myvar=0, count_insert_var=count_insert` statement, then undeploy-all; the SODA toEPL assertion pins as an unrepresentable record carrying the asserted EPL (no Go object model); same-var-twice replays ResultSetOutputWhenThenSameVarTwice (JIRA-386) \u2014 s1 and s2 deploy the identical `select * from SupportMarketDataBean output last when myvar=100` module, E1/E2 sends plus a one-second advance fire neither listener, then myvar=100 and a second advance fire both with the single last buffered row E2 before both modules undeploy; invalid replays ResultSetInvalid's eight path-less tryInvalidCompile probes pinning the output-clause rejection prefixes (non-boolean when, then-set type mismatch, aggregate in then-set, then-set literal \u2014 unrepresentable in Go, aggregate over a stream property in when, aggregate over count_insert in when, prev in when, zero-second every interval). compile-error records carry the pinned Java message prefixes; unrepresentable records pin the asserted EPL and the then-set-literal prefix; deployed records mark each module statement; listener records carry the s1/s2 last-row emissions (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitCrontabWhen.java).",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitCrontabWhen.java",
+ "javaRuntimes": [
+  "java-runtime-c8af5811fef1d7f582d6",
+  "java-runtime-feee4a26544010fc7fed",
+  "java-runtime-54ed0a4e11d7714b8289"
+ ],
+ "javaNames": [
+  "ResultSetOutputWhenThenExpressionSODA",
+  "ResultSetOutputWhenThenSameVarTwice",
+  "ResultSetInvalid"
+ ],
+ "javaStaticIds": [
+  "java-1ebf6ec5d07196df180e",
+  "java-40115e717917aa787855",
+  "java-ecf17baa44d87226cc82"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "when-then-soda",
+   "ordinal": 9,
+   "runtimeId": "java-runtime-c8af5811fef1d7f582d6",
+   "executionName": "ResultSetOutputWhenThenExpressionSODA",
+   "observation": "deployed+unrepresentable; myvar=0 and the 2008-02-01T08:00 advance precede the inert on-set deploy and the s0 length(2) output-when-then deploy; the SODA model's toEPL assertion pins the byte-exact EPL as an unrepresentable record (no Go object model); no events are sent so the listener never fires",
+   "epl": "@name('s0') select symbol from SupportMarketDataBean#length(2) output when myvar=1 then set myvar=0, count_insert_var=count_insert"
+  },
+  {
+   "case": "same-var-twice",
+   "ordinal": 10,
+   "runtimeId": "java-runtime-feee4a26544010fc7fed",
+   "executionName": "ResultSetOutputWhenThenSameVarTwice",
+   "observation": "deployed+listener; s1 and s2 deploy the identical `output last when myvar=100` module, E1/E2 sends and a one-second advance fire neither listener, then myvar=100 and a second advance fire both listeners with the single last buffered row E2 before both modules undeploy",
+   "epl": "@name('s1') select * from SupportMarketDataBean output last when myvar=100"
+  },
+  {
+   "case": "invalid",
+   "ordinal": 13,
+   "runtimeId": "java-runtime-54ed0a4e11d7714b8289",
+   "executionName": "ResultSetInvalid",
+   "observation": "compile-error+unrepresentable; eight path-less tryInvalidCompile probes pin the output-clause rejections: non-boolean when, then-set type mismatch, aggregate in then-set, then-set literal without a variable name (pinned-only; SetOutputVariable requires a name), aggregate over a stream property in when, aggregate over count_insert in when, prev in when, and a zero-second every interval",
+   "epl": "select * from SupportMarketDataBean output when myvardummy"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "when-then-soda"
+  },
+  {
+   "op": "set-variable",
+   "case": "when-then-soda",
+   "name": "myvar",
+   "payload": 0
+  },
+  {
+   "op": "advance-time",
+   "case": "when-then-soda",
+   "at": "2008-02-01T08:00:00Z"
+  },
+  {
+   "op": "deploy",
+   "case": "when-then-soda",
+   "statement": "on-set",
+   "epl": "on SupportBean set myvar = intPrimitive"
+  },
+  {
+   "op": "deployed",
+   "case": "when-then-soda",
+   "statement": "on-set"
+  },
+  {
+   "op": "deploy",
+   "case": "when-then-soda",
+   "statement": "s0",
+   "epl": "@name('s0') select symbol from SupportMarketDataBean#length(2) output when myvar=1 then set myvar=0, count_insert_var=count_insert"
+  },
+  {
+   "op": "deployed",
+   "case": "when-then-soda",
+   "statement": "s0"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "when-then-soda",
+   "statement": "soda-to-epl",
+   "epl": "@name('s0') select symbol from SupportMarketDataBean#length(2) output when myvar=1 then set myvar=0, count_insert_var=count_insert",
+   "expectError": "@name('s0') select symbol from SupportMarketDataBean#length(2) output when myvar=1 then set myvar=0, count_insert_var=count_insert"
+  },
+  {
+   "op": "set-variable",
+   "case": "when-then-soda",
+   "name": "myvar",
+   "payload": 0
+  },
+  {
+   "op": "undeploy-all",
+   "case": "when-then-soda"
+  },
+  {
+   "op": "case",
+   "case": "same-var-twice"
+  },
+  {
+   "op": "advance-time",
+   "case": "same-var-twice",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deploy",
+   "case": "same-var-twice",
+   "statement": "s1",
+   "epl": "@name('s1') select * from SupportMarketDataBean output last when myvar=100"
+  },
+  {
+   "op": "deployed",
+   "case": "same-var-twice",
+   "statement": "s1"
+  },
+  {
+   "op": "deploy",
+   "case": "same-var-twice",
+   "statement": "s2",
+   "epl": "@name('s2') select * from SupportMarketDataBean output last when myvar=100"
+  },
+  {
+   "op": "deployed",
+   "case": "same-var-twice",
+   "statement": "s2"
+  },
+  {
+   "op": "send",
+   "case": "same-var-twice",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "ABC",
+    "id": "E1",
+    "price": 100
+   }
+  },
+  {
+   "op": "send",
+   "case": "same-var-twice",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "ABC",
+    "id": "E2",
+    "price": 100
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "same-var-twice",
+   "at": "1970-01-01T00:00:01Z"
+  },
+  {
+   "op": "set-variable",
+   "case": "same-var-twice",
+   "name": "myvar",
+   "payload": 100
+  },
+  {
+   "op": "advance-time",
+   "case": "same-var-twice",
+   "at": "1970-01-01T00:00:02Z"
+  },
+  {
+   "op": "undeploy",
+   "case": "same-var-twice",
+   "statement": "s1"
+  },
+  {
+   "op": "undeploy",
+   "case": "same-var-twice",
+   "statement": "s2"
+  },
+  {
+   "op": "case",
+   "case": "invalid"
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "when-non-bool",
+   "epl": "select * from SupportMarketDataBean output when myvardummy",
+   "expectError": "The when-trigger expression in the OUTPUT WHEN clause must return a boolean-type value [select * from SupportMarketDataBean output when myvardummy]",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "then-set-type-mismatch",
+   "epl": "select * from SupportMarketDataBean output when true then set myvardummy = 'b'",
+   "expectError": "Failed to validate the output rate limiting clause: Failed to validate assignment expression 'myvardummy=\"b\"': Variable 'myvardummy' of declared type Integer cannot be assigned a value of type String [select * from SupportMarketDataBean output when true then set myvardummy = 'b']",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "then-set-aggregate",
+   "epl": "select * from SupportMarketDataBean output when true then set myvardummy = sum(myvardummy)",
+   "expectError": "Aggregation functions may not be used within update-set [select * from SupportMarketDataBean output when true then set myvardummy = sum(myvardummy)]",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "unrepresentable",
+   "case": "invalid",
+   "statement": "then-set-literal",
+   "epl": "select * from SupportMarketDataBean output when true then set 1",
+   "expectError": "Failed to validate the output rate limiting clause: Failed to validate assignment expression '1': Assignment expression must receive a single variable value",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "when-aggregate-property",
+   "epl": "select * from SupportMarketDataBean output when sum(price) > 0",
+   "expectError": "Failed to validate output limit expression '(sum(price))>0': Property named 'price' is not valid in any stream [select * from SupportMarketDataBean output when sum(price) > 0]",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "when-aggregate-count-insert",
+   "epl": "select * from SupportMarketDataBean output when sum(count_insert) > 0",
+   "expectError": "An aggregate function may not appear in a OUTPUT LIMIT clause [select * from SupportMarketDataBean output when sum(count_insert) > 0]",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "when-prev-count-insert",
+   "epl": "select * from SupportMarketDataBean output when prev(1, count_insert) = 0",
+   "expectError": "Failed to validate output limit expression 'prev(1,count_insert)=0': Previous function cannot be used in this context [select * from SupportMarketDataBean output when prev(1, count_insert) = 0]",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "every-zero-seconds",
+   "epl": "select theString, count(*) from SupportBean#length(2) group by theString output all every 0 seconds",
+   "expectError": "Invalid time period expression returns a zero or negative time interval [select theString, count(*) from SupportBean#length(2) group by theString output all every 0 seconds]",
+   "compileWithoutPath": true
+  }
+ ]
+}

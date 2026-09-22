@@ -7539,6 +7539,12 @@ func (e *Environment) validateOutputExpressions(policy OutputPolicy) error {
 		if len(fields) > 0 {
 			return NewError(ErrorInvalidRule, "output when condition can reference variables only")
 		}
+		if expressionNodeContainsAggregate(policy.When.node()) {
+			return NewError(ErrorInvalidRule, "An aggregate function may not appear in a OUTPUT LIMIT clause")
+		}
+		if expressionContainsKind(policy.When.node(), "prev") || expressionContainsKind(policy.When.node(), "prior") {
+			return NewError(ErrorInvalidRule, "Previous function cannot be used in this context")
+		}
 	}
 	seen := make(map[string]struct{}, len(policy.Then))
 	for index, assignment := range policy.Then {
@@ -7567,6 +7573,9 @@ func (e *Environment) validateOutputExpressions(policy OutputPolicy) error {
 		assignment.Expr.node().referencedFields(&fields)
 		if len(fields) > 0 {
 			return NewError(ErrorInvalidRule, "output assignments can reference variables only")
+		}
+		if expressionNodeContainsAggregate(assignment.Expr.node()) {
+			return NewError(ErrorInvalidRule, "Aggregation functions may not be used within update-set")
 		}
 		if expressionType := assignment.Expr.Type(); definition.typ != nil && definition.typ != typeOf[any]() && expressionType != nil && expressionType != typeOf[any]() {
 			if !definition.typ.AssignableTo(expressionType) && !expressionType.AssignableTo(definition.typ) && !numericTypes(definition.typ, expressionType) {
