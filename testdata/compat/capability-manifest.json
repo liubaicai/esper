@@ -26289,7 +26289,14 @@
     "TestRunResultsetOrderbySimpleJoinWildcardCheckedInEvidenceMatchesTraceAndReplay",
     "TestRunResultsetOrderbySimpleJoinWildcardRejectsMalformedRawScenario",
     "TestRunResultsetOrderbySimpleJoinWildcardRuntimeIDMappingMatchesScenario",
-    "TestRunHelpIncludesResultsetOrderbySimpleJoinWildcard"
+    "TestRunHelpIncludesResultsetOrderbySimpleJoinWildcard",
+    "TestRunResultsetOrderbySimpleNoOutputInvalidDirectReplay",
+    "TestRunResultsetOrderbySimpleNoOutputInvalidDiffWritesPassingEvidence",
+    "TestRunResultsetOrderbySimpleNoOutputInvalidDiffRejectsTraceMutations",
+    "TestRunResultsetOrderbySimpleNoOutputInvalidCheckedInEvidenceMatchesTraceAndReplay",
+    "TestRunResultsetOrderbySimpleNoOutputInvalidRejectsMalformedRawScenario",
+    "TestRunResultsetOrderbySimpleNoOutputInvalidRuntimeIDMappingMatchesScenario",
+    "TestRunHelpIncludesResultsetOrderbySimpleNoOutputInvalid"
    ],
    "tags": [
     "orderby",
@@ -26321,9 +26328,12 @@
     "java-runtime-6c1c5e581115d83acac7",
     "java-runtime-2524d06789dd35e36c8e",
     "java-runtime-9455a5a72c84baa7bdc2",
-    "java-runtime-4aaec5e95dbea839ece3"
+    "java-runtime-4aaec5e95dbea839ece3",
+    "java-runtime-6de2b14776f97a0a69b2",
+    "java-runtime-091c77bae73759b7cb3e",
+    "java-runtime-bbc3ab446f26d0f99488"
    ],
-   "notes": "Draft 4.497: ord 3 DescendingOM + ord 4 variants 2-6 DV'd; OM text/serialization unrepresentable. Draft 4.498: ord 5-9 expressions/aliases/multikey DV'd. Draft 4.499: ord 10-14 join/wildcard DV'd."
+   "notes": "Draft 4.497: ord 3 DescendingOM + ord 4 variants 2-6 DV'd; OM text/serialization unrepresentable. Draft 4.498: ord 5-9 expressions/aliases/multikey DV'd. Draft 4.499: ord 10-14 join/wildcard DV'd. Draft 4.500: ord 15-17 no-output/invalid DV'd; plan.go aggregate-order-by validation added."
   },
   {
    "id": "case.infra-table-access-filter",
@@ -50807,7 +50817,7 @@
   "inventoriedCases": 735,
   "implementedCases": 733,
   "differentialVerifiedCases": 359,
-  "differentialVerifiedRuntimeIds": 1400,
+  "differentialVerifiedRuntimeIds": 1403,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,

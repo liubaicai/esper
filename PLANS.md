@@ -123,6 +123,25 @@ Active: Draft 4.495 ('resultset-output-when-then-closure').
 - [x] Shipped; Git owns identity. Draft 4.495 committed and pushed as `98d55664e`.
 
 ## Current work unit
+Active: Draft 4.500 ('resultset-orderby-simple-no-output-invalid').
+
+- Selection: `ResultSetOrderBySimple` ordinals 15-17 (no-output-clause-view,
+  no-output-clause-join, invalid). Ords 15-16 replayable; ord 17 build-error
+  probes requiring new plan.go validation.
+- [x] Contract frozen (JavaContract500 + GoSurface500): ords 15-16
+  replayable; ord 17 needs aggregate-order-by validation rule.
+- [x] Parity assets (Assets500): runner, scenario (5 cases / 51 steps),
+  oracle, run.sh, run.go/run_test.go wiring, plan.go
+  `validateOrderByAggregates` rule. Java trace via oracle, Go trace, diff
+  `passing` / 0 differences (20 records each).
+- [x] Manifest: `case.resultset-orderby-simple` extended (+3 net-new DV
+  runtime IDs). Summary 735 cases / 359 DV / 1403 DV runtime IDs,
+  unreferenced 623.
+- [x] Gates + parity review: `make check` green (parity 84s, esper 110s).
+  Reviewer ParityReview500: PASS with 2 P3 findings (pre-existing manifest
+  staleness, not blockers).
+
+## Current work unit
 Active: Draft 4.499 ('resultset-orderby-simple-join-wildcard').
 
 - Selection: `ResultSetOrderBySimple` ordinals 10-14 (multiple-keys-join,

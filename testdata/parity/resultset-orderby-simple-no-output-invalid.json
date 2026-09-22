@@ -1,0 +1,123 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-orderby-simple-no-output-invalid",
+  "description": "ResultSetOrderBySimple ordinals 15-17: order-by without an output clause over a length window and a time batch, the same two shapes over the SupportMarketDataBean/SupportBeanString join, and six build-error probes pinning the aggregate order-by compile diagnostic.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/orderby/ResultSetOrderBySimple.java",
+  "javaRuntimes": [
+    "java-runtime-6de2b14776f97a0a69b2",
+    "java-runtime-091c77bae73759b7cb3e",
+    "java-runtime-bbc3ab446f26d0f99488"
+  ],
+  "javaNames": [
+    "ResultSetNoOutputClauseView",
+    "ResultSetNoOutputClauseJoin",
+    "ResultSetInvalid"
+  ],
+  "javaStaticIds": [
+    "java-042c1b302e7183feb8a6",
+    "java-042c1b302e7183feb8a6",
+    "java-042c1b302e7183feb8a6"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "no-output-view-v1",
+      "ordinal": 15,
+      "runtimeId": "java-runtime-6de2b14776f97a0a69b2",
+      "executionName": "ResultSetNoOutputClauseView",
+      "observation": "listener; ordinal 15 variant 1 emits one sorted single-row batch per market event over length(5) with no output clause",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select symbol from SupportMarketDataBean#length(5) order by price"
+    },
+    {
+      "case": "no-output-view-v2",
+      "ordinal": 15,
+      "runtimeId": "java-runtime-6de2b14776f97a0a69b2",
+      "executionName": "ResultSetNoOutputClauseView",
+      "observation": "listener; ordinal 15 variant 2 emits one six-row batch sorted by price when the time_batch(1 sec) window flushes at the one-second boundary",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select symbol from SupportMarketDataBean#time_batch(1 sec) order by price"
+    },
+    {
+      "case": "no-output-join-v1",
+      "ordinal": 16,
+      "runtimeId": "java-runtime-091c77bae73759b7cb3e",
+      "executionName": "ResultSetNoOutputClauseJoin",
+      "observation": "listener; ordinal 16 variant 1 emits one sorted single-row batch per matching join row over length(10) with no output clause",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select symbol from SupportMarketDataBean#length(10) as one, SupportBeanString#length(100) as two where one.symbol = two.theString order by price"
+    },
+    {
+      "case": "no-output-join-v2",
+      "ordinal": 16,
+      "runtimeId": "java-runtime-091c77bae73759b7cb3e",
+      "executionName": "ResultSetNoOutputClauseJoin",
+      "observation": "listener; ordinal 16 variant 2 emits one six-row join batch sorted by price, symbol when the time_batch(1) window flushes at the one-second boundary",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select symbol from SupportMarketDataBean#time_batch(1) as one, SupportBeanString#length(100) as two where one.symbol = two.theString order by price, symbol"
+    },
+    {
+      "case": "invalid",
+      "ordinal": 17,
+      "runtimeId": "java-runtime-bbc3ab446f26d0f99488",
+      "executionName": "ResultSetInvalid",
+      "observation": "compile-only; ordinal 17 rejects six statements whose order-by aggregate does not occur identically in the select expression",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select symbol from SupportMarketDataBean#length(5) output every 6 events order by sum(price)"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "no-output-view-v1"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 2}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "KGB", "volume": 0, "price": 1}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CMU", "volume": 0, "price": 3}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 5}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "FOX", "volume": 0, "price": 10}},
+    {"op": "case", "case": "no-output-view-v2"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:00.000Z"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 2}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "KGB", "volume": 0, "price": 1}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CMU", "volume": 0, "price": 3}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 5}},
+    {"op": "advance-time", "at": "1970-01-01T00:00:01.000Z"},
+    {"op": "case", "case": "no-output-join-v1"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 2}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "KGB", "volume": 0, "price": 1}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CMU", "volume": 0, "price": 3}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 5}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "CAT"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "IBM"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "CMU"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "KGB"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "DOG"}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DOG", "volume": 0, "price": 10}},
+    {"op": "case", "case": "no-output-join-v2"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:00.000Z"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 2}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "KGB", "volume": 0, "price": 1}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CMU", "volume": 0, "price": 3}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 5}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "CAT"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "IBM"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "CMU"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "KGB"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "DOG"}},
+    {"op": "advance-time", "at": "1970-01-01T00:00:01.000Z"},
+    {"op": "case", "case": "invalid"},
+    {"op": "build-error", "statement": "single-sum-missing", "epl": "@name('s0') select symbol from SupportMarketDataBean#length(5) output every 6 events order by sum(price)", "expectError": "Aggregate functions in the order-by clause must also occur in the select expression [@name('s0') select symbol from SupportMarketDataBean#length(5) output every 6 events order by sum(price)]"},
+    {"op": "build-error", "statement": "single-sum-different", "epl": "@name('s0') select sum(price) from SupportMarketDataBean#length(5) output every 6 events order by sum(price + 6)", "expectError": "Aggregate functions in the order-by clause must also occur in the select expression [@name('s0') select sum(price) from SupportMarketDataBean#length(5) output every 6 events order by sum(price + 6)]"},
+    {"op": "build-error", "statement": "single-sum-input-different", "epl": "@name('s0') select sum(price + 6) from SupportMarketDataBean#length(5) output every 6 events order by sum(price)", "expectError": "Aggregate functions in the order-by clause must also occur in the select expression [@name('s0') select sum(price + 6) from SupportMarketDataBean#length(5) output every 6 events order by sum(price)]"},
+    {"op": "build-error", "statement": "join-sum-missing", "epl": "@name('s0') select symbol from SupportMarketDataBean#length(10) as one, SupportBeanString#length(100) as two where one.symbol = two.theString output every 6 events order by sum(price)", "expectError": "Aggregate functions in the order-by clause must also occur in the select expression [@name('s0') select symbol from SupportMarketDataBean#length(10) as one, SupportBeanString#length(100) as two where one.symbol = two.theString output every 6 events order by sum(price)]"},
+    {"op": "build-error", "statement": "join-sum-different", "epl": "@name('s0') select sum(price) from SupportMarketDataBean#length(10) as one, SupportBeanString#length(100) as two where one.symbol = two.theString output every 6 events order by sum(price + 6)", "expectError": "Aggregate functions in the order-by clause must also occur in the select expression [@name('s0') select sum(price) from SupportMarketDataBean#length(10) as one, SupportBeanString#length(100) as two where one.symbol = two.theString output every 6 events order by sum(price + 6)]"},
+    {"op": "build-error", "statement": "join-sum-input-different", "epl": "@name('s0') select sum(price + 6) from SupportMarketDataBean#length(10) as one, SupportBeanString#length(100) as two where one.symbol = two.theString output every 6 events order by sum(price)", "expectError": "Aggregate functions in the order-by clause must also occur in the select expression [@name('s0') select sum(price + 6) from SupportMarketDataBean#length(10) as one, SupportBeanString#length(100) as two where one.symbol = two.theString output every 6 events order by sum(price)]"}
+  ]
+}

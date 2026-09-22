@@ -1,0 +1,1073 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-6de2b14776f97a0a69b2",
+    "java-runtime-091c77bae73759b7cb3e",
+    "java-runtime-bbc3ab446f26d0f99488"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/orderby/ResultSetOrderBySimple.java"
+  ],
+  "javaExecutions": [
+    "ResultSetNoOutputClauseView",
+    "ResultSetNoOutputClauseJoin",
+    "ResultSetInvalid"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-orderby-simple-no-output-invalid",
+    "steps": [
+      {
+        "op": "case",
+        "case": "no-output-view-v1"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 0,
+          "price": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "KGB",
+          "volume": 0,
+          "price": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "volume": 0,
+          "price": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 0,
+          "price": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "volume": 0,
+          "price": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "volume": 0,
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "FOX",
+          "volume": 0,
+          "price": 10
+        }
+      },
+      {
+        "op": "case",
+        "case": "no-output-view-v2"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 0,
+          "price": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "KGB",
+          "volume": 0,
+          "price": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "volume": 0,
+          "price": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 0,
+          "price": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "volume": 0,
+          "price": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "volume": 0,
+          "price": 5
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "case",
+        "case": "no-output-join-v1"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 0,
+          "price": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "KGB",
+          "volume": 0,
+          "price": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "volume": 0,
+          "price": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 0,
+          "price": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "volume": 0,
+          "price": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "volume": 0,
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "CAT"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "IBM"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "CMU"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "KGB"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "DOG"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DOG",
+          "volume": 0,
+          "price": 10
+        }
+      },
+      {
+        "op": "case",
+        "case": "no-output-join-v2"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 0,
+          "price": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "KGB",
+          "volume": 0,
+          "price": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "volume": 0,
+          "price": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 0,
+          "price": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "volume": 0,
+          "price": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "volume": 0,
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "CAT"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "IBM"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "CMU"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "KGB"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "DOG"
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "case",
+        "case": "invalid"
+      },
+      {
+        "op": "build-error",
+        "statement": "single-sum-missing",
+        "expectError": "Aggregate functions in the order-by clause must also occur in the select expression [@name('s0') select symbol from SupportMarketDataBean#length(5) output every 6 events order by sum(price)]",
+        "epl": "@name('s0') select symbol from SupportMarketDataBean#length(5) output every 6 events order by sum(price)"
+      },
+      {
+        "op": "build-error",
+        "statement": "single-sum-different",
+        "expectError": "Aggregate functions in the order-by clause must also occur in the select expression [@name('s0') select sum(price) from SupportMarketDataBean#length(5) output every 6 events order by sum(price + 6)]",
+        "epl": "@name('s0') select sum(price) from SupportMarketDataBean#length(5) output every 6 events order by sum(price + 6)"
+      },
+      {
+        "op": "build-error",
+        "statement": "single-sum-input-different",
+        "expectError": "Aggregate functions in the order-by clause must also occur in the select expression [@name('s0') select sum(price + 6) from SupportMarketDataBean#length(5) output every 6 events order by sum(price)]",
+        "epl": "@name('s0') select sum(price + 6) from SupportMarketDataBean#length(5) output every 6 events order by sum(price)"
+      },
+      {
+        "op": "build-error",
+        "statement": "join-sum-missing",
+        "expectError": "Aggregate functions in the order-by clause must also occur in the select expression [@name('s0') select symbol from SupportMarketDataBean#length(10) as one, SupportBeanString#length(100) as two where one.symbol = two.theString output every 6 events order by sum(price)]",
+        "epl": "@name('s0') select symbol from SupportMarketDataBean#length(10) as one, SupportBeanString#length(100) as two where one.symbol = two.theString output every 6 events order by sum(price)"
+      },
+      {
+        "op": "build-error",
+        "statement": "join-sum-different",
+        "expectError": "Aggregate functions in the order-by clause must also occur in the select expression [@name('s0') select sum(price) from SupportMarketDataBean#length(10) as one, SupportBeanString#length(100) as two where one.symbol = two.theString output every 6 events order by sum(price + 6)]",
+        "epl": "@name('s0') select sum(price) from SupportMarketDataBean#length(10) as one, SupportBeanString#length(100) as two where one.symbol = two.theString output every 6 events order by sum(price + 6)"
+      },
+      {
+        "op": "build-error",
+        "statement": "join-sum-input-different",
+        "expectError": "Aggregate functions in the order-by clause must also occur in the select expression [@name('s0') select sum(price + 6) from SupportMarketDataBean#length(10) as one, SupportBeanString#length(100) as two where one.symbol = two.theString output every 6 events order by sum(price)]",
+        "epl": "@name('s0') select sum(price + 6) from SupportMarketDataBean#length(10) as one, SupportBeanString#length(100) as two where one.symbol = two.theString output every 6 events order by sum(price)"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-orderby-simple-no-output-invalid",
+    "records": [
+      {
+        "case": "no-output-view-v1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-view-v1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "KGB"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-view-v1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CMU"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-view-v1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-view-v1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CAT"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-view-v1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CAT"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-view-v1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "FOX"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-view-v2",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "KGB"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CAT"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-join-v1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CAT"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-join-v1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-join-v1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CMU"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-join-v1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "KGB"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-join-v1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "DOG"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-join-v2",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "KGB"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-rejected",
+        "statement": "single-sum-missing",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Aggregate functions in the order-by clause must also occur in the select expression [@name('s0') select symbol from SupportMarketDataBean#length(5) output every 6 events order by sum(price)]"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-rejected",
+        "statement": "single-sum-different",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Aggregate functions in the order-by clause must also occur in the select expression [@name('s0') select sum(price) from SupportMarketDataBean#length(5) output every 6 events order by sum(price + 6)]"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-rejected",
+        "statement": "single-sum-input-different",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Aggregate functions in the order-by clause must also occur in the select expression [@name('s0') select sum(price + 6) from SupportMarketDataBean#length(5) output every 6 events order by sum(price)]"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-rejected",
+        "statement": "join-sum-missing",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Aggregate functions in the order-by clause must also occur in the select expression [@name('s0') select symbol from SupportMarketDataBean#length(10) as one, SupportBeanString#length(100) as two where one.symbol = two.theString output every 6 events order by sum(price)]"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-rejected",
+        "statement": "join-sum-different",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Aggregate functions in the order-by clause must also occur in the select expression [@name('s0') select sum(price) from SupportMarketDataBean#length(10) as one, SupportBeanString#length(100) as two where one.symbol = two.theString output every 6 events order by sum(price + 6)]"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-rejected",
+        "statement": "join-sum-input-different",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Aggregate functions in the order-by clause must also occur in the select expression [@name('s0') select sum(price + 6) from SupportMarketDataBean#length(10) as one, SupportBeanString#length(100) as two where one.symbol = two.theString output every 6 events order by sum(price)]"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-orderby-simple-no-output-invalid",
+    "records": [
+      {
+        "case": "no-output-view-v1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-view-v1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "KGB"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-view-v1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CMU"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-view-v1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-view-v1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CAT"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-view-v1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CAT"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-view-v1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "FOX"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-view-v2",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "KGB"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CAT"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-join-v1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CAT"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-join-v1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-join-v1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CMU"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-join-v1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "KGB"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-join-v1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "DOG"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output-join-v2",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "KGB"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-rejected",
+        "statement": "single-sum-missing",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Aggregate functions in the order-by clause must also occur in the select expression [@name('s0') select symbol from SupportMarketDataBean#length(5) output every 6 events order by sum(price)]"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-rejected",
+        "statement": "single-sum-different",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Aggregate functions in the order-by clause must also occur in the select expression [@name('s0') select sum(price) from SupportMarketDataBean#length(5) output every 6 events order by sum(price + 6)]"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-rejected",
+        "statement": "single-sum-input-different",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Aggregate functions in the order-by clause must also occur in the select expression [@name('s0') select sum(price + 6) from SupportMarketDataBean#length(5) output every 6 events order by sum(price)]"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-rejected",
+        "statement": "join-sum-missing",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Aggregate functions in the order-by clause must also occur in the select expression [@name('s0') select symbol from SupportMarketDataBean#length(10) as one, SupportBeanString#length(100) as two where one.symbol = two.theString output every 6 events order by sum(price)]"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-rejected",
+        "statement": "join-sum-different",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Aggregate functions in the order-by clause must also occur in the select expression [@name('s0') select sum(price) from SupportMarketDataBean#length(10) as one, SupportBeanString#length(100) as two where one.symbol = two.theString output every 6 events order by sum(price + 6)]"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-rejected",
+        "statement": "join-sum-input-different",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Aggregate functions in the order-by clause must also occur in the select expression [@name('s0') select sum(price + 6) from SupportMarketDataBean#length(10) as one, SupportBeanString#length(100) as two where one.symbol = two.theString output every 6 events order by sum(price)]"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

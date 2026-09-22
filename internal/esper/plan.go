@@ -2511,7 +2511,73 @@ func (e *Environment) validateQueryModifiers(query Query) error {
 			return fmt.Errorf("order-by key %d: %w", index, err)
 		}
 	}
+	if err := validateOrderByAggregates(query); err != nil {
+		return err
+	}
 	return nil
+}
+
+// validateOrderByAggregates mirrors Java's
+// OrderByProcessorFactoryFactory.validateOrderByAggregates: every aggregate
+// expression that appears in the order-by clause must also occur, as the
+// identical aggregate expression, in the select expression. Java compares the
+// aggregate nodes with ExprNodeUtilityCompare.deepEquals; the fluent API pins
+// the same structural identity through each node's canonical description.
+// Applies to single-stream, join, and aggregate queries alike (ordinal 17 of
+// ResultSetOrderBySimple rejects all three shapes).
+func validateOrderByAggregates(query Query) error {
+	if len(query.orderBy) == 0 {
+		return nil
+	}
+	selected := make(map[string]struct{})
+	collect := func(expression Expr) {
+		if expression == nil {
+			return
+		}
+		collectAggregateDescriptions(expression.node(), selected)
+	}
+	for _, selection := range query.selections {
+		collect(selection.Expr)
+	}
+	for _, selection := range query.joinSelections {
+		collect(selection.Expr)
+	}
+	for _, selection := range query.patternSelections {
+		collect(selection.Expr)
+	}
+	if query.aggregate != nil {
+		for _, selection := range query.aggregate.selections {
+			collect(selection.Expr)
+		}
+	}
+	for _, key := range query.orderBy {
+		if key.Expr == nil {
+			continue
+		}
+		ordered := make(map[string]struct{})
+		collectAggregateDescriptions(key.Expr.node(), ordered)
+		for description := range ordered {
+			if _, ok := selected[description]; !ok {
+				return NewError(ErrorInvalidRule, "Aggregate functions in the order-by clause must also occur in the select expression")
+			}
+		}
+	}
+	return nil
+}
+
+// collectAggregateDescriptions gathers the canonical descriptions of every
+// aggregate node in the expression tree, matching the bottom-up aggregate
+// collection Java performs with ExprAggregateNodeUtil.getAggregatesBottomUp.
+func collectAggregateDescriptions(node *exprNode, descriptions map[string]struct{}) {
+	if node == nil {
+		return
+	}
+	if expressionNodeIsAggregate(node) {
+		descriptions[node.description] = struct{}{}
+	}
+	for _, child := range node.children {
+		collectAggregateDescriptions(child, descriptions)
+	}
 }
 
 // namedWindowConsumerSource unwraps filter nodes and reports the named window
