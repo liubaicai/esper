@@ -129,6 +129,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultsetOutputLimitChangesetScenario(file)
 	} else if *mode == "resultset-outputlimit-simple-none" || *mode == "resultset-outputlimit-simple-none-diff" {
 		scenario, err = loadResultSetOutputLimitSimpleNoneScenario(file)
+	} else if *mode == "expr-enum-sumof-remainder" || *mode == "expr-enum-sumof-remainder-diff" {
+		scenario, err = loadExprEnumSumOfRemainderScenario(file)
 	} else if *mode == "epl-variable-output-rate" || *mode == "epl-variable-output-rate-diff" {
 		scenario, err = loadEplVariableOutputRateScenario(file)
 	} else if *mode == "epl-subselect-within-filter-having" || *mode == "epl-subselect-within-filter-having-diff" {
@@ -5066,6 +5068,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, resultsetOutputLimitSimpleNoneJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, resultsetOutputLimitSimpleNoneJavaSources),
 				splitMetadata(*javaExecutions, resultsetOutputLimitSimpleNoneJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "expr-enum-sumof-remainder" || *mode == "expr-enum-sumof-remainder-diff" {
+		trace, err := runExprEnumSumOfRemainderScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "expr-enum-sumof-remainder-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, exprEnumSumOfRemainderJavaCommit,
+				splitMetadata(*javaRuntimeIDs, exprEnumSumOfRemainderJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, exprEnumSumOfRemainderJavaSources),
+				splitMetadata(*javaExecutions, exprEnumSumOfRemainderJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

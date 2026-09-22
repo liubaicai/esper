@@ -123,6 +123,55 @@ Active: Draft 4.495 ('resultset-output-when-then-closure').
 - [x] Shipped; Git owns identity. Draft 4.495 committed and pushed as `98d55664e`.
 
 ## Current work unit
+Active: Draft 4.502 ('expr-enum-sumof-remainder').
+
+- Selection: `ExprEnumSumOf` ordinals 1 `ExprEnumSumEventsPlus`
+  (`java-runtime-8497175e9fc13501285c`, static `java-7443fe2db668140640df`),
+  3 `ExprEnumSumScalarStringValue` (`java-runtime-93ec466957ff19bc38a6`,
+  static `java-ce9a9b8124ed9b9cda09`), 4 `ExprEnumSumInvalid`
+  (`java-runtime-bbe116cdf8ad7e13172f`, static `java-3bdebdfafa650da60077`),
+  5 `ExprEnumSumArray` (`java-runtime-b0455a5d1e4b447f34b1`, static
+  `java-2c99e8eabfc5cdb0b018`). One file, one enum method, no flags, no
+  virtual time, listener-only SupportEvalBuilder assertions + 2 build-error
+  probes.
+- [x] Contract frozen (JavaContract502 + GoSurface502): all 4 ordinals
+  replayable; zero engine change predicted (EnumSum/SumOf + Func1/Func2 UDFs
+  + big-number collections already exist). Pitfalls: null-vs-empty
+  collection both yield null; null elements/lambda-nulls skipped; result
+  type follows input (Integer/Long/Double/BigDecimal/BigInteger); BigDecimal
+  scale fidelity; invalid probes pin message prefixes only (JVM FQNs
+  diverge).
+- [x] Parity assets (Assets502): runner
+  `internal/app/parity/expr_enum_sumof_remainder.go`, scenario
+  `testdata/parity/expr-enum-sumof-remainder.json` (4 cases / 22 steps),
+  oracle `tools/java-oracle/ExprEnumSumOfRemainderScenarioOracle.java` +
+  `run-expr-enum-sumof-remainder.sh`, run.go dispatch + 6-test family in
+  run_test.go.
+- [x] Oracle fix: deploy compiles must use `new CompilerArguments(configuration)`
+  (carries compiler-level plug-in single-row functions extractNum/
+  extractBigDecimal); `runtime.getRuntimePath()` does not. Precedent:
+  ContextHashScenarioOracle. First trace run failed with "Unknown single-row
+  function 'extractNum'" before the fix.
+- [x] Differential replay: Java 11 records / Go 11 records, `passing` /
+  0 differences. Checked-in traces + evidence under testdata/parity/.
+- [x] Manifest/roadmap: `case.expr-enum-minmax-sum-avg` extended to
+  differential-verified with the 4 new runtime IDs (javaRuntimeIds now 11,
+  javaNames +4, goTests +6, `difference` text records remaining partial
+  coverage); summary 361 DV / 1411 DV runtime IDs / unreferenced 619.
+  Roadmap Draft 4.502 entry added. CHANGELOG intentionally untouched (it
+  lags the roadmap; top entry is 4.496).
+- [x] Gates + parity review: `make check` exit 0 twice (before and after the
+  P3 fix). Independent parity review (ParityReview502): OVERALL PASS, one P3 —
+  the sumof-null-lambda probe tolerated either Build outcome and verified
+  nothing; FIXED: the probe now requires Go's typed NullLiteral selector to
+  build (Build failure = Go regression), header comment corrected. Diff
+  re-run passing / 0 differences, Go trace byte-identical.
+- [x] N+1 prefetch: ord 12 solution-pattern turned out already DV'd (4.413);
+  re-selected `EPLOtherSelectWildcardWAdditional` ords 0/2/3/4/5/6 (6
+  unreferenced, wildcard+additional-column family). Java contract frozen by
+  NextJavaContract503; Go surface scout NextGoSurface503b running.
+
+## Current work unit
 Active: Draft 4.501 ('resultset-outputlimit-simple-none').
 
 - Selection: `ResultSetOutputLimitSimple` ordinals 0-3 (none variants:

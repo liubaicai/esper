@@ -22925,13 +22925,17 @@
   {
    "id": "case.expr-enum-minmax-sum-avg",
    "javaRuntimeIds": [
-    "java-runtime-36c7cf2230b2a5f5f3f4",
+    "java-runtime-23c59932117b5d9b6674",
     "java-runtime-3015932ecbe4d1bde2d6",
-    "java-runtime-de1bcaf9deecd986e68d",
-    "java-runtime-86b7fb2d3adcd0aeff95",
-    "java-runtime-95a7de21cca4c78877cb",
+    "java-runtime-36c7cf2230b2a5f5f3f4",
     "java-runtime-726123e637422bea0d86",
-    "java-runtime-23c59932117b5d9b6674"
+    "java-runtime-8497175e9fc13501285c",
+    "java-runtime-86b7fb2d3adcd0aeff95",
+    "java-runtime-93ec466957ff19bc38a6",
+    "java-runtime-95a7de21cca4c78877cb",
+    "java-runtime-b0455a5d1e4b447f34b1",
+    "java-runtime-bbe116cdf8ad7e13172f",
+    "java-runtime-de1bcaf9deecd986e68d"
    ],
    "javaNames": [
     "ExprEnumMinMaxScalar",
@@ -22940,7 +22944,11 @@
     "ExprEnumSumEvents",
     "ExprEnumSumScalar",
     "ExprEnumAverageEvents",
-    "ExprEnumAverageScalar"
+    "ExprEnumAverageScalar",
+    "ExprEnumSumEventsPlus",
+    "ExprEnumSumScalarStringValue",
+    "ExprEnumSumInvalid",
+    "ExprEnumSumArray"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumMinMax.java",
@@ -22950,7 +22958,13 @@
    "goTests": [
     "TestExprEnumMinMaxMatchesEsper",
     "TestExprEnumSumOfMatchesEsper",
-    "TestExprEnumAverageOfMatchesEsper"
+    "TestExprEnumAverageOfMatchesEsper",
+    "TestRunExprEnumSumOfRemainderDiffWritesPassingEvidence",
+    "TestRunExprEnumSumOfRemainderDiffRejectsTraceMutations",
+    "TestRunExprEnumSumOfRemainderDirectReplay",
+    "TestRunExprEnumSumOfRemainderCheckedInEvidenceMatchesTraceAndReplay",
+    "TestRunExprEnumSumOfRemainderRejectsMalformedRawScenario",
+    "TestRunExprEnumSumOfRemainderRuntimeIDMappingMatchesScenario"
    ],
    "tags": [
     "correctness",
@@ -22961,16 +22975,24 @@
     "sum",
     "average"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
     "java-runtime-inventory",
     "go-unit"
    ],
-   "difference": "",
+   "difference": "Go covers the enum min/max/sum/average method family through typed EnumMin/Max/Sum/Average(+Of) builders with element/index/size lambda footprints, UDF calls inside lambdas, constant-collection sources and big-number typing. The case intentionally records the whole Java minmax/sum/average inventory while remaining partial: min/max footprints and invalid probes beyond the four sumOf remainder executions, average scalar-more/invalid, and SODA/planning variants still require additional shared trace work.",
    "verification": [
     "inventoried",
-    "implemented"
-   ]
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-8497175e9fc13501285c",
+    "java-runtime-93ec466957ff19bc38a6",
+    "java-runtime-bbe116cdf8ad7e13172f",
+    "java-runtime-b0455a5d1e4b447f34b1"
+   ],
+   "notes": "Draft 4.502: ExprEnumSumOf ord 1/3/4/5 DV'd (sumof remainder)."
   },
   {
    "id": "case.expr-enum-orderby-take-minmaxby",
@@ -50830,8 +50852,8 @@
  "summary": {
   "inventoriedCases": 735,
   "implementedCases": 733,
-  "differentialVerifiedCases": 360,
-  "differentialVerifiedRuntimeIds": 1407,
+  "differentialVerifiedCases": 361,
+  "differentialVerifiedRuntimeIds": 1411,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -50841,10 +50863,10 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3941,
-  "referencedJavaRuntimeIds": 3513,
+  "runtimeAssociationCount": 3945,
+  "referencedJavaRuntimeIds": 3517,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 623,
+  "unreferencedJavaRuntimeIds": 619,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
   "totalCases": 735,

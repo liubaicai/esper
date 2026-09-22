@@ -1,0 +1,209 @@
+{
+ "version": "esper-parity/v1",
+ "id": "expr-enum-sumof-remainder",
+ "description": "ExprEnumSumOf ordinals 1, 3, 4 and 5 (the remaining executions): sum-events-plus sums intBoxed over SupportBean_Container.beans with element/index/size lambda footprints and a case-when null branch; sum-scalar-string sums extractNum/extractBigDecimal UDF results over SupportCollection.strvals; sum-invalid records the two tryInvalidCompile message prefixes; sum-array sums constant Double, BigInteger and nullable Long collections. Each listener case deploys s0 once, sends every assertion event, then undeploys.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumSumOf.java",
+ "javaRuntimes": [
+  "java-runtime-8497175e9fc13501285c",
+  "java-runtime-93ec466957ff19bc38a6",
+  "java-runtime-bbe116cdf8ad7e13172f",
+  "java-runtime-b0455a5d1e4b447f34b1"
+ ],
+ "javaNames": [
+  "ExprEnumSumEventsPlus",
+  "ExprEnumSumScalarStringValue",
+  "ExprEnumSumInvalid",
+  "ExprEnumSumArray"
+ ],
+ "javaStaticIds": [
+  "java-7443fe2db668140640df",
+  "java-ce9a9b8124ed9b9cda09",
+  "java-3bdebdfafa650da60077",
+  "java-2c99e8eabfc5cdb0b018"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "sum-events-plus",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-8497175e9fc13501285c",
+   "executionName": "ExprEnumSumEventsPlus",
+   "observation": "listener",
+   "epl": "select beans.sumOf(x => intBoxed) c0, beans.sumOf( (x, i) => intBoxed + i*10) c1, beans.sumOf( (x, i, s) => intBoxed + i*10 + s*100) c2, beans.sumOf( (x, i) => case when i = 1 then null else 1 end) c3 from SupportBean_Container"
+  },
+  {
+   "case": "sum-scalar-string",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-93ec466957ff19bc38a6",
+   "executionName": "ExprEnumSumScalarStringValue",
+   "observation": "listener",
+   "epl": "select strvals.sumOf(v => extractNum(v)) c0, strvals.sumOf(v => extractBigDecimal(v)) c1, strvals.sumOf( (v, i) => extractNum(v) + i*10) c2, strvals.sumOf( (v, i, s) => extractNum(v) + i*10 + s*100) c3 from SupportCollection"
+  },
+  {
+   "case": "sum-invalid",
+   "ordinal": 4,
+   "runtimeId": "java-runtime-bbe116cdf8ad7e13172f",
+   "executionName": "ExprEnumSumInvalid",
+   "observation": "compile-error; two tryInvalidCompile probes pin the Java message prefixes: beans.sumof() rejects a collection of events as the 0-parameter input and strvals.sumOf(v => null) rejects a null-typed lambda result; both compile without the runtime path",
+   "epl": "select beans.sumof() from SupportBean_Container"
+  },
+  {
+   "case": "sum-array",
+   "ordinal": 5,
+   "runtimeId": "java-runtime-b0455a5d1e4b447f34b1",
+   "executionName": "ExprEnumSumArray",
+   "observation": "listener",
+   "epl": "select {1d, 2d}.sumOf() c0, {BigInteger.valueOf(1), BigInteger.valueOf(2)}.sumOf() c1, {1L, 2L}.sumOf() c2, {1L, 2L, null}.sumOf() c3 from SupportBean"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "sum-events-plus"
+  },
+  {
+   "op": "deploy",
+   "case": "sum-events-plus",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "sum-events-plus",
+   "eventType": "SupportBean_Container",
+   "payload": {
+    "beans": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "sum-events-plus",
+   "eventType": "SupportBean_Container",
+   "payload": {
+    "beans": []
+   }
+  },
+  {
+   "op": "send",
+   "case": "sum-events-plus",
+   "eventType": "SupportBean_Container",
+   "payload": {
+    "beans": [
+     {
+      "theString": "E1",
+      "intBoxed": 10
+     }
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "case": "sum-events-plus",
+   "eventType": "SupportBean_Container",
+   "payload": {
+    "beans": [
+     {
+      "theString": "E1",
+      "intBoxed": 10
+     },
+     {
+      "theString": "E2",
+      "intBoxed": 11
+     }
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "sum-events-plus"
+  },
+  {
+   "op": "case",
+   "case": "sum-scalar-string"
+  },
+  {
+   "op": "deploy",
+   "case": "sum-scalar-string",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "sum-scalar-string",
+   "eventType": "SupportCollection",
+   "payload": {
+    "strvals": ["E2", "E1", "E5", "E4"]
+   }
+  },
+  {
+   "op": "send",
+   "case": "sum-scalar-string",
+   "eventType": "SupportCollection",
+   "payload": {
+    "strvals": ["E1"]
+   }
+  },
+  {
+   "op": "send",
+   "case": "sum-scalar-string",
+   "eventType": "SupportCollection",
+   "payload": {
+    "strvals": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "sum-scalar-string",
+   "eventType": "SupportCollection",
+   "payload": {
+    "strvals": []
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "sum-scalar-string"
+  },
+  {
+   "op": "case",
+   "case": "sum-invalid"
+  },
+  {
+   "op": "build-error",
+   "case": "sum-invalid",
+   "statement": "sumof-no-param",
+   "epl": "select beans.sumof() from SupportBean_Container",
+   "expectError": "Failed to validate select-clause expression 'beans.sumof()': Invalid input for built-in enumeration method 'sumof' and 0-parameter footprint, expecting collection of values (typically scalar values) as input, received collection of events of type '",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "build-error",
+   "case": "sum-invalid",
+   "statement": "sumof-null-lambda",
+   "epl": "select strvals.sumOf(v => null) from SupportCollection",
+   "expectError": "Failed to validate select-clause expression 'strvals.sumOf()': Failed to validate enumeration method 'sumOf', expected a non-null result for expression parameter 0 but received a null-typed expression",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "undeploy-all",
+   "case": "sum-invalid"
+  },
+  {
+   "op": "case",
+   "case": "sum-array"
+  },
+  {
+   "op": "deploy",
+   "case": "sum-array",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "sum-array",
+   "eventType": "SupportBean",
+   "payload": {}
+  },
+  {
+   "op": "undeploy-all",
+   "case": "sum-array"
+  }
+ ]
+}

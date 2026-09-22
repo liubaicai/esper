@@ -1,0 +1,607 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-8497175e9fc13501285c",
+    "java-runtime-93ec466957ff19bc38a6",
+    "java-runtime-bbe116cdf8ad7e13172f",
+    "java-runtime-b0455a5d1e4b447f34b1"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumSumOf.java"
+  ],
+  "javaExecutions": [
+    "ExprEnumSumEventsPlus",
+    "ExprEnumSumScalarStringValue",
+    "ExprEnumSumInvalid",
+    "ExprEnumSumArray"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "expr-enum-sumof-remainder",
+    "steps": [
+      {
+        "op": "case",
+        "case": "sum-events-plus"
+      },
+      {
+        "op": "deploy",
+        "case": "sum-events-plus",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "sum-events-plus",
+        "eventType": "SupportBean_Container",
+        "payload": {
+          "beans": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "sum-events-plus",
+        "eventType": "SupportBean_Container",
+        "payload": {
+          "beans": []
+        }
+      },
+      {
+        "op": "send",
+        "case": "sum-events-plus",
+        "eventType": "SupportBean_Container",
+        "payload": {
+          "beans": [
+            {
+              "theString": "E1",
+              "intBoxed": 10
+            }
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "sum-events-plus",
+        "eventType": "SupportBean_Container",
+        "payload": {
+          "beans": [
+            {
+              "theString": "E1",
+              "intBoxed": 10
+            },
+            {
+              "theString": "E2",
+              "intBoxed": 11
+            }
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "sum-events-plus"
+      },
+      {
+        "op": "case",
+        "case": "sum-scalar-string"
+      },
+      {
+        "op": "deploy",
+        "case": "sum-scalar-string",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "sum-scalar-string",
+        "eventType": "SupportCollection",
+        "payload": {
+          "strvals": [
+            "E2",
+            "E1",
+            "E5",
+            "E4"
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "sum-scalar-string",
+        "eventType": "SupportCollection",
+        "payload": {
+          "strvals": [
+            "E1"
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "sum-scalar-string",
+        "eventType": "SupportCollection",
+        "payload": {
+          "strvals": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "sum-scalar-string",
+        "eventType": "SupportCollection",
+        "payload": {
+          "strvals": []
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "sum-scalar-string"
+      },
+      {
+        "op": "case",
+        "case": "sum-invalid"
+      },
+      {
+        "op": "build-error",
+        "case": "sum-invalid",
+        "statement": "sumof-no-param",
+        "expectError": "Failed to validate select-clause expression 'beans.sumof()': Invalid input for built-in enumeration method 'sumof' and 0-parameter footprint, expecting collection of values (typically scalar values) as input, received collection of events of type '",
+        "epl": "select beans.sumof() from SupportBean_Container"
+      },
+      {
+        "op": "build-error",
+        "case": "sum-invalid",
+        "statement": "sumof-null-lambda",
+        "expectError": "Failed to validate select-clause expression 'strvals.sumOf()': Failed to validate enumeration method 'sumOf', expected a non-null result for expression parameter 0 but received a null-typed expression",
+        "epl": "select strvals.sumOf(v =\u003e null) from SupportCollection"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "sum-invalid"
+      },
+      {
+        "op": "case",
+        "case": "sum-array"
+      },
+      {
+        "op": "deploy",
+        "case": "sum-array",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "sum-array",
+        "eventType": "SupportBean",
+        "payload": {}
+      },
+      {
+        "op": "undeploy-all",
+        "case": "sum-array"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-enum-sumof-remainder",
+    "records": [
+      {
+        "case": "sum-events-plus",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-events-plus",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-events-plus",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "c1": 10,
+              "c2": 110,
+              "c3": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-events-plus",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 21,
+              "c1": 31,
+              "c2": 431,
+              "c3": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-scalar-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 12,
+              "c1": "12",
+              "c2": 72,
+              "c3": 1672
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-scalar-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": "1",
+              "c2": 1,
+              "c3": 101
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-scalar-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-scalar-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-invalid",
+        "operation": "compile-error",
+        "statement": "sumof-no-param",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'beans.sumof()': Invalid input for built-in enumeration method 'sumof' and 0-parameter footprint, expecting collection of values (typically scalar values) as input, received collection of events of type '"
+      },
+      {
+        "case": "sum-invalid",
+        "operation": "compile-error",
+        "statement": "sumof-null-lambda",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'strvals.sumOf()': Failed to validate enumeration method 'sumOf', expected a non-null result for expression parameter 0 but received a null-typed expression"
+      },
+      {
+        "case": "sum-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 3,
+              "c1": "3",
+              "c2": 3,
+              "c3": 3
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-enum-sumof-remainder",
+    "records": [
+      {
+        "case": "sum-events-plus",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-events-plus",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-events-plus",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "c1": 10,
+              "c2": 110,
+              "c3": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-events-plus",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 21,
+              "c1": 31,
+              "c2": 431,
+              "c3": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-scalar-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 12,
+              "c1": "12",
+              "c2": 72,
+              "c3": 1672
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-scalar-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": "1",
+              "c2": 1,
+              "c3": 101
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-scalar-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-scalar-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-invalid",
+        "operation": "compile-error",
+        "statement": "sumof-no-param",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'beans.sumof()': Invalid input for built-in enumeration method 'sumof' and 0-parameter footprint, expecting collection of values (typically scalar values) as input, received collection of events of type '"
+      },
+      {
+        "case": "sum-invalid",
+        "operation": "compile-error",
+        "statement": "sumof-null-lambda",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'strvals.sumOf()': Failed to validate enumeration method 'sumOf', expected a non-null result for expression parameter 0 but received a null-typed expression"
+      },
+      {
+        "case": "sum-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 3,
+              "c1": "3",
+              "c2": 3,
+              "c3": 3
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

@@ -23036,6 +23036,281 @@ func TestRunResultSetOutputLimitSimpleNoneRuntimeIDMappingMatchesScenario(t *tes
 	}
 }
 
+func TestRunExprEnumSumOfRemainderDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "expr-enum-sumof-remainder.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "expr-enum-sumof-remainder.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "expr-enum-sumof-remainder.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "expr-enum-sumof-remainder-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	if len(evidence.JavaRuntimeIDs) != 4 {
+		t.Fatalf("runtime ids = %d, want 4", len(evidence.JavaRuntimeIDs))
+	}
+}
+
+func TestRunExprEnumSumOfRemainderDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "sum-events-plus-row-missing",
+			mutate: func(trace *compat.Trace) {
+				// The two-bean sum-events-plus record carries c0..c3 =
+				// 21/31/431/1. Dropping the row means a listener delivery
+				// was lost.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "sum-events-plus" && rec.Sequence == 4 {
+						rec.New = rec.New[1:]
+						return
+					}
+				}
+				panic("no sum-events-plus record 4")
+			},
+		},
+		{
+			name: "sum-scalar-string-bigdecimal-drift",
+			mutate: func(trace *compat.Trace) {
+				// c1 is the BigDecimal sum rendered as an exact decimal
+				// string; drifting it means scale/value fidelity broke.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "sum-scalar-string" && rec.Sequence == 1 {
+						rec.New[0].Fields["c1"] = "12.0"
+						return
+					}
+				}
+				panic("no sum-scalar-string record 1")
+			},
+		},
+		{
+			name: "sum-invalid-probe-missing",
+			mutate: func(trace *compat.Trace) {
+				// Dropping the sumof-null-lambda compile-error record means
+				// a pinned invalid probe was lost.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "sum-invalid" && rec.Statement == "sumof-null-lambda" {
+						rec.Value = ""
+						return
+					}
+				}
+				panic("no sumof-null-lambda record")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "expr-enum-sumof-remainder.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "expr-enum-sumof-remainder.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "expr-enum-sumof-remainder.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "expr-enum-sumof-remainder-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunExprEnumSumOfRemainderDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", exprEnumSumOfRemainderID,
+		"-scenario", filepath.Join(root, exprEnumSumOfRemainderID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(trace.Records) != 11 {
+		t.Fatalf("records = %d, want 11", len(trace.Records))
+	}
+}
+
+func TestRunExprEnumSumOfRemainderCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTraceFile, err := os.Open(filepath.Join(root, exprEnumSumOfRemainderID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	javaTrace, err := compat.LoadTrace(javaTraceFile)
+	closeErr := javaTraceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	goTraceFile, err := os.Open(filepath.Join(root, exprEnumSumOfRemainderID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := compat.LoadTrace(goTraceFile)
+	closeErr = goTraceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, exprEnumSumOfRemainderID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr = evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if !reflect.DeepEqual(evidence.JavaTrace, javaTrace) || !reflect.DeepEqual(evidence.GoTrace, goTrace) {
+		t.Fatal("checked-in evidence traces do not match checked-in trace files")
+	}
+}
+
+func TestRunExprEnumSumOfRemainderRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, exprEnumSumOfRemainderID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "sum-events-plus",`), []byte(`"case": "sum-events-plus", "extra": 0,`), 1)
+		}},
+		{name: "case-ordinal-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 1`), []byte(`"ordinal": 99`), 1)
+		}},
+		{name: "runtime-id-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"java-runtime-8497175e9fc13501285c"`), []byte(`"java-runtime-bogus"`), 1)
+		}},
+		{name: "epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"select beans.sumOf(x => intBoxed) c0`), []byte(`"select bogus`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte("\"theString\": \"E1\",\n      \"intBoxed\": 10"), []byte("\"theString\": \"E1\",\n      \"intBoxed\": 10,\n      \"extra\": 0"), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte("\"theString\": \"E1\",\n      \"intBoxed\": 10"), []byte("\"theString\": \"E1\",\n      \"intBoxed\": 10,\n      \"intBoxed\": 11"), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportBean_Container"`), []byte(`"eventType": "bogus"`), 1)
+		}},
+		{name: "payload-value-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intBoxed": 10`), []byte(`"intBoxed": 99`), 1)
+		}},
+		{name: "strval-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"strvals": ["E2", "E1", "E5", "E4"]`), []byte(`"strvals": ["E2", "E1", "E5", "E9"]`), 1)
+		}},
+		{name: "step-count", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "send"`), []byte(`"op": "bogus"`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{"-mode", exprEnumSumOfRemainderID, "-scenario", scenarioPath}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunExprEnumSumOfRemainderRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", exprEnumSumOfRemainderID+".json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		JavaRuntimes  []string `json:"javaRuntimes"`
+		JavaNames     []string `json:"javaNames"`
+		JavaStaticIDs []string `json:"javaStaticIds"`
+		Cases         []struct {
+			Case          string `json:"case"`
+			Ordinal       int    `json:"ordinal"`
+			RuntimeID     string `json:"runtimeId"`
+			ExecutionName string `json:"executionName"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if len(document.JavaRuntimes) != 4 {
+		t.Fatalf("javaRuntimes = %d, want 4", len(document.JavaRuntimes))
+	}
+	for _, c := range document.Cases {
+		if c.RuntimeID == "" {
+			t.Fatalf("case %q missing runtimeId", c.Case)
+		}
+	}
+}
+
 func TestRunEPLOtherForGroupDeliveryDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromTrace(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-for-group-delivery.trace.json"),
