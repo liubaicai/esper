@@ -15364,7 +15364,13 @@
     "TestOutputSnapshotEveryRebuildsCurrentAggregateState",
     "TestOutputSnapshotEveryEventsRebuildsCurrentAggregateState",
     "TestOutputEveryTimeAppliesOrderLimitToAggregateInterval",
-    "TestOutputLastEveryEventsAfterActivationMatchesEsper"
+    "TestOutputLastEveryEventsAfterActivationMatchesEsper",
+    "TestRunResultSetOutputLimitSimpleNoneDirectReplay",
+    "TestRunResultSetOutputLimitSimpleNoneDiffWritesPassingEvidence",
+    "TestRunResultSetOutputLimitSimpleNoneDiffRejectsTraceMutations",
+    "TestRunResultSetOutputLimitSimpleNoneCheckedInEvidenceMatchesTraceAndReplay",
+    "TestRunResultSetOutputLimitSimpleNoneRejectsMalformedRawScenario",
+    "TestRunResultSetOutputLimitSimpleNoneRuntimeIDMappingMatchesScenario"
    ],
    "tags": [
     "correctness",
@@ -15378,7 +15384,7 @@
     "join",
     "virtual-time"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
     "java-runtime-inventory",
     "java-junit",
@@ -15387,8 +15393,16 @@
    "difference": "Go covers the fluent core output policies, event/time batching, first/last group behavior, virtual-clock time output, current-state snapshots, HAVING, order/limit interaction and after/last composition through typed OutputPolicy builders. The case intentionally records the whole Java ResultSetOutputLimitSimple inventory while remaining partial: multi-component variable intervals, month-scoped dynamic periods, all row-per-event/group/for-all and unidirectional join traces, SODA variants, hints and exact diagnostics still require additional shared trace work.",
    "verification": [
     "inventoried",
-    "implemented"
-   ]
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-427e3f367e9556c57969",
+    "java-runtime-74646a15e15f49fdd1a1",
+    "java-runtime-eb78eaf610806ed398a6",
+    "java-runtime-ddd51d27fc7e1de1efb8"
+   ],
+   "notes": "Draft 4.501: ord 0-3 none variants DV'd."
   },
   {
    "id": "case.output-row-per-event",
@@ -50816,8 +50830,8 @@
  "summary": {
   "inventoriedCases": 735,
   "implementedCases": 733,
-  "differentialVerifiedCases": 359,
-  "differentialVerifiedRuntimeIds": 1403,
+  "differentialVerifiedCases": 360,
+  "differentialVerifiedRuntimeIds": 1407,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,

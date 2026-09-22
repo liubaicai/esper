@@ -123,6 +123,23 @@ Active: Draft 4.495 ('resultset-output-when-then-closure').
 - [x] Shipped; Git owns identity. Draft 4.495 committed and pushed as `98d55664e`.
 
 ## Current work unit
+Active: Draft 4.501 ('resultset-outputlimit-simple-none').
+
+- Selection: `ResultSetOutputLimitSimple` ordinals 0-3 (none variants:
+  no-having/having x no-join/join). All replayable, no flags, virtual time.
+- [x] Contract frozen (JavaContract501-2 + GoSurface501-2): all 4 ordinals
+  replayable; none output-limit fully expressible.
+- [x] Parity assets (Assets501): runner, scenario (4 cases / 320 steps),
+  oracle, run.sh, run.go/run_test.go wiring. Java trace via oracle, Go
+  trace, diff `passing` / 0 differences (62 records each).
+- [x] Manifest: `case.output-simple-core` extended (+4 net-new DV runtime
+  IDs). Summary 735 cases / 360 DV / 1407 DV runtime IDs, unreferenced 623.
+- [x] Gates + parity review: strict raw-bytes loader added after first
+  `make check` failure (malformed-scenario rejections + test needle fixes);
+  test family green. Reviewer ParityReview501-2: PASS with 1 P3 (stale DV
+  count here, fixed).
+
+## Current work unit
 Active: Draft 4.500 ('resultset-orderby-simple-no-output-invalid').
 
 - Selection: `ResultSetOrderBySimple` ordinals 15-17 (no-output-clause-view,

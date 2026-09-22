@@ -22759,6 +22759,283 @@ func TestRunResultSetOutputLimitRowPerGroupDefaultDiffRejectsTraceMutations(t *t
 	}
 }
 
+func TestRunResultSetOutputLimitSimpleNoneDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-outputlimit-simple-none.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-outputlimit-simple-none.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-outputlimit-simple-none.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-outputlimit-simple-none-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	if len(evidence.JavaRuntimeIDs) != 4 {
+		t.Fatalf("runtime ids = %d, want 4", len(evidence.JavaRuntimeIDs))
+	}
+}
+
+func TestRunResultSetOutputLimitSimpleNoneDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "none-per-event-missing",
+			mutate: func(trace *compat.Trace) {
+				// The none-no-having-no-join istream record at t=200 is a
+				// per-event immediate emission (no output clause). Dropping
+				// IBM's row means a per-event update was lost.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "none-no-having-no-join" && rec.Sequence == 1 {
+						rec.New = rec.New[1:]
+						return
+					}
+				}
+				panic("no none-no-having-no-join record 1")
+			},
+		},
+		{
+			name: "none-istream-old-leak",
+			mutate: func(trace *compat.Trace) {
+				// The first none-no-having-no-join record is an istream
+				// per-event emission: plain select must never deliver old
+				// rows.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "none-no-having-no-join" && rec.Sequence == 1 {
+						rec.Old = append([]compat.ResultRecord(nil), rec.New...)
+						return
+					}
+				}
+				panic("no none-no-having-no-join record 1")
+			},
+		},
+		{
+			name: "none-having-expiry-dropped",
+			mutate: func(trace *compat.Trace) {
+				// The none-having-no-join irstream remove at t=5700 posts
+				// IBM's expired row as old. Dropping the record means a
+				// having-filtered window expiry was lost.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "none-having-no-join" && rec.Sequence == 9 {
+						rec.Old = nil
+						return
+					}
+				}
+				panic("no none-having-no-join record 9")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "resultset-outputlimit-simple-none.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-outputlimit-simple-none.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-outputlimit-simple-none.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-outputlimit-simple-none-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunResultSetOutputLimitSimpleNoneDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", resultsetOutputLimitSimpleNoneID,
+		"-scenario", filepath.Join(root, resultsetOutputLimitSimpleNoneID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(trace.Records) != 62 {
+		t.Fatalf("records = %d, want 62", len(trace.Records))
+	}
+}
+
+func TestRunResultSetOutputLimitSimpleNoneCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTraceFile, err := os.Open(filepath.Join(root, resultsetOutputLimitSimpleNoneID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	javaTrace, err := compat.LoadTrace(javaTraceFile)
+	closeErr := javaTraceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	goTraceFile, err := os.Open(filepath.Join(root, resultsetOutputLimitSimpleNoneID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := compat.LoadTrace(goTraceFile)
+	closeErr = goTraceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, resultsetOutputLimitSimpleNoneID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr = evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if !reflect.DeepEqual(evidence.JavaTrace, javaTrace) || !reflect.DeepEqual(evidence.GoTrace, goTrace) {
+		t.Fatal("checked-in evidence traces do not match checked-in trace files")
+	}
+}
+
+func TestRunResultSetOutputLimitSimpleNoneRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, resultsetOutputLimitSimpleNoneID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "none-no-having-no-join",`), []byte(`"case": "none-no-having-no-join", "extra": 0,`), 1)
+		}},
+		{name: "case-ordinal-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 0`), []byte(`"ordinal": 99`), 1)
+		}},
+		{name: "runtime-id-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"java-runtime-427e3f367e9556c57969"`), []byte(`"java-runtime-bogus"`), 1)
+		}},
+		{name: "epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"@name('s0') select symbol, volume, price from SupportMarketDataBean#time(5.5 sec)"`), []byte(`"select bogus"`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte("\"symbol\": \"IBM\",\n    \"volume\": 100,\n    \"price\": 25"), []byte("\"symbol\": \"IBM\",\n    \"volume\": 100,\n    \"price\": 25,\n    \"extra\": 0"), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte("\"symbol\": \"IBM\",\n    \"volume\": 100,\n    \"price\": 25"), []byte("\"symbol\": \"IBM\",\n    \"volume\": 100,\n    \"price\": 25,\n    \"price\": 26"), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportMarketDataBean"`), []byte(`"eventType": "bogus"`), 1)
+		}},
+		{name: "volume-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"volume": 100`), []byte(`"volume": 999`), 1)
+		}},
+		{name: "string-payload-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "IBM"`), []byte(`"theString": "bogus"`), 1)
+		}},
+		{name: "step-count", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "send"`), []byte(`"op": "bogus"`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{"-mode", resultsetOutputLimitSimpleNoneID, "-scenario", scenarioPath}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunResultSetOutputLimitSimpleNoneRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", resultsetOutputLimitSimpleNoneID+".json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		JavaRuntimes  []string `json:"javaRuntimes"`
+		JavaNames     []string `json:"javaNames"`
+		JavaStaticIDs []string `json:"javaStaticIds"`
+		Cases         []struct {
+			Case          string `json:"case"`
+			Ordinal       int    `json:"ordinal"`
+			RuntimeID     string `json:"runtimeId"`
+			ExecutionName string `json:"executionName"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if len(document.JavaRuntimes) != 4 {
+		t.Fatalf("javaRuntimes = %d, want 4", len(document.JavaRuntimes))
+	}
+	for _, c := range document.Cases {
+		if c.RuntimeID == "" {
+			t.Fatalf("case %q missing runtimeId", c.Case)
+		}
+	}
+}
+
 func TestRunEPLOtherForGroupDeliveryDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromTrace(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-for-group-delivery.trace.json"),

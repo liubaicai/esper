@@ -127,6 +127,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultsetOutputLimitParameterizedContextScenario(file)
 	} else if *mode == "resultset-output-limit-changeset-opt" || *mode == "resultset-output-limit-changeset-opt-diff" {
 		scenario, err = loadResultsetOutputLimitChangesetScenario(file)
+	} else if *mode == "resultset-outputlimit-simple-none" || *mode == "resultset-outputlimit-simple-none-diff" {
+		scenario, err = loadResultSetOutputLimitSimpleNoneScenario(file)
 	} else if *mode == "epl-variable-output-rate" || *mode == "epl-variable-output-rate-diff" {
 		scenario, err = loadEplVariableOutputRateScenario(file)
 	} else if *mode == "epl-subselect-within-filter-having" || *mode == "epl-subselect-within-filter-having-diff" {
@@ -5048,6 +5050,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, resultsetOutputLimitRowPerGroupDefaultJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, resultsetOutputLimitRowPerGroupNoneDefaultJavaSources),
 				splitMetadata(*javaExecutions, resultsetOutputLimitRowPerGroupDefaultJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-outputlimit-simple-none" || *mode == "resultset-outputlimit-simple-none-diff" {
+		trace, err := runResultSetOutputLimitSimpleNoneScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-outputlimit-simple-none-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, resultsetOutputLimitSimpleNoneJavaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetOutputLimitSimpleNoneJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetOutputLimitSimpleNoneJavaSources),
+				splitMetadata(*javaExecutions, resultsetOutputLimitSimpleNoneJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
