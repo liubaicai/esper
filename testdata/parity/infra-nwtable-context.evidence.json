@@ -1,0 +1,903 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-dfaacac6bb82c21d6d47",
+    "java-runtime-913c09693fb262b75d75"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableContext.java"
+  ],
+  "javaExecutions": [
+    "InfraContext{namedWindow=true}",
+    "InfraContext{namedWindow=false}"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-context",
+    "steps": [
+      {
+        "op": "case",
+        "case": "named-window"
+      },
+      {
+        "op": "deploy",
+        "case": "named-window",
+        "statement": "ctx",
+        "epl": "@public create context ContextOne start SupportBean_S0 end SupportBean_S1"
+      },
+      {
+        "op": "deploy",
+        "case": "named-window",
+        "statement": "create",
+        "epl": "@public context ContextOne create window MyInfra#keepall as (pkey0 string, pkey1 int, c0 long)"
+      },
+      {
+        "op": "deploy",
+        "case": "named-window",
+        "statement": "insert",
+        "epl": "context ContextOne insert into MyInfra select theString as pkey0, intPrimitive as pkey1, longPrimitive as c0 from SupportBean"
+      },
+      {
+        "op": "send",
+        "case": "named-window",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "named-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "case": "named-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20,
+          "longPrimitive": 200
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "named-window",
+        "statement": "s1",
+        "epl": "@name('s1')context ContextOne select * from MyInfra output snapshot when terminated"
+      },
+      {
+        "op": "deploy",
+        "case": "named-window",
+        "statement": "s2",
+        "epl": "@name('s2')context ContextOne select count(*) as thecnt from MyInfra output snapshot when terminated"
+      },
+      {
+        "op": "deploy",
+        "case": "named-window",
+        "statement": "s3",
+        "epl": "@name('s3')context ContextOne select pkey0, count(*) as thecnt from MyInfra output snapshot when terminated"
+      },
+      {
+        "op": "deploy",
+        "case": "named-window",
+        "statement": "s4",
+        "epl": "@name('s4')context ContextOne select pkey0, count(*) as thecnt from MyInfra group by pkey0 output snapshot when terminated"
+      },
+      {
+        "op": "deploy",
+        "case": "named-window",
+        "statement": "s5",
+        "epl": "@name('s5')context ContextOne select pkey0, pkey1, count(*) as thecnt from MyInfra group by pkey0 output snapshot when terminated"
+      },
+      {
+        "op": "deploy",
+        "case": "named-window",
+        "statement": "s6",
+        "epl": "@name('s6')context ContextOne select pkey0, pkey1, count(*) as thecnt from MyInfra group by rollup (pkey0, pkey1) output snapshot when terminated"
+      },
+      {
+        "op": "send",
+        "case": "named-window",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "named-window"
+      },
+      {
+        "op": "case",
+        "case": "table"
+      },
+      {
+        "op": "deploy",
+        "case": "table",
+        "statement": "ctx",
+        "epl": "@public create context ContextOne start SupportBean_S0 end SupportBean_S1"
+      },
+      {
+        "op": "deploy",
+        "case": "table",
+        "statement": "create",
+        "epl": "@public context ContextOne create table MyInfra as (pkey0 string primary key, pkey1 int primary key, c0 long)"
+      },
+      {
+        "op": "deploy",
+        "case": "table",
+        "statement": "insert",
+        "epl": "context ContextOne insert into MyInfra select theString as pkey0, intPrimitive as pkey1, longPrimitive as c0 from SupportBean"
+      },
+      {
+        "op": "send",
+        "case": "table",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "case": "table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20,
+          "longPrimitive": 200
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "table",
+        "statement": "s1",
+        "epl": "@name('s1')context ContextOne select * from MyInfra output snapshot when terminated"
+      },
+      {
+        "op": "deploy",
+        "case": "table",
+        "statement": "s2",
+        "epl": "@name('s2')context ContextOne select count(*) as thecnt from MyInfra output snapshot when terminated"
+      },
+      {
+        "op": "deploy",
+        "case": "table",
+        "statement": "s3",
+        "epl": "@name('s3')context ContextOne select pkey0, count(*) as thecnt from MyInfra output snapshot when terminated"
+      },
+      {
+        "op": "deploy",
+        "case": "table",
+        "statement": "s4",
+        "epl": "@name('s4')context ContextOne select pkey0, count(*) as thecnt from MyInfra group by pkey0 output snapshot when terminated"
+      },
+      {
+        "op": "deploy",
+        "case": "table",
+        "statement": "s5",
+        "epl": "@name('s5')context ContextOne select pkey0, pkey1, count(*) as thecnt from MyInfra group by pkey0 output snapshot when terminated"
+      },
+      {
+        "op": "deploy",
+        "case": "table",
+        "statement": "s6",
+        "epl": "@name('s6')context ContextOne select pkey0, pkey1, count(*) as thecnt from MyInfra group by rollup (pkey0, pkey1) output snapshot when terminated"
+      },
+      {
+        "op": "send",
+        "case": "table",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "table"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-context",
+    "records": [
+      {
+        "case": "named-window",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 100,
+              "pkey0": "E1",
+              "pkey1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 200,
+              "pkey0": "E2",
+              "pkey1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-window",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "thecnt": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-window",
+        "operation": "listener",
+        "statement": "s3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "thecnt": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E2",
+              "thecnt": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-window",
+        "operation": "listener",
+        "statement": "s4",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "thecnt": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E2",
+              "thecnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-window",
+        "operation": "listener",
+        "statement": "s5",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "pkey1": 10,
+              "thecnt": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E2",
+              "pkey1": 20,
+              "thecnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-window",
+        "operation": "listener",
+        "statement": "s6",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "pkey1": 10,
+              "thecnt": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "pkey1": {
+                "state": "null"
+              },
+              "thecnt": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E2",
+              "pkey1": 20,
+              "thecnt": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E2",
+              "pkey1": {
+                "state": "null"
+              },
+              "thecnt": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": {
+                "state": "null"
+              },
+              "pkey1": {
+                "state": "null"
+              },
+              "thecnt": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 100,
+              "pkey0": "E1",
+              "pkey1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 200,
+              "pkey0": "E2",
+              "pkey1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "thecnt": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "s3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "thecnt": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E2",
+              "thecnt": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "s4",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "thecnt": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E2",
+              "thecnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "s5",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "pkey1": 10,
+              "thecnt": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E2",
+              "pkey1": 20,
+              "thecnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "s6",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "pkey1": 10,
+              "thecnt": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "pkey1": {
+                "state": "null"
+              },
+              "thecnt": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E2",
+              "pkey1": 20,
+              "thecnt": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E2",
+              "pkey1": {
+                "state": "null"
+              },
+              "thecnt": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": {
+                "state": "null"
+              },
+              "pkey1": {
+                "state": "null"
+              },
+              "thecnt": 2
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-context",
+    "records": [
+      {
+        "case": "named-window",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 100,
+              "pkey0": "E1",
+              "pkey1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 200,
+              "pkey0": "E2",
+              "pkey1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-window",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "thecnt": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-window",
+        "operation": "listener",
+        "statement": "s3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "thecnt": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E2",
+              "thecnt": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-window",
+        "operation": "listener",
+        "statement": "s4",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "thecnt": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E2",
+              "thecnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-window",
+        "operation": "listener",
+        "statement": "s5",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "pkey1": 10,
+              "thecnt": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E2",
+              "pkey1": 20,
+              "thecnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-window",
+        "operation": "listener",
+        "statement": "s6",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "pkey1": 10,
+              "thecnt": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "pkey1": {
+                "state": "null"
+              },
+              "thecnt": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E2",
+              "pkey1": 20,
+              "thecnt": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E2",
+              "pkey1": {
+                "state": "null"
+              },
+              "thecnt": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": {
+                "state": "null"
+              },
+              "pkey1": {
+                "state": "null"
+              },
+              "thecnt": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 100,
+              "pkey0": "E1",
+              "pkey1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 200,
+              "pkey0": "E2",
+              "pkey1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "thecnt": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "s3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "thecnt": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E2",
+              "thecnt": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "s4",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "thecnt": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E2",
+              "thecnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "s5",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "pkey1": 10,
+              "thecnt": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E2",
+              "pkey1": 20,
+              "thecnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "s6",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "pkey1": 10,
+              "thecnt": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "pkey1": {
+                "state": "null"
+              },
+              "thecnt": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E2",
+              "pkey1": 20,
+              "thecnt": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E2",
+              "pkey1": {
+                "state": "null"
+              },
+              "thecnt": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": {
+                "state": "null"
+              },
+              "pkey1": {
+                "state": "null"
+              },
+              "thecnt": 2
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

@@ -1661,7 +1661,8 @@
     "internal/app/parity/context_key_segmented_infra_prioritized.go",
     "internal/app/parity/context_key_segmented_named_window.go",
     "internal/app/parity/context_key_segmented_named_window_subquery.go",
-    "internal/app/parity/context_init_term_prioritized.go"
+    "internal/app/parity/context_init_term_prioritized.go",
+    "internal/app/parity/infra_nwtable_context.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -2564,7 +2565,8 @@
     "internal/app/parity/infra_named_window_consumer_views.go",
     "internal/app/parity/infra_named_window_bean_views.go",
     "internal/app/parity/infra_named_window_insert_shape.go",
-    "internal/app/parity/infra_named_window_final_views.go"
+    "internal/app/parity/infra_named_window_final_views.go",
+    "internal/app/parity/infra_nwtable_context.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -48479,6 +48481,59 @@
     "java-runtime-0c822c80cf402d017d61"
    ],
    "notes": "Java/Go 4 records each, 0 differences. Covers: a non-overlapping cron context (9:00-17:00) with a contexted firstunique named window, four identical contexted inserts gated by a not-exists subquery over the window (only the first lands; out emits one {productID=A1} row), a pinned cross-context named-window subquery compile rejection, and a @Priority(1) start-@now/end-SupportBean context whose terminating event still delivers to @Priority(0) s0 (E1,E2 each emit one row). Engine fixes: temporal-context insert-into now routes per partition (was dropped into a bogus window partition); a context-free insert whose subquery reads a contexted window is now rejected before insert-into context inheritance."
+  },
+  {
+   "id": "case.infra-nwtable-context",
+   "javaRuntimeIds": [
+    "java-runtime-dfaacac6bb82c21d6d47",
+    "java-runtime-913c09693fb262b75d75"
+   ],
+   "javaStaticIds": [
+    "java-504b139a33ff22d20d65",
+    "java-504b139a33ff22d20d65"
+   ],
+   "javaNames": [
+    "InfraContext{namedWindow=true}",
+    "InfraContext{namedWindow=false}"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableContext.java"
+   ],
+   "goTests": [
+    "internal/app/parity/infra_nwtable_context.go",
+    "internal/app/parity/run_test.go"
+   ],
+   "tags": [
+    "infra",
+    "named-window",
+    "table",
+    "context",
+    "initiated-terminated",
+    "output-snapshot",
+    "group-by",
+    "rollup",
+    "late-deploy"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-nwtable-context.json",
+    "testdata/parity/infra-nwtable-context.trace.json",
+    "testdata/parity/infra-nwtable-context.go.trace.json",
+    "testdata/parity/infra-nwtable-context.evidence.json",
+    "tools/java-oracle/InfraNWTableContextScenarioOracle.java",
+    "tools/java-oracle/run-infra-nwtable-context.sh"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "difference": "Approved differences: none.",
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-dfaacac6bb82c21d6d47",
+    "java-runtime-913c09693fb262b75d75"
+   ],
+   "notes": "Java/Go 12 records each, 0 differences (cross-statement termination dispatch order canonicalized: Java fires s6..s1 reverse-deploy, Go s1..s6 forward; per-statement content compared exactly). Covers a non-overlapping init-term ContextOne (S0 start / S1 end) owning a contexted keepall named window xor a contexted PK table, a contexted insert-into, and six output-snapshot-when-terminated selects (star / count(*) / ungrouped count-per-row / group-by / group-by+non-grouped-column / rollup) LATE-DEPLOYED into the already-active partition. Engine fixes: (1) adoptInitiatedTerminatedPartitionsLocked attaches a late-deployed statement to the context's live partitions at deploy time (reusing the original allocation ID and contextProperties), so terminated-snapshot output fires; (2) snapshotAggregateBatch replays a named-window aggregate's current rows through a fresh runtime when the statement's own aggregate state is empty (late deploy), matching the table replay path."
   }
  ],
  "mappings": [
@@ -51813,13 +51868,21 @@
   {
    "capabilityId": "context.partition",
    "caseId": "case.context-init-term-prioritized"
+  },
+  {
+   "capabilityId": "context.partition",
+   "caseId": "case.infra-nwtable-context"
+  },
+  {
+   "capabilityId": "infra.namedwindow.views",
+   "caseId": "case.infra-nwtable-context"
   }
  ],
  "summary": {
-  "inventoriedCases": 748,
-  "implementedCases": 746,
-  "differentialVerifiedCases": 374,
-  "differentialVerifiedRuntimeIds": 1469,
+  "inventoriedCases": 749,
+  "implementedCases": 747,
+  "differentialVerifiedCases": 375,
+  "differentialVerifiedRuntimeIds": 1471,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -51829,13 +51892,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4003,
-  "referencedJavaRuntimeIds": 3573,
+  "runtimeAssociationCount": 4005,
+  "referencedJavaRuntimeIds": 3575,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 563,
+  "unreferencedJavaRuntimeIds": 561,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 748,
+  "totalCases": 749,
   "totalCapabilities": 126
  }
 }

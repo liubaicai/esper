@@ -75918,3 +75918,241 @@ func TestRunHelpIncludesContextInitTermPrioritized(t *testing.T) {
 		}
 	}
 }
+
+func TestRunInfraNWTableContextDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "infra-nwtable-context.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "infra-nwtable-context.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "infra-nwtable-context.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "infra-nwtable-context-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunInfraNWTableContextDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "named-window-snapshot-row-lost",
+			mutate: func(trace *compat.Trace) {
+				// The evidence stores the canonicalized s1..s6 order, so
+				// records[0] is the named-window s1 batch: both keepall
+				// window rows {E1,10,100},{E2,20,200}.
+				trace.Records[0].New[0].Fields["pkey0"] = "E9"
+			},
+		},
+		{
+			name: "named-window-rollup-super-aggregate-lost",
+			mutate: func(trace *compat.Trace) {
+				// records[5] is the named-window s6 rollup batch; its last
+				// row is the () super-aggregate {null,null,2}.
+				trace.Records[5].New[4].Fields["thecnt"] = 99
+			},
+		},
+		{
+			name: "table-count-drift",
+			mutate: func(trace *compat.Trace) {
+				// records[7] is the table case's s2 batch: the single
+				// count row {thecnt=2} at partition end.
+				trace.Records[7].New[0].Fields["thecnt"] = 3
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "infra-nwtable-context.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "infra-nwtable-context.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "infra-nwtable-context.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "infra-nwtable-context-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
+// TestRunInfraNWTableContextDiffAcceptsJavaTerminationOrder feeds the raw
+// Java dispatch order (s6..s1 reverse-deploy) through the diff and asserts the
+// normalizer canonicalizes it to the same s1..s6 order the evidence stores —
+// the only test that exercises normalizeInfraNWTableContextTrace end-to-end.
+func TestRunInfraNWTableContextDiffAcceptsJavaTerminationOrder(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "infra-nwtable-context.evidence.json"),
+		func(trace *compat.Trace) {
+			// Restore Java's raw s6..s1 listener order within each case: the
+			// canonicalized evidence stores s1..s6, so reverse the six-record
+			// run per case.
+			for start := 0; start+6 <= len(trace.Records); start += 6 {
+				for i, j := start, start+5; i < j; i, j = i+1, j-1 {
+					trace.Records[i], trace.Records[j] = trace.Records[j], trace.Records[i]
+				}
+			}
+		})
+	evidencePath := filepath.Join(t.TempDir(), "infra-nwtable-context.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "infra-nwtable-context.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "infra-nwtable-context-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunInfraNWTableContextRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "infra-nwtable-context.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "infra-nwtable-context"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "infra-nwtable-context"`)...), 1)
+		}},
+		{name: "case-metadata", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 1`), []byte(`"ordinal": 2`), 1)
+		}},
+		{name: "epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`group by rollup (pkey0, pkey1)`), []byte(`group by rollup (pkey1, pkey0)`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"payload": {"id": 0}`), []byte(`"payload": {"id": 0, "extra": 0}`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1"`), []byte(`"theString": "E1", "theString": "Z"`), 1)
+		}},
+		{name: "step-field-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "case", "case": "table"}`), []byte(`{"op": "case", "case": "table", "extra": 0}`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", "infra-nwtable-context",
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunInfraNWTableContextDiffRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "infra-nwtable-context.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, infraNWTableContextJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, infraNWTableContextJavaExecutions) {
+		t.Fatalf("scenario metadata runtimes=%v names=%v", document.JavaRuntimes, document.JavaNames)
+	}
+	wantCaseRuntimeIDs := map[string]string{
+		"named-window": "java-runtime-dfaacac6bb82c21d6d47",
+		"table":        "java-runtime-913c09693fb262b75d75",
+	}
+	for _, entry := range document.Cases {
+		if wantCaseRuntimeIDs[entry.Case] != entry.RuntimeID {
+			t.Fatalf("case %q runtimeId = %q, want %q", entry.Case, entry.RuntimeID, wantCaseRuntimeIDs[entry.Case])
+		}
+	}
+}
+
+func TestRunHelpIncludesInfraNWTableContext(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-h"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("help exit code = %d, stderr = %q", code, stderr.String())
+	}
+	for _, mode := range []string{
+		"infra-nwtable-context",
+		"infra-nwtable-context-diff",
+	} {
+		if !strings.Contains(stderr.String(), mode) {
+			t.Fatalf("help output omits %q: %s", mode, stderr.String())
+		}
+	}
+}

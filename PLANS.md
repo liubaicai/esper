@@ -192,7 +192,62 @@ Active: Draft 4.516 ('context-init-term-prioritized').
   (2 runtime IDs) + `context.partition` mapping/goRefs/DV IDs. Summary 748
   cases / 374 DV / 1469 DV runtime IDs / unreferenced 563.
 - [x] Gates: `make check` green (parity ~90s, esper ~108s, compat clean).
-- [ ] Parity review.
+- [x] Parity review: ParityReview516 initial FAIL (1 P2 + 3 P3) — P2: the
+  isTemporal() route-queue skip dropped expire-path and trigger-select routed
+  output; fixed by extending expireContext routePerPartition to temporal,
+  routing syncTemporalContextLocked termination/expire batches per partition,
+  and routing the trigger batch per-partition. P3s fixed: route moved after
+  the iterator-only early return; nested-subquery recursion added (symmetric
+  direction deliberately NOT applied — contexted statements may read
+  context-free windows via projection subqueries, proven by DV'd ord 4/5);
+  run_test.go gained the 5-test family and the loader now whitelists
+  case-marker fields. Confirmation review: PASS.
+- [x] Shipped; Git owns identity. Draft 4.516 committed and pushed as `aef870d9a`.
+
+## Current work unit
+Active: Draft 4.517 ('infra-nwtable-context').
+
+- Selection: `InfraNWTableContext.java` ord 0 `InfraContext{namedWindow=true}`
+  (`java-runtime-dfaacac6bb82c21d6d47`) + ord 1 `InfraContext{namedWindow=false}`
+  (`java-runtime-913c09693fb262b75d75`). Contract frozen by NextJavaContract517 +
+  NextGoSurface517; asset contract at `.omp/contract-517.md`.
+- [x] Shared core (primary agent, verified by probes — both variants emit the
+  exact Java-asserted rows for all six statements):
+  (1) `adoptInitiatedTerminatedPartitionsLocked` added at deploy (after
+  materializeCategoryContextLocked): a statement deployed into an
+  initiated-terminated context AFTER the initiating event now instantiates an
+  agent instance per live partition, reusing the partition's original
+  allocation ID and contextProperties from the descriptor. Without it the
+  statement's partition map stayed empty and `output snapshot when terminated`
+  fired nothing on the end event.
+  (2) `snapshotAggregateBatch` extended: a named-window aggregate whose own
+  state is empty (late deploy or empty window) now replays the window's
+  current rows through a fresh aggregate runtime — the same model
+  `snapshotAggregateFromTable` already used for tables. Fixes s2..s6
+  returning zero/empty for late-deployed window aggregates.
+- [x] Parity assets (InfraNWTableCtx517): scenario (2 cases / 28 steps),
+  oracle, runner, run.go/run_test.go wiring, 6-test family. Java trace via
+  oracle; Go trace + diff `passing` / 0 differences (12 records each).
+- [x] Shared core (post-review fixes): `infraLeafEvents` walks wrapper nodes
+  (streamWindow/streamFilter/streamContained/streamDerived/streamPattern) to
+  the infra leaf so preload/replay reach stored rows; adoption guard requires
+  non-overlapping, non-distinct, no start/end pattern, ALL contextKeys
+  literal; preload failure skips the partition; `snapshotAggregateFromTable`
+  falls through to `snapshotAggregateStateBatch` on empty sources (restores
+  Esper's {count=0} empty-group row); `.go.trace.json` checked in;
+  `TestRunInfraNWTableContextDiffAcceptsJavaTerminationOrder` exercises the
+  s6->s1 canonicalization end-to-end.
+- [x] Manifest/roadmap/CHANGELOG updated: `case.infra-nwtable-context` +
+  `infra.nwtable-context` born-DV (2 runtime IDs). Summary 671 cases / 298 DV
+  / 1093 DV runtime IDs, unreferenced 816.
+- [x] Gates: `make check` green (parity ~97s, esper ~107s, compat clean).
+- [x] Parity review (ParityReview517): PASS after five rounds — P1 missing
+  .go.trace.json; P2s preload-only-zero-delta, empty-source early return,
+  adoption for overlapping/keyed contexts, wrapped-input leaf enumeration,
+  pattern-end fresh timer, pattern-start unreproducible key; P3s composite-key
+  guard, silent preload error, unreachable endPattern block, normalizer test,
+  comment accuracy. All fixed; residual P3 scope notes only (non-snapshot
+  output, join secondary streams, keyed contexts — pre-existing divergences).
 
 ## Current work unit
 Active: Draft 4.512 ('context-start-end-trio').

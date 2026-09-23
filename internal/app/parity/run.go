@@ -82,6 +82,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include view-group-closure and view-group-closure-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-output-limit-crontab-when-closure and resultset-output-limit-crontab-when-closure-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-invalid-closure and resultset-aggregate-invalid-closure-diff")
+		fmt.Fprintln(stderr, "runner modes include infra-nwtable-context and infra-nwtable-context-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
@@ -409,6 +410,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraTableSubqueryScenario(file)
 	} else if *mode == "infra-table-context" || *mode == "infra-table-context-diff" {
 		scenario, err = loadInfraTableContextScenario(file)
+	} else if *mode == "infra-nwtable-context" || *mode == "infra-nwtable-context-diff" {
+		scenario, err = loadInfraNWTableContextScenario(file)
 	} else if *mode == "infra-table-invalid" || *mode == "infra-table-invalid-diff" {
 		scenario, err = loadInfraTableInvalidScenario(file)
 	} else if *mode == "infra-table-count-min-sketch" || *mode == "infra-table-count-min-sketch-diff" {
@@ -4280,6 +4283,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraTableContextJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraTableContextJavaSources),
 				splitMetadata(*javaExecutions, infraTableContextJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-nwtable-context" || *mode == "infra-nwtable-context-diff" {
+		trace, err := runInfraNWTableContextScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-nwtable-context-diff" {
+			return runDifferentialModeWithNormalizer(stdout, stderr, *javaTracePath, *evidencePath, infraNWTableContextJavaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNWTableContextJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNWTableContextJavaSources),
+				splitMetadata(*javaExecutions, infraNWTableContextJavaExecutions), scenario, trace, normalizeInfraNWTableContextTrace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

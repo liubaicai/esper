@@ -3195,6 +3195,7 @@ func (e *Engine) deployPreparedRequestsLocked(ctx context.Context, requests []de
 		// preallocated hash and flat category contexts.
 		e.materializePreallocatedHashContextLocked(statement)
 		e.materializeCategoryContextLocked(statement)
+		e.adoptInitiatedTerminatedPartitionsLocked(statement)
 		if e.contextStatementRefs[contextName] == 1 {
 			e.pendingContextEvents = append(e.pendingContextEvents, contextNotification{
 				kind:  contextNotificationActivated,
@@ -3287,6 +3288,118 @@ func (e *Engine) materializeCategoryContextLocked(statement *Statement) {
 		statement.runtime.partitions[partitionKey] = partition
 		e.retainContextPartitionLocked(statement.plan.query.contextName, partitionKey, partition)
 	}
+}
+
+// adoptInitiatedTerminatedPartitionsLocked attaches a late-deployed statement
+// to the partitions its initiated-terminated context already materialized.
+// Esper's context controller owns partition lifecycle, so a statement deployed
+// after the initiating event still instantiates an agent instance per live
+// partition and observes the shared window/table state that partition owns.
+// Without adoption the statement's partition map stays empty and an
+// `output snapshot when terminated` select fires nothing when the end event
+// arrives.
+func (e *Engine) adoptInitiatedTerminatedPartitionsLocked(statement *Statement) {
+	if e == nil || e.env == nil || statement == nil || statement.plan.query.contextName == "" {
+		return
+	}
+	definition, ok := e.env.Context(statement.plan.query.contextName)
+	if !ok || definition.parent != nil || definition.kind != ContextInitiatedTerminated ||
+		definition.initiatedOverlapping || definition.initiatedDistinct ||
+		definition.startPattern != nil || definition.endPattern != nil {
+		return
+	}
+	// Adoption is only safe when every partition key is a compile-time
+	// literal: infra rows carry no context-key fields, so a keyed context's
+	// partitionsForEvent on a stored row never reproduces the stored
+	// allocation key and the adopted partition would read an empty window.
+	for _, key := range definition.contextKeys() {
+		if key == nil || key.node() == nil || key.node().kind != "literal" {
+			return
+		}
+	}
+	keys := e.liveContextPartitionKeysLocked(statement.plan.query.contextName)
+	if len(keys) == 0 {
+		return
+	}
+	if statement.runtime.partitions == nil {
+		statement.runtime.partitions = make(map[string]*statementRuntime)
+	}
+	now := e.clock.Now()
+	for _, partitionKey := range keys {
+		if _, exists := statement.runtime.partitions[partitionKey]; exists {
+			continue
+		}
+		descriptor := e.contextPartitionDescriptors[statement.plan.query.contextName][partitionKey]
+		query := statement.runtime.query
+		query.contextName = ""
+		partitionRuntime := newStatementRuntime(query)
+		partitionRuntime.engine = e
+		partitionRuntime.rowRecogOwner = statement.runtime.rowRecogOwner
+		partitionRuntime.partitionContextName = statement.plan.query.contextName
+		partitionRuntime.partitionKey = partitionKey
+		// Reuse the partition's original allocation ID and context properties
+		// (startTime, initiating_event, declared context fields) so the adopted
+		// agent instance is indistinguishable from one created at initiation.
+		partitionRuntime.partitionID = descriptor.ID
+		partitionRuntime.contextProperties = cloneValues(descriptor.properties)
+		if partitionRuntime.contextProperties == nil {
+			partitionRuntime.contextProperties = definition.contextPropertyValues(Event{}, now, statement.runtime.variables, partitionRuntime.partitionID)
+		}
+		partitionRuntime.variables = partitionRuntime.withContextProperties(statement.runtime.variables)
+		partitionRuntime.initializeAt(now)
+		// Esper preloads a late-deployed consumer with the partition's current
+		// infra rows at agent-instance creation (NamedWindowConsumerPreload):
+		// feed the leaf rows through the adopted runtime's full input chain so
+		// window views, unnest wrappers and aggregate state all reflect
+		// pre-deploy rows, not only post-deploy deltas. A preload failure skips
+		// the partition entirely rather than retaining a partially-seeded one.
+		preloadFailed := false
+		for _, event := range partitionRuntime.infraLeafEvents(statement.plan.query.input, now) {
+			delta, insertErr := partitionRuntime.insert(statement.plan.query.input, event, now)
+			if insertErr != nil {
+				preloadFailed = true
+				break
+			}
+			if statement.plan.query.aggregate != nil {
+				if _, aggErr := partitionRuntime.aggregateBatch(delta, statement.plan, now); aggErr != nil {
+					preloadFailed = true
+					break
+				}
+			}
+		}
+		if preloadFailed {
+			continue
+		}
+		partition := ptrStatementRuntime(partitionRuntime)
+		statement.runtime.partitions[partitionKey] = partition
+		e.retainContextPartitionLocked(statement.plan.query.contextName, partitionKey, partition)
+	}
+}
+
+// infraLeafEvents returns the partition-scoped rows of the innermost named
+// window or table leaf under node. Wrapper nodes (streamWindow, streamFilter,
+// streamContained, streamDerived, streamPattern via its input) are walked
+// through so a late-deployed statement whose input wraps the infra source
+// still sees the stored rows; feeding them back through insert repopulates
+// each wrapper's own state (a pattern wrapper re-arms on the replayed rows,
+// matching Esper's consumer preload).
+func (r *statementRuntime) infraLeafEvents(node *streamNode, now time.Time) []Event {
+	if r == nil || node == nil {
+		return nil
+	}
+	for current := node; current != nil; current = current.input {
+		if current.kind == streamNamedWindow || current.kind == streamTable {
+			if r.engine == nil {
+				return nil
+			}
+			events, err := r.engine.snapshotFireAndForgetSourceLocked(r.context(), current, now, r.variables)
+			if err != nil {
+				return nil
+			}
+			return r.filterPartitionEvents(events, now)
+		}
+	}
+	return nil
 }
 
 func (e *Engine) dispatchDeploymentActivation(ctx context.Context, activation deploymentActivation, rolloutItemIndex int) error {
@@ -13526,6 +13639,17 @@ func (r *statementRuntime) snapshotAggregateBatch(plan Plan, now time.Time) Resu
 	if r != nil && plan.query.aggregate != nil && plan.query.aggregate.join == nil && containsTableSource(plan.query.input, nil) {
 		return r.snapshotAggregateFromTable(plan, now)
 	}
+	// A late-deployed aggregate over a named window has no accumulated state
+	// of its own, yet Esper's statement iterator still reports the aggregate
+	// over the window's current rows. Replay the current contents through a
+	// fresh aggregate runtime — the same model snapshotAggregateFromTable
+	// uses for tables — whenever the source is a named window and this
+	// statement has accumulated nothing (late deploy or an empty window).
+	if r != nil && plan.query.aggregate != nil && plan.query.aggregate.join == nil &&
+		containsNamedWindow(plan.query.input, nil) &&
+		(r.aggregateState == nil || len(r.aggregateState.allEvents) == 0) {
+		return r.snapshotAggregateFromTable(plan, now)
+	}
 	if r != nil && plan.query.aggregate != nil && outputLimitedGroupedIterator(plan.query.output) && len(aggregateGroupingSetsForDefinition(plan.query.aggregate)) == 1 {
 		return r.snapshotOutputLimitedAggregateBatch(plan, now, false)
 	}
@@ -13792,9 +13916,12 @@ func (r *statementRuntime) snapshotOutputLimitedAggregateBatch(plan Plan, now ti
 }
 
 func (r *statementRuntime) snapshotAggregateFromTable(plan Plan, now time.Time) ResultBatch {
-	events := r.currentStreamEvents(plan.query.input, now)
+	events := r.infraLeafEvents(plan.query.input, now)
 	if len(events) == 0 {
-		return ResultBatch{Time: now}
+		// An empty infra source still owes an ungrouped aggregate its
+		// empty-group row (Esper's RowForAll iterator emits {count=0} over an
+		// empty window/table); the accumulated-state path produces it.
+		return r.snapshotAggregateStateBatch(plan, now)
 	}
 	temporaryPlan := plan
 	temporaryPlan.query.tableTarget = ""
