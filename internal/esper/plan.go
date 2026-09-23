@@ -735,6 +735,14 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 	if query.join == nil && (query.aggregate == nil || query.aggregate.join == nil) && streamHasMethodDependencies(query.input) {
 		return Plan{}, WrapError(ErrorInvalidRule, "stream", NewError(ErrorInvalidRule, "method dependencies require a join"))
 	}
+	// Esper validates a subquery's named-window context against the
+	// statement's declared context before insert-into inheritance: a
+	// context-free insert whose subquery reads a contexted window is
+	// rejected even though the statement would inherit the window's
+	// context. Run the check before the inheritance block below.
+	if err := e.validateSubqueryWindowContext(query); err != nil {
+		return Plan{}, err
+	}
 	// Esper associates an insert-into statement with the target named
 	// window's context: the statement runs inside each context partition and
 	// its routed rows land in the matching window partition. Inherit the
@@ -1470,6 +1478,71 @@ func (e *Environment) validateTableContext(query Query) error {
 		}
 	}
 	return nil
+}
+
+// validateSubqueryWindowContext rejects a subquery whose named-window source
+// is declared for a context that differs from the statement's declared
+// context. Esper compares the window's context against the statement's own
+// context before insert-into inheritance (EPLValidationUtil
+// mustMatchContext), so a context-free insert whose subquery reads a
+// contexted window fails even though the statement would inherit the
+// window's context, and a contexted statement whose subquery reads a
+// context-free window fails too. The check runs before the inheritance
+// block in Build, which is why it reads query.contextName directly, and it
+// recurses into each subquery's own predicate/projection/group-by/having
+// expressions so nested subqueries are checked (ExprNodeSubselectDeclaredDotVisitor).
+func (e *Environment) validateSubqueryWindowContext(query Query) error {
+	if e == nil {
+		return nil
+	}
+	contextName := strings.TrimSpace(query.contextName)
+	var checkNode func(node *exprNode) error
+	var checkExpr func(expression Expr) error
+	checkNode = func(node *exprNode) error {
+		if node == nil {
+			return nil
+		}
+		if node.subquery != nil {
+			base, err := sourceNode(node.subquery.source)
+			if err == nil && base != nil && base.kind == streamNamedWindow {
+				if window, found := e.NamedWindowInModule(base.moduleName, base.sourceName); found {
+					// Reject only when the window is contexted and the
+					// statement context differs: a contexted statement MAY
+					// read a context-free window through a projection
+					// subquery (ContextKeyedSubqueryNamedWindowIndex*),
+					// so the reverse direction is not rejected here.
+					if declared := strings.TrimSpace(window.Context()); declared != "" && declared != contextName {
+						return NewError(ErrorInvalidRule, fmt.Sprintf("named window %q has been declared for context %q and can only be used within the same context", base.sourceName, declared))
+					}
+				}
+			}
+			// Nested subqueries inside this subquery's own clauses are
+			// validated against the same statement context.
+			for _, nested := range []Expr{node.subquery.predicate, node.subquery.projection, node.subquery.groupBy, node.subquery.having} {
+				if err := checkExpr(nested); err != nil {
+					return err
+				}
+			}
+			for _, column := range node.subquery.columns {
+				if err := checkExpr(column.Expr); err != nil {
+					return err
+				}
+			}
+		}
+		for _, child := range node.children {
+			if err := checkNode(child); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	checkExpr = func(expression Expr) error {
+		if expression == nil || isNilReflectValue(reflect.ValueOf(expression)) {
+			return nil
+		}
+		return checkNode(expression.node())
+	}
+	return visitQueryExpressions(e, query, checkExpr)
 }
 
 func aggregateJoin(definition *aggregateDefinition) *joinDefinition {

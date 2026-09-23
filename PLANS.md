@@ -153,21 +153,46 @@ Active: Draft 4.515 ('context-key-segmented-named-window-subquery').
 - [x] Manifest: `case.context-key-segmented-named-window-subquery` born-DV
  (2 runtime IDs) + `context.partition` mapping/goRefs; summary 747 cases /
  373 DV / 1467 DV runtime IDs / unreferenced 565. Roadmap + CHANGELOG added.
+- [x] Gates + parity review: `make check` green (parity ~98s, esper ~110s).
+  Reviewer ParityReview515 PASS, no findings.
+- [x] Shipped; Git owns identity. Draft 4.515 committed and pushed as `ff186afec`.
 
-## Prefetched next unit (read-only, contract frozen)
+## Current work unit
+Active: Draft 4.516 ('context-init-term-prioritized').
 
-Draft 4.515 candidate: `ContextKeySegmentedNamedWindow.java` ords 4
-`ContextKeyedSubqueryNamedWindowIndexUnShared` (`java-runtime-7347c7d16d52e5ea0d30`)
-+ 5 `ContextKeyedSubqueryNamedWindowIndexShared` (`java-runtime-af7bcf071474f57227fb`).
-Frozen by NextJavaContract515: a context-FREE keepall window over
-SupportBean_S0 is read by a correlated scalar subquery
-`(select p00 from W as s0 where sb.intPrimitive = s0.id)` from a keyed-context
-SupportBean statement; correlation is NOT partition-scoped (G2 sees s1; G1
-sees s2 inserted under G3 flow); val0 null when no row matches. Ord 5 adds
-`@Hint('enable_window_subquery_indexshare')` on the create-window + @public
-path sharing; observable output identical to unshared. Event matrix:
-S0(10,s1) → silent; G1(10) → {G1,10,s1}; G2(10) → {G2,10,s1}; G3(20) →
-{G3,20,null}; S0(20,s2) → silent; G3(20) → {G3,20,s2}; G1(20) → {G1,20,s2}.
+- Selection: `ContextInitTermPrioritized.java` ord 0
+  `ContextInitTermPrioNonOverlappingSubqueryAndInvalid` (`java-runtime-bb247dc87cf118eb8661`,
+  static `java-41c13254dc50886c2dd2`) + ord 1 `ContextInitTermPrioAtNowWithSelectedEventEnding`
+  (`java-runtime-0c822c80cf402d017d61`, static `java-517175a60c987d2e2397`). Contract frozen by
+  NextJavaContract516 + NextGoSurface516; asset contract at `.omp/contract-516.md`.
+- [x] Shared core (primary agent, verified by probes):
+  (1) `queueStatementRoutesLocked` skip extended to `definition.isTemporal()` and the temporal
+  branch of `process` now calls `routePartitionInsertLocked` — contexted `insert into` a
+  contexted named window under a cron/daily context previously routed via the generic queue
+  with statement-level variables and landed in a bogus window partition (probe: `out` saw
+  nothing; now emits one row).
+  (2) `validateSubqueryWindowContext` added in `Build` BEFORE insert-into context inheritance —
+  a context-free `insert into` whose subquery reads a contexted window is now rejected with
+  `ErrorInvalidRule` ("has been declared for context"), matching Java's
+  `Failed to validate subquery ... can only be used within the same context`.
+  (3) Terminating-event re-initiation NOT needed: Go already delivers the terminating event to
+  the old partition for `select *` (no output clause → `OutputNoTermination` → no skip), so
+  E1/E2 each emit one row identically to Java's new-partition delivery. Verified by probe.
+- [x] Regression check: `go test ./internal/esper -run 'TestContext|TestSubquery|TestNamedWindow|TestRoute|TestFAF'` green (58s).
+- [x] Parity assets (AssetWorker512 + primary fix): scenario
+  `context-init-term-prioritized.json` (2 cases / 18 steps — ctx+s0 merged into
+  one deploy step because non-@public C1 is invisible across Java modules),
+  oracle `ContextInitTermPrioritizedScenarioOracle.java` + run.sh, runner
+  `context_init_term_prioritized.go`, run.go wiring.
+- [x] Differential replay: Java 4 records / Go 4 records, `passing` / 0
+  differences; evidence `context-init-term-prioritized.evidence.json`.
+  FAF test `context-mismatch` updated to assert Build-time rejection (Java
+  compileFAF runs the same context validation as compileDeploy).
+- [x] Manifest/roadmap/CHANGELOG: `case.context-init-term-prioritized` born-DV
+  (2 runtime IDs) + `context.partition` mapping/goRefs/DV IDs. Summary 748
+  cases / 374 DV / 1469 DV runtime IDs / unreferenced 563.
+- [x] Gates: `make check` green (parity ~90s, esper ~108s, compat clean).
+- [ ] Parity review.
 
 ## Current work unit
 Active: Draft 4.512 ('context-start-end-trio').

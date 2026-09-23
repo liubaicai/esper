@@ -2,8 +2,10 @@ package esper
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 )
 
@@ -478,12 +480,18 @@ func TestInfraFAFSubqueryInvalidMatchesEsper(t *testing.T) {
 		}
 		createFAFSubqueryStore(t, env, engine, "PartitionedInfra", schema, true, KeepAll(), "MyContext")
 		inner := FromNamedWindow(env, "PartitionedInfra")
-		plan, err := env.Build(outer.Select(Alias("c0", SubqueryValue[string](inner, Field[any, string]("theString")))).Query())
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err := engine.ExecuteFireAndForget(context.Background(), plan); err == nil {
-			t.Fatal("expected context-mismatch FAF subquery to be rejected")
+		// Java rejects a subquery over a contexted named window from a
+		// context-free statement at compile time (compileFAF runs the same
+		// context validation as compileDeploy), so the fluent Build — Go's
+		// compile step — is the faithful rejection boundary.
+		if _, err := env.Build(outer.Select(Alias("c0", SubqueryValue[string](inner, Field[any, string]("theString")))).Query()); err == nil {
+			t.Fatal("expected context-mismatch subquery to be rejected at build")
+		} else {
+			var espErr *Error
+			if !errors.As(err, &espErr) || espErr.Code != ErrorInvalidRule ||
+				!strings.Contains(err.Error(), "has been declared for context") {
+				t.Fatalf("context-mismatch build error = %v", err)
+			}
 		}
 	})
 }

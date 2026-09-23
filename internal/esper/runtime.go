@@ -5708,12 +5708,13 @@ func (e *Engine) queueStatementRoutesLocked(statement *Statement, batch ResultBa
 	}
 	if statement.plan.query.contextName != "" {
 		if definition, ok := e.env.Context(statement.plan.query.contextName); ok &&
-			(definition.kind == ContextInitiatedTerminated || definition.hasInitiatedParent()) {
-			// Lifecycle contexts route per partition inside
+			(definition.kind == ContextInitiatedTerminated || definition.hasInitiatedParent() || definition.isTemporal()) {
+			// Lifecycle and temporal contexts route per partition inside
 			// processInitiatedTerminated / processPatternInitiatedTerminated /
-			// processNestedInitiatedParent with partition-scoped variables;
-			// the generic queue would re-derive a bogus single key and
-			// double-route rows already inserted per partition.
+			// processNestedInitiatedParent / the temporal branch of process
+			// with partition-scoped variables; the generic queue would
+			// re-derive a bogus single key and double-route rows already
+			// inserted per partition.
 			return nil
 		}
 	}
@@ -8303,6 +8304,13 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 			if err != nil {
 				return ResultBatch{}, false, err
 			}
+			if definition.isTemporal() && s.plan.query.routeTarget != "" {
+				// Temporal trigger-selects route per partition too (the
+				// generic post-dispatch queue skips them).
+				if err := s.routePartitionInsertLocked(partition, batch, now, variables); err != nil {
+					return ResultBatch{}, false, err
+				}
+			}
 			batch.New = append(allocBatch.New, batch.New...)
 			if batch.Time.IsZero() {
 				batch.Time = allocBatch.Time
@@ -8315,6 +8323,15 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 			// iterator-only: the cycle refreshed the retained state for the
 			// iterator, but no listener batch or route is ever posted.
 			return ResultBatch{Time: batch.Time}, false, err
+		}
+		if err == nil && definition.isTemporal() && s.plan.query.routeTarget != "" {
+			// Temporal contexts route insert-into rows per partition (the
+			// generic post-dispatch queue skips them); the partition-scoped
+			// variables carry the leaf key so a context-bound named window
+			// insert lands in this exact partition. Runs after the
+			// iterator-only early return so suppressed statements never
+			// route.
+			err = s.routePartitionInsertLocked(partition, batch, now, variables)
 		}
 		if changed {
 			batch.Sequence = s.runtime.seq.Add(1)
@@ -10595,16 +10612,25 @@ func (s *Statement) syncTemporalContextLocked(now time.Time) (ResultBatch, bool)
 				terminationBatch := partition.outputAtTermination(s.plan, now)
 				batch.New = append(batch.New, terminationBatch.New...)
 				batch.Old = append(batch.Old, terminationBatch.Old...)
+				// Temporal contexts route insert-into rows per partition
+				// (the generic post-dispatch queue skips them).
+				if err := s.routePartitionInsertLocked(partition, terminationBatch, now, s.runtime.variables); err != nil {
+					return ResultBatch{}, false
+				}
 			} else {
 				partBatch, _ := partition.expireBatch(s.plan, now, s.runtime.variables)
 				batch.New = append(batch.New, partBatch.New...)
 				batch.Old = append(batch.Old, partBatch.Old...)
+				if err := s.routePartitionInsertLocked(partition, partBatch, now, s.runtime.variables); err != nil {
+					return ResultBatch{}, false
+				}
 			}
 			s.runtime.pendingOutputAssignments = append(s.runtime.pendingOutputAssignments, partition.drainOutputAssignments()...)
 		}
 		delete(s.runtime.partitions, key)
 		s.engine.releaseContextPartitionKindLocked(s.plan.query.contextName, key, true, partition)
 	}
+
 	if active {
 		if _, exists := s.runtime.partitions[activeKey]; !exists {
 			query := s.runtime.query
@@ -11622,11 +11648,12 @@ func (s *Statement) expireContextSubqueriesLocked(now time.Time) {
 func (s *Statement) expireContext(now time.Time, variables map[string]Value) (ResultBatch, bool) {
 	keys := sortedPartitionKeys(s.runtime.partitions)
 	batch := ResultBatch{Time: now}
-	// Lifecycle contexts route insert-into rows per partition (the generic
-	// post-dispatch queue skips them); other contexts keep the merged batch.
+	// Lifecycle and temporal contexts route insert-into rows per partition
+	// (the generic post-dispatch queue skips them); other contexts keep the
+	// merged batch.
 	routePerPartition := false
 	if definition, ok := s.engine.env.Context(s.plan.query.contextName); ok {
-		routePerPartition = definition.kind == ContextInitiatedTerminated || definition.hasInitiatedParent()
+		routePerPartition = definition.kind == ContextInitiatedTerminated || definition.hasInitiatedParent() || definition.isTemporal()
 	}
 	for _, key := range keys {
 		partition := s.runtime.partitions[key]

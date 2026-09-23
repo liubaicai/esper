@@ -1,0 +1,251 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-bb247dc87cf118eb8661",
+    "java-runtime-0c822c80cf402d017d61"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextInitTermPrioritized.java"
+  ],
+  "javaExecutions": [
+    "ContextInitTermPrioNonOverlappingSubqueryAndInvalid",
+    "ContextInitTermPrioAtNowWithSelectedEventEnding"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "context-init-term-prioritized",
+    "steps": [
+      {
+        "op": "case",
+        "case": "nonoverlapping-subquery"
+      },
+      {
+        "op": "advance-time",
+        "case": "nonoverlapping-subquery",
+        "at": "2002-05-01T10:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "nonoverlapping-subquery",
+        "statement": "ctx",
+        "epl": "@Name('ctx') @public create context RuleActivityTime as start (0, 9, *, *, *) end (0, 17, *, *, *)"
+      },
+      {
+        "op": "deploy",
+        "case": "nonoverlapping-subquery",
+        "statement": "window",
+        "epl": "@Name('window') @public context RuleActivityTime create window EventsWindow#firstunique(productID) as SupportProductIdEvent"
+      },
+      {
+        "op": "deploy",
+        "case": "nonoverlapping-subquery",
+        "statement": "variable",
+        "epl": "@Name('variable') create variable boolean IsOutputTriggered_2 = false"
+      },
+      {
+        "op": "deploy",
+        "case": "nonoverlapping-subquery",
+        "statement": "A",
+        "epl": "@Name('A') context RuleActivityTime insert into EventsWindow select * from SupportProductIdEvent(not exists (select * from EventsWindow))"
+      },
+      {
+        "op": "deploy",
+        "case": "nonoverlapping-subquery",
+        "statement": "B",
+        "epl": "@Name('B') context RuleActivityTime insert into EventsWindow select * from SupportProductIdEvent(not exists (select * from EventsWindow))"
+      },
+      {
+        "op": "deploy",
+        "case": "nonoverlapping-subquery",
+        "statement": "C",
+        "epl": "@Name('C') context RuleActivityTime insert into EventsWindow select * from SupportProductIdEvent(not exists (select * from EventsWindow))"
+      },
+      {
+        "op": "deploy",
+        "case": "nonoverlapping-subquery",
+        "statement": "D",
+        "epl": "@Name('D') context RuleActivityTime insert into EventsWindow select * from SupportProductIdEvent(not exists (select * from EventsWindow))"
+      },
+      {
+        "op": "deploy",
+        "case": "nonoverlapping-subquery",
+        "statement": "out",
+        "epl": "@Name('out') context RuleActivityTime select * from EventsWindow"
+      },
+      {
+        "op": "send",
+        "case": "nonoverlapping-subquery",
+        "eventType": "SupportProductIdEvent",
+        "payload": {
+          "productID": "A1"
+        }
+      },
+      {
+        "op": "build-error",
+        "case": "nonoverlapping-subquery",
+        "statement": "subquery-context-mismatch",
+        "expectError": "Failed to validate subquery number 1 querying EventsWindow: Named window by name 'EventsWindow' has been declared for context 'RuleActivityTime' and can only be used within the same context",
+        "epl": "insert into EventsWindow select * from SupportProductIdEvent(not exists (select * from EventsWindow))"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nonoverlapping-subquery"
+      },
+      {
+        "op": "case",
+        "case": "terminating-same-event"
+      },
+      {
+        "op": "deploy",
+        "case": "terminating-same-event",
+        "statement": "s0",
+        "epl": "@Priority(1) create context C1 start @now end SupportBean;\n@name('s0') @Priority(0) context C1 select * from SupportBean"
+      },
+      {
+        "op": "send",
+        "case": "terminating-same-event",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "terminating-same-event",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "terminating-same-event"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-init-term-prioritized",
+    "records": [
+      {
+        "case": "nonoverlapping-subquery",
+        "operation": "listener",
+        "statement": "out",
+        "sequence": 1,
+        "time": "2002-05-01T10:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "productID": "A1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonoverlapping-subquery",
+        "operation": "compile-error",
+        "statement": "subquery-context-mismatch",
+        "sequence": 0,
+        "value": "Failed to validate subquery number 1 querying EventsWindow: Named window by name 'EventsWindow' has been declared for context 'RuleActivityTime' and can only be used within the same context"
+      },
+      {
+        "case": "terminating-same-event",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "terminating-same-event",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-init-term-prioritized",
+    "records": [
+      {
+        "case": "nonoverlapping-subquery",
+        "operation": "listener",
+        "statement": "out",
+        "sequence": 1,
+        "time": "2002-05-01T10:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "productID": "A1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonoverlapping-subquery",
+        "operation": "compile-error",
+        "statement": "subquery-context-mismatch",
+        "sequence": 0,
+        "value": "Failed to validate subquery number 1 querying EventsWindow: Named window by name 'EventsWindow' has been declared for context 'RuleActivityTime' and can only be used within the same context"
+      },
+      {
+        "case": "terminating-same-event",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "terminating-same-event",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
