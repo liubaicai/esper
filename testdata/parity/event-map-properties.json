@@ -1,0 +1,259 @@
+{
+  "version": "esper-parity/v1",
+  "id": "event-map-properties",
+  "description": "EventMapProperties map-event property access (pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c): indexed access over int[] and bean[] map properties (ord 0, EventMapArrayProperty), mapped ('key') access over untyped Map properties and a bean map getter (ord 1, EventMapMappedProperty), named-map nested navigation including the '?' dynamic-property variants (ord 2, EventMapMapNamePropertyNested) and named-map references with MyNamedMap[] elements (ord 3, EventMapMapNameProperty). All eight map types are Configuration-registered by TestSuiteEventMap (no create-schema EPL); every statement deploys as its own module, sends one event, then undeploys — undeployModuleContaining('s0') and undeployAll are the same boundary for a single-statement module. Java EventType assertions (Integer/Object/String/Map/Map[]/int[]/bean) are compile-time types in the Go fluent API and carry no trace records (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/map/EventMapProperties.java).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/map/EventMapProperties.java",
+  "javaRuntimes": [
+    "java-runtime-cb09bcf76eee12b3c551",
+    "java-runtime-088ce1203ecce0c8be3a",
+    "java-runtime-b8c72b0931684bdc57dc",
+    "java-runtime-14c459a77aca4647964b"
+  ],
+  "javaNames": [
+    "EventMapArrayProperty",
+    "EventMapMappedProperty",
+    "EventMapMapNamePropertyNested",
+    "EventMapMapNameProperty"
+  ],
+  "javaStaticIds": [
+    "java-368891e43058141edd4d",
+    "java-0c40f754142dc89a2adf",
+    "java-a138650435fe869f14c5",
+    "java-1e1838567edaeb0850df"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "array-property",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-cb09bcf76eee12b3c551",
+      "executionName": "EventMapArrayProperty",
+      "observation": "listener; two deploy/send/undeploy cycles: p0[0]/p0[1]/p1[0].intPrimitive/p1[1]/p0 over MyArrayMap{p0:int[],p1:SupportBean[]} yields a=1,b=2,c=5,d=bean(e2,6),e=[1,2,3], then the same columns prefixed outer. over MyArrayMapOuter{outer:<inline MyArrayMap def>} yields the same row (e selected, not value-asserted in Java)",
+      "epl": "@name('s0') select p0[0] as a, p0[1] as b, p1[0].intPrimitive as c, p1[1] as d, p0 as e from MyArrayMap\n@name('s0') select outer.p0[0] as a, outer.p0[1] as b, outer.p1[0].intPrimitive as c, outer.p1[1] as d, outer.p0 as e from MyArrayMapOuter\n"
+    },
+    {
+      "case": "mapped-property",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-088ce1203ecce0c8be3a",
+      "executionName": "EventMapMappedProperty",
+      "observation": "listener; three deploy/send/undeploy cycles: p0('k1') over MyMappedPropertyMap{p0:Map} yields a=v1, outer.p0('k1') over MyMappedPropertyMapOuter yields a=v1, outerTwo.mapProperty('xOne') over MyMappedPropertyMapOuterTwo{outerTwo:SupportBeanComplexProps} yields a=yOne from the makeDefaultBean payload",
+      "epl": "@name('s0') select p0('k1') as a from MyMappedPropertyMap\n@name('s0') select outer.p0('k1') as a from MyMappedPropertyMapOuter\n@name('s0') select outerTwo.mapProperty('xOne') as a from MyMappedPropertyMapOuterTwo\n"
+    },
+    {
+      "case": "map-name-nested",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-b8c72b0931684bdc57dc",
+      "executionName": "EventMapMapNamePropertyNested",
+      "observation": "listener; two deploy/send/undeploy cycles over MyArrayMapTwo{outer:<inline MyMapWithAMap def>}: outer.p0.n0/outer.p1[0].n0/outer.p1[1].n0/outer.p0/outer.p1 yields a=1,b=2,c=3,d={n0:1},e=[{n0:2},{n0:3}], then the '?' variants outer.p0.n0?/outer.p1[0].n0?/outer.p1[1]?.n0/outer.p0?/outer.p1? yield the identical row",
+      "epl": "@name('s0') select outer.p0.n0 as a, outer.p1[0].n0 as b, outer.p1[1].n0 as c, outer.p0 as d, outer.p1 as e from MyArrayMapTwo\n@name('s0') select outer.p0.n0? as a, outer.p1[0].n0? as b, outer.p1[1]?.n0 as c, outer.p0? as d, outer.p1? as e from MyArrayMapTwo\n"
+    },
+    {
+      "case": "map-name",
+      "ordinal": 3,
+      "runtimeId": "java-runtime-14c459a77aca4647964b",
+      "executionName": "EventMapMapNameProperty",
+      "observation": "listener; one deploy/send/undeploy cycle over MyMapWithAMap{p0:MyNamedMap,p1:MyNamedMap[]}: p0.n0/p1[0].n0/p1[1].n0/p0/p1 yields a=1,b=2,c=3,d={n0:1},e=[{n0:2},{n0:3}]",
+      "epl": "@name('s0') select p0.n0 as a, p1[0].n0 as b, p1[1].n0 as c, p0 as d, p1 as e from MyMapWithAMap"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "array-property"
+    },
+    {
+      "op": "deploy",
+      "case": "array-property",
+      "statement": "s0",
+      "epl": "@name('s0') select p0[0] as a, p0[1] as b, p1[0].intPrimitive as c, p1[1] as d, p0 as e from MyArrayMap"
+    },
+    {
+      "op": "send",
+      "case": "array-property",
+      "eventType": "MyArrayMap",
+      "payload": {
+        "p0": [1, 2, 3],
+        "p1": [
+          {"theString": "e1", "intPrimitive": 5},
+          {"theString": "e2", "intPrimitive": 6}
+        ]
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "array-property",
+      "statement": "s0"
+    },
+    {
+      "op": "deploy",
+      "case": "array-property",
+      "statement": "s0",
+      "epl": "@name('s0') select outer.p0[0] as a, outer.p0[1] as b, outer.p1[0].intPrimitive as c, outer.p1[1] as d, outer.p0 as e from MyArrayMapOuter"
+    },
+    {
+      "op": "send",
+      "case": "array-property",
+      "eventType": "MyArrayMapOuter",
+      "payload": {
+        "outer": {
+          "p0": [1, 2, 3],
+          "p1": [
+            {"theString": "e1", "intPrimitive": 5},
+            {"theString": "e2", "intPrimitive": 6}
+          ]
+        }
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "array-property",
+      "statement": "s0"
+    },
+    {
+      "op": "case",
+      "case": "mapped-property"
+    },
+    {
+      "op": "deploy",
+      "case": "mapped-property",
+      "statement": "s0",
+      "epl": "@name('s0') select p0('k1') as a from MyMappedPropertyMap"
+    },
+    {
+      "op": "send",
+      "case": "mapped-property",
+      "eventType": "MyMappedPropertyMap",
+      "payload": {
+        "p0": {"k1": "v1"}
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "mapped-property",
+      "statement": "s0"
+    },
+    {
+      "op": "deploy",
+      "case": "mapped-property",
+      "statement": "s0",
+      "epl": "@name('s0') select outer.p0('k1') as a from MyMappedPropertyMapOuter"
+    },
+    {
+      "op": "send",
+      "case": "mapped-property",
+      "eventType": "MyMappedPropertyMapOuter",
+      "payload": {
+        "outer": {
+          "p0": {"k1": "v1"}
+        }
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "mapped-property",
+      "statement": "s0"
+    },
+    {
+      "op": "deploy",
+      "case": "mapped-property",
+      "statement": "s0",
+      "epl": "@name('s0') select outerTwo.mapProperty('xOne') as a from MyMappedPropertyMapOuterTwo"
+    },
+    {
+      "op": "send",
+      "case": "mapped-property",
+      "eventType": "MyMappedPropertyMapOuterTwo",
+      "payload": {
+        "outerTwo": {
+          "simpleProperty": "simple",
+          "mapped": {"keyOne": "valueOne", "keyTwo": "valueTwo"},
+          "indexed": [1, 2],
+          "mapProperty": {"xOne": "yOne", "xTwo": "yTwo"},
+          "arrayProperty": [10, 20, 30],
+          "nested": {
+            "nestedValue": "nestedValue",
+            "nestedNested": {"nestedNestedValue": "nestedNestedValue"}
+          }
+        }
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "mapped-property",
+      "statement": "s0"
+    },
+    {
+      "op": "case",
+      "case": "map-name-nested"
+    },
+    {
+      "op": "deploy",
+      "case": "map-name-nested",
+      "statement": "s0",
+      "epl": "@name('s0') select outer.p0.n0 as a, outer.p1[0].n0 as b, outer.p1[1].n0 as c, outer.p0 as d, outer.p1 as e from MyArrayMapTwo"
+    },
+    {
+      "op": "send",
+      "case": "map-name-nested",
+      "eventType": "MyArrayMapTwo",
+      "payload": {
+        "outer": {
+          "p0": {"n0": 1},
+          "p1": [{"n0": 2}, {"n0": 3}]
+        }
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "map-name-nested",
+      "statement": "s0"
+    },
+    {
+      "op": "deploy",
+      "case": "map-name-nested",
+      "statement": "s0",
+      "epl": "@name('s0') select outer.p0.n0? as a, outer.p1[0].n0? as b, outer.p1[1]?.n0 as c, outer.p0? as d, outer.p1? as e from MyArrayMapTwo"
+    },
+    {
+      "op": "send",
+      "case": "map-name-nested",
+      "eventType": "MyArrayMapTwo",
+      "payload": {
+        "outer": {
+          "p0": {"n0": 1},
+          "p1": [{"n0": 2}, {"n0": 3}]
+        }
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "map-name-nested",
+      "statement": "s0"
+    },
+    {
+      "op": "case",
+      "case": "map-name"
+    },
+    {
+      "op": "deploy",
+      "case": "map-name",
+      "statement": "s0",
+      "epl": "@name('s0') select p0.n0 as a, p1[0].n0 as b, p1[1].n0 as c, p0 as d, p1 as e from MyMapWithAMap"
+    },
+    {
+      "op": "send",
+      "case": "map-name",
+      "eventType": "MyMapWithAMap",
+      "payload": {
+        "p0": {"n0": 1},
+        "p1": [{"n0": 2}, {"n0": 3}]
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "map-name",
+      "statement": "s0"
+    }
+  ]
+}

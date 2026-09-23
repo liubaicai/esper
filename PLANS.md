@@ -55,45 +55,41 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly') committed and pushed as 9ac32d036; Git owns identity. Parity review PASS, two P3s fixed.
 
 ## Current work unit
-Active: Draft 4.519 ('epl-other-pattern-event-properties').
+Active: Draft 4.520 ('event-map-properties').
 
-- Selection: `EPLOtherPatternEventProperties.java` all 4 executions, no
-  flags — `EPLOtherWildcardSimplePattern`
-  (`java-runtime-97cfec67b539a40837da`, static `java-526cb327bfe0c4b23edb`),
-  `EPLOtherWildcardOrPattern` (`java-runtime-157bfa584c8111e1ec07`, static
-  `java-e66c56ee60a585967eac`), `EPLOtherPropertiesSimplePattern`
-  (`java-runtime-ec5a7e8cfd338e68a315`, static `java-6f9f30d76350678d1ff0`),
-  `EPLOtherPropertiesOrPattern` (`java-runtime-e469a171adadf0bcd221`,
-  static `java-e3432d4a451aede65cac`). Java commit
-  `9e1b9f1cc9117fea4bf33ab043762c045d73839c`.
-- Contract (prefetched read-only by primary agent during 4.518 review):
-  pattern tagged-event projection — `select *`/explicit columns over
-  `pattern [a=SupportBean]` and `pattern [every(a=SupportBean or
-  b=SupportBeanComplexProps)]`; unmatched or-branch tags project null;
-  columns include the tagged event itself (`a`, `a as myEvent`), tagged
-  field paths (`a.theString`, `b.indexed[0]`, `b.nested.nestedValue`), and
-  `assertSame` identity on event-valued columns.
-- [x] Scouts: JavaContract519 (frozen contract: byte-exact EPLs, sends,
-  expected rows incl. null-for-unmatched-tag, makeDefaultBean values,
-  assertSame→field-equality) + GoSurface519 (no engine gaps; PatternFrom/
-  Or/Every + Alias(PatternEvent/TagField); approved differences: explicit
-  Alias expansion for select-*, identity not trace-observable). Assets519
-  dispatched for runner/scenario/oracle/wiring.
-- [x] Assets (Assets519): runner `internal/app/parity/epl_other_pattern_event_properties.go`,
-  scenario (4 cases / 10 steps), oracle + run.sh, run.go/run_test.go wiring
-  (5-test family). pepSupportBean.TheString is *string so JSON null renders
-  {state:null}; oracle renders ComplexProps event columns from the stashed
-  send payload (bean lacks collection getters). Identity normalizer.
-- [x] Traces + evidence (primary agent): Java trace via oracle run.sh
-  (6 records), Go trace via runner, `-mode epl-other-pattern-event-properties-diff`
-  -> `passing` / 0 differences.
-- [x] Manifest: `case.epl-other-pattern-event-properties` born-DV (4 runtime
-  IDs, 4 static IDs) + `pattern.basic` mapping/javaRefs/goRefs/DV IDs.
-  Summary 751 cases / 377 DV / 1481 DV runtime IDs / unreferenced 551.
+- Selection: `EventMapProperties.java` all 4 executions, no flags —
+  `EventMapArrayProperty` (`java-runtime-cb09bcf76eee12b3c551`),
+  `EventMapMappedProperty` (`java-runtime-088ce1203ecce0c8be3a`),
+  `EventMapMapNamePropertyNested` (`java-runtime-b8c72b0931684bdc57dc`),
+  `EventMapMapNameProperty` (`java-runtime-14c459a77aca4647964b`).
+  Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`.
+- [x] Scouts: JavaContract520 (frozen: config-registered map types — no
+  create-schema EPL; 8 statements across 4 executions; byte-exact selects,
+  sends, expected rows; '?' dynamic marker keeps declared type;
+  undeployModuleContaining≈undeployAll boundary) + GoSurface520 (no engine
+  gaps; RegisterMap+WithNestedPropertySchema, SendRecord, path-string
+  Property with [N]/('k')/dotted/? support; closest runner
+  event_map_core.go). Assets520 dispatched.
+- [x] Assets (Assets520): runner `internal/app/parity/event_map_properties.go`,
+  scenario `testdata/parity/event-map-properties.json` (4 cases / 8 statements),
+  oracle `tools/java-oracle/EventMapPropertiesScenarioOracle.java` + run.sh,
+  run.go/run_test.go wiring (5-test family).
+- [x] Traces + diff (primary): Java trace via run.sh (8 records), Go trace via
+  runner, `-mode event-map-properties-diff` -> `passing` / 0 differences.
+- [x] Manifest: `case.event-map-properties` born-DV (4 runtime IDs, 4 static
+  IDs) + `event.map-core` mapping/javaRefs/goRefs/DV IDs. Summary 752 cases /
+  378 DV / 1485 DV runtime IDs / unreferenced 547.
 - [ ] Gates + parity review + commit: pending `make check`, independent
   reviewer, then commit/push.
 
 ## Previous work units (shipped)
+
+- Shipped: Draft 4.519 ('epl-other-pattern-event-properties') committed and
+  pushed as 0d93d2984; Git owns identity. Born-DV
+  `case.epl-other-pattern-event-properties` under `pattern.basic` (4 runtime
+  IDs, 6 records, 0 differences, zero engine changes). Parity review PASS
+  (one P3 comment fix).
+
 
 - Shipped: Draft 4.518 ('epl-contained-event-example') committed and pushed
   as 65f16b572; Git owns identity. Born-DV `case.epl-contained-event-example`

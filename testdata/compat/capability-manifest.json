@@ -5375,10 +5375,12 @@
    "level": "S",
    "summary": "Preconfigured Map event types: three-level map-of-maps navigation into a bean payload, type metadata introspection, bean fragment navigation (nested/indexed/nestednested) over a Map window, and raw extra-key-free HashMap sends against the declared type",
    "javaRefs": [
-    "EventMapCore"
+    "EventMapCore",
+    "EventMapProperties"
    ],
    "goRefs": [
     "internal/app/parity/event_map_core.go",
+    "internal/app/parity/event_map_properties.go",
     "internal/app/parity/run_test.go",
     "internal/esper/runtime.go"
    ],
@@ -5394,10 +5396,14 @@
     "differential-verified"
    ],
    "differentialVerifiedRuntimeIds": [
-    "java-runtime-b9ad55d94a0fae4f6aef",
-    "java-runtime-cec11239155e518fa819",
+    "java-runtime-088ce1203ecce0c8be3a",
+    "java-runtime-14c459a77aca4647964b",
     "java-runtime-69cbc6c78f1b84546092",
-    "java-runtime-baefe25be71d54724d17"
+    "java-runtime-b8c72b0931684bdc57dc",
+    "java-runtime-b9ad55d94a0fae4f6aef",
+    "java-runtime-baefe25be71d54724d17",
+    "java-runtime-cb09bcf76eee12b3c551",
+    "java-runtime-cec11239155e518fa819"
    ]
   },
   {
@@ -48684,6 +48690,57 @@
     "java-runtime-e469a171adadf0bcd221"
    ],
    "notes": "Java/Go 6 records each, 0 differences (identity normalizer; one s0 statement per case). Covers pattern tagged-event projection: select-* over pattern [a=SupportBean] yields the tagged event column; every(a=SupportBean or b=SupportBeanComplexProps) projects the matched tag's event and null for the unmatched branch; explicit projections carry the tagged event twice (a, a as myEvent), tagged field paths (a.intPrimitive as myInt, a.theString literal-name column), and indexed/nested paths (b.indexed[0] as indexed, b.nested.nestedValue as nestedVal) with null for absent or-branch tags. Event-valued columns render as kind/row over the bean's pinned field set on both sides. Zero engine changes: PatternFrom/Or/Every + Alias(PatternEvent/TagField) with full property-path resolution and absent-tag Null already matched."
+  },
+  {
+   "id": "case.event-map-properties",
+   "javaRuntimeIds": [
+    "java-runtime-cb09bcf76eee12b3c551",
+    "java-runtime-088ce1203ecce0c8be3a",
+    "java-runtime-b8c72b0931684bdc57dc",
+    "java-runtime-14c459a77aca4647964b"
+   ],
+   "javaStaticIds": [
+    "java-368891e43058141edd4d",
+    "java-0c40f754142dc89a2adf",
+    "java-a138650435fe869f14c5",
+    "java-1e1838567edaeb0850df"
+   ],
+   "javaNames": [
+    "EventMapArrayProperty",
+    "EventMapMappedProperty",
+    "EventMapMapNamePropertyNested",
+    "EventMapMapNameProperty"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/map/EventMapProperties.java"
+   ],
+   "goTests": [
+    "internal/app/parity/event_map_properties.go",
+    "internal/app/parity/run_test.go"
+   ],
+   "tags": [
+    "event",
+    "map",
+    "properties",
+    "born-differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/event-map-properties.evidence.json"
+   ],
+   "difference": "none",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-cb09bcf76eee12b3c551",
+    "java-runtime-088ce1203ecce0c8be3a",
+    "java-runtime-b8c72b0931684bdc57dc",
+    "java-runtime-14c459a77aca4647964b"
+   ],
+   "notes": "Config-registered map types (no create-schema EPL): indexed p0[0], mapped p0('k1'), named-map nested p0.n0/p1[i].n0, and '?' dynamic-marker variants; 8 statements, 8 records, 0 differences."
   }
  ],
  "mappings": [
@@ -52034,13 +52091,17 @@
   {
    "capabilityId": "pattern.basic",
    "caseId": "case.epl-other-pattern-event-properties"
+  },
+  {
+   "capabilityId": "event.map-core",
+   "caseId": "case.event-map-properties"
   }
  ],
  "summary": {
-  "inventoriedCases": 751,
-  "implementedCases": 749,
-  "differentialVerifiedCases": 377,
-  "differentialVerifiedRuntimeIds": 1481,
+  "inventoriedCases": 752,
+  "implementedCases": 750,
+  "differentialVerifiedCases": 378,
+  "differentialVerifiedRuntimeIds": 1485,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -52050,13 +52111,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4015,
-  "referencedJavaRuntimeIds": 3585,
+  "runtimeAssociationCount": 4019,
+  "referencedJavaRuntimeIds": 3589,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 551,
+  "unreferencedJavaRuntimeIds": 547,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 751,
+  "totalCases": 752,
   "totalCapabilities": 126
  }
 }

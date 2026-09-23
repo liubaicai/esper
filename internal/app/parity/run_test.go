@@ -76631,3 +76631,239 @@ func TestRunHelpIncludesEPLOtherPatternEventProperties(t *testing.T) {
 		}
 	}
 }
+
+func TestRunEventMapPropertiesDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "event-map-properties.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "event-map-properties.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "event-map-properties.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "event-map-properties-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunEventMapPropertiesDiffRejectsTraceMutations(t *testing.T) {
+	// mutateField rewrites field on the leading new-data row of the first
+	// listener record for (caseName, statement). Scanning by content keeps
+	// the mutations robust against the canonical record order the evidence
+	// stores; a miss leaves the trace unmutated so the diff passes and the
+	// "unexpectedly passed" check reports the bad field.
+	mutateField := func(caseName, statement, field string, value any) func(*compat.Trace) {
+		return func(trace *compat.Trace) {
+			for i := range trace.Records {
+				rec := &trace.Records[i]
+				if rec.Case != caseName || rec.Statement != statement || len(rec.New) == 0 {
+					continue
+				}
+				if _, ok := rec.New[0].Fields[field]; ok {
+					rec.New[0].Fields[field] = value
+					return
+				}
+			}
+		}
+	}
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name:   "array-property-index",
+			mutate: mutateField("array-property", "s0", "a", 99),
+		},
+		{
+			name:   "array-property-bean-column",
+			mutate: mutateField("array-property", "s0", "d", map[string]any{"theString": "bogus", "intPrimitive": 99}),
+		},
+		{
+			name:   "mapped-property-key",
+			mutate: mutateField("mapped-property", "s0", "a", "bogus"),
+		},
+		{
+			name:   "map-name-nested-map-array",
+			mutate: mutateField("map-name-nested", "s0", "e", []any{map[string]any{"n0": 99}}),
+		},
+		{
+			name:   "map-name-named-map",
+			mutate: mutateField("map-name", "s0", "d", map[string]any{"n0": 99}),
+		},
+		{
+			name: "dropped-record",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[1:]
+			},
+		},
+		{
+			name: "sequence-flip",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					if trace.Records[i].Case == "mapped-property" && trace.Records[i].Sequence == 2 {
+						trace.Records[i].Sequence = 99
+						return
+					}
+				}
+			},
+		},
+		{
+			name: "case-swap",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					if trace.Records[i].Case == "map-name" {
+						trace.Records[i].Case = "array-property"
+						return
+					}
+				}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "event-map-properties.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "event-map-properties.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "event-map-properties.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "event-map-properties-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
+func TestRunEventMapPropertiesRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "event-map-properties.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "event-map-properties"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "event-map-properties"`)...), 1)
+		}},
+		{name: "case-metadata", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 3`), []byte(`"ordinal": 4`), 1)
+		}},
+		{name: "epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`p0[0] as a`), []byte(`p0[2] as a`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"payload": {`), []byte(`"payload": {"extra": 0,`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "e1"`), []byte(`"theString": "e1", "theString": "bogus"`), 1)
+		}},
+		{name: "step-field-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "case",`), []byte(`"op": "case", "extra": 0,`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", "event-map-properties",
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunEventMapPropertiesDiffRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "event-map-properties.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	wantCaseRuntimeIDs := map[string]string{
+		"array-property":  "java-runtime-cb09bcf76eee12b3c551",
+		"mapped-property": "java-runtime-088ce1203ecce0c8be3a",
+		"map-name-nested": "java-runtime-b8c72b0931684bdc57dc",
+		"map-name":        "java-runtime-14c459a77aca4647964b",
+	}
+	for _, entry := range document.Cases {
+		if wantCaseRuntimeIDs[entry.Case] != entry.RuntimeID {
+			t.Fatalf("case %q runtimeId = %q, want %q", entry.Case, entry.RuntimeID, wantCaseRuntimeIDs[entry.Case])
+		}
+	}
+}
+
+func TestRunHelpIncludesEventMapProperties(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-h"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("help exit code = %d, stderr = %q", code, stderr.String())
+	}
+	for _, mode := range []string{
+		"event-map-properties",
+		"event-map-properties-diff",
+	} {
+		if !strings.Contains(stderr.String(), mode) {
+			t.Fatalf("help output omits %q: %s", mode, stderr.String())
+		}
+	}
+}
