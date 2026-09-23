@@ -1,0 +1,667 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-97cfec67b539a40837da",
+    "java-runtime-157bfa584c8111e1ec07",
+    "java-runtime-ec5a7e8cfd338e68a315",
+    "java-runtime-e469a171adadf0bcd221"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherPatternEventProperties.java"
+  ],
+  "javaExecutions": [
+    "EPLOtherWildcardSimplePattern",
+    "EPLOtherWildcardOrPattern",
+    "EPLOtherPropertiesSimplePattern",
+    "EPLOtherPropertiesOrPattern"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "epl-other-pattern-event-properties",
+    "steps": [
+      {
+        "op": "case",
+        "case": "wildcard-simple-pattern"
+      },
+      {
+        "op": "send",
+        "case": "wildcard-simple-pattern",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null,
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "wildcard-or-pattern"
+      },
+      {
+        "op": "send",
+        "case": "wildcard-or-pattern",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null,
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "wildcard-or-pattern",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "nested": {
+            "nestedValue": "nestedValue",
+            "nestedNested": {
+              "nestedNestedValue": "nestedNestedValue"
+            }
+          }
+        }
+      },
+      {
+        "op": "case",
+        "case": "properties-simple-pattern"
+      },
+      {
+        "op": "send",
+        "case": "properties-simple-pattern",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "test",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "case",
+        "case": "properties-or-pattern"
+      },
+      {
+        "op": "send",
+        "case": "properties-or-pattern",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "nested": {
+            "nestedValue": "nestedValue",
+            "nestedNested": {
+              "nestedNestedValue": "nestedNestedValue"
+            }
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "properties-or-pattern",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "test2",
+          "intPrimitive": 2
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-other-pattern-event-properties",
+    "records": [
+      {
+        "case": "wildcard-simple-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "theString": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "wildcard-or-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "theString": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              },
+              "b": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "wildcard-or-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "state": "null"
+              },
+              "b": {
+                "fields": {
+                  "arrayProperty": [
+                    10,
+                    20,
+                    30
+                  ],
+                  "indexed": [
+                    1,
+                    2
+                  ],
+                  "mapProperty": {
+                    "xOne": "yOne",
+                    "xTwo": "yTwo"
+                  },
+                  "mapped": {
+                    "keyOne": "valueOne",
+                    "keyTwo": "valueTwo"
+                  },
+                  "nested": {
+                    "nestedNested": {
+                      "nestedNestedValue": "nestedNestedValue"
+                    },
+                    "nestedValue": "nestedValue"
+                  },
+                  "simpleProperty": "simple"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "properties-simple-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "test"
+                },
+                "kind": "row"
+              },
+              "a.theString": "test",
+              "myEvent": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "test"
+                },
+                "kind": "row"
+              },
+              "myInt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "properties-or-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "state": "null"
+              },
+              "a.theString": {
+                "state": "null"
+              },
+              "b": {
+                "fields": {
+                  "arrayProperty": [
+                    10,
+                    20,
+                    30
+                  ],
+                  "indexed": [
+                    1,
+                    2
+                  ],
+                  "mapProperty": {
+                    "xOne": "yOne",
+                    "xTwo": "yTwo"
+                  },
+                  "mapped": {
+                    "keyOne": "valueOne",
+                    "keyTwo": "valueTwo"
+                  },
+                  "nested": {
+                    "nestedNested": {
+                      "nestedNestedValue": "nestedNestedValue"
+                    },
+                    "nestedValue": "nestedValue"
+                  },
+                  "simpleProperty": "simple"
+                },
+                "kind": "row"
+              },
+              "indexed": 1,
+              "myAEvent": {
+                "state": "null"
+              },
+              "myBEvent": {
+                "fields": {
+                  "arrayProperty": [
+                    10,
+                    20,
+                    30
+                  ],
+                  "indexed": [
+                    1,
+                    2
+                  ],
+                  "mapProperty": {
+                    "xOne": "yOne",
+                    "xTwo": "yTwo"
+                  },
+                  "mapped": {
+                    "keyOne": "valueOne",
+                    "keyTwo": "valueTwo"
+                  },
+                  "nested": {
+                    "nestedNested": {
+                      "nestedNestedValue": "nestedNestedValue"
+                    },
+                    "nestedValue": "nestedValue"
+                  },
+                  "simpleProperty": "simple"
+                },
+                "kind": "row"
+              },
+              "myInt": {
+                "state": "null"
+              },
+              "nestedVal": "nestedValue",
+              "simple": "simple"
+            }
+          }
+        ]
+      },
+      {
+        "case": "properties-or-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "test2"
+                },
+                "kind": "row"
+              },
+              "a.theString": "test2",
+              "b": {
+                "state": "null"
+              },
+              "indexed": {
+                "state": "null"
+              },
+              "myAEvent": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "test2"
+                },
+                "kind": "row"
+              },
+              "myBEvent": {
+                "state": "null"
+              },
+              "myInt": 2,
+              "nestedVal": {
+                "state": "null"
+              },
+              "simple": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-other-pattern-event-properties",
+    "records": [
+      {
+        "case": "wildcard-simple-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "theString": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "wildcard-or-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "theString": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              },
+              "b": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "wildcard-or-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "state": "null"
+              },
+              "b": {
+                "fields": {
+                  "arrayProperty": [
+                    10,
+                    20,
+                    30
+                  ],
+                  "indexed": [
+                    1,
+                    2
+                  ],
+                  "mapProperty": {
+                    "xOne": "yOne",
+                    "xTwo": "yTwo"
+                  },
+                  "mapped": {
+                    "keyOne": "valueOne",
+                    "keyTwo": "valueTwo"
+                  },
+                  "nested": {
+                    "nestedNested": {
+                      "nestedNestedValue": "nestedNestedValue"
+                    },
+                    "nestedValue": "nestedValue"
+                  },
+                  "simpleProperty": "simple"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "properties-simple-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "test"
+                },
+                "kind": "row"
+              },
+              "a.theString": "test",
+              "myEvent": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "test"
+                },
+                "kind": "row"
+              },
+              "myInt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "properties-or-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "state": "null"
+              },
+              "a.theString": {
+                "state": "null"
+              },
+              "b": {
+                "fields": {
+                  "arrayProperty": [
+                    10,
+                    20,
+                    30
+                  ],
+                  "indexed": [
+                    1,
+                    2
+                  ],
+                  "mapProperty": {
+                    "xOne": "yOne",
+                    "xTwo": "yTwo"
+                  },
+                  "mapped": {
+                    "keyOne": "valueOne",
+                    "keyTwo": "valueTwo"
+                  },
+                  "nested": {
+                    "nestedNested": {
+                      "nestedNestedValue": "nestedNestedValue"
+                    },
+                    "nestedValue": "nestedValue"
+                  },
+                  "simpleProperty": "simple"
+                },
+                "kind": "row"
+              },
+              "indexed": 1,
+              "myAEvent": {
+                "state": "null"
+              },
+              "myBEvent": {
+                "fields": {
+                  "arrayProperty": [
+                    10,
+                    20,
+                    30
+                  ],
+                  "indexed": [
+                    1,
+                    2
+                  ],
+                  "mapProperty": {
+                    "xOne": "yOne",
+                    "xTwo": "yTwo"
+                  },
+                  "mapped": {
+                    "keyOne": "valueOne",
+                    "keyTwo": "valueTwo"
+                  },
+                  "nested": {
+                    "nestedNested": {
+                      "nestedNestedValue": "nestedNestedValue"
+                    },
+                    "nestedValue": "nestedValue"
+                  },
+                  "simpleProperty": "simple"
+                },
+                "kind": "row"
+              },
+              "myInt": {
+                "state": "null"
+              },
+              "nestedVal": "nestedValue",
+              "simple": "simple"
+            }
+          }
+        ]
+      },
+      {
+        "case": "properties-or-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "test2"
+                },
+                "kind": "row"
+              },
+              "a.theString": "test2",
+              "b": {
+                "state": "null"
+              },
+              "indexed": {
+                "state": "null"
+              },
+              "myAEvent": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "test2"
+                },
+                "kind": "row"
+              },
+              "myBEvent": {
+                "state": "null"
+              },
+              "myInt": 2,
+              "nestedVal": {
+                "state": "null"
+              },
+              "simple": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

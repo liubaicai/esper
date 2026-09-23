@@ -1328,7 +1328,8 @@
     "PatternStartLoop",
     "PatternSuperAndInterfaces",
     "PatternInvalid",
-    "PatternExpressionText"
+    "PatternExpressionText",
+    "EPLOtherPatternEventProperties"
    ],
    "goRefs": [
     "internal/esper/pattern.go",
@@ -1356,7 +1357,8 @@
     "internal/esper/pattern_expression_text_parity_test.go",
     "internal/esper/pattern_timer_interval_parity_test.go",
     "internal/app/parity/pattern_timer.go",
-    "internal/app/parity/epl_other_pattern_queries.go"
+    "internal/app/parity/epl_other_pattern_queries.go",
+    "internal/app/parity/epl_other_pattern_event_properties.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -1376,7 +1378,11 @@
     "java-runtime-00e2f9b1ff1f7568065e",
     "java-runtime-2d9518b6894d4c46972d",
     "java-runtime-5b43884f1025d0953a3c",
-    "java-runtime-ba57386eec69d7a3e1f4"
+    "java-runtime-ba57386eec69d7a3e1f4",
+    "java-runtime-97cfec67b539a40837da",
+    "java-runtime-157bfa584c8111e1ec07",
+    "java-runtime-ec5a7e8cfd338e68a315",
+    "java-runtime-e469a171adadf0bcd221"
    ],
    "representativeScenarioIds": [
     "pattern-timer-interval"
@@ -48618,6 +48624,66 @@
     "java-runtime-23292c0fd335038c05d4"
    ],
    "notes": "Java/Go 33 records each, 0 differences (listener dispatch order canonicalized by statement name per case). Covers the media-order XML contained-event example: twelve statements over the MediaOrder DOM type (indexed item path, [books.book] expansion, parent-filtered expansion, #unique count, two-level [books.book][review], never-fired Cancel->book pattern, contained select projections with parent fields/wildcard fragments/grandparent references, fragment-typed insert-into round-trip, and fragment-filtered review expansion); the SupportResponseEvent.subEvents bean-array solution pattern windowed over #time(1 min) grouped by category+subEventType; three self-join phases (inner, left-outer, full-outer) pairing book and item contained streams on productId=bookId; and the financial solution pattern deploying a module with map schemas, a two-key Mapping table with secondary indexes, fire-and-forget positional inserts, a lastevent join insert, a split-all on-trigger emitting contained foreign/local company rows, a start/end-event context, contexted merges with scalar Mapping subselects, and an ordered output select. Engine fixes: (1) contained joins only pair children sharing the same parent event instance (containedJoinSameParent/containedJoinTupleSameParent in joinKeyedTuples and joinChainedKeyedTuples); (2) [property] expansion treats a scalar value as a single-element collection (castPropertyValue wrap + containedCollectionItems fallback); (3) ContainedParentField returns Null (not Missing) when the row has no parent so left-only full-outer-join rows project null parent fields; (4) keyless table selects perform a full table scan (validateTrigger + executeSelectTableAction)."
+  },
+  {
+   "id": "case.epl-other-pattern-event-properties",
+   "javaRuntimeIds": [
+    "java-runtime-97cfec67b539a40837da",
+    "java-runtime-157bfa584c8111e1ec07",
+    "java-runtime-ec5a7e8cfd338e68a315",
+    "java-runtime-e469a171adadf0bcd221"
+   ],
+   "javaStaticIds": [
+    "java-526cb327bfe0c4b23edb",
+    "java-e66c56ee60a585967eac",
+    "java-6f9f30d76350678d1ff0",
+    "java-e3432d4a451aede65cac"
+   ],
+   "javaNames": [
+    "EPLOtherWildcardSimplePattern",
+    "EPLOtherWildcardOrPattern",
+    "EPLOtherPropertiesSimplePattern",
+    "EPLOtherPropertiesOrPattern"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherPatternEventProperties.java"
+   ],
+   "goTests": [
+    "internal/app/parity/epl_other_pattern_event_properties.go",
+    "internal/app/parity/run_test.go"
+   ],
+   "tags": [
+    "epl",
+    "pattern",
+    "tag",
+    "or",
+    "every",
+    "projection",
+    "event-column",
+    "null"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/epl-other-pattern-event-properties.json",
+    "testdata/parity/epl-other-pattern-event-properties.trace.json",
+    "testdata/parity/epl-other-pattern-event-properties.go.trace.json",
+    "testdata/parity/epl-other-pattern-event-properties.evidence.json",
+    "tools/java-oracle/EPLOtherPatternEventPropertiesScenarioOracle.java",
+    "tools/java-oracle/run-epl-other-pattern-event-properties.sh"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "difference": "Approved differences: Java `select *` over a pattern has no chain-API form, so the Go runner enumerates the equivalent explicit Alias list (the tag columns Java expands); assertSame identity on event-valued columns is not trace-observable and is pinned by rendered field equality instead.",
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-97cfec67b539a40837da",
+    "java-runtime-157bfa584c8111e1ec07",
+    "java-runtime-ec5a7e8cfd338e68a315",
+    "java-runtime-e469a171adadf0bcd221"
+   ],
+   "notes": "Java/Go 6 records each, 0 differences (identity normalizer; one s0 statement per case). Covers pattern tagged-event projection: select-* over pattern [a=SupportBean] yields the tagged event column; every(a=SupportBean or b=SupportBeanComplexProps) projects the matched tag's event and null for the unmatched branch; explicit projections carry the tagged event twice (a, a as myEvent), tagged field paths (a.intPrimitive as myInt, a.theString literal-name column), and indexed/nested paths (b.indexed[0] as indexed, b.nested.nestedValue as nestedVal) with null for absent or-branch tags. Event-valued columns render as kind/row over the bean's pinned field set on both sides. Zero engine changes: PatternFrom/Or/Every + Alias(PatternEvent/TagField) with full property-path resolution and absent-tag Null already matched."
   }
  ],
  "mappings": [
@@ -51964,13 +52030,17 @@
   {
    "capabilityId": "event.contained",
    "caseId": "case.epl-contained-event-example"
+  },
+  {
+   "capabilityId": "pattern.basic",
+   "caseId": "case.epl-other-pattern-event-properties"
   }
  ],
  "summary": {
-  "inventoriedCases": 750,
-  "implementedCases": 748,
-  "differentialVerifiedCases": 376,
-  "differentialVerifiedRuntimeIds": 1477,
+  "inventoriedCases": 751,
+  "implementedCases": 749,
+  "differentialVerifiedCases": 377,
+  "differentialVerifiedRuntimeIds": 1481,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -51980,13 +52050,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4011,
-  "referencedJavaRuntimeIds": 3581,
+  "runtimeAssociationCount": 4015,
+  "referencedJavaRuntimeIds": 3585,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 555,
+  "unreferencedJavaRuntimeIds": 551,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 750,
+  "totalCases": 751,
   "totalCapabilities": 126
  }
 }

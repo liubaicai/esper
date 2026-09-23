@@ -1,0 +1,114 @@
+{
+ "version": "esper-parity/v1",
+ "id": "epl-other-pattern-event-properties",
+ "description": "EPLOtherPatternEventProperties ords 0-3: event-pattern tag projections. Ord 0 selects * (the tagged event) from pattern [a=SupportBean]. Ord 1 selects * from pattern [every(a=SupportBean or b=SupportBeanComplexProps)] with the absent OR-branch tag projecting null. Ord 2 selects the tagged event twice plus its intPrimitive/theString properties. Ord 3 selects both tagged events, their aliases, and the simple/indexed/nested property paths across the every-or pattern (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherPatternEventProperties.java).",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherPatternEventProperties.java",
+ "javaRuntimes": [
+  "java-runtime-97cfec67b539a40837da",
+  "java-runtime-157bfa584c8111e1ec07",
+  "java-runtime-ec5a7e8cfd338e68a315",
+  "java-runtime-e469a171adadf0bcd221"
+ ],
+ "javaNames": [
+  "EPLOtherWildcardSimplePattern",
+  "EPLOtherWildcardOrPattern",
+  "EPLOtherPropertiesSimplePattern",
+  "EPLOtherPropertiesOrPattern"
+ ],
+ "javaStaticIds": [
+  "java-526cb327bfe0c4b23edb",
+  "java-e66c56ee60a585967eac",
+  "java-6f9f30d76350678d1ff0",
+  "java-e3432d4a451aede65cac"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "wildcard-simple-pattern",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-97cfec67b539a40837da",
+   "executionName": "EPLOtherWildcardSimplePattern",
+   "observation": "listener; one deploy selects * from pattern [a=SupportBean]; one default SupportBean send delivers {a=event}",
+   "epl": "@name('s0') select * from pattern [a=SupportBean]"
+  },
+  {
+   "case": "wildcard-or-pattern",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-157bfa584c8111e1ec07",
+   "executionName": "EPLOtherWildcardOrPattern",
+   "observation": "listener; one deploy selects * from pattern [every(a=SupportBean or b=SupportBeanComplexProps)]; a default SupportBean send delivers {a=event,b=null} then a default SupportBeanComplexProps send delivers {b=event,a=null}",
+   "epl": "@name('s0') select * from pattern [every(a=SupportBean or b=SupportBeanComplexProps)]"
+  },
+  {
+   "case": "properties-simple-pattern",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-ec5a7e8cfd338e68a315",
+   "executionName": "EPLOtherPropertiesSimplePattern",
+   "observation": "listener; one deploy selects a, a as myEvent, a.intPrimitive as myInt, a.theString from pattern [a=SupportBean]; one SupportBean{intPrimitive=1,theString=test} send delivers {a=event,myEvent=event,myInt=1,a.theString=test}",
+   "epl": "@name('s0') select a, a as myEvent, a.intPrimitive as myInt, a.theString from pattern [a=SupportBean]"
+  },
+  {
+   "case": "properties-or-pattern",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-e469a171adadf0bcd221",
+   "executionName": "EPLOtherPropertiesOrPattern",
+   "observation": "listener; one deploy selects the nine-column projection from pattern [every(a=SupportBean or b=SupportBeanComplexProps)]; a default SupportBeanComplexProps send delivers {b=event,simple=simple,indexed=1,nestedVal=nestedValue} with the a-side columns null, then SupportBean{intPrimitive=2,theString=test2} delivers {myInt=2,a.theString=test2} with the b-side columns null",
+   "epl": "@name('s0') select a, a as myAEvent, b, b as myBEvent, a.intPrimitive as myInt, a.theString, b.simpleProperty as simple, b.indexed[0] as indexed, b.nested.nestedValue as nestedVal from pattern [every(a=SupportBean or b=SupportBeanComplexProps)]"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "wildcard-simple-pattern"
+  },
+  {
+   "op": "send",
+   "case": "wildcard-simple-pattern",
+   "eventType": "SupportBean",
+   "payload": {"theString": null, "intPrimitive": 0}
+  },
+  {
+   "op": "case",
+   "case": "wildcard-or-pattern"
+  },
+  {
+   "op": "send",
+   "case": "wildcard-or-pattern",
+   "eventType": "SupportBean",
+   "payload": {"theString": null, "intPrimitive": 0}
+  },
+  {
+   "op": "send",
+   "case": "wildcard-or-pattern",
+   "eventType": "SupportBeanComplexProps",
+   "payload": {"simpleProperty": "simple", "mapped": {"keyOne": "valueOne", "keyTwo": "valueTwo"}, "indexed": [1, 2], "mapProperty": {"xOne": "yOne", "xTwo": "yTwo"}, "arrayProperty": [10, 20, 30], "nested": {"nestedValue": "nestedValue", "nestedNested": {"nestedNestedValue": "nestedNestedValue"}}}
+  },
+  {
+   "op": "case",
+   "case": "properties-simple-pattern"
+  },
+  {
+   "op": "send",
+   "case": "properties-simple-pattern",
+   "eventType": "SupportBean",
+   "payload": {"theString": "test", "intPrimitive": 1}
+  },
+  {
+   "op": "case",
+   "case": "properties-or-pattern"
+  },
+  {
+   "op": "send",
+   "case": "properties-or-pattern",
+   "eventType": "SupportBeanComplexProps",
+   "payload": {"simpleProperty": "simple", "mapped": {"keyOne": "valueOne", "keyTwo": "valueTwo"}, "indexed": [1, 2], "mapProperty": {"xOne": "yOne", "xTwo": "yTwo"}, "arrayProperty": [10, 20, 30], "nested": {"nestedValue": "nestedValue", "nestedNested": {"nestedNestedValue": "nestedNestedValue"}}}
+  },
+  {
+   "op": "send",
+   "case": "properties-or-pattern",
+   "eventType": "SupportBean",
+   "payload": {"theString": "test2", "intPrimitive": 2}
+  }
+ ]
+}

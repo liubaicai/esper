@@ -76395,3 +76395,239 @@ func TestRunHelpIncludesEPLContainedEventExample(t *testing.T) {
 		}
 	}
 }
+
+func TestRunEPLOtherPatternEventPropertiesDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-pattern-event-properties.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "epl-other-pattern-event-properties.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-pattern-event-properties.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "epl-other-pattern-event-properties-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunEPLOtherPatternEventPropertiesDiffRejectsTraceMutations(t *testing.T) {
+	// mutateField rewrites field on the leading new-data row of the first
+	// listener record for (caseName, statement). Scanning by content keeps
+	// the mutations robust against the canonical record order the evidence
+	// stores; a miss leaves the trace unmutated so the diff passes and the
+	// "unexpectedly passed" check reports the bad field.
+	mutateField := func(caseName, statement, field string, value any) func(*compat.Trace) {
+		return func(trace *compat.Trace) {
+			for i := range trace.Records {
+				rec := &trace.Records[i]
+				if rec.Case != caseName || rec.Statement != statement || len(rec.New) == 0 {
+					continue
+				}
+				if _, ok := rec.New[0].Fields[field]; ok {
+					rec.New[0].Fields[field] = value
+					return
+				}
+			}
+		}
+	}
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name:   "wildcard-simple-pattern-event",
+			mutate: mutateField("wildcard-simple-pattern", "s0", "a", map[string]any{"kind": "row", "fields": map[string]any{"theString": "bogus", "intPrimitive": 99}}),
+		},
+		{
+			name:   "wildcard-or-pattern-null-side",
+			mutate: mutateField("wildcard-or-pattern", "s0", "b", map[string]any{"kind": "row", "fields": map[string]any{"simpleProperty": "bogus"}}),
+		},
+		{
+			name:   "properties-simple-pattern-int",
+			mutate: mutateField("properties-simple-pattern", "s0", "myInt", 99),
+		},
+		{
+			name:   "properties-or-pattern-nested",
+			mutate: mutateField("properties-or-pattern", "s0", "nestedVal", "bogus"),
+		},
+		{
+			name: "dropped-record",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[1:]
+			},
+		},
+		{
+			name: "sequence-flip",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					if trace.Records[i].Case == "wildcard-or-pattern" && trace.Records[i].Sequence == 2 {
+						trace.Records[i].Sequence = 99
+						return
+					}
+				}
+			},
+		},
+		{
+			name: "case-swap",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					if trace.Records[i].Case == "properties-simple-pattern" {
+						trace.Records[i].Case = "wildcard-simple-pattern"
+						return
+					}
+				}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-pattern-event-properties.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "epl-other-pattern-event-properties.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-pattern-event-properties.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "epl-other-pattern-event-properties-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
+func TestRunEPLOtherPatternEventPropertiesRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "epl-other-pattern-event-properties.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "epl-other-pattern-event-properties"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "epl-other-pattern-event-properties"`)...), 1)
+		}},
+		{name: "case-metadata", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 3`), []byte(`"ordinal": 4`), 1)
+		}},
+		{name: "epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`select * from pattern [a=SupportBean]`), []byte(`select * from pattern [every a=SupportBean]`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"payload": {`), []byte(`"payload": {"extra": 0,`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "test"`), []byte(`"theString": "test", "theString": "bogus"`), 1)
+		}},
+		{name: "step-field-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "case",`), []byte(`"op": "case", "extra": 0,`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", "epl-other-pattern-event-properties",
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunEPLOtherPatternEventPropertiesDiffRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-pattern-event-properties.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, eplOtherPatternEventPropertiesJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, eplOtherPatternEventPropertiesJavaExecutions) {
+		t.Fatalf("scenario metadata runtimes=%v names=%v", document.JavaRuntimes, document.JavaNames)
+	}
+	wantCaseRuntimeIDs := map[string]string{
+		"wildcard-simple-pattern":   "java-runtime-97cfec67b539a40837da",
+		"wildcard-or-pattern":       "java-runtime-157bfa584c8111e1ec07",
+		"properties-simple-pattern": "java-runtime-ec5a7e8cfd338e68a315",
+		"properties-or-pattern":     "java-runtime-e469a171adadf0bcd221",
+	}
+	for _, entry := range document.Cases {
+		if wantCaseRuntimeIDs[entry.Case] != entry.RuntimeID {
+			t.Fatalf("case %q runtimeId = %q, want %q", entry.Case, entry.RuntimeID, wantCaseRuntimeIDs[entry.Case])
+		}
+	}
+}
+
+func TestRunHelpIncludesEPLOtherPatternEventProperties(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-h"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("help exit code = %d, stderr = %q", code, stderr.String())
+	}
+	for _, mode := range []string{
+		"epl-other-pattern-event-properties",
+		"epl-other-pattern-event-properties-diff",
+	} {
+		if !strings.Contains(stderr.String(), mode) {
+			t.Fatalf("help output omits %q: %s", mode, stderr.String())
+		}
+	}
+}
