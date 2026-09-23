@@ -1659,7 +1659,8 @@
     "internal/app/parity/context_selection_faf_nested.go",
     "internal/app/parity/context_start_end_trio.go",
     "internal/app/parity/context_key_segmented_infra_prioritized.go",
-    "internal/app/parity/context_key_segmented_named_window.go"
+    "internal/app/parity/context_key_segmented_named_window.go",
+    "internal/app/parity/context_key_segmented_named_window_subquery.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -46290,6 +46291,57 @@
    "notes": "Java/Go 3 records each, 0 differences. Covers: a two-key keyed context (grp, subGrp) over a unique(type) named window with a contexted wildcard insert-into and an irstream consumer (one new-only row), and a keyed context over a keepall named window answering a no-selector fire-and-forget select * (one partition row, then both partition rows in allocation order)."
   },
   {
+   "id": "case.context-key-segmented-named-window-subquery",
+   "javaRuntimeIds": [
+    "java-runtime-7347c7d16d52e5ea0d30",
+    "java-runtime-af7bcf071474f57227fb"
+   ],
+   "javaStaticIds": [
+    "java-b6c806b84e6ac1511ac5",
+    "java-79ea11275b4e65d10869"
+   ],
+   "javaNames": [
+    "ContextKeyedSubqueryNamedWindowIndexUnShared",
+    "ContextKeyedSubqueryNamedWindowIndexShared"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmentedNamedWindow.java"
+   ],
+   "goTests": [
+    "internal/app/parity/context_key_segmented_named_window_subquery.go",
+    "internal/app/parity/run_test.go"
+   ],
+   "tags": [
+    "context",
+    "keyed",
+    "segmented",
+    "named-window",
+    "subquery",
+    "correlated",
+    "index-share"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/context-key-segmented-named-window-subquery.json",
+    "testdata/parity/context-key-segmented-named-window-subquery.trace.json",
+    "testdata/parity/context-key-segmented-named-window-subquery.go.trace.json",
+    "testdata/parity/context-key-segmented-named-window-subquery.evidence.json",
+    "tools/java-oracle/ContextKeySegmentedNamedWindowSubqueryScenarioOracle.java",
+    "tools/java-oracle/run-context-key-segmented-named-window-subquery.sh"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "difference": "Approved differences: none.",
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-7347c7d16d52e5ea0d30",
+    "java-runtime-af7bcf071474f57227fb"
+   ],
+   "notes": "Java/Go 10 records each, 0 differences. Covers: a context-free keepall named window over SupportBean_S0 read by a correlated scalar subquery (sb.intPrimitive = s0.id) from a keyed-context statement — the correlation is not partition-scoped (G2 sees s1; G1 sees s2 inserted under G3 flow; val0 null on no match), and the enable_window_subquery_indexshare hint variant produces identical observable output."
+  },
+  {
    "id": "case.context-key-segmented-allocation-time",
    "javaRuntimeIds": [
     "java-runtime-57199db349abfe7ad70e",
@@ -51700,13 +51752,17 @@
   {
    "capabilityId": "context.partition",
    "caseId": "case.context-key-segmented-named-window"
+  },
+  {
+   "capabilityId": "context.partition",
+   "caseId": "case.context-key-segmented-named-window-subquery"
   }
  ],
  "summary": {
-  "inventoriedCases": 746,
-  "implementedCases": 744,
-  "differentialVerifiedCases": 372,
-  "differentialVerifiedRuntimeIds": 1465,
+  "inventoriedCases": 747,
+  "implementedCases": 745,
+  "differentialVerifiedCases": 373,
+  "differentialVerifiedRuntimeIds": 1467,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -51716,13 +51772,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3999,
+  "runtimeAssociationCount": 4001,
   "referencedJavaRuntimeIds": 3571,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 565,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 746,
+  "totalCases": 747,
   "totalCapabilities": 126
  }
 }

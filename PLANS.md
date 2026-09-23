@@ -125,6 +125,34 @@ Active: Draft 4.514 ('context-key-segmented-named-window').
 - [x] Manifest: `case.context-key-segmented-named-window` born-DV (2 runtime
  IDs) + `context.partition` mapping/goRefs; summary 746 cases / 372 DV /
  1465 DV runtime IDs / unreferenced 565. Roadmap + CHANGELOG entries added.
+- [x] Gates + parity review: `make check` green (parity ~90s, esper ~111s).
+  Reviewer ParityReview514 PASS with one P3 (FAF deploy EPLs carried a
+  trailing ';' absent from the Java source); fixed in scenario + oracle,
+  traces regenerated, confirmation PASS.
+- [x] Shipped; Git owns identity. Draft 4.514 committed and pushed as `0bbedbc7d`.
+
+## Current work unit
+Active: Draft 4.515 ('context-key-segmented-named-window-subquery').
+
+- [x] Contract frozen (scouts NextJavaContract515 + NextGoSurface515):
+ `ContextKeySegmentedNamedWindow.java` ords 4 `ContextKeyedSubqueryNamedWindowIndexUnShared`
+ (`java-runtime-7347c7d16d52e5ea0d30`, static `java-b6c806b84e6ac1511ac5`) +
+ 5 `ContextKeyedSubqueryNamedWindowIndexShared` (`java-runtime-af7bcf071474f57227fb`,
+ static `java-79ea11275b4e65d10869`). Correlated scalar subquery over a
+ context-FREE window: not partition-scoped; indexshare hint observably
+ identical. Go surface expressible today (SubqueryValue+OuterField global
+ snapshot; NamedWindowSubqueryIndexSharing for the hint).
+- [x] Scenario `testdata/parity/context-key-segmented-named-window-subquery.json`
+ (2 cases / 23 steps), oracle
+ `tools/java-oracle/ContextKeySegmentedNamedWindowSubqueryScenarioOracle.java`
+ + run.sh (EXPECTED_RECORDS=10), runner
+ `internal/app/parity/context_key_segmented_named_window_subquery.go` +
+ run.go wiring. Java/Go 10 records each, 0 differences. Zero engine work.
+- [x] Test family: passing-evidence, 3 trace mutations, 7 raw-scenario
+ mutations, runtime-ID mapping, help listing — all green.
+- [x] Manifest: `case.context-key-segmented-named-window-subquery` born-DV
+ (2 runtime IDs) + `context.partition` mapping/goRefs; summary 747 cases /
+ 373 DV / 1467 DV runtime IDs / unreferenced 565. Roadmap + CHANGELOG added.
 
 ## Prefetched next unit (read-only, contract frozen)
 
