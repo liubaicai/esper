@@ -1,0 +1,805 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-f297e13be96337235ae0",
+    "java-runtime-f49875a427fb00323404",
+    "java-runtime-3b57cf3ad453555fb0b5"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmentedInfra.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmentedPrioritized.java"
+  ],
+  "javaExecutions": [
+    "ContextKeySegmentedInfraAggregatedSubquery",
+    "ContextKeySegmentedInfraCreateIndex",
+    "ContextKeySegmentedPrioritized"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "context-key-segmented-infra-prioritized",
+    "steps": [
+      {
+        "op": "case",
+        "case": "infra-aggregated-subquery-nw"
+      },
+      {
+        "op": "deploy",
+        "case": "infra-aggregated-subquery-nw",
+        "statement": "module",
+        "epl": "create context SegmentedByString partition by theString from SupportBean, p00 from SupportBean_S0;\n@public context SegmentedByString create window MyInfra#keepall as SupportBean;\n@Name('insert') context SegmentedByString insert into MyInfra select theString, intPrimitive from SupportBean;\n@Audit @name('s0') context SegmentedByString select *, (select max(intPrimitive) from MyInfra) as mymax from SupportBean_S0;\n"
+      },
+      {
+        "op": "send",
+        "case": "infra-aggregated-subquery-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "infra-aggregated-subquery-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "case": "infra-aggregated-subquery-nw",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "infra-aggregated-subquery-nw",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "infra-aggregated-subquery-nw",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E3"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "infra-aggregated-subquery-nw"
+      },
+      {
+        "op": "case",
+        "case": "infra-aggregated-subquery-table"
+      },
+      {
+        "op": "deploy",
+        "case": "infra-aggregated-subquery-table",
+        "statement": "module",
+        "epl": "create context SegmentedByString partition by theString from SupportBean, p00 from SupportBean_S0;\n@public context SegmentedByString create table MyInfra (theString string primary key, intPrimitive int);\n@Name('insert') context SegmentedByString insert into MyInfra select theString, intPrimitive from SupportBean;\n@Audit @name('s0') context SegmentedByString select *, (select max(intPrimitive) from MyInfra) as mymax from SupportBean_S0;\n"
+      },
+      {
+        "op": "send",
+        "case": "infra-aggregated-subquery-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "infra-aggregated-subquery-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "case": "infra-aggregated-subquery-table",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "infra-aggregated-subquery-table",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "infra-aggregated-subquery-table",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E3"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "infra-aggregated-subquery-table"
+      },
+      {
+        "op": "case",
+        "case": "infra-create-index-nw"
+      },
+      {
+        "op": "deploy",
+        "case": "infra-create-index-nw",
+        "statement": "module",
+        "epl": "@name('create-ctx') @public create context SegmentedByCustomer   initiated by SupportBean_S0 s0   terminated by SupportBean_S1(p00 = p10);@name('create-infra') @public context SegmentedByCustomer\ncreate window MyInfra#keepall as SupportBean;@name('insert-into-window') insert into MyInfra select theString, intPrimitive from SupportBean;@name('create-index') context SegmentedByCustomer create index MyIndex on MyInfra(intPrimitive);"
+      },
+      {
+        "op": "send",
+        "case": "infra-create-index-nw",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "A"
+        }
+      },
+      {
+        "op": "send",
+        "case": "infra-create-index-nw",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 2,
+          "p00": "B"
+        }
+      },
+      {
+        "op": "send",
+        "case": "infra-create-index-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "faf",
+        "case": "infra-create-index-nw",
+        "statement": "faf",
+        "selector": "ids",
+        "ids": [
+          1
+        ],
+        "epl": "select * from MyInfra where intPrimitive = 1"
+      },
+      {
+        "op": "send",
+        "case": "infra-create-index-nw",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 3,
+          "p10": "A"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "infra-create-index-nw"
+      },
+      {
+        "op": "case",
+        "case": "infra-create-index-table"
+      },
+      {
+        "op": "deploy",
+        "case": "infra-create-index-table",
+        "statement": "module",
+        "epl": "@name('create-ctx') @public create context SegmentedByCustomer   initiated by SupportBean_S0 s0   terminated by SupportBean_S1(p00 = p10);@name('create-infra') @public context SegmentedByCustomer\ncreate table MyInfra(theString string primary key, intPrimitive int);@name('insert-into-table') context SegmentedByCustomer insert into MyInfra select theString, intPrimitive from SupportBean;@name('create-index') context SegmentedByCustomer create index MyIndex on MyInfra(intPrimitive);"
+      },
+      {
+        "op": "send",
+        "case": "infra-create-index-table",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "A"
+        }
+      },
+      {
+        "op": "send",
+        "case": "infra-create-index-table",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 2,
+          "p00": "B"
+        }
+      },
+      {
+        "op": "send",
+        "case": "infra-create-index-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "faf",
+        "case": "infra-create-index-table",
+        "statement": "faf",
+        "selector": "ids",
+        "ids": [
+          1
+        ],
+        "epl": "select * from MyInfra where intPrimitive = 1"
+      },
+      {
+        "op": "send",
+        "case": "infra-create-index-table",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 3,
+          "p10": "A"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "infra-create-index-table"
+      },
+      {
+        "op": "case",
+        "case": "keyed-prioritized"
+      },
+      {
+        "op": "deploy",
+        "case": "keyed-prioritized",
+        "statement": "ctx",
+        "epl": "@public create context SegmentedByMessage partition by theString from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "keyed-prioritized",
+        "statement": "s0",
+        "epl": "@name('s0') @Drop @Priority(1) context SegmentedByMessage select 'test1' from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "keyed-prioritized",
+        "statement": "s1",
+        "epl": "@name('s1') @Priority(0) context SegmentedByMessage select 'test2' from SupportBean"
+      },
+      {
+        "op": "send",
+        "case": "keyed-prioritized",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "test msg",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "keyed-prioritized"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-key-segmented-infra-prioritized",
+    "records": [
+      {
+        "case": "infra-aggregated-subquery-nw",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 0,
+              "mymax": 20,
+              "p00": "E2",
+              "p01": {
+                "state": "null"
+              },
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "infra-aggregated-subquery-nw",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 0,
+              "mymax": 10,
+              "p00": "E1",
+              "p01": {
+                "state": "null"
+              },
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "infra-aggregated-subquery-nw",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 0,
+              "mymax": {
+                "state": "null"
+              },
+              "p00": "E3",
+              "p01": {
+                "state": "null"
+              },
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "infra-aggregated-subquery-table",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 0,
+              "mymax": 20,
+              "p00": "E2",
+              "p01": {
+                "state": "null"
+              },
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "infra-aggregated-subquery-table",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 0,
+              "mymax": 10,
+              "p00": "E1",
+              "p01": {
+                "state": "null"
+              },
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "infra-aggregated-subquery-table",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 0,
+              "mymax": {
+                "state": "null"
+              },
+              "p00": "E3",
+              "p01": {
+                "state": "null"
+              },
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "infra-create-index-nw",
+        "operation": "faf",
+        "statement": "faf",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "infra-create-index-table",
+        "operation": "faf",
+        "statement": "faf",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-prioritized",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "\"test1\"": "test1"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-key-segmented-infra-prioritized",
+    "records": [
+      {
+        "case": "infra-aggregated-subquery-nw",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 0,
+              "mymax": 20,
+              "p00": "E2",
+              "p01": {
+                "state": "null"
+              },
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "infra-aggregated-subquery-nw",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 0,
+              "mymax": 10,
+              "p00": "E1",
+              "p01": {
+                "state": "null"
+              },
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "infra-aggregated-subquery-nw",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 0,
+              "mymax": {
+                "state": "null"
+              },
+              "p00": "E3",
+              "p01": {
+                "state": "null"
+              },
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "infra-aggregated-subquery-table",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 0,
+              "mymax": 20,
+              "p00": "E2",
+              "p01": {
+                "state": "null"
+              },
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "infra-aggregated-subquery-table",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 0,
+              "mymax": 10,
+              "p00": "E1",
+              "p01": {
+                "state": "null"
+              },
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "infra-aggregated-subquery-table",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 0,
+              "mymax": {
+                "state": "null"
+              },
+              "p00": "E3",
+              "p01": {
+                "state": "null"
+              },
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "infra-create-index-nw",
+        "operation": "faf",
+        "statement": "faf",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "infra-create-index-table",
+        "operation": "faf",
+        "statement": "faf",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-prioritized",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "\"test1\"": "test1"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

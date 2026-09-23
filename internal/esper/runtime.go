@@ -928,6 +928,32 @@ func (e *Engine) ensureContextPartitionRegisteredLocked(contextName, partitionKe
 	e.auditContextPartitionLocked(contextName, descriptor.ID, true, e.clock.Now())
 }
 
+// liveContextPartitionKeysLocked returns the keys of the context's currently
+// allocated partitions in allocation-ID order. Context-free inserts into a
+// context-bound named window under a lifecycle context (initiated-terminated
+// or a leaf below an initiated parent) broadcast to exactly this set: the
+// routed insert event carries no derivable partition key, and Esper's context
+// controller delivers it to every live partition.
+func (e *Engine) liveContextPartitionKeysLocked(contextName string) []string {
+	if e == nil || contextName == "" {
+		return nil
+	}
+	descriptors := e.contextPartitionDescriptors[contextName]
+	if len(descriptors) == 0 {
+		return nil
+	}
+	ordered := make([]ContextPartitionDescriptor, 0, len(descriptors))
+	for _, descriptor := range descriptors {
+		ordered = append(ordered, descriptor)
+	}
+	sort.Slice(ordered, func(i, j int) bool { return ordered[i].ID < ordered[j].ID })
+	keys := make([]string, 0, len(ordered))
+	for _, descriptor := range ordered {
+		keys = append(keys, descriptor.Key)
+	}
+	return keys
+}
+
 func (e *Engine) retainContextPartitionLocked(contextName, partitionKey string, runtime ...*statementRuntime) {
 	if e == nil || contextName == "" || partitionKey == "" {
 		return
@@ -5681,10 +5707,13 @@ func (e *Engine) queueStatementRoutesLocked(statement *Statement, batch ResultBa
 		return nil
 	}
 	if statement.plan.query.contextName != "" {
-		if definition, ok := e.env.Context(statement.plan.query.contextName); ok && definition.hasInitiatedParent() {
-			// Initiated-parent contexts route per leaf inside
+		if definition, ok := e.env.Context(statement.plan.query.contextName); ok &&
+			(definition.kind == ContextInitiatedTerminated || definition.hasInitiatedParent()) {
+			// Lifecycle contexts route per partition inside
+			// processInitiatedTerminated / processPatternInitiatedTerminated /
 			// processNestedInitiatedParent with partition-scoped variables;
-			// the generic queue would re-derive a bogus single-parent key.
+			// the generic queue would re-derive a bogus single key and
+			// double-route rows already inserted per partition.
 			return nil
 		}
 	}
@@ -5704,6 +5733,50 @@ func (e *Engine) queueStatementRoutesLocked(statement *Statement, batch ResultBa
 			routed.hasPrec = true
 		}
 		e.insertRoutedEventLocked(routed)
+	}
+	return nil
+}
+
+// routePartitionInsertLocked routes one partition's output rows for an
+// insert-into statement running inside a lifecycle context partition. The
+// partition-scoped variables carry the leaf key so a context-bound named
+// window insert lands in this exact partition; non-window targets keep the
+// ordinary routed-event queue. Esper routes insert-into rows from inside the
+// partition agent instance, so the generic post-dispatch route queue is
+// skipped for these contexts (it would re-derive a bogus single key).
+func (s *Statement) routePartitionInsertLocked(partition *statementRuntime, batch ResultBatch, now time.Time, variables map[string]Value) error {
+	if s == nil || s.engine == nil || s.plan.query.routeTarget == "" {
+		return nil
+	}
+	partitionVariables := s.contextPartitionVariables(partition, variables)
+	precedenceExpr := s.plan.query.eventPrecedence
+	for _, routed := range routeResults(s.plan.query.routeSelector, batch) {
+		re, routeErr := s.engine.routeResultToTargetLocked(s, routed, s.plan.query.routeTarget, now)
+		if routeErr != nil {
+			return routeErr
+		}
+		re.owner = s
+		re.front = re.namedWindow != nil
+		if precedenceExpr != nil {
+			// Precedence is evaluated against the target event after route
+			// projection and schema coercion, matching Esper's output router;
+			// the partition-scoped variables carry this partition's context
+			// properties like the generic path's statement variables do.
+			re.precedence = evaluatePrecedenceExpr(precedenceExpr, resultEvent(re.event), s.engine, partitionVariables)
+			re.hasPrec = true
+		}
+		if re.namedWindow != nil {
+			insertUnderlying := namedWindowInsertUnderlying(re.namedWindow, re.event)
+			delta, insertErr := re.namedWindow.insertWithVariables(s.runtime.ctx, now, insertUnderlying, partitionVariables)
+			if insertErr != nil {
+				return insertErr
+			}
+			if err := s.engine.queueNamedWindowDeltaLocked(s.runtime.ctx, now, re.namedWindow, delta, &partitionVariables, s); err != nil {
+				return err
+			}
+			continue
+		}
+		s.engine.insertRoutedEventLocked(re)
 	}
 	return nil
 }
@@ -8827,6 +8900,9 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 				result.New = append(result.New, row.New...)
 				result.Old = append(result.Old, row.Old...)
 				changed = changed || !row.empty() || row.forced
+				if err := s.routePartitionInsertLocked(partition, row, now, variables); err != nil {
+					return ResultBatch{}, false, err
+				}
 			}
 		}
 		if definition.initiatedOverlapping || definition.startPatternInclusive {
@@ -8850,6 +8926,9 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 						result.New = append(result.New, batch.New...)
 						result.Old = append(result.Old, batch.Old...)
 						changed = changed || partitionChanged
+						if err := s.routePartitionInsertLocked(partition, batch, now, variables); err != nil {
+							return ResultBatch{}, false, err
+						}
 					}
 					continue
 				}
@@ -8861,6 +8940,9 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 					result.New = append(result.New, batch.New...)
 					result.Old = append(result.Old, batch.Old...)
 					changed = changed || partitionChanged
+					if err := s.routePartitionInsertLocked(partition, batch, now, variables); err != nil {
+						return ResultBatch{}, false, err
+					}
 				}
 			}
 		}
@@ -8873,6 +8955,9 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 			if !startBatch.empty() {
 				result.New = append(result.New, startBatch.New...)
 				result.Old = append(result.Old, startBatch.Old...)
+				if err := s.routePartitionInsertLocked(partition, startBatch, now, variables); err != nil {
+					return ResultBatch{}, false, err
+				}
 			}
 			// Drain the start assignments immediately: the termination loop
 			// below flushes later partitions' pending assignments, and Esper
@@ -8986,6 +9071,9 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 			result.New = append(result.New, batch.New...)
 			result.Old = append(result.Old, batch.Old...)
 			changed = changed || partitionChanged
+			if err := s.routePartitionInsertLocked(partition, batch, now, variables); err != nil {
+				return ResultBatch{}, false, err
+			}
 		}
 	}
 	for _, partitionKey := range keys {
@@ -9002,6 +9090,9 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 			result.New = append(result.New, terminationBatch.New...)
 			result.Old = append(result.Old, terminationBatch.Old...)
 			changed = changed || !terminationBatch.empty() || terminationBatch.forced
+			if err := s.routePartitionInsertLocked(partition, terminationBatch, now, variables); err != nil {
+				return ResultBatch{}, false, err
+			}
 		}
 		s.runtime.pendingOutputAssignments = append(s.runtime.pendingOutputAssignments, partition.drainOutputAssignments()...)
 		delete(s.runtime.partitions, partitionKey)
@@ -9519,6 +9610,9 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 						result.New = append(result.New, batch.New...)
 						result.Old = append(result.Old, batch.Old...)
 						changed = changed || partitionChanged
+						if err := s.routePartitionInsertLocked(partition, batch, now, variables); err != nil {
+							return ResultBatch{}, false
+						}
 					}
 					continue
 				}
@@ -9530,6 +9624,9 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 					result.New = append(result.New, batch.New...)
 					result.Old = append(result.Old, batch.Old...)
 					changed = changed || partitionChanged
+					if err := s.routePartitionInsertLocked(partition, batch, now, variables); err != nil {
+						return ResultBatch{}, false
+					}
 				}
 			}
 		}
@@ -9542,6 +9639,9 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 			if !startBatch.empty() {
 				result.New = append(result.New, startBatch.New...)
 				result.Old = append(result.Old, startBatch.Old...)
+				if err := s.routePartitionInsertLocked(partition, startBatch, now, variables); err != nil {
+					return ResultBatch{}, false
+				}
 			}
 			// Drain the start assignments immediately: the termination loop
 			// below flushes later partitions' pending assignments, and Esper
@@ -9587,6 +9687,9 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 			result.New = append(result.New, terminationBatch.New...)
 			result.Old = append(result.Old, terminationBatch.Old...)
 			changed = changed || !terminationBatch.empty() || terminationBatch.forced
+			if err := s.routePartitionInsertLocked(partition, terminationBatch, now, variables); err != nil {
+				return ResultBatch{}, false
+			}
 		}
 		s.runtime.pendingOutputAssignments = append(s.runtime.pendingOutputAssignments, partition.drainOutputAssignments()...)
 		delete(s.runtime.partitions, partitionKey)
@@ -9682,6 +9785,9 @@ func (s *Statement) processNestedInitiatedParent(definition ContextDefinition, e
 							initiationBatch.New = append(initiationBatch.New, row.New...)
 							initiationBatch.Old = append(initiationBatch.Old, row.Old...)
 							initiationChanged = initiationChanged || !row.empty() || row.forced
+							if err := s.routePartitionInsertLocked(partitionRuntime, row, now, variables); err != nil {
+								return ResultBatch{}, false, err
+							}
 						}
 					}
 				}
@@ -9737,34 +9843,8 @@ func (s *Statement) processNestedInitiatedParent(definition ContextDefinition, e
 				result.New = append(result.New, batch.New...)
 				result.Old = append(result.Old, batch.Old...)
 				changed = changed || partitionChanged
-				if s.plan.query.routeTarget != "" {
-					// Esper routes insert-into rows from inside the leaf
-					// partition: the partition-scoped variables carry the
-					// leaf key so the context-bound window insert lands in
-					// this leaf. The generic post-dispatch route queue is
-					// skipped for initiated-parent contexts (it would
-					// re-derive a bogus single-parent key).
-					partitionVariables := s.contextPartitionVariables(partition, variables)
-					for _, routed := range routeResults(s.plan.query.routeSelector, batch) {
-						re, routeErr := s.engine.routeResultToTargetLocked(s, routed, s.plan.query.routeTarget, now)
-						if routeErr != nil {
-							return ResultBatch{}, false, routeErr
-						}
-						re.owner = s
-						re.front = re.namedWindow != nil
-						if re.namedWindow != nil {
-							insertUnderlying := namedWindowInsertUnderlying(re.namedWindow, re.event)
-							delta, insertErr := re.namedWindow.insertWithVariables(s.runtime.ctx, now, insertUnderlying, partitionVariables)
-							if insertErr != nil {
-								return ResultBatch{}, false, insertErr
-							}
-							if err := s.engine.queueNamedWindowDeltaLocked(s.runtime.ctx, now, re.namedWindow, delta, &partitionVariables, s); err != nil {
-								return ResultBatch{}, false, err
-							}
-							continue
-						}
-						s.engine.insertRoutedEventLocked(re)
-					}
+				if err := s.routePartitionInsertLocked(partition, batch, now, variables); err != nil {
+					return ResultBatch{}, false, err
 				}
 			}
 		}
@@ -9805,6 +9885,9 @@ func (s *Statement) processNestedInitiatedParent(definition ContextDefinition, e
 					result.New = append(result.New, terminationBatch.New...)
 					result.Old = append(result.Old, terminationBatch.Old...)
 					changed = changed || !terminationBatch.empty() || terminationBatch.forced
+					if err := s.routePartitionInsertLocked(partition, terminationBatch, now, variables); err != nil {
+						return ResultBatch{}, false, err
+					}
 				}
 				s.runtime.pendingOutputAssignments = append(s.runtime.pendingOutputAssignments, partition.drainOutputAssignments()...)
 				delete(s.runtime.partitions, partitionKey)
@@ -9910,6 +9993,9 @@ func (s *Statement) processInitiatedTerminated(definition ContextDefinition, eve
 				initiationBatch.New = append(initiationBatch.New, row.New...)
 				initiationBatch.Old = append(initiationBatch.Old, row.Old...)
 				initiationChanged = initiationChanged || !row.empty() || row.forced
+				if err := s.routePartitionInsertLocked(partitionValue, row, now, variables); err != nil {
+					return ResultBatch{}, false, err
+				}
 			}
 		}
 	}
@@ -10029,6 +10115,9 @@ func (s *Statement) processInitiatedTerminated(definition ContextDefinition, eve
 			result.New = append(result.New, batch.New...)
 			result.Old = append(result.Old, batch.Old...)
 			changed = changed || partitionChanged
+			if err := s.routePartitionInsertLocked(partition, batch, now, variables); err != nil {
+				return ResultBatch{}, false, err
+			}
 		}
 	}
 	for _, partitionKey := range keys {
@@ -10045,6 +10134,9 @@ func (s *Statement) processInitiatedTerminated(definition ContextDefinition, eve
 			result.New = append(result.New, terminationBatch.New...)
 			result.Old = append(result.Old, terminationBatch.Old...)
 			changed = changed || !terminationBatch.empty() || terminationBatch.forced
+			if err := s.routePartitionInsertLocked(partition, terminationBatch, now, variables); err != nil {
+				return ResultBatch{}, false, err
+			}
 		}
 		// The parent statement collects assignments from live partitions after
 		// processing. Drain this partition before releasing it, including
@@ -10205,6 +10297,9 @@ func (s *Statement) processNestedInitiatedTerminated(definition ContextDefinitio
 					initiationBatch.New = append(initiationBatch.New, row.New...)
 					initiationBatch.Old = append(initiationBatch.Old, row.Old...)
 					initiationChanged = initiationChanged || !row.empty() || row.forced
+					if err := s.routePartitionInsertLocked(partitionValue, row, now, variables); err != nil {
+						return ResultBatch{}, false, err
+					}
 				}
 			}
 		}
@@ -10317,33 +10412,8 @@ func (s *Statement) processNestedInitiatedTerminated(definition ContextDefinitio
 			result.New = append(result.New, batch.New...)
 			result.Old = append(result.Old, batch.Old...)
 			changed = changed || partitionChanged
-			if s.plan.query.routeTarget != "" {
-				// Esper routes insert-into rows from inside the leaf
-				// partition: the partition-scoped variables carry the leaf
-				// key so the context-bound window insert lands in this
-				// leaf. The generic post-dispatch route queue is skipped
-				// for initiated-parent contexts.
-				partitionVariables := s.contextPartitionVariables(partition, variables)
-				for _, routed := range routeResults(s.plan.query.routeSelector, batch) {
-					re, routeErr := s.engine.routeResultToTargetLocked(s, routed, s.plan.query.routeTarget, now)
-					if routeErr != nil {
-						return ResultBatch{}, false, routeErr
-					}
-					re.owner = s
-					re.front = re.namedWindow != nil
-					if re.namedWindow != nil {
-						insertUnderlying := namedWindowInsertUnderlying(re.namedWindow, re.event)
-						delta, insertErr := re.namedWindow.insertWithVariables(s.runtime.ctx, now, insertUnderlying, partitionVariables)
-						if insertErr != nil {
-							return ResultBatch{}, false, insertErr
-						}
-						if err := s.engine.queueNamedWindowDeltaLocked(s.runtime.ctx, now, re.namedWindow, delta, &partitionVariables, s); err != nil {
-							return ResultBatch{}, false, err
-						}
-						continue
-					}
-					s.engine.insertRoutedEventLocked(re)
-				}
+			if err := s.routePartitionInsertLocked(partition, batch, now, variables); err != nil {
+				return ResultBatch{}, false, err
 			}
 		}
 	}
@@ -10361,6 +10431,9 @@ func (s *Statement) processNestedInitiatedTerminated(definition ContextDefinitio
 			result.New = append(result.New, terminationBatch.New...)
 			result.Old = append(result.Old, terminationBatch.Old...)
 			changed = changed || !terminationBatch.empty() || terminationBatch.forced
+			if err := s.routePartitionInsertLocked(partition, terminationBatch, now, variables); err != nil {
+				return ResultBatch{}, false, err
+			}
 		}
 		s.runtime.pendingOutputAssignments = append(s.runtime.pendingOutputAssignments, partition.drainOutputAssignments()...)
 		delete(s.runtime.partitions, partitionKey)
@@ -11517,6 +11590,9 @@ func (s *Statement) expireMixedEndPatternsLocked(definition ContextDefinition, n
 			result.New = append(result.New, terminationBatch.New...)
 			result.Old = append(result.Old, terminationBatch.Old...)
 			changed = changed || !terminationBatch.empty() || terminationBatch.forced
+			if err := s.routePartitionInsertLocked(partition, terminationBatch, now, variables); err != nil {
+				return ResultBatch{}, false
+			}
 		}
 		s.runtime.pendingOutputAssignments = append(s.runtime.pendingOutputAssignments, partition.drainOutputAssignments()...)
 		delete(s.runtime.partitions, partitionKey)
@@ -11546,11 +11622,22 @@ func (s *Statement) expireContextSubqueriesLocked(now time.Time) {
 func (s *Statement) expireContext(now time.Time, variables map[string]Value) (ResultBatch, bool) {
 	keys := sortedPartitionKeys(s.runtime.partitions)
 	batch := ResultBatch{Time: now}
+	// Lifecycle contexts route insert-into rows per partition (the generic
+	// post-dispatch queue skips them); other contexts keep the merged batch.
+	routePerPartition := false
+	if definition, ok := s.engine.env.Context(s.plan.query.contextName); ok {
+		routePerPartition = definition.kind == ContextInitiatedTerminated || definition.hasInitiatedParent()
+	}
 	for _, key := range keys {
 		partition := s.runtime.partitions[key]
 		partBatch, _ := partition.expireBatch(s.plan, now, s.contextPartitionVariables(partition, variables))
 		batch.New = append(batch.New, partBatch.New...)
 		batch.Old = append(batch.Old, partBatch.Old...)
+		if routePerPartition {
+			if err := s.routePartitionInsertLocked(partition, partBatch, now, variables); err != nil {
+				return ResultBatch{}, false
+			}
+		}
 	}
 	// A segmented context declared `terminated after <duration>` retires a
 	// partition once its age exceeds the duration; every statement bound to
@@ -15188,6 +15275,9 @@ func (s *Statement) processNamedWindowContextLocked(ctx context.Context, now tim
 	}
 	sort.Strings(keys)
 	result := ResultBatch{Time: now}
+	// Lifecycle contexts route insert-into rows per partition (the generic
+	// post-dispatch queue skips them); other contexts keep the merged batch.
+	routePerPartition := definition.kind == ContextInitiatedTerminated || definition.hasInitiatedParent()
 	for _, key := range keys {
 		group := grouped[key]
 		partition := s.runtime.partitions[key]
@@ -15227,6 +15317,11 @@ func (s *Statement) processNamedWindowContextLocked(ctx context.Context, now tim
 			}
 			result.New = append(result.New, triggerBatch.New...)
 			result.Old = append(result.Old, triggerBatch.Old...)
+			if routePerPartition {
+				if err := s.routePartitionInsertLocked(partition, triggerBatch, now, variables); err != nil {
+					return ResultBatch{}, false, err
+				}
+			}
 			continue
 		}
 		query := s.runtime.query
@@ -15239,6 +15334,11 @@ func (s *Statement) processNamedWindowContextLocked(ctx context.Context, now tim
 		}
 		result.New = append(result.New, partitionBatch.New...)
 		result.Old = append(result.Old, partitionBatch.Old...)
+		if routePerPartition {
+			if err := s.routePartitionInsertLocked(partition, partitionBatch, now, variables); err != nil {
+				return ResultBatch{}, false, err
+			}
+		}
 	}
 	if result.empty() {
 		return ResultBatch{}, false, nil

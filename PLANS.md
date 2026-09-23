@@ -55,6 +55,74 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly') committed and pushed as 9ac32d036; Git owns identity. Parity review PASS, two P3s fixed.
 
 ## Current work unit
+Active: Draft 4.513 ('context-key-segmented-infra-prioritized').
+
+- Selection: `ContextKeySegmentedInfra.java` ord 0
+  `ContextKeySegmentedInfraAggregatedSubquery` (`java-runtime-f297e13be96337235ae0`,
+  static `java-46365e0a7205d91894a0`), ord 2 `ContextKeySegmentedInfraCreateIndex`
+  (`java-runtime-f49875a427fb00323404`, static `java-4124e1ac4a7995762796`), and
+  `ContextKeySegmentedPrioritized.java` `ContextKeySegmentedPrioritized`
+  (`java-runtime-3b57cf3ad453555fb0b5`, static `java-fc89ee858ab88751c211`) — three
+  unreferenced lifecycle-context executions sharing the init-term partition
+  surface. Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`, no flags.
+- [x] Shared core: (1) `executeInitiatedTerminatedFireAndForget` — init-term FAF
+  iterates live partition descriptors in allocation order, snapshots the
+  named-window/table source per partition, evaluates the projection against the
+  descriptor's stored context properties; replaces the old InvalidRule rejection
+  (obsolete test `TestInitiatedTerminatedContextFireAndForgetIsRejected`
+  deleted). (2) `routePartitionInsertLocked` extracted and wired into every
+  partition output point of `processInitiatedTerminated`,
+  `processPatternInitiatedTerminated`, `processNestedInitiatedTerminated`,
+  `processNestedInitiatedParent`; the generic post-dispatch route queue is
+  skipped for all lifecycle contexts. (3) `insertWithVariables` broadcasts a
+  context-free insert into a lifecycle-contexted window to every live partition
+  (Esper context-controller delivery; routed event type never matches the start
+  condition so no partition is allocated).
+- [x] Parity assets: runner `internal/app/parity/context_key_segmented_infra_prioritized.go`
+  (bean widened to the full 20-field SupportBean shape; the create-index
+  insert-into routes the whole decoded event because Esper fills unprojected
+  window columns with bean defaults — charPrimitive NUL — which a two-column
+  projection would re-zero), scenario (5 cases / 38 steps), oracle
+  `tools/java-oracle/ContextKeySegmentedInfraPrioritizedScenarioOracle.java` +
+  run.sh, run.go/run_test.go wiring.
+- [x] Differential replay: Java 9 records / Go 9 records, `passing` / 0
+  differences; evidence `context-key-segmented-infra-prioritized.evidence.json`.
+- [x] Manifest/roadmap/CHANGELOG: `case.context-key-segmented-infra-prioritized`
+  born-DV (3 runtime IDs); `context.partition` goRefs extended. Summary 745
+  cases / 371 DV / 1463 DV runtime IDs / unreferenced 567.
+- [x] Gates + parity review: `make check` green (parity ~98s, esper ~110s).
+  Reviewer ParityReview513 first pass FAIL on 1 P2 + 4 P3 — P2: extending the
+  route-queue skip to init-term contexts dropped batches from timer expiry,
+  named-window consumer waves, and output.When startBatch; fixed by wiring
+  routePartitionInsertLocked into expireContext (lifecycle-gated),
+  processPatternContextTime, expireMixedEndPatternsLocked, both nested paths'
+  initiation/termination sites, and processNamedWindowContextLocked
+  (lifecycle-gated). P3s fixed: eventPrecedence evaluation in the partition
+  route, descriptor-property overlay for broadcast inserts, prose corrections
+  (max not sum; keyed-prioritized is a keyed context; 5 cases), per-execution
+  static IDs in scenario+oracle. Confirmation review: PASS.
+
+## Prefetched next unit (read-only, contract frozen)
+
+Draft 4.514 candidate: `ContextKeySegmentedNamedWindow.java` ord 0
+`ContextKeyedNamedWindowBasic` (`java-runtime-18f8400337cdcd1dffd3`, static
+`java-0554274bf96ee5ab94ce`) + ord 3 `ContextKeyedNamedWindowFAF`
+(`java-runtime-73bbdb8596de168d6d94`, static `java-bf2785808c45262f93ce`,
+flag FIREANDFORGET). Frozen by NextJavaContract514 + NextGoSurface514:
+- ord 0: multi-key segmented context (grp,subGrp) + `#unique(type)` contexted
+  window + contexted `insert into ... select *` + `irstream *` consumer; one
+  send, assertListenerInvoked only (weak — trace row is the de-facto pin).
+- ord 3: three separate compileDeploys + compileFAF `select * from MyWindow`
+  (context-free FAF over context-bound window); selector-less FAF returns the
+  union of all live partitions, ordered [[G1]] then any-order [[G1],[G2]].
+- Go surface: everything expressible today — CreateKeyContext variadic keys,
+  NamedWindowContext+Unique/KeepAll, contexted OnEvent insert-into,
+  FromNamedWindow irstream consumer, selector-less ExecuteFireAndForget over
+  context-bound windows (union of partitions). No engine work expected.
+- Ords 1/2 already referenced (nw-nonpattern/nw-pattern cases); ords 4/5
+  (subquery over context-free window) stay out of scope.
+
+## Current work unit
 Active: Draft 4.512 ('context-start-end-trio').
 
 - Selection: `ContextStartEndContextPartitionSelection` (ord 0) +
@@ -79,7 +147,7 @@ Active: Draft 4.512 ('context-start-end-trio').
 - [x] Manifest/roadmap/CHANGELOG: `case.context-start-end-trio` born-DV
   (3 runtime IDs); `context.partition` goRefs + DV IDs extended. Summary
   744 cases / 370 DV / 1460 DV runtime IDs / unreferenced 570.
-- [ ] Gates + parity review pending.
+- [x] Shipped; Git owns identity. Draft 4.512 committed and pushed as `1b0523add`.
 
 ## Current work unit
 Active: Draft 4.494 ('view-group-closure').

@@ -73115,6 +73115,221 @@ func TestRunHelpIncludesContextKeySegmentedSubselectPrevPrior(t *testing.T) {
 	}
 }
 
+func TestRunContextKeySegmentedInfraPrioritizedDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-infra-prioritized.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "context-key-segmented-infra-prioritized.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-infra-prioritized.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "context-key-segmented-infra-prioritized-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunContextKeySegmentedInfraPrioritizedDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "empty-partition-max-lost",
+			mutate: func(trace *compat.Trace) {
+				// The E3 partition holds no MyInfra rows: mymax must be null.
+				trace.Records[2].New[0].Fields["mymax"] = 0
+			},
+		},
+		{
+			name: "per-partition-max-drift",
+			mutate: func(trace *compat.Trace) {
+				// Partition E2 sees only its own rows: max is 20, not 10.
+				trace.Records[0].New[0].Fields["mymax"] = 10
+			},
+		},
+		{
+			name: "bean-default-lost",
+			mutate: func(trace *compat.Trace) {
+				// Esper fills unprojected window columns with bean defaults:
+				// charPrimitive is the NUL char, not the empty string.
+				trace.Records[6].New[0].Fields["charPrimitive"] = ""
+			},
+		},
+		{
+			name: "priority-drop-lost",
+			mutate: func(trace *compat.Trace) {
+				// @Drop @Priority(1) s0 fires 'test1'; s1 @Priority(0) is
+				// preempted, so the record carries exactly one row.
+				trace.Records[8].New = append(trace.Records[8].New, compat.ResultRecord{Kind: "row", Fields: map[string]any{"\"test2\"": "test2"}})
+			},
+		},
+		{
+			name: "table-projection-drift",
+			mutate: func(trace *compat.Trace) {
+				// The table FAF row is the two-column projection only.
+				trace.Records[7].New[0].Fields["intPrimitive"] = 2
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-infra-prioritized.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "context-key-segmented-infra-prioritized.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-infra-prioritized.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "context-key-segmented-infra-prioritized-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
+func TestRunContextKeySegmentedInfraPrioritizedRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "context-key-segmented-infra-prioritized.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "context-key-segmented-infra-prioritized"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "context-key-segmented-infra-prioritized"`)...), 1)
+		}},
+		{name: "case-metadata", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 2`), []byte(`"ordinal": 3`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1",
+        "intPrimitive": 10`), []byte(`"theString": "E1",
+        "intPrimitive": 10,
+        "extra": 0`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1",`), []byte(`"theString": "E1",
+        "theString": "Z",`), 1)
+		}},
+		{name: "step-field-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "case",
+      "case": "infra-aggregated-subquery-nw"`), []byte(`"op": "case",
+      "case": "infra-aggregated-subquery-nw",
+      "extra": 0`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", "context-key-segmented-infra-prioritized",
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunContextKeySegmentedInfraPrioritizedRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-infra-prioritized.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, contextKeySegmentedInfraPrioritizedJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, contextKeySegmentedInfraPrioritizedJavaExecutions) {
+		t.Fatalf("scenario metadata runtimes=%v names=%v", document.JavaRuntimes, document.JavaNames)
+	}
+	wantCaseRuntimeIDs := map[string]string{
+		"infra-aggregated-subquery-nw":    "java-runtime-f297e13be96337235ae0",
+		"infra-aggregated-subquery-table": "java-runtime-f297e13be96337235ae0",
+		"infra-create-index-nw":           "java-runtime-f49875a427fb00323404",
+		"infra-create-index-table":        "java-runtime-f49875a427fb00323404",
+		"keyed-prioritized":               "java-runtime-3b57cf3ad453555fb0b5",
+	}
+	for _, entry := range document.Cases {
+		if wantCaseRuntimeIDs[entry.Case] != entry.RuntimeID {
+			t.Fatalf("case %q runtimeId = %q, want %q", entry.Case, entry.RuntimeID, wantCaseRuntimeIDs[entry.Case])
+		}
+	}
+}
+
+func TestRunHelpIncludesContextKeySegmentedInfraPrioritized(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-h"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("help exit code = %d, stderr = %q", code, stderr.String())
+	}
+	for _, mode := range []string{
+		"context-key-segmented-infra-prioritized",
+		"context-key-segmented-infra-prioritized-diff",
+	} {
+		if !strings.Contains(stderr.String(), mode) {
+			t.Fatalf("help output omits %q: %s", mode, stderr.String())
+		}
+	}
+}
+
 func TestRunContextKeySegmentedInvalidDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-invalid.evidence.json"),

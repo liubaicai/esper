@@ -1,0 +1,341 @@
+{
+  "version": "esper-parity/v1",
+  "id": "context-key-segmented-infra-prioritized",
+  "description": "ContextKeySegmentedInfra aggregated-subquery and create-index executions plus ContextKeySegmentedPrioritized (three executions, five cases): infra-aggregated-subquery-nw/-table replay ContextKeySegmentedInfraAggregatedSubquery (ord 0, both namedWindow variants under one runtime ID) — a SegmentedByString keyed context, a contexted MyInfra keepall window or theString-primary-key table fed by the contexted insert, and s0 projecting select * plus an uncorrelated max(intPrimitive) subquery over MyInfra; S0 triggers yield mymax 20, 10 and null for the empty E3 partition. infra-create-index-nw/-table replay ContextKeySegmentedInfraCreateIndex (ord 2, both variants) — an OVERLAPPING initiated/terminated SegmentedByCustomer context (no partition-by) whose named-window insert omits the context clause while the table insert requires it; SupportBean E1 broadcasts into both live partitions, the FAF select under by-id selector {1} returns {E1,1}, and S1(3,'A') terminates only partition A. keyed-prioritized replays ContextKeySegmentedPrioritized (direct execution) under setPrioritized(true): s0 @Drop @Priority(1) fires 'test1' while s1 @Priority(0) stays silent.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmentedInfra.java",
+  "javaSource2": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmentedPrioritized.java",
+  "javaRuntimes": [
+    "java-runtime-f297e13be96337235ae0",
+    "java-runtime-f49875a427fb00323404",
+    "java-runtime-3b57cf3ad453555fb0b5"
+  ],
+  "javaNames": [
+    "ContextKeySegmentedInfraAggregatedSubquery",
+    "ContextKeySegmentedInfraCreateIndex",
+    "ContextKeySegmentedPrioritized"
+  ],
+  "javaStaticIds": [
+    "java-46365e0a7205d91894a0",
+    "java-4124e1ac4a7995762796",
+    "java-fc89ee858ab88751c211"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "infra-aggregated-subquery-nw",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-f297e13be96337235ae0",
+      "executionName": "ContextKeySegmentedInfraAggregatedSubquery",
+      "observation": "listener; keyed SegmentedByString context over a keepall named window fed by the contexted insert; SupportBean sends are silent (trigger stream is S0), S0(0,E2)/S0(0,E1) emit one row each carrying the S0 columns plus mymax 20/10, and S0(0,E3) allocates an empty partition whose mymax is null",
+      "epl": "create context SegmentedByString partition by theString from SupportBean, p00 from SupportBean_S0;\n@public context SegmentedByString create window MyInfra#keepall as SupportBean;\n@Name('insert') context SegmentedByString insert into MyInfra select theString, intPrimitive from SupportBean;\n@Audit @name('s0') context SegmentedByString select *, (select max(intPrimitive) from MyInfra) as mymax from SupportBean_S0;\n"
+    },
+    {
+      "case": "infra-aggregated-subquery-table",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-f297e13be96337235ae0",
+      "executionName": "ContextKeySegmentedInfraAggregatedSubquery",
+      "observation": "listener; identical observable sequence over the theString-primary-key table variant (byte-exact space before the column-list paren)",
+      "epl": "create context SegmentedByString partition by theString from SupportBean, p00 from SupportBean_S0;\n@public context SegmentedByString create table MyInfra (theString string primary key, intPrimitive int);\n@Name('insert') context SegmentedByString insert into MyInfra select theString, intPrimitive from SupportBean;\n@Audit @name('s0') context SegmentedByString select *, (select max(intPrimitive) from MyInfra) as mymax from SupportBean_S0;\n"
+    },
+    {
+      "case": "infra-create-index-nw",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-f49875a427fb00323404",
+      "executionName": "ContextKeySegmentedInfraCreateIndex",
+      "observation": "faf; overlapping initiated/terminated SegmentedByCustomer context (no partition-by) over a keepall named window whose insert inherits the context; S0(1,A)/S0(2,B) initiate partitions 0/1, SupportBean E1 broadcasts into both, the by-id {1} FAF returns {E1,1}, and S1(3,A) terminates only partition A",
+      "epl": "@name('create-ctx') @public create context SegmentedByCustomer   initiated by SupportBean_S0 s0   terminated by SupportBean_S1(p00 = p10);@name('create-infra') @public context SegmentedByCustomer\ncreate window MyInfra#keepall as SupportBean;@name('insert-into-window') insert into MyInfra select theString, intPrimitive from SupportBean;@name('create-index') context SegmentedByCustomer create index MyIndex on MyInfra(intPrimitive);"
+    },
+    {
+      "case": "infra-create-index-table",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-f49875a427fb00323404",
+      "executionName": "ContextKeySegmentedInfraCreateIndex",
+      "observation": "faf; identical sequence over the table variant whose insert requires the explicit context SegmentedByCustomer clause",
+      "epl": "@name('create-ctx') @public create context SegmentedByCustomer   initiated by SupportBean_S0 s0   terminated by SupportBean_S1(p00 = p10);@name('create-infra') @public context SegmentedByCustomer\ncreate table MyInfra(theString string primary key, intPrimitive int);@name('insert-into-table') context SegmentedByCustomer insert into MyInfra select theString, intPrimitive from SupportBean;@name('create-index') context SegmentedByCustomer create index MyIndex on MyInfra(intPrimitive);"
+    },
+    {
+      "case": "keyed-prioritized",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-3b57cf3ad453555fb0b5",
+      "executionName": "ContextKeySegmentedPrioritized",
+      "observation": "listener; prioritized runtime (setPrioritized(true)) with three separate deploys; s0 @Drop @Priority(1) fires 'test1' for SupportBean(test msg,1) while s1 @Priority(0) is not invoked",
+      "epl": "@name('s0') @Drop @Priority(1) context SegmentedByMessage select 'test1' from SupportBean"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "infra-aggregated-subquery-nw"
+    },
+    {
+      "op": "deploy",
+      "case": "infra-aggregated-subquery-nw",
+      "statement": "module",
+      "epl": "create context SegmentedByString partition by theString from SupportBean, p00 from SupportBean_S0;\n@public context SegmentedByString create window MyInfra#keepall as SupportBean;\n@Name('insert') context SegmentedByString insert into MyInfra select theString, intPrimitive from SupportBean;\n@Audit @name('s0') context SegmentedByString select *, (select max(intPrimitive) from MyInfra) as mymax from SupportBean_S0;\n"
+    },
+    {
+      "op": "send",
+      "case": "infra-aggregated-subquery-nw",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 10
+      }
+    },
+    {
+      "op": "send",
+      "case": "infra-aggregated-subquery-nw",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 20
+      }
+    },
+    {
+      "op": "send",
+      "case": "infra-aggregated-subquery-nw",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 0,
+        "p00": "E2"
+      }
+    },
+    {
+      "op": "send",
+      "case": "infra-aggregated-subquery-nw",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 0,
+        "p00": "E1"
+      }
+    },
+    {
+      "op": "send",
+      "case": "infra-aggregated-subquery-nw",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 0,
+        "p00": "E3"
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "infra-aggregated-subquery-nw"
+    },
+    {
+      "op": "case",
+      "case": "infra-aggregated-subquery-table"
+    },
+    {
+      "op": "deploy",
+      "case": "infra-aggregated-subquery-table",
+      "statement": "module",
+      "epl": "create context SegmentedByString partition by theString from SupportBean, p00 from SupportBean_S0;\n@public context SegmentedByString create table MyInfra (theString string primary key, intPrimitive int);\n@Name('insert') context SegmentedByString insert into MyInfra select theString, intPrimitive from SupportBean;\n@Audit @name('s0') context SegmentedByString select *, (select max(intPrimitive) from MyInfra) as mymax from SupportBean_S0;\n"
+    },
+    {
+      "op": "send",
+      "case": "infra-aggregated-subquery-table",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 10
+      }
+    },
+    {
+      "op": "send",
+      "case": "infra-aggregated-subquery-table",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 20
+      }
+    },
+    {
+      "op": "send",
+      "case": "infra-aggregated-subquery-table",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 0,
+        "p00": "E2"
+      }
+    },
+    {
+      "op": "send",
+      "case": "infra-aggregated-subquery-table",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 0,
+        "p00": "E1"
+      }
+    },
+    {
+      "op": "send",
+      "case": "infra-aggregated-subquery-table",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 0,
+        "p00": "E3"
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "infra-aggregated-subquery-table"
+    },
+    {
+      "op": "case",
+      "case": "infra-create-index-nw"
+    },
+    {
+      "op": "deploy",
+      "case": "infra-create-index-nw",
+      "statement": "module",
+      "epl": "@name('create-ctx') @public create context SegmentedByCustomer   initiated by SupportBean_S0 s0   terminated by SupportBean_S1(p00 = p10);@name('create-infra') @public context SegmentedByCustomer\ncreate window MyInfra#keepall as SupportBean;@name('insert-into-window') insert into MyInfra select theString, intPrimitive from SupportBean;@name('create-index') context SegmentedByCustomer create index MyIndex on MyInfra(intPrimitive);"
+    },
+    {
+      "op": "send",
+      "case": "infra-create-index-nw",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 1,
+        "p00": "A"
+      }
+    },
+    {
+      "op": "send",
+      "case": "infra-create-index-nw",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 2,
+        "p00": "B"
+      }
+    },
+    {
+      "op": "send",
+      "case": "infra-create-index-nw",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 1
+      }
+    },
+    {
+      "op": "faf",
+      "case": "infra-create-index-nw",
+      "statement": "faf",
+      "epl": "select * from MyInfra where intPrimitive = 1",
+      "selector": "ids",
+      "ids": [
+        1
+      ]
+    },
+    {
+      "op": "send",
+      "case": "infra-create-index-nw",
+      "eventType": "SupportBean_S1",
+      "payload": {
+        "id": 3,
+        "p10": "A"
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "infra-create-index-nw"
+    },
+    {
+      "op": "case",
+      "case": "infra-create-index-table"
+    },
+    {
+      "op": "deploy",
+      "case": "infra-create-index-table",
+      "statement": "module",
+      "epl": "@name('create-ctx') @public create context SegmentedByCustomer   initiated by SupportBean_S0 s0   terminated by SupportBean_S1(p00 = p10);@name('create-infra') @public context SegmentedByCustomer\ncreate table MyInfra(theString string primary key, intPrimitive int);@name('insert-into-table') context SegmentedByCustomer insert into MyInfra select theString, intPrimitive from SupportBean;@name('create-index') context SegmentedByCustomer create index MyIndex on MyInfra(intPrimitive);"
+    },
+    {
+      "op": "send",
+      "case": "infra-create-index-table",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 1,
+        "p00": "A"
+      }
+    },
+    {
+      "op": "send",
+      "case": "infra-create-index-table",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 2,
+        "p00": "B"
+      }
+    },
+    {
+      "op": "send",
+      "case": "infra-create-index-table",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 1
+      }
+    },
+    {
+      "op": "faf",
+      "case": "infra-create-index-table",
+      "statement": "faf",
+      "epl": "select * from MyInfra where intPrimitive = 1",
+      "selector": "ids",
+      "ids": [
+        1
+      ]
+    },
+    {
+      "op": "send",
+      "case": "infra-create-index-table",
+      "eventType": "SupportBean_S1",
+      "payload": {
+        "id": 3,
+        "p10": "A"
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "infra-create-index-table"
+    },
+    {
+      "op": "case",
+      "case": "keyed-prioritized"
+    },
+    {
+      "op": "deploy",
+      "case": "keyed-prioritized",
+      "statement": "ctx",
+      "epl": "@public create context SegmentedByMessage partition by theString from SupportBean"
+    },
+    {
+      "op": "deploy",
+      "case": "keyed-prioritized",
+      "statement": "s0",
+      "epl": "@name('s0') @Drop @Priority(1) context SegmentedByMessage select 'test1' from SupportBean"
+    },
+    {
+      "op": "deploy",
+      "case": "keyed-prioritized",
+      "statement": "s1",
+      "epl": "@name('s1') @Priority(0) context SegmentedByMessage select 'test2' from SupportBean"
+    },
+    {
+      "op": "send",
+      "case": "keyed-prioritized",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "test msg",
+        "intPrimitive": 1
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "keyed-prioritized"
+    }
+  ]
+}

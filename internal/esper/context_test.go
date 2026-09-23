@@ -2987,40 +2987,6 @@ func TestContextSnapshotWithSelectorFiltersIteratorState(t *testing.T) {
 	}
 }
 
-func TestInitiatedTerminatedContextFireAndForgetIsRejected(t *testing.T) {
-	env := NewEnvironment()
-	if _, err := RegisterStruct[runtimeTestTrade](env, "Trade"); err != nil {
-		t.Fatal(err)
-	}
-	schema, ok := env.Schema("Trade")
-	if !ok {
-		t.Fatal("Trade schema is missing")
-	}
-	if _, err := CreateNamedWindow(env, "initiated-live", schema); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := CreateInitiatedTerminatedContext(
-		env,
-		"initiated-by-symbol",
-		Field[any, string]("symbol"),
-		Literal(true),
-		Literal(false),
-	); err != nil {
-		t.Fatal(err)
-	}
-	plan, err := env.Build(FromNamedWindow(env, "initiated-live").Query(
-		StatementName("initiated-context-faf"),
-		WithContext("initiated-by-symbol"),
-	))
-	if err != nil {
-		t.Fatal(err)
-	}
-	engine := NewEngine(env)
-	if _, err := engine.ExecuteFireAndForgetWithSelector(context.Background(), plan, ContextPartitionSelectorAll{}); err == nil {
-		t.Fatal("initiated-terminated context FAF unexpectedly succeeded")
-	}
-}
-
 func TestPatternInitiatedTerminatedContextCorrelatesCapturedTags(t *testing.T) {
 	env, engine := newRuntimeTest(t)
 	base := From[runtimeTestTrade](env, "Trade")

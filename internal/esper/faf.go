@@ -1998,7 +1998,7 @@ func (e *Engine) executeContextFireAndForget(ctx context.Context, plan Plan, sel
 		return QueryResult{}, NewError(ErrorUnknownName, fmt.Sprintf("context %q is not registered", plan.query.contextName))
 	}
 	if definition.kind == ContextInitiatedTerminated {
-		return QueryResult{}, NewError(ErrorInvalidRule, "fire-and-forget context selection does not support initiated-terminated lifecycle")
+		return e.executeInitiatedTerminatedFireAndForget(ctx, plan, definition, selector, parameters)
 	}
 	if definition.hasInitiatedParent() {
 		return e.executeNestedInitiatedParentFireAndForget(ctx, plan, definition, selector, parameters)
@@ -2146,6 +2146,116 @@ func (e *Engine) executeNestedInitiatedParentFireAndForget(ctx context.Context, 
 				continue
 			}
 			return QueryResult{}, err
+		}
+		query := plan.query
+		query.contextName = ""
+		partitionPlan := plan
+		partitionPlan.query = query
+		runtime := newStatementRuntime(query)
+		runtime.engine = e
+		runtime.partitionContextName = definition.name
+		runtime.partitionKey = descriptor.Key
+		runtime.partitionID = descriptor.ID
+		runtime.contextProperties = cloneValues(descriptor.properties)
+		runtime.initializeAt(now)
+		runtime.ctx = ctx
+		runtime.variables = runtime.withContextVariables(variablesWithEngine(cloneValues(variables), e))
+		runtime.variables = runtime.withContextProperties(runtime.variables)
+		delta := eventDelta{}
+		for _, event := range events {
+			inserted, insertErr := runtime.insert(query.input, event, now)
+			if insertErr != nil {
+				return QueryResult{}, insertErr
+			}
+			delta = mergeDelta(delta, inserted)
+		}
+		var batch ResultBatch
+		if query.aggregate != nil {
+			batch, err = runtime.aggregateBatch(delta, partitionPlan, now)
+		} else if query.rowRecog != nil {
+			batch = runtime.rowRecogBatch(delta, partitionPlan, now)
+		} else {
+			batch = runtime.batch(delta, partitionPlan, now)
+		}
+		if err != nil {
+			return QueryResult{}, err
+		}
+		batch = runtime.applyOutput(query.output, batch, false, now, partitionPlan)
+		result.New = append(result.New, batch.New...)
+		result.Old = append(result.Old, batch.Old...)
+	}
+	if !result.empty() {
+		result.Sequence = 1
+	}
+	return QueryResult{Batch: result}, nil
+}
+
+// executeInitiatedTerminatedFireAndForget runs a context-clause
+// fire-and-forget query over an initiated-terminated context. Partition keys
+// are lifecycle identities that cannot be re-derived from stored rows, so the
+// query iterates the live context partition descriptors in allocation order,
+// snapshots the source's rows per partition, and evaluates the projection
+// against each descriptor's stored context properties — the same shape as the
+// nested initiated-parent path, extended to contexted tables.
+func (e *Engine) executeInitiatedTerminatedFireAndForget(ctx context.Context, plan Plan, definition ContextDefinition, selector ContextPartitionSelector, parameters ParameterValues) (QueryResult, error) {
+	source, err := sourceNode(plan.query.input)
+	if err != nil {
+		return QueryResult{}, err
+	}
+	if source.kind != streamNamedWindow && source.kind != streamTable {
+		return QueryResult{}, NewError(ErrorInvalidRule, "fire-and-forget over initiated-terminated contexts requires a named-window or table source")
+	}
+	e.mu.Lock()
+	now := e.clock.Now()
+	variables := bindParameterValues(cloneValues(e.variables), parameters)
+	descriptors := e.contextPartitionDescriptors[plan.query.contextName]
+	keys := make([]string, 0, len(descriptors))
+	for key := range descriptors {
+		keys = append(keys, key)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return descriptors[keys[i]].ID < descriptors[keys[j]].ID
+	})
+	selected := make([]ContextPartitionDescriptor, 0, len(keys))
+	for _, key := range keys {
+		descriptor := descriptors[key]
+		if contextPartitionSelectedWithDescriptor(selector, descriptor) {
+			selected = append(selected, descriptor)
+		}
+	}
+	e.mu.Unlock()
+	result := ResultBatch{Time: now}
+	for _, descriptor := range selected {
+		if err := contextErr(ctx); err != nil {
+			return QueryResult{}, err
+		}
+		var events []Event
+		switch source.kind {
+		case streamNamedWindow:
+			window, ok := e.NamedWindowInModule(source.moduleName, source.sourceName)
+			if !ok {
+				return QueryResult{}, NewError(ErrorUnknownName, fmt.Sprintf("named window %q is not registered", source.sourceName))
+			}
+			events, err = window.SnapshotContext(ctx, descriptor.Key)
+			if err != nil {
+				if errors.Is(err, ErrorUnknownName) {
+					continue
+				}
+				return QueryResult{}, err
+			}
+		case streamTable:
+			table, ok := e.TableInModule(source.moduleName, source.sourceName)
+			if !ok {
+				return QueryResult{}, NewError(ErrorUnknownName, fmt.Sprintf("table %q is not registered", source.sourceName))
+			}
+			rows, snapshotErr := table.snapshotInScope(ctx, tableContextScope(definition.name, descriptor.Key))
+			if snapshotErr != nil {
+				return QueryResult{}, snapshotErr
+			}
+			events, err = tableRowsAsEvents(source, table.Definition(), rows, now)
+			if err != nil {
+				return QueryResult{}, err
+			}
 		}
 		query := plan.query
 		query.contextName = ""

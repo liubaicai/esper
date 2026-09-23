@@ -4002,10 +4002,20 @@ func (w *NamedWindow) insertWithVariables(ctx context.Context, now time.Time, un
 	}
 	state := w.state
 	if state.def.contextName != "" && state.contextKey == "" {
-		var partitionKey string
+		var partitionKeys []string
 		var partitionEvent *Event
 		if key, fromContext := w.contextPartitionFromVariables(variables); fromContext {
-			partitionKey = key
+			partitionKeys = []string{key}
+		} else if definition, ok := w.engineContextDefinition(); ok &&
+			(definition.kind == ContextInitiatedTerminated || definition.hasInitiatedParent()) {
+			// Lifecycle contexts hold no derivable key for a context-free
+			// insert: Esper routes the insert-into stream event through the
+			// context controller, which delivers it to every live partition
+			// (init-term broadcasts non-initiating events; nested initiated
+			// parents broadcast leaf events). The routed event's type is the
+			// window name, so it never matches the start condition and no
+			// new partition is allocated here.
+			partitionKeys = w.engine.liveContextPartitionKeysLocked(state.def.contextName)
 		} else {
 			key, active, err := w.contextPartitionKey(event, now, variables)
 			if err != nil {
@@ -4014,22 +4024,55 @@ func (w *NamedWindow) insertWithVariables(ctx context.Context, now time.Time, un
 			if !active {
 				return NamedWindowDelta{Time: now}, nil
 			}
-			partitionKey = key
+			partitionKeys = []string{key}
 			partitionEvent = &event
 		}
-		// A window-created partition is a context partition: register its
-		// allocation-order ID and descriptor so fire-and-forget selectors
-		// (by-id, segmented) resolve it exactly like a statement-created
-		// partition. Callers hold the engine mutex.
-		if w.engine != nil {
-			w.engine.ensureContextPartitionRegisteredLocked(state.def.contextName, partitionKey, partitionEvent, now, variables, nil)
+		delta := NamedWindowDelta{Time: now, External: true}
+		for _, partitionKey := range partitionKeys {
+			// A window-created partition is a context partition: register its
+			// allocation-order ID and descriptor so fire-and-forget selectors
+			// (by-id, segmented) resolve it exactly like a statement-created
+			// partition. Callers hold the engine mutex.
+			if w.engine != nil {
+				w.engine.ensureContextPartitionRegisteredLocked(state.def.contextName, partitionKey, partitionEvent, now, variables, nil)
+			}
+			partition, err := w.partitionState(partitionKey, true)
+			if err != nil {
+				return NamedWindowDelta{}, err
+			}
+			// Broadcast inserts carry no partition-scoped variables; overlay
+			// the partition's registered context properties so a partition
+			// that has not recorded any yet remembers its real identity
+			// (id/keyN) instead of the shared insert's zero values.
+			partitionVariables := variables
+			if w.engine != nil {
+				if descriptor, ok := w.engine.contextPartitionDescriptors[state.def.contextName][partitionKey]; ok && len(descriptor.properties) > 0 {
+					partitionVariables = cloneValues(variables)
+					if partitionVariables == nil {
+						partitionVariables = make(map[string]Value, len(descriptor.properties))
+					}
+					for name, value := range descriptor.properties {
+						partitionVariables[contextVariableName(name)] = value
+					}
+				}
+			}
+			partitionDelta, err := w.insertIntoState(partition, event, now, partitionVariables)
+			if err != nil {
+				return NamedWindowDelta{}, err
+			}
+			delta.New = append(delta.New, partitionDelta.New...)
+			delta.Old = append(delta.Old, partitionDelta.Old...)
 		}
-		var err error
-		state, err = w.partitionState(partitionKey, true)
-		if err != nil {
-			return NamedWindowDelta{}, err
-		}
+		return delta, nil
 	}
+	return w.insertIntoState(state, event, now, variables)
+}
+
+// insertIntoState applies one already-built insert event to a single window
+// partition state, recording context properties, validating unique indexes
+// and applying the retention view. The caller resolves the partition; the
+// returned delta describes only this partition's change.
+func (w *NamedWindow) insertIntoState(state *namedWindowRuntime, event Event, now time.Time, variables map[string]Value) (NamedWindowDelta, error) {
 	if state.def.contextName != "" {
 		if definition, ok := w.engineContextDefinition(); ok {
 			properties := definition.contextPropertyValues(event, now, variables, 0)
