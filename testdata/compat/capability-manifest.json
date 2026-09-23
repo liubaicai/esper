@@ -1656,7 +1656,8 @@
     "internal/esper/runtime.go",
     "internal/esper/split_stream.go",
     "internal/esper/state.go",
-    "internal/app/parity/context_selection_faf_nested.go"
+    "internal/app/parity/context_selection_faf_nested.go",
+    "internal/app/parity/context_start_end_trio.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -1693,7 +1694,10 @@
     "java-runtime-d59fd16257279a2118a7",
     "java-runtime-f04b99d603d61f3808fb",
     "java-runtime-f51a1493ad61c1f0d0d1",
-    "java-runtime-206c08a7f3d6c239050c"
+    "java-runtime-206c08a7f3d6c239050c",
+    "java-runtime-0319b4a966a4103e44ef",
+    "java-runtime-2bc9a5098743149a306e",
+    "java-runtime-10686594f4fde577bfed"
    ],
    "representativeScenarioIds": [
     "context-hash-segmented",
@@ -46360,6 +46364,71 @@
    "notes": "Draft 4.475 (2026-09-20). Ords 0-2 of ContextSelectionAndFireAndForget: FAF join rejections over context-bound windows, the iterator-selector matrix (all/by-id/empty/null/nil/non-context), and selector-aware FAF over a context-bound named window. Draft 4.476 adds ord 3 ContextSelectionFAFNestedNamedWindowQuery: a nested context with an overlapping initiated ACtx parent (S0 starts, S1(id=s0.id) ends) over a three-category BCtx child. Go now inherits the target window's context on insert-into, drives parent lifecycle before the leaf-type gate, eagerly instantiates category leaves per activation with global leaf IDs, broadcasts leaf-typed events to all live parents, cascades parent termination to leaves, and runs context-clause FAF descriptor-driven. Nested selectors accept All/ById/Nested only. Registration precedes unique-index validation, matching Java's route-then-insert order."
   },
   {
+   "id": "case.context-start-end-trio",
+   "javaRuntimeIds": [
+    "java-runtime-0319b4a966a4103e44ef",
+    "java-runtime-2bc9a5098743149a306e",
+    "java-runtime-10686594f4fde577bfed"
+   ],
+   "javaStaticIds": [
+    "java-06954b45a1979f495425",
+    "java-025e65b1524c37205df0"
+   ],
+   "javaNames": [
+    "ContextStartEndContextPartitionSelection",
+    "ContextStartEndPrevPriorAndAggregation",
+    "ContextInitTermScheduleFilterResources"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextInitTermTemporalFixed.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextInitTerm.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunContextStartEndTrioDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunContextStartEndTrioDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "correctness",
+    "context",
+    "initiated-terminated",
+    "partition-selector",
+    "prev-prior",
+    "schedule-count",
+    "virtual-time",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/context-start-end-trio.json",
+    "testdata/parity/context-start-end-trio.trace.json",
+    "testdata/parity/context-start-end-trio.go.trace.json",
+    "testdata/parity/context-start-end-trio.evidence.json",
+    "tools/java-oracle/ContextStartEndTrioScenarioOracle.java",
+    "tools/java-oracle/run-context-start-end-trio.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-0319b4a966a4103e44ef",
+    "java-runtime-2bc9a5098743149a306e",
+    "java-runtime-10686594f4fde577bfed"
+   ],
+   "notes": [
+    "Context start/end trio (3 executions, 25 records, 0 differences): non-overlapping start/end context with grouped keepall + ids/filtered/always-false/segmented selector probes (ord 0), NineToFive crontab prev/prevwindow/prevtail/prior/sum with cross-day partition reset (ord 7), and the schedule/filter resource lifecycle pinning schedule-count-overall 1-0-0-1-2-0-0 (ContextInitTerm ord 10). Shared-core fix: ScheduleCountOverall now counts per-partition context-end schedules (terminatedAfter deadline or end-pattern timer) once per (context, partition) pair. filterSvcCountApprox and the always-false selector's observed partitions are asserted inside the oracle only (no Go analog)."
+   ]
+  },
+  {
    "id": "case.infra-nwtable-on-merge-basic",
    "javaRuntimeIds": [
     "java-runtime-dbf13fb6d1ca3a37275a",
@@ -51509,13 +51578,17 @@
   {
    "capabilityId": "view.basic-windows",
    "caseId": "case.view-systime-trio"
+  },
+  {
+   "capabilityId": "context.partition",
+   "caseId": "case.context-start-end-trio"
   }
  ],
  "summary": {
-  "inventoriedCases": 743,
-  "implementedCases": 741,
-  "differentialVerifiedCases": 369,
-  "differentialVerifiedRuntimeIds": 1457,
+  "inventoriedCases": 744,
+  "implementedCases": 742,
+  "differentialVerifiedCases": 370,
+  "differentialVerifiedRuntimeIds": 1460,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -51525,13 +51598,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3991,
-  "referencedJavaRuntimeIds": 3563,
+  "runtimeAssociationCount": 3994,
+  "referencedJavaRuntimeIds": 3566,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 573,
+  "unreferencedJavaRuntimeIds": 570,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 743,
+  "totalCases": 744,
   "totalCapabilities": 126
  }
 }

@@ -17470,6 +17470,121 @@ func TestRunViewSystimeTrioDiffRejectsTraceMutations(t *testing.T) {
 	}
 }
 
+func TestRunContextStartEndTrioDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "context-start-end-trio.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "context-start-end-trio.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-start-end-trio.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "context-start-end-trio-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunContextStartEndTrioDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "partition-selection-sum-drift",
+			mutate: func(trace *compat.Trace) {
+				// The grouped keepall sum for E1 is 6 after E1/1+E1/2+E1/3;
+				// drifting it means the local group or the context
+				// partition is wrong.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "startend-partition-selection" && rec.Operation == "snapshot" && len(rec.New) > 0 {
+						rec.New[0].Fields["c3"] = float64(-1)
+						return
+					}
+				}
+				panic("no startend-partition-selection snapshot record")
+			},
+		},
+		{
+			name: "prev-prior-reset-drift",
+			mutate: func(trace *compat.Trace) {
+				// Day two's E3 row must show a fully reset partition
+				// (col1/col4 null); drifting col5 means the reset is wrong.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "startend-prev-prior-agg" && rec.Operation == "listener" && len(rec.New) > 0 {
+						if rec.New[0].Fields["col5"] == json.Number("9") {
+							rec.New[0].Fields["col5"] = json.Number("-1")
+							return
+						}
+					}
+				}
+				panic("no startend-prev-prior-agg reset listener record")
+			},
+		},
+		{
+			name: "schedule-count-drift",
+			mutate: func(trace *compat.Trace) {
+				// The terminated-after partition timer must count once a
+				// partition exists; drifting the count hides the fix.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "initterm-schedule-filter-resources" && rec.Operation == "schedule-count-overall" && rec.Count != nil && *rec.Count == 2 {
+						*rec.Count = 99
+						return
+					}
+				}
+				panic("no initterm-schedule-filter-resources count record")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "context-start-end-trio.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "context-start-end-trio.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-start-end-trio.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "context-start-end-trio-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", evidence)
+			}
+		})
+	}
+}
+
 func TestRunEplOtherWildcardAdditionalDirectReplay(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "testdata", "parity")
 	var stdout, stderr bytes.Buffer

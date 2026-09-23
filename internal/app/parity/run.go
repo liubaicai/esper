@@ -5427,6 +5427,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "context-start-end-trio" || *mode == "context-start-end-trio-diff" {
+		trace, err := runContextStartEndTrioScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "context-start-end-trio-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, contextStartEndTrioJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, contextStartEndTrioJavaSources),
+				splitMetadata(*javaExecutions, contextStartEndTrioJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "expr-class-static-method" || *mode == "expr-class-static-method-diff" {
 		trace, err := runEcsmScenario(context.Background(), scenario)
 		if err != nil {

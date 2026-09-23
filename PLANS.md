@@ -55,29 +55,30 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly') committed and pushed as 9ac32d036; Git owns identity. Parity review PASS, two P3s fixed.
 
 ## Current work unit
-Active: Draft 4.511 ('view-systime-trio').
+Active: Draft 4.512 ('context-start-end-trio').
 
-- Selection: `ViewTimeBatchRefPoint` (ord 9) + `ViewTimeBatchWSystemTime`
-  + `ViewTimeWinWSystemTime` (3 unreferenced) — time-view ref-point and
-  system-time family. Contract at `.omp/contract-511.md` (scouts
-  NextJavaContract511 + NextGoSurface511).
-- [x] Shared core: `TimeBatchRefPoint(duration, refPoint)` API
-  (TimeBatchWindowSpec.ReferencePoint + strictly-greater grid boundary
-  helper `timeBatchRefPointBoundary`); flush re-anchor fix — the next
-  callback is the smallest grid boundary strictly after now, so a late
-  flush no longer skips an intermediate boundary (Java deltaAddWReference).
-- [x] Go runner `internal/app/parity/view_systime_trio.go` + run.go
-  dispatch + run_test.go 2-test family (3 cases / 30 records; uni six
-  stats fields, weighted_avg LastEver passthrough, types op).
-- [x] Parity assets (Assets511): oracle
-  `tools/java-oracle/ViewSystimeTrioScenarioOracle.java`, run.sh, scenario
-  `testdata/parity/view-systime-trio.json` (3 cases / 57 steps).
-- [x] Differential replay: Java 30 records / Go 30 records, `passing` /
-  0 differences. Evidence `view-systime-trio.evidence.json` + 2-test
+- Selection: `ContextStartEndContextPartitionSelection` (ord 0) +
+  `ContextStartEndPrevPriorAndAggregation` (ord 7) +
+  `ContextInitTermScheduleFilterResources` (ContextInitTerm ord 10) — 3
+  unreferenced, initiated/terminated-context family. Contract frozen via
+  NextJavaContract512 + NextGoSurface512.
+- [x] Shared core: `ScheduleCountOverall` now counts per-partition
+  context-end schedules (terminatedAfter deadline / end-pattern timer)
+  once per (context, partition) pair — matches Java's per-agent-instance
+  termination callback.
+- [x] Go runner `internal/app/parity/context_start_end_trio.go` + run.go
+  dispatch + run_test.go 2-test family (3 cases / 25 records).
+- [x] Parity assets (Assets512 + primary): oracle
+  `tools/java-oracle/ContextStartEndTrioScenarioOracle.java` (fixed:
+  context-deployment-id lookup, null initiating properties), run.sh,
+  scenario `testdata/parity/context-start-end-trio.json` (3 cases / 53
+  steps, generated from the oracle's pinned step keys).
+- [x] Differential replay: Java 25 records / Go 25 records, `passing` /
+  0 differences. Evidence `context-start-end-trio.evidence.json` + 2-test
   family (passing-evidence + 3 mutations).
-- [x] Manifest/roadmap/CHANGELOG: `case.view-systime-trio` born-DV (3
-  runtime IDs); `view.basic-windows` goRefs + DV IDs extended. Summary
-  743 cases / 369 DV / 1457 DV runtime IDs / unreferenced 573.
+- [x] Manifest/roadmap/CHANGELOG: `case.context-start-end-trio` born-DV
+  (3 runtime IDs); `context.partition` goRefs + DV IDs extended. Summary
+  744 cases / 370 DV / 1460 DV runtime IDs / unreferenced 570.
 - [ ] Gates + parity review pending.
 
 ## Current work unit

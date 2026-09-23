@@ -2166,6 +2166,42 @@ func (e *Engine) ScheduleCountOverall(ctx context.Context) (int, error) {
 		}
 		total++
 	}
+	// Per-partition context-end schedules (a `terminated after` deadline or an
+	// end-pattern timer) are owned by the context partition, shared across the
+	// statements bound to it — count each live (context, partition) pair once,
+	// matching Java's per-agent-instance termination callback.
+	countedEnds := make(map[string]struct{})
+	for _, statement := range e.statements {
+		statement.mu.RLock()
+		if statement.closed || statement.state != StatementStarted || statement.plan.query.contextName == "" {
+			statement.mu.RUnlock()
+			continue
+		}
+		definition, ok := e.env.Context(statement.plan.query.contextName)
+		if !ok || (definition.terminatedAfter <= 0 && definition.endPattern == nil) {
+			statement.mu.RUnlock()
+			continue
+		}
+		for key, partition := range statement.runtime.partitions {
+			if partition == nil {
+				continue
+			}
+			pending := false
+			if definition.terminatedAfter > 0 && partition.initializedAt.Add(definition.terminatedAfter).After(now) {
+				pending = true
+			}
+			if !pending && definition.endPattern != nil {
+				if at, found := patternOnlyNearestSchedule(partition.contextEndPatternState, definition.endPattern); found && at.After(now) {
+					pending = true
+				}
+			}
+			if pending {
+				countedEnds[statement.plan.query.contextName+"\x00"+key] = struct{}{}
+			}
+		}
+		statement.mu.RUnlock()
+	}
+	total += len(countedEnds)
 	_ = ctx
 	return total, nil
 }

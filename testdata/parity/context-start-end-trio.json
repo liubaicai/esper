@@ -1,0 +1,350 @@
+{
+ "version": "esper-parity/v1",
+ "id": "context-start-end-trio",
+ "description": "ContextInitTermTemporalFixed start/end executions plus ContextInitTermScheduleFilterResources (three executions, the context start/end trio): startend-partition-selection replays ContextStartEndContextPartitionSelection (ord 0) — a non-overlapping start SupportBean_S0/end SupportBean_S1(id=s0.id) context (byte-exact doubled @public) whose single partition stays open through undeploy-all; the grouped keepall s0 fires one listener row per SupportBean send and the snapshot-selector probes pin ids=[0], filtered p00=S0_1 (3 rows), p00=S0_2 (empty), always-false (empty; the oracle asserts internally that the callback observed every partition) and segmented (selector-error invalid-context-partition-selector). startend-prev-prior-agg replays ContextStartEndPrevPriorAndAggregation (ord 7) — the NineToFive crontab context projecting prev/prevwindow/prevtail/prior/sum over #keepall (byte-exact, no parens); sends outside 09:00-17:00 are silent, the 17:00 end empties the iterator and the next day's 09:00 start resets prev/prior state. initterm-schedule-filter-resources replays ContextInitTermScheduleFilterResources (ContextInitTerm ord 10) — phase A pins the plain #time(30) expiry schedule; phase B pins the initiated-by/terminated-after-1-minutes lifecycle where the termination schedule is created at partition initiation and the S0#time(2 min) expiry is preempted by partition destruction at 1 min; schedule-count-overall steps emit records while the paired filterCount field is asserted internally against getFilterSvcCountApprox (no Go analog).",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextInitTermTemporalFixed.java",
+ "javaSource2": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextInitTerm.java",
+ "javaRuntimes": [
+  "java-runtime-0319b4a966a4103e44ef",
+  "java-runtime-2bc9a5098743149a306e",
+  "java-runtime-10686594f4fde577bfed"
+ ],
+ "javaNames": [
+  "ContextStartEndContextPartitionSelection",
+  "ContextStartEndPrevPriorAndAggregation",
+  "ContextInitTermScheduleFilterResources"
+ ],
+ "javaStaticIds": [
+  "java-06954b45a1979f495425",
+  "java-06954b45a1979f495425",
+  "java-025e65b1524c37205df0"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "startend-partition-selection",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-0319b4a966a4103e44ef",
+   "executionName": "ContextStartEndContextPartitionSelection",
+   "observation": "listener+snapshot+snapshot-selector+selector-error; non-overlapping start/end context (S0 starts the partition at startTime 1000, the correlated S1 end is never sent) keeps one partition open through undeploy-all; grouped keepall fires one listener row per SupportBean send; ids/filtered/always-false/segmented selector probes pin iterator rows and InvalidContextPartitionSelector",
+   "epl": "@name('s0') context MyCtx select context.id as c0, context.s0.p00 as c1, theString as c2, sum(intPrimitive) as c3 from SupportBean#keepall group by theString"
+  },
+  {
+   "case": "startend-prev-prior-agg",
+   "ordinal": 7,
+   "runtimeId": "java-runtime-2bc9a5098743149a306e",
+   "executionName": "ContextStartEndPrevPriorAndAggregation",
+   "observation": "listener+snapshot; NineToFive crontab context projects prev/prevwindow/prevtail/prior/sum over keepall; the 17:00 end destroys the partition (empty iterator) and the next day's 09:00 start resets prev/prior state",
+   "epl": "@name('s0') context NineToFive select prev(theString) as col1, prevwindow(sb) as col2, prevtail(theString) as col3, prior(1, theString) as col4, sum(intPrimitive) as col5 from SupportBean#keepall as sb"
+  },
+  {
+   "case": "initterm-schedule-filter-resources",
+   "ordinal": 10,
+   "runtimeId": "java-runtime-10686594f4fde577bfed",
+   "executionName": "ContextInitTermScheduleFilterResources",
+   "observation": "schedule-count-overall; phase A pins the plain #time(30) expiry schedule; phase B pins the initiated-by/terminated-after-1-minutes lifecycle — termination schedule created at initiation, S0#time(2 min) expiry preempted by partition destruction at 1 min; filterSvcCountApprox asserted internally (no Go analog)",
+   "epl": "@name('ctx') @public create context EverySupportBean as initiated by SupportBean as sb terminated after 1 minutes"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "startend-partition-selection"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00.000Z"
+  },
+  {
+   "op": "deploy",
+   "statement": "ctx",
+   "epl": "@public @public create context MyCtx as start SupportBean_S0 s0 end SupportBean_S1(id=s0.id)"
+  },
+  {
+   "op": "deploy",
+   "statement": "s0",
+   "epl": "@name('s0') context MyCtx select context.id as c0, context.s0.p00 as c1, theString as c2, sum(intPrimitive) as c3 from SupportBean#keepall group by theString"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1,
+    "p00": "S0_1",
+    "p01": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 100
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 101
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "snapshot-selector",
+   "statement": "s0",
+   "selector": "ids",
+   "ids": [
+    0
+   ]
+  },
+  {
+   "op": "snapshot-selector",
+   "statement": "s0",
+   "selector": "filtered",
+   "filterProperty": "p00",
+   "filterValue": "S0_1"
+  },
+  {
+   "op": "snapshot-selector",
+   "statement": "s0",
+   "selector": "filtered",
+   "filterProperty": "p00",
+   "filterValue": "S0_2"
+  },
+  {
+   "op": "snapshot-selector",
+   "statement": "s0",
+   "selector": "filtered",
+   "filterProperty": "p00",
+   "filterValue": null
+  },
+  {
+   "op": "snapshot-selector",
+   "statement": "s0",
+   "selector": "segmented",
+   "expectError": "invalid-context-partition-selector"
+  },
+  {
+   "op": "undeploy-all"
+  },
+  {
+   "op": "case",
+   "case": "startend-prev-prior-agg"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:00.000Z"
+  },
+  {
+   "op": "deploy",
+   "statement": "ctx",
+   "epl": "@public create context NineToFive as start (0, 9, *, *, *) end (0, 17, *, *, *)"
+  },
+  {
+   "op": "deploy",
+   "statement": "s0",
+   "epl": "@name('s0') context NineToFive select prev(theString) as col1, prevwindow(sb) as col2, prevtail(theString) as col3, prior(1, theString) as col4, sum(intPrimitive) as col5 from SupportBean#keepall as sb"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": null,
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T09:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T17:00:00.000Z"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": null,
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-02T09:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 9
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "undeploy-all"
+  },
+  {
+   "op": "case",
+   "case": "initterm-schedule-filter-resources"
+  },
+  {
+   "op": "deploy",
+   "statement": "s0",
+   "epl": "@name('s0') select * from SupportBean#time(30)"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "schedule-count-overall",
+   "count": 1
+  },
+  {
+   "op": "undeploy",
+   "statement": "s0"
+  },
+  {
+   "op": "schedule-count-overall",
+   "count": 0
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:00.000Z"
+  },
+  {
+   "op": "deploy",
+   "statement": "ctx",
+   "epl": "@name('ctx') @public create context EverySupportBean as initiated by SupportBean as sb terminated after 1 minutes"
+  },
+  {
+   "op": "deploy",
+   "statement": "stmt",
+   "epl": "context EverySupportBean select * from SupportBean_S0#time(2 min) sb0"
+  },
+  {
+   "op": "schedule-count-overall",
+   "count": 0,
+   "filterCount": 1
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "schedule-count-overall",
+   "count": 1,
+   "filterCount": 2
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0,
+    "p00": "S0_1",
+    "p01": null
+   }
+  },
+  {
+   "op": "schedule-count-overall",
+   "count": 2,
+   "filterCount": 2
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:01:00.000Z"
+  },
+  {
+   "op": "schedule-count-overall",
+   "count": 0,
+   "filterCount": 1
+  },
+  {
+   "op": "undeploy-all"
+  },
+  {
+   "op": "schedule-count-overall",
+   "count": 0,
+   "filterCount": 0
+  }
+ ]
+}
