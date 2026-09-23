@@ -101,26 +101,45 @@ Active: Draft 4.513 ('context-key-segmented-infra-prioritized').
   route, descriptor-property overlay for broadcast inserts, prose corrections
   (max not sum; keyed-prioritized is a keyed context; 5 cases), per-execution
   static IDs in scenario+oracle. Confirmation review: PASS.
+- [x] Shipped; Git owns identity. Draft 4.513 committed and pushed as `20522d48b`.
+
+## Current work unit
+Active: Draft 4.514 ('context-key-segmented-named-window').
+
+- [x] Contract frozen (prefetched scouts NextJavaContract514 + NextGoSurface514):
+ `ContextKeySegmentedNamedWindow.java` ord 0 `ContextKeyedNamedWindowBasic`
+ (`java-runtime-18f8400337cdcd1dffd3`, static `java-0554274bf96ee5ab94ce`) +
+ ord 3 `ContextKeyedNamedWindowFAF` (`java-runtime-73bbdb8596de168d6d94`,
+ static `java-bf2785808c45262f93ce`, flag FIREANDFORGET). Ords 1/2 already
+ referenced; ords 4/5 (subquery over context-free window) out of scope.
+- [x] Scenario `testdata/parity/context-key-segmented-named-window.json` (2
+ cases / 13 steps), oracle
+ `tools/java-oracle/ContextKeySegmentedNamedWindowScenarioOracle.java` +
+ run.sh (byte-exact EPLs, pinned steps/cases, EXPECTED_RECORDS=3), runner
+ `internal/app/parity/context_key_segmented_named_window.go` + run.go wiring.
+- [x] Java trace generated (3 records: 1 listener + 2 faf); Go replay 3
+ records; `-mode context-key-segmented-named-window-diff` passing / 0
+ differences. Zero engine work — all surfaces already existed.
+- [x] Test family: passing-evidence, 3 trace mutations, 7 raw-scenario
+ mutations, runtime-ID mapping, help listing — all green.
+- [x] Manifest: `case.context-key-segmented-named-window` born-DV (2 runtime
+ IDs) + `context.partition` mapping/goRefs; summary 746 cases / 372 DV /
+ 1465 DV runtime IDs / unreferenced 565. Roadmap + CHANGELOG entries added.
 
 ## Prefetched next unit (read-only, contract frozen)
 
-Draft 4.514 candidate: `ContextKeySegmentedNamedWindow.java` ord 0
-`ContextKeyedNamedWindowBasic` (`java-runtime-18f8400337cdcd1dffd3`, static
-`java-0554274bf96ee5ab94ce`) + ord 3 `ContextKeyedNamedWindowFAF`
-(`java-runtime-73bbdb8596de168d6d94`, static `java-bf2785808c45262f93ce`,
-flag FIREANDFORGET). Frozen by NextJavaContract514 + NextGoSurface514:
-- ord 0: multi-key segmented context (grp,subGrp) + `#unique(type)` contexted
-  window + contexted `insert into ... select *` + `irstream *` consumer; one
-  send, assertListenerInvoked only (weak — trace row is the de-facto pin).
-- ord 3: three separate compileDeploys + compileFAF `select * from MyWindow`
-  (context-free FAF over context-bound window); selector-less FAF returns the
-  union of all live partitions, ordered [[G1]] then any-order [[G1],[G2]].
-- Go surface: everything expressible today — CreateKeyContext variadic keys,
-  NamedWindowContext+Unique/KeepAll, contexted OnEvent insert-into,
-  FromNamedWindow irstream consumer, selector-less ExecuteFireAndForget over
-  context-bound windows (union of partitions). No engine work expected.
-- Ords 1/2 already referenced (nw-nonpattern/nw-pattern cases); ords 4/5
-  (subquery over context-free window) stay out of scope.
+Draft 4.515 candidate: `ContextKeySegmentedNamedWindow.java` ords 4
+`ContextKeyedSubqueryNamedWindowIndexUnShared` (`java-runtime-7347c7d16d52e5ea0d30`)
++ 5 `ContextKeyedSubqueryNamedWindowIndexShared` (`java-runtime-af7bcf071474f57227fb`).
+Frozen by NextJavaContract515: a context-FREE keepall window over
+SupportBean_S0 is read by a correlated scalar subquery
+`(select p00 from W as s0 where sb.intPrimitive = s0.id)` from a keyed-context
+SupportBean statement; correlation is NOT partition-scoped (G2 sees s1; G1
+sees s2 inserted under G3 flow); val0 null when no row matches. Ord 5 adds
+`@Hint('enable_window_subquery_indexshare')` on the create-window + @public
+path sharing; observable output identical to unshared. Event matrix:
+S0(10,s1) → silent; G1(10) → {G1,10,s1}; G2(10) → {G2,10,s1}; G3(20) →
+{G3,20,null}; S0(20,s2) → silent; G3(20) → {G3,20,s2}; G1(20) → {G1,20,s2}.
 
 ## Current work unit
 Active: Draft 4.512 ('context-start-end-trio').

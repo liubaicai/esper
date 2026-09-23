@@ -70,6 +70,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include epl-other-select-expr-stream-selector-remainder and epl-other-select-expr-stream-selector-remainder-diff")
 		fmt.Fprintln(stderr, "runner modes include context-key-segmented-subselect-prev-prior and context-key-segmented-subselect-prev-prior-diff")
 		fmt.Fprintln(stderr, "runner modes include context-key-segmented-infra-prioritized and context-key-segmented-infra-prioritized-diff")
+		fmt.Fprintln(stderr, "runner modes include context-key-segmented-named-window and context-key-segmented-named-window-diff")
 		fmt.Fprintln(stderr, "runner modes include context-key-segmented-invalid and context-key-segmented-invalid-diff")
 		fmt.Fprintln(stderr, "runner modes include context-key-segmented-allocation-time and context-key-segmented-allocation-time-diff")
 		fmt.Fprintln(stderr, "runner modes include context-nested-initterm and context-nested-initterm-diff")
@@ -196,6 +197,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadContextKeySegmentedInvalidScenario(file)
 	} else if *mode == "context-key-segmented-infra-prioritized" || *mode == "context-key-segmented-infra-prioritized-diff" {
 		scenario, err = loadContextKeySegmentedInfraPrioritizedScenario(file)
+	} else if *mode == "context-key-segmented-named-window" || *mode == "context-key-segmented-named-window-diff" {
+		scenario, err = loadContextKeySegmentedNamedWindowScenario(file)
 	} else if *mode == "context-lifecycle" || *mode == "context-lifecycle-diff" {
 		scenario, err = loadContextLifecycleScenario(file)
 	} else if *mode == "context-selection-faf" || *mode == "context-selection-faf-diff" {
@@ -3453,6 +3456,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, contextKeySegmentedInfraPrioritizedJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, contextKeySegmentedInfraPrioritizedJavaSources),
 				splitMetadata(*javaExecutions, contextKeySegmentedInfraPrioritizedJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "context-key-segmented-named-window" || *mode == "context-key-segmented-named-window-diff" {
+		trace, err := runContextKeySegmentedNamedWindowScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "context-key-segmented-named-window-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, contextKeySegmentedNamedWindowJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, contextKeySegmentedNamedWindowJavaSources),
+				splitMetadata(*javaExecutions, contextKeySegmentedNamedWindowJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

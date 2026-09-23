@@ -1658,7 +1658,8 @@
     "internal/esper/state.go",
     "internal/app/parity/context_selection_faf_nested.go",
     "internal/app/parity/context_start_end_trio.go",
-    "internal/app/parity/context_key_segmented_infra_prioritized.go"
+    "internal/app/parity/context_key_segmented_infra_prioritized.go",
+    "internal/app/parity/context_key_segmented_named_window.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -46239,6 +46240,56 @@
    "notes": "Java/Go 9 records each, 0 differences. Covers: an uncorrelated max(intPrimitive) subquery over a contexted named window and table (per-partition max, null for the empty partition), fire-and-forget over an initiated-terminated contexted named window via a partition-id selector, and @Drop/@Priority preemption under a plain keyed SegmentedByMessage context."
   },
   {
+   "id": "case.context-key-segmented-named-window",
+   "javaRuntimeIds": [
+    "java-runtime-18f8400337cdcd1dffd3",
+    "java-runtime-73bbdb8596de168d6d94"
+   ],
+   "javaStaticIds": [
+    "java-0554274bf96ee5ab94ce",
+    "java-bf2785808c45262f93ce"
+   ],
+   "javaNames": [
+    "ContextKeyedNamedWindowBasic",
+    "ContextKeyedNamedWindowFAF"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmentedNamedWindow.java"
+   ],
+   "goTests": [
+    "internal/app/parity/context_key_segmented_named_window.go",
+    "internal/app/parity/run_test.go"
+   ],
+   "tags": [
+    "context",
+    "keyed",
+    "segmented",
+    "named-window",
+    "fire-and-forget",
+    "irstream"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/context-key-segmented-named-window.json",
+    "testdata/parity/context-key-segmented-named-window.trace.json",
+    "testdata/parity/context-key-segmented-named-window.go.trace.json",
+    "testdata/parity/context-key-segmented-named-window.evidence.json",
+    "tools/java-oracle/ContextKeySegmentedNamedWindowScenarioOracle.java",
+    "tools/java-oracle/run-context-key-segmented-named-window.sh"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "difference": "Approved differences: none.",
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-18f8400337cdcd1dffd3",
+    "java-runtime-73bbdb8596de168d6d94"
+   ],
+   "notes": "Java/Go 3 records each, 0 differences. Covers: a two-key keyed context (grp, subGrp) over a unique(type) named window with a contexted wildcard insert-into and an irstream consumer (one new-only row), and a keyed context over a keepall named window answering a no-selector fire-and-forget select * (one partition row, then both partition rows in allocation order)."
+  },
+  {
    "id": "case.context-key-segmented-allocation-time",
    "javaRuntimeIds": [
     "java-runtime-57199db349abfe7ad70e",
@@ -51645,13 +51696,17 @@
   {
    "capabilityId": "context.partition",
    "caseId": "case.context-key-segmented-infra-prioritized"
+  },
+  {
+   "capabilityId": "context.partition",
+   "caseId": "case.context-key-segmented-named-window"
   }
  ],
  "summary": {
-  "inventoriedCases": 745,
-  "implementedCases": 743,
-  "differentialVerifiedCases": 371,
-  "differentialVerifiedRuntimeIds": 1463,
+  "inventoriedCases": 746,
+  "implementedCases": 744,
+  "differentialVerifiedCases": 372,
+  "differentialVerifiedRuntimeIds": 1465,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -51661,13 +51716,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3997,
-  "referencedJavaRuntimeIds": 3569,
+  "runtimeAssociationCount": 3999,
+  "referencedJavaRuntimeIds": 3571,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 567,
+  "unreferencedJavaRuntimeIds": 565,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 745,
+  "totalCases": 746,
   "totalCapabilities": 126
  }
 }

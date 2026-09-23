@@ -1,0 +1,472 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-18f8400337cdcd1dffd3",
+    "java-runtime-73bbdb8596de168d6d94"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmentedNamedWindow.java"
+  ],
+  "javaExecutions": [
+    "ContextKeyedNamedWindowBasic",
+    "ContextKeyedNamedWindowFAF"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "context-key-segmented-named-window",
+    "steps": [
+      {
+        "op": "case",
+        "case": "keyed-named-window-basic"
+      },
+      {
+        "op": "deploy",
+        "case": "keyed-named-window-basic",
+        "statement": "module",
+        "epl": "@Audit @Name('CTX') create context Ctx partition by grp, subGrp from SupportGroupSubgroupEvent;\n@Audit @Name('Window') context Ctx create window EventData#unique(type) as SupportGroupSubgroupEvent;@Audit @Name('Insert') context Ctx insert into EventData select * from SupportGroupSubgroupEvent;@Audit @Name('Test') context Ctx select irstream * from EventData;"
+      },
+      {
+        "op": "send",
+        "case": "keyed-named-window-basic",
+        "eventType": "SupportGroupSubgroupEvent",
+        "payload": {
+          "grp": "G1",
+          "subGrp": "SG1",
+          "type": 1,
+          "value": 10.45
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "keyed-named-window-basic"
+      },
+      {
+        "op": "case",
+        "case": "keyed-named-window-faf"
+      },
+      {
+        "op": "deploy",
+        "case": "keyed-named-window-faf",
+        "statement": "module",
+        "epl": "@public create context SegmentedByString partition by theString from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "keyed-named-window-faf",
+        "statement": "module",
+        "epl": "@public context SegmentedByString create window MyWindow#keepall as SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "keyed-named-window-faf",
+        "statement": "module",
+        "epl": "context SegmentedByString insert into MyWindow select * from SupportBean"
+      },
+      {
+        "op": "send",
+        "case": "keyed-named-window-faf",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "faf",
+        "case": "keyed-named-window-faf",
+        "statement": "faf",
+        "selector": "none",
+        "epl": "select * from MyWindow"
+      },
+      {
+        "op": "send",
+        "case": "keyed-named-window-faf",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "faf",
+        "case": "keyed-named-window-faf",
+        "statement": "faf",
+        "selector": "none",
+        "epl": "select * from MyWindow"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "keyed-named-window-faf"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-key-segmented-named-window",
+    "records": [
+      {
+        "case": "keyed-named-window-basic",
+        "operation": "listener",
+        "statement": "Test",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "grp": "G1",
+              "subGrp": "SG1",
+              "type": 1,
+              "value": 10.45
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-named-window-faf",
+        "operation": "faf",
+        "statement": "faf",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 0,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "G1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-named-window-faf",
+        "operation": "faf",
+        "statement": "faf",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 0,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "G1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 0,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "G2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-key-segmented-named-window",
+    "records": [
+      {
+        "case": "keyed-named-window-basic",
+        "operation": "listener",
+        "statement": "Test",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "grp": "G1",
+              "subGrp": "SG1",
+              "type": 1,
+              "value": 10.45
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-named-window-faf",
+        "operation": "faf",
+        "statement": "faf",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 0,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "G1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-named-window-faf",
+        "operation": "faf",
+        "statement": "faf",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 0,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "G1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 0,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "G2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
