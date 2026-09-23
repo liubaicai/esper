@@ -55,6 +55,71 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly') committed and pushed as 9ac32d036; Git owns identity. Parity review PASS, two P3s fixed.
 
 ## Current work unit
+Active: Draft 4.518 ('epl-contained-event-example').
+
+- Selection: `EPLContainedEventExample.java` all 6 executions —
+  `EPLContainedExample` (`java-runtime-36bfa282c286614e1bc0`),
+  `EPLContainedSolutionPattern` (`java-runtime-3bcf56da38fd1e2f669a`),
+  `EPLContainedJoinSelfJoin` (`java-runtime-06cbcd9c14891d14a995`),
+  `EPLContainedJoinSelfLeftOuterJoin` (`java-runtime-bfcd3e5954bd02726c90`),
+  `EPLContainedJoinSelfFullOuterJoin` (`java-runtime-e9cfcbfcc5556a9ea9ab`),
+  `EPLContainedSolutionPatternFinancial` (`java-runtime-23292c0fd335038c05d4`,
+  FIREANDFORGET). Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`.
+- Delegation checkpoint: unit resumed mid-flight from an interrupted session;
+  the original scout/asset agent IDs were lost with the archived transcript.
+  Serial-fallback reason: contract, scenario, oracle, runner and both traces
+  already existed in the worktree; the primary agent re-verified every
+  artifact against the pinned Java source and the execution inventory
+  instead of re-scouting.
+- [x] Assets verified: scenario `testdata/parity/epl-contained-event-example.json`
+  (6 cases), runner `internal/app/parity/epl_contained_event_example.go`,
+  oracle `tools/java-oracle/EPLContainedEventExampleScenarioOracle.java` +
+  run.sh (pins Java 17 + expected commit), run.go/run_test.go wiring with
+  diff + trace-mutation tests.
+- [x] Shared core: (1) contained joins pair only children of the same parent
+  event instance (`containedJoinSameParent`/`containedJoinTupleSameParent` in
+  `joinKeyedTuples`/`joinChainedKeyedTuples`); (2) `[property]` expansion
+  treats a scalar as a single-element collection (`castPropertyValue` wrap +
+  `containedCollectionItems` fallback); (3) `ContainedParentField` returns
+  Null (not Missing) for parentless rows so full-outer-join left-only rows
+  project null parent fields; (4) keyless table select = full table scan
+  (`validateTrigger` + `executeSelectTableAction`).
+- [x] Differential replay re-run post-resume: `-mode
+  epl-contained-event-example-diff` -> `passing` / 0 differences, 33 records
+  each; regenerated evidence byte-identical to checked-in file. Checked-in
+  Go trace was stale (pre-final-fix, missing `orderId` in join rows);
+  regenerated to md5 `9f61a0a54c2172263f2050a93ceff143`.
+- [x] Manifest: `case.epl-contained-event-example` born-DV (6 runtime IDs,
+  6 static IDs) + `event.contained` mapping, goRefs + `expr.go`/runner,
+  `remaining` narrowed, `differential-verified` added to verification.
+  Summary 750 cases / 376 DV / 1477 DV runtime IDs / unreferenced 555.
+- [x] N+1 prefetch (read-only, primary agent): `EPLOtherPatternEventProperties.java`
+  all 4 executions, no flags — `EPLOtherWildcardSimplePattern`
+  (`java-runtime-97cfec67b539a40837da`, static `java-526cb327bfe0c4b23edb`),
+  `EPLOtherWildcardOrPattern` (`java-runtime-157bfa584c8111e1ec07`, static
+  `java-e66c56ee60a585967eac`), `EPLOtherPropertiesSimplePattern`
+  (`java-runtime-ec5a7e8cfd338e68a315`, static `java-6f9f30d76350678d1ff0`),
+  `EPLOtherPropertiesOrPattern` (`java-runtime-e469a171adadf0bcd221`, static
+  `java-e3432d4a451aede65cac`). Contract: pattern tagged-event projection —
+  `select *`/explicit columns over `pattern [a=SupportBean]` and
+  `pattern [every(a=SupportBean or b=SupportBeanComplexProps)]`; unmatched
+  or-branch tags project null; columns include the tagged event itself
+  (`a`, `a as myEvent`), tagged field paths (`a.theString`,
+  `b.indexed[0]`, `b.nested.nestedValue`), and `assertSame` identity on
+  event-valued columns. Go surface spotted: `PatternFrom`/`Or`/`Every`/
+  `TagField`; open question for the Go scout — event-valued tagged columns
+  and null projection for unmatched or-branches.
+- [x] Gates + parity review + commit: `make check` green twice (parity ~91s,
+  esper ~112s). Reviewer `ParityReview518`: initial FAIL on 1 P1 + 3 P3 —
+  P1 same-parent constraint missing on three sibling join leaves (fixed:
+  joinKeyedTuples inner visit, joinInnerKeyedTuplesIndexed leaf,
+  joinOuterKeyedTuples visit); P3s fixed (six per-execution static IDs
+  pinned in scenario/runner/oracle, left-outer + dropped-record +
+  sequence-flip mutations added, SelectFromTable scan-mode docs). Fixes
+  returned to the same reviewer: confirmation PASS, oracle re-run
+  byte-identical, diff re-run passing/0 differences.
+
+## Current work unit
 Active: Draft 4.513 ('context-key-segmented-infra-prioritized').
 
 - Selection: `ContextKeySegmentedInfra.java` ord 0

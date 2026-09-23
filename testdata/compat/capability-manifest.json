@@ -155,19 +155,30 @@
     "internal/esper/contained_split_event_test.go",
     "internal/esper/contained_split_representation_test.go",
     "internal/esper/contained_split_chain_test.go",
-    "internal/esper/contained_split_sequence_test.go"
+    "internal/esper/contained_split_sequence_test.go",
+    "internal/esper/expr.go",
+    "internal/app/parity/epl_contained_event_example.go"
    ],
    "phase": 1,
    "status": "implemented",
    "remaining": [
-    "property-selection alias/fragment semantics across nested representations",
+    "property-selection alias/fragment semantics across nested representations beyond the covered XML/bean fragment projections",
     "full split-expression adapter matrix beyond the covered raw ObjectArray/Avro/XML rows, basic two-level chain and iter.Seq adapter, including Java dialect scripts, wildcard method adapters and additional collection shapes",
-    "contained Table/FAF interactions and remaining Named Window representation combinations",
-    "invalid diagnostics beyond the covered parent/depth cases and complete Java contained-event trace"
+    "contained Table/FAF interactions and remaining Named Window representation combinations beyond the covered two-key table, secondary-index, merge and fire-and-forget paths",
+    "invalid diagnostics beyond the covered parent/depth cases"
    ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-36bfa282c286614e1bc0",
+    "java-runtime-3bcf56da38fd1e2f669a",
+    "java-runtime-06cbcd9c14891d14a995",
+    "java-runtime-bfcd3e5954bd02726c90",
+    "java-runtime-e9cfcbfcc5556a9ea9ab",
+    "java-runtime-23292c0fd335038c05d4"
    ]
   },
   {
@@ -48534,6 +48545,79 @@
     "java-runtime-913c09693fb262b75d75"
    ],
    "notes": "Java/Go 12 records each, 0 differences (cross-statement termination dispatch order canonicalized: Java fires s6..s1 reverse-deploy, Go s1..s6 forward; per-statement content compared exactly). Covers a non-overlapping init-term ContextOne (S0 start / S1 end) owning a contexted keepall named window xor a contexted PK table, a contexted insert-into, and six output-snapshot-when-terminated selects (star / count(*) / ungrouped count-per-row / group-by / group-by+non-grouped-column / rollup) LATE-DEPLOYED into the already-active partition. Engine fixes: (1) adoptInitiatedTerminatedPartitionsLocked attaches a late-deployed statement to the context's live partitions at deploy time (reusing the original allocation ID and contextProperties), so terminated-snapshot output fires; (2) snapshotAggregateBatch replays a named-window aggregate's current rows through a fresh runtime when the statement's own aggregate state is empty (late deploy), matching the table replay path."
+  },
+  {
+   "id": "case.epl-contained-event-example",
+   "javaRuntimeIds": [
+    "java-runtime-36bfa282c286614e1bc0",
+    "java-runtime-3bcf56da38fd1e2f669a",
+    "java-runtime-06cbcd9c14891d14a995",
+    "java-runtime-bfcd3e5954bd02726c90",
+    "java-runtime-e9cfcbfcc5556a9ea9ab",
+    "java-runtime-23292c0fd335038c05d4"
+   ],
+   "javaStaticIds": [
+    "java-d763dc53250784007213",
+    "java-3370a9fc6c79a91c99db",
+    "java-a340361a64068355d364",
+    "java-e0629eece325f19d5eab",
+    "java-b66b814fdafb047c88ca",
+    "java-364de601500af6cb9ce9"
+   ],
+   "javaNames": [
+    "EPLContainedExample",
+    "EPLContainedSolutionPattern",
+    "EPLContainedJoinSelfJoin",
+    "EPLContainedJoinSelfLeftOuterJoin",
+    "EPLContainedJoinSelfFullOuterJoin",
+    "EPLContainedSolutionPatternFinancial"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/contained/EPLContainedEventExample.java"
+   ],
+   "goTests": [
+    "internal/app/parity/epl_contained_event_example.go",
+    "internal/app/parity/run_test.go"
+   ],
+   "tags": [
+    "epl",
+    "contained",
+    "xml",
+    "bean",
+    "fragment",
+    "join",
+    "outer-join",
+    "pattern",
+    "table",
+    "merge",
+    "context",
+    "fire-and-forget",
+    "split"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/epl-contained-event-example.json",
+    "testdata/parity/epl-contained-event-example.trace.json",
+    "testdata/parity/epl-contained-event-example.go.trace.json",
+    "testdata/parity/epl-contained-event-example.evidence.json",
+    "tools/java-oracle/EPLContainedEventExampleScenarioOracle.java",
+    "tools/java-oracle/run-epl-contained-event-example.sh"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "difference": "Approved differences: none.",
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-36bfa282c286614e1bc0",
+    "java-runtime-3bcf56da38fd1e2f669a",
+    "java-runtime-06cbcd9c14891d14a995",
+    "java-runtime-bfcd3e5954bd02726c90",
+    "java-runtime-e9cfcbfcc5556a9ea9ab",
+    "java-runtime-23292c0fd335038c05d4"
+   ],
+   "notes": "Java/Go 33 records each, 0 differences (listener dispatch order canonicalized by statement name per case). Covers the media-order XML contained-event example: twelve statements over the MediaOrder DOM type (indexed item path, [books.book] expansion, parent-filtered expansion, #unique count, two-level [books.book][review], never-fired Cancel->book pattern, contained select projections with parent fields/wildcard fragments/grandparent references, fragment-typed insert-into round-trip, and fragment-filtered review expansion); the SupportResponseEvent.subEvents bean-array solution pattern windowed over #time(1 min) grouped by category+subEventType; three self-join phases (inner, left-outer, full-outer) pairing book and item contained streams on productId=bookId; and the financial solution pattern deploying a module with map schemas, a two-key Mapping table with secondary indexes, fire-and-forget positional inserts, a lastevent join insert, a split-all on-trigger emitting contained foreign/local company rows, a start/end-event context, contexted merges with scalar Mapping subselects, and an ordered output select. Engine fixes: (1) contained joins only pair children sharing the same parent event instance (containedJoinSameParent/containedJoinTupleSameParent in joinKeyedTuples and joinChainedKeyedTuples); (2) [property] expansion treats a scalar value as a single-element collection (castPropertyValue wrap + containedCollectionItems fallback); (3) ContainedParentField returns Null (not Missing) when the row has no parent so left-only full-outer-join rows project null parent fields; (4) keyless table selects perform a full table scan (validateTrigger + executeSelectTableAction)."
   }
  ],
  "mappings": [
@@ -51876,29 +51960,33 @@
   {
    "capabilityId": "infra.namedwindow.views",
    "caseId": "case.infra-nwtable-context"
+  },
+  {
+   "capabilityId": "event.contained",
+   "caseId": "case.epl-contained-event-example"
   }
  ],
  "summary": {
-  "inventoriedCases": 749,
-  "implementedCases": 747,
-  "differentialVerifiedCases": 375,
-  "differentialVerifiedRuntimeIds": 1471,
+  "inventoriedCases": 750,
+  "implementedCases": 748,
+  "differentialVerifiedCases": 376,
+  "differentialVerifiedRuntimeIds": 1477,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 126,
   "implementedCapabilities": 125,
-  "differentialVerifiedCapabilities": 46,
+  "differentialVerifiedCapabilities": 47,
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4005,
-  "referencedJavaRuntimeIds": 3575,
+  "runtimeAssociationCount": 4011,
+  "referencedJavaRuntimeIds": 3581,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 561,
+  "unreferencedJavaRuntimeIds": 555,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 749,
+  "totalCases": 750,
   "totalCapabilities": 126
  }
 }

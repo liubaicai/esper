@@ -1,0 +1,689 @@
+{
+ "version": "esper-parity/v1",
+ "id": "epl-contained-event-example",
+ "description": "EPLContainedEventExample ords 0-5: the media-order XML contained-event example. Ord 0 expands MediaOrder[books.book] and [books.book][review] contained fragments (s1 indexed item path, s2 wildcard book, s3 filtered parent, s4 unique-count, s5 review fields, s6 unobserved pattern, s7-s10 contained select projections, s11 ReviewStream round-trip, s12 filtered book). Ord 1 expands the SupportResponseEvent.subEvents bean array under a 1-minute time window grouped by parent category. Ords 2-4 self-join the book and item contained streams on productId=bookId (inner, left-outer, full-outer) plus cumulative and unidirectional count phases. Ord 5 is the financial solution pattern: a SymbolsPair lastevent join feeds a split-all on-trigger that unnests foreign/local companies, merges foreign and local Symbol rows into the contexted Result table via Mapping subselects, and fires the ordered SymbolsPairOutputEvent select between begin/end markers (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/contained/EPLContainedEventExample.java).",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/contained/EPLContainedEventExample.java",
+ "javaRuntimes": [
+  "java-runtime-36bfa282c286614e1bc0",
+  "java-runtime-3bcf56da38fd1e2f669a",
+  "java-runtime-06cbcd9c14891d14a995",
+  "java-runtime-bfcd3e5954bd02726c90",
+  "java-runtime-e9cfcbfcc5556a9ea9ab",
+  "java-runtime-23292c0fd335038c05d4"
+ ],
+ "javaNames": [
+  "EPLContainedExample",
+  "EPLContainedSolutionPattern",
+  "EPLContainedJoinSelfJoin",
+  "EPLContainedJoinSelfLeftOuterJoin",
+  "EPLContainedJoinSelfFullOuterJoin",
+  "EPLContainedSolutionPatternFinancial"
+ ],
+ "javaStaticIds": [
+  "java-d763dc53250784007213",
+  "java-3370a9fc6c79a91c99db",
+  "java-a340361a64068355d364",
+  "java-e0629eece325f19d5eab",
+  "java-b66b814fdafb047c88ca",
+  "java-364de601500af6cb9ce9"
+ ],
+ "javaFlags": [
+  "FIREANDFORGET"
+ ],
+ "cases": [
+  {
+   "case": "contained-example",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-36bfa282c286614e1bc0",
+   "executionName": "EPLContainedExample",
+   "observation": "listener; twelve deploys over the MediaOrder XML DOM type: s1 orderId plus indexed items.item[0].itemId, s2 wildcard book fragments, s3 filtered parent expansion, s4 count over #unique(bookId), s5 review fragments, s6 unobserved Cancel->book pattern, s7-s10 contained select projections, s11 ReviewStream round-trip, s12 filtered book expansion; one mediaOrderOne.xml send fires every statement except s6",
+   "epl": "@name('s1') select orderId, items.item[0].itemId from MediaOrder\n@name('s2') select * from MediaOrder[books.book]\n@name('s3') select * from MediaOrder(orderId='PO200901')[books.book]\n@name('s4') select count(*) from MediaOrder[books.book]#unique(bookId)\n@name('s5') select * from MediaOrder[books.book][review]\n@name('s6') select * from pattern [c=Cancel -> o=MediaOrder(orderId = c.orderId)[books.book]]\n@name('s7') select * from MediaOrder[select orderId, bookId from books.book][select * from review]\n@name('s8') select * from MediaOrder[select * from books.book][select reviewId, comment from review]\n@name('s9') select * from MediaOrder[books.book as book][select book.*, reviewId, comment from review]\n@name('s10') select * from MediaOrder[books.book as book][select mediaOrder.*, bookId, reviewId from review] as mediaOrder\n@name('s11_0') @public insert into ReviewStream select * from MediaOrder[books.book as book]\n    [select mediaOrder.* as mediaOrder, book.* as book, review.* as review from review as review] as mediaOrder\n@name('s11') select mediaOrder.orderId, book.bookId, review.reviewId from ReviewStream\n@name('s12') select * from MediaOrder[books.book where author = 'Orson Scott Card'][review]"
+  },
+  {
+   "case": "solution-pattern",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-3bcf56da38fd1e2f669a",
+   "executionName": "EPLContainedSolutionPattern",
+   "observation": "listener; one deploy expands the SupportResponseEvent.subEvents bean array under #time(1 min) grouped by category+subEventType; two bean sends yield cumulative averages {svcOne,typeA,1000},{svcOne,typeB,800} then {svcOne,typeA,750},{svcOne,typeB,600}",
+   "epl": "@name('s0') select category, subEventType, avg(responseTimeMillis) as avgTime from SupportResponseEvent[select category, * from subEvents]#time(1 min) group by category, subEventType order by category, subEventType"
+  },
+  {
+   "case": "join-self-join",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-06cbcd9c14891d14a995",
+   "executionName": "EPLContainedJoinSelfJoin",
+   "observation": "listener; three phases separated by undeploy-all: the book/item inner join row select, a cumulative count(*) join and a unidirectional count(*) join; sends docOne, docOne, docTwo, then docTwo, docOne, then docTwo, docOne",
+   "epl": "@name('s0') select book.bookId,item.itemId from MediaOrder[books.book] as book, MediaOrder[items.item] as item where productId = bookId order by bookId, item.itemId asc\n@name('s0') select count(*) from MediaOrder[books.book] as book, MediaOrder[items.item] as item where productId = bookId order by bookId asc\n@name('s0') select count(*) from MediaOrder[books.book] as book unidirectional, MediaOrder[items.item] as item where productId = bookId order by bookId asc"
+  },
+  {
+   "case": "join-self-left-outer",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-bfcd3e5954bd02726c90",
+   "executionName": "EPLContainedJoinSelfLeftOuterJoin",
+   "observation": "listener; three phases separated by undeploy-all: the book/item left-outer join row select, a cumulative count(*) join and a unidirectional count(*) join; sends docTwo, docOne, then docTwo, docOne, then docTwo, docOne",
+   "epl": "@name('s0') select book.bookId,item.itemId from MediaOrder[books.book] as book left outer join MediaOrder[items.item] as item on productId = bookId order by bookId, item.itemId asc\n@name('s0') select count(*) from MediaOrder[books.book] as book left outer join MediaOrder[items.item] as item on productId = bookId\n@name('s0') select count(*) from MediaOrder[books.book] as book unidirectional left outer join MediaOrder[items.item] as item on productId = bookId"
+  },
+  {
+   "case": "join-self-full-outer",
+   "ordinal": 4,
+   "runtimeId": "java-runtime-e9cfcbfcc5556a9ea9ab",
+   "executionName": "EPLContainedJoinSelfFullOuterJoin",
+   "observation": "listener; three phases separated by undeploy-all: the book/item full-outer join row select (item side carries the contained select orderId), a cumulative count(*) join and a unidirectional count(*) join; sends docTwo, docOne, then docTwo, docOne, then docTwo, docOne",
+   "epl": "@name('s0') select orderId, book.bookId,item.itemId from MediaOrder[books.book] as book full outer join MediaOrder[select orderId, * from items.item] as item on productId = bookId order by bookId, item.itemId asc\n@name('s0') select count(*) from MediaOrder[books.book] as book full outer join MediaOrder[items.item] as item on productId = bookId\n@name('s0') select count(*) from MediaOrder[books.book] as book unidirectional full outer join MediaOrder[items.item] as item on productId = bookId"
+  },
+  {
+   "case": "financial",
+   "ordinal": 5,
+   "runtimeId": "java-runtime-23292c0fd335038c05d4",
+   "executionName": "EPLContainedSolutionPatternFinancial",
+   "observation": "listener; one module deploy registers map schemas, the Mapping table with secondary indexes, the SymbolsPair lastevent insert, the begin/foreign/local/output/end split-all with contained branches, the start/end-event context, the contexted Result table merges with Mapping subselects and the ordered out select; four fire-and-forget Mapping loads seed the pairs; ForeignSymbols/LocalSymbols sends produce four ordered rows",
+   "epl": "create schema Symbol(symbol string, value double);\n@public @buseventtype create schema ForeignSymbols(companies Symbol[]);\n@public @buseventtype create schema LocalSymbols(companies Symbol[]);\n\n@public create table Mapping(foreignSymbol string primary key, localSymbol string primary key);\ncreate index MappingIndexForeignSymbol on Mapping(foreignSymbol);\ncreate index MappingIndexLocalSymbol on Mapping(localSymbol);\n\ninsert into SymbolsPair select * from ForeignSymbols#lastevent as foreign, LocalSymbols#lastevent as local;\non SymbolsPair\n  insert into SymbolsPairBeginEvent select null\n  insert into ForeignSymbolRow select * from [foreign.companies]\n  insert into LocalSymbolRow select * from [local.companies]\n  insert into SymbolsPairOutputEvent select null  insert into SymbolsPairEndEvent select null  output all;\n\ncreate context SymbolsPairContext start SymbolsPairBeginEvent end SymbolsPairEndEvent;\ncontext SymbolsPairContext create table Result(foreignSymbol string primary key, localSymbol string primary key, value double);\n\ncontext SymbolsPairContext on ForeignSymbolRow as fsr merge Result as result where result.foreignSymbol = fsr.symbol\n  when not matched then insert select fsr.symbol as foreignSymbol,\n    (select localSymbol from Mapping as mapping where mapping.foreignSymbol = fsr.symbol) as localSymbol, fsr.value as value\n  when matched and fsr.value > result.value then update set value = fsr.value;\n\ncontext SymbolsPairContext on LocalSymbolRow as lsr merge Result as result where result.localSymbol = lsr.symbol\n  when not matched then insert select (select foreignSymbol from Mapping as mapping where mapping.localSymbol = lsr.symbol) as foreignSymbol,    lsr.symbol as localSymbol, lsr.value as value\n  when matched and lsr.value > result.value then update set value = lsr.value;\n\n@name('out') context SymbolsPairContext on SymbolsPairOutputEvent select foreignSymbol, localSymbol, value from Result order by foreignSymbol asc;\n"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "contained-example"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-example",
+   "statement": "s1",
+   "epl": "@name('s1') select orderId, items.item[0].itemId from MediaOrder",
+   "fields": [
+    "items.item[0].itemId",
+    "orderId"
+   ],
+   "listen": "s1"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-example",
+   "statement": "s2",
+   "epl": "@name('s2') select * from MediaOrder[books.book]",
+   "fields": [
+    "bookId"
+   ],
+   "listen": "s2"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-example",
+   "statement": "s3",
+   "epl": "@name('s3') select * from MediaOrder(orderId='PO200901')[books.book]",
+   "fields": [
+    "bookId"
+   ],
+   "listen": "s3"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-example",
+   "statement": "s4",
+   "epl": "@name('s4') select count(*) from MediaOrder[books.book]#unique(bookId)",
+   "fields": [
+    "count(*)"
+   ],
+   "listen": "s4"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-example",
+   "statement": "s5",
+   "epl": "@name('s5') select * from MediaOrder[books.book][review]",
+   "fields": [
+    "reviewId"
+   ],
+   "listen": "s5"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-example",
+   "statement": "s6",
+   "epl": "@name('s6') select * from pattern [c=Cancel -> o=MediaOrder(orderId = c.orderId)[books.book]]",
+   "fields": [
+    "c.orderId",
+    "o.bookId"
+   ],
+   "listen": "s6"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-example",
+   "statement": "s7",
+   "epl": "@name('s7') select * from MediaOrder[select orderId, bookId from books.book][select * from review]",
+   "fields": [
+    "bookId",
+    "orderId",
+    "reviewId"
+   ],
+   "listen": "s7"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-example",
+   "statement": "s8",
+   "epl": "@name('s8') select * from MediaOrder[select * from books.book][select reviewId, comment from review]",
+   "fields": [
+    "bookId",
+    "reviewId"
+   ],
+   "listen": "s8"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-example",
+   "statement": "s9",
+   "epl": "@name('s9') select * from MediaOrder[books.book as book][select book.*, reviewId, comment from review]",
+   "fields": [
+    "bookId",
+    "reviewId"
+   ],
+   "listen": "s9"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-example",
+   "statement": "s10",
+   "epl": "@name('s10') select * from MediaOrder[books.book as book][select mediaOrder.*, bookId, reviewId from review] as mediaOrder",
+   "fields": [
+    "bookId",
+    "reviewId"
+   ],
+   "listen": "s10"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-example",
+   "statement": "s11_0",
+   "epl": "@name('s11_0') @public insert into ReviewStream select * from MediaOrder[books.book as book]\n    [select mediaOrder.* as mediaOrder, book.* as book, review.* as review from review as review] as mediaOrder"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-example",
+   "statement": "s11",
+   "epl": "@name('s11') select mediaOrder.orderId, book.bookId, review.reviewId from ReviewStream",
+   "fields": [
+    "book.bookId",
+    "mediaOrder.orderId",
+    "review.reviewId"
+   ],
+   "listen": "s11"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-example",
+   "statement": "s12",
+   "epl": "@name('s12') select * from MediaOrder[books.book where author = 'Orson Scott Card'][review]",
+   "fields": [
+    "reviewId"
+   ],
+   "listen": "s12"
+  },
+  {
+   "op": "send",
+   "case": "contained-example",
+   "eventType": "MediaOrder",
+   "payload": {
+    "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<mediaorder xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"mediaOrderSchema.xsd\">\n  <orderId>PO200901</orderId>\n  <items>\n    <item>\n      <itemId>100001</itemId>\n      <productId>B001</productId>\n      <amount>10</amount>\n      <price>11.95</price>\n    </item>\n  </items>\n  <books>\n    <book>\n      <bookId>B001</bookId>\n      <author>Orson Scott Card</author>\n      <review>\n        <reviewId>1</reviewId>\n        <comment>best book ever</comment>\n      </review>\n    </book>\n    <book>\n      <bookId>B002</bookId>\n      <author>Isaac Asimov</author>\n    </book>\n  </books>\n</mediaorder>\n"
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "contained-example"
+  },
+  {
+   "op": "case",
+   "case": "solution-pattern"
+  },
+  {
+   "op": "deploy",
+   "case": "solution-pattern",
+   "statement": "s0",
+   "epl": "@name('s0') select category, subEventType, avg(responseTimeMillis) as avgTime from SupportResponseEvent[select category, * from subEvents]#time(1 min) group by category, subEventType order by category, subEventType",
+   "fields": [
+    "avgTime",
+    "category",
+    "subEventType"
+   ],
+   "listen": "s0"
+  },
+  {
+   "op": "send",
+   "case": "solution-pattern",
+   "eventType": "SupportResponseEvent",
+   "payload": {
+    "category": "svcOne",
+    "subEvents": [
+     {
+      "responseTimeMillis": 1000,
+      "subEventType": "typeA"
+     },
+     {
+      "responseTimeMillis": 800,
+      "subEventType": "typeB"
+     }
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "case": "solution-pattern",
+   "eventType": "SupportResponseEvent",
+   "payload": {
+    "category": "svcOne",
+    "subEvents": [
+     {
+      "responseTimeMillis": 400,
+      "subEventType": "typeB"
+     },
+     {
+      "responseTimeMillis": 500,
+      "subEventType": "typeA"
+     }
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "solution-pattern"
+  },
+  {
+   "op": "case",
+   "case": "join-self-join"
+  },
+  {
+   "op": "deploy",
+   "case": "join-self-join",
+   "statement": "s0",
+   "epl": "@name('s0') select book.bookId,item.itemId from MediaOrder[books.book] as book, MediaOrder[items.item] as item where productId = bookId order by bookId, item.itemId asc",
+   "fields": [
+    "book.bookId",
+    "item.itemId"
+   ],
+   "listen": "s0"
+  },
+  {
+   "op": "send",
+   "case": "join-self-join",
+   "eventType": "MediaOrder",
+   "payload": {
+    "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<mediaorder xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"mediaOrderSchema.xsd\">\n  <orderId>PO200901</orderId>\n  <items>\n    <item>\n      <itemId>100001</itemId>\n      <productId>B001</productId>\n      <amount>10</amount>\n      <price>11.95</price>\n    </item>\n  </items>\n  <books>\n    <book>\n      <bookId>B001</bookId>\n      <author>Orson Scott Card</author>\n      <review>\n        <reviewId>1</reviewId>\n        <comment>best book ever</comment>\n      </review>\n    </book>\n    <book>\n      <bookId>B002</bookId>\n      <author>Isaac Asimov</author>\n    </book>\n  </books>\n</mediaorder>\n"
+   }
+  },
+  {
+   "op": "send",
+   "case": "join-self-join",
+   "eventType": "MediaOrder",
+   "payload": {
+    "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<mediaorder xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"mediaOrderSchema.xsd\">\n  <orderId>PO200901</orderId>\n  <items>\n    <item>\n      <itemId>100001</itemId>\n      <productId>B001</productId>\n      <amount>10</amount>\n      <price>11.95</price>\n    </item>\n  </items>\n  <books>\n    <book>\n      <bookId>B001</bookId>\n      <author>Orson Scott Card</author>\n      <review>\n        <reviewId>1</reviewId>\n        <comment>best book ever</comment>\n      </review>\n    </book>\n    <book>\n      <bookId>B002</bookId>\n      <author>Isaac Asimov</author>\n    </book>\n  </books>\n</mediaorder>\n"
+   }
+  },
+  {
+   "op": "send",
+   "case": "join-self-join",
+   "eventType": "MediaOrder",
+   "payload": {
+    "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<mediaorder xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"mediaOrderSchema.xsd\">\n  <orderId>PO200901</orderId>\n  <items>\n    <item>\n      <itemId>200001</itemId>\n      <productId>B006</productId>\n      <amount>7</amount>\n      <price>7.45</price>\n    </item>\n    <item>\n      <itemId>200002</itemId>\n      <productId>B005</productId>\n      <amount>1</amount>\n      <price>67.99</price>\n    </item>\n    <item>\n      <itemId>200003</itemId>\n      <productId>B007</productId>\n      <amount>0</amount>\n      <price>0</price>\n    </item>\n    <item>\n      <itemId>200004</itemId>\n      <productId>B005</productId>\n      <amount>2</amount>\n      <price>63.99</price>\n    </item>\n  </items>\n  <books>\n    <book>\n      <bookId>B005</bookId>\n      <author>Heinlein</author>\n      <review>\n        <reviewId>1</reviewId>\n        <comment>best book ever</comment>\n      </review>\n      <review>\n        <reviewId>2</reviewId>\n        <comment>would recommend</comment>\n      </review>\n    </book>\n    <book>\n      <bookId>B006</bookId>\n      <author>Isaac Asimov</author>\n    </book>\n    <book>\n      <bookId>B008</bookId>\n      <author>Ian M Banks</author>\n    </book>\n  </books>\n</mediaorder>\n"
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "join-self-join"
+  },
+  {
+   "op": "deploy",
+   "case": "join-self-join",
+   "statement": "s0",
+   "epl": "@name('s0') select count(*) from MediaOrder[books.book] as book, MediaOrder[items.item] as item where productId = bookId order by bookId asc",
+   "fields": [
+    "count(*)"
+   ],
+   "listen": "s0"
+  },
+  {
+   "op": "send",
+   "case": "join-self-join",
+   "eventType": "MediaOrder",
+   "payload": {
+    "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<mediaorder xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"mediaOrderSchema.xsd\">\n  <orderId>PO200901</orderId>\n  <items>\n    <item>\n      <itemId>200001</itemId>\n      <productId>B006</productId>\n      <amount>7</amount>\n      <price>7.45</price>\n    </item>\n    <item>\n      <itemId>200002</itemId>\n      <productId>B005</productId>\n      <amount>1</amount>\n      <price>67.99</price>\n    </item>\n    <item>\n      <itemId>200003</itemId>\n      <productId>B007</productId>\n      <amount>0</amount>\n      <price>0</price>\n    </item>\n    <item>\n      <itemId>200004</itemId>\n      <productId>B005</productId>\n      <amount>2</amount>\n      <price>63.99</price>\n    </item>\n  </items>\n  <books>\n    <book>\n      <bookId>B005</bookId>\n      <author>Heinlein</author>\n      <review>\n        <reviewId>1</reviewId>\n        <comment>best book ever</comment>\n      </review>\n      <review>\n        <reviewId>2</reviewId>\n        <comment>would recommend</comment>\n      </review>\n    </book>\n    <book>\n      <bookId>B006</bookId>\n      <author>Isaac Asimov</author>\n    </book>\n    <book>\n      <bookId>B008</bookId>\n      <author>Ian M Banks</author>\n    </book>\n  </books>\n</mediaorder>\n"
+   }
+  },
+  {
+   "op": "send",
+   "case": "join-self-join",
+   "eventType": "MediaOrder",
+   "payload": {
+    "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<mediaorder xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"mediaOrderSchema.xsd\">\n  <orderId>PO200901</orderId>\n  <items>\n    <item>\n      <itemId>100001</itemId>\n      <productId>B001</productId>\n      <amount>10</amount>\n      <price>11.95</price>\n    </item>\n  </items>\n  <books>\n    <book>\n      <bookId>B001</bookId>\n      <author>Orson Scott Card</author>\n      <review>\n        <reviewId>1</reviewId>\n        <comment>best book ever</comment>\n      </review>\n    </book>\n    <book>\n      <bookId>B002</bookId>\n      <author>Isaac Asimov</author>\n    </book>\n  </books>\n</mediaorder>\n"
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "join-self-join"
+  },
+  {
+   "op": "deploy",
+   "case": "join-self-join",
+   "statement": "s0",
+   "epl": "@name('s0') select count(*) from MediaOrder[books.book] as book unidirectional, MediaOrder[items.item] as item where productId = bookId order by bookId asc",
+   "fields": [
+    "count(*)"
+   ],
+   "listen": "s0"
+  },
+  {
+   "op": "send",
+   "case": "join-self-join",
+   "eventType": "MediaOrder",
+   "payload": {
+    "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<mediaorder xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"mediaOrderSchema.xsd\">\n  <orderId>PO200901</orderId>\n  <items>\n    <item>\n      <itemId>200001</itemId>\n      <productId>B006</productId>\n      <amount>7</amount>\n      <price>7.45</price>\n    </item>\n    <item>\n      <itemId>200002</itemId>\n      <productId>B005</productId>\n      <amount>1</amount>\n      <price>67.99</price>\n    </item>\n    <item>\n      <itemId>200003</itemId>\n      <productId>B007</productId>\n      <amount>0</amount>\n      <price>0</price>\n    </item>\n    <item>\n      <itemId>200004</itemId>\n      <productId>B005</productId>\n      <amount>2</amount>\n      <price>63.99</price>\n    </item>\n  </items>\n  <books>\n    <book>\n      <bookId>B005</bookId>\n      <author>Heinlein</author>\n      <review>\n        <reviewId>1</reviewId>\n        <comment>best book ever</comment>\n      </review>\n      <review>\n        <reviewId>2</reviewId>\n        <comment>would recommend</comment>\n      </review>\n    </book>\n    <book>\n      <bookId>B006</bookId>\n      <author>Isaac Asimov</author>\n    </book>\n    <book>\n      <bookId>B008</bookId>\n      <author>Ian M Banks</author>\n    </book>\n  </books>\n</mediaorder>\n"
+   }
+  },
+  {
+   "op": "send",
+   "case": "join-self-join",
+   "eventType": "MediaOrder",
+   "payload": {
+    "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<mediaorder xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"mediaOrderSchema.xsd\">\n  <orderId>PO200901</orderId>\n  <items>\n    <item>\n      <itemId>100001</itemId>\n      <productId>B001</productId>\n      <amount>10</amount>\n      <price>11.95</price>\n    </item>\n  </items>\n  <books>\n    <book>\n      <bookId>B001</bookId>\n      <author>Orson Scott Card</author>\n      <review>\n        <reviewId>1</reviewId>\n        <comment>best book ever</comment>\n      </review>\n    </book>\n    <book>\n      <bookId>B002</bookId>\n      <author>Isaac Asimov</author>\n    </book>\n  </books>\n</mediaorder>\n"
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "join-self-join"
+  },
+  {
+   "op": "case",
+   "case": "join-self-left-outer"
+  },
+  {
+   "op": "deploy",
+   "case": "join-self-left-outer",
+   "statement": "s0",
+   "epl": "@name('s0') select book.bookId,item.itemId from MediaOrder[books.book] as book left outer join MediaOrder[items.item] as item on productId = bookId order by bookId, item.itemId asc",
+   "fields": [
+    "book.bookId",
+    "item.itemId"
+   ],
+   "listen": "s0"
+  },
+  {
+   "op": "send",
+   "case": "join-self-left-outer",
+   "eventType": "MediaOrder",
+   "payload": {
+    "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<mediaorder xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"mediaOrderSchema.xsd\">\n  <orderId>PO200901</orderId>\n  <items>\n    <item>\n      <itemId>200001</itemId>\n      <productId>B006</productId>\n      <amount>7</amount>\n      <price>7.45</price>\n    </item>\n    <item>\n      <itemId>200002</itemId>\n      <productId>B005</productId>\n      <amount>1</amount>\n      <price>67.99</price>\n    </item>\n    <item>\n      <itemId>200003</itemId>\n      <productId>B007</productId>\n      <amount>0</amount>\n      <price>0</price>\n    </item>\n    <item>\n      <itemId>200004</itemId>\n      <productId>B005</productId>\n      <amount>2</amount>\n      <price>63.99</price>\n    </item>\n  </items>\n  <books>\n    <book>\n      <bookId>B005</bookId>\n      <author>Heinlein</author>\n      <review>\n        <reviewId>1</reviewId>\n        <comment>best book ever</comment>\n      </review>\n      <review>\n        <reviewId>2</reviewId>\n        <comment>would recommend</comment>\n      </review>\n    </book>\n    <book>\n      <bookId>B006</bookId>\n      <author>Isaac Asimov</author>\n    </book>\n    <book>\n      <bookId>B008</bookId>\n      <author>Ian M Banks</author>\n    </book>\n  </books>\n</mediaorder>\n"
+   }
+  },
+  {
+   "op": "send",
+   "case": "join-self-left-outer",
+   "eventType": "MediaOrder",
+   "payload": {
+    "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<mediaorder xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"mediaOrderSchema.xsd\">\n  <orderId>PO200901</orderId>\n  <items>\n    <item>\n      <itemId>100001</itemId>\n      <productId>B001</productId>\n      <amount>10</amount>\n      <price>11.95</price>\n    </item>\n  </items>\n  <books>\n    <book>\n      <bookId>B001</bookId>\n      <author>Orson Scott Card</author>\n      <review>\n        <reviewId>1</reviewId>\n        <comment>best book ever</comment>\n      </review>\n    </book>\n    <book>\n      <bookId>B002</bookId>\n      <author>Isaac Asimov</author>\n    </book>\n  </books>\n</mediaorder>\n"
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "join-self-left-outer"
+  },
+  {
+   "op": "deploy",
+   "case": "join-self-left-outer",
+   "statement": "s0",
+   "epl": "@name('s0') select count(*) from MediaOrder[books.book] as book left outer join MediaOrder[items.item] as item on productId = bookId",
+   "fields": [
+    "count(*)"
+   ],
+   "listen": "s0"
+  },
+  {
+   "op": "send",
+   "case": "join-self-left-outer",
+   "eventType": "MediaOrder",
+   "payload": {
+    "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<mediaorder xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"mediaOrderSchema.xsd\">\n  <orderId>PO200901</orderId>\n  <items>\n    <item>\n      <itemId>200001</itemId>\n      <productId>B006</productId>\n      <amount>7</amount>\n      <price>7.45</price>\n    </item>\n    <item>\n      <itemId>200002</itemId>\n      <productId>B005</productId>\n      <amount>1</amount>\n      <price>67.99</price>\n    </item>\n    <item>\n      <itemId>200003</itemId>\n      <productId>B007</productId>\n      <amount>0</amount>\n      <price>0</price>\n    </item>\n    <item>\n      <itemId>200004</itemId>\n      <productId>B005</productId>\n      <amount>2</amount>\n      <price>63.99</price>\n    </item>\n  </items>\n  <books>\n    <book>\n      <bookId>B005</bookId>\n      <author>Heinlein</author>\n      <review>\n        <reviewId>1</reviewId>\n        <comment>best book ever</comment>\n      </review>\n      <review>\n        <reviewId>2</reviewId>\n        <comment>would recommend</comment>\n      </review>\n    </book>\n    <book>\n      <bookId>B006</bookId>\n      <author>Isaac Asimov</author>\n    </book>\n    <book>\n      <bookId>B008</bookId>\n      <author>Ian M Banks</author>\n    </book>\n  </books>\n</mediaorder>\n"
+   }
+  },
+  {
+   "op": "send",
+   "case": "join-self-left-outer",
+   "eventType": "MediaOrder",
+   "payload": {
+    "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<mediaorder xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"mediaOrderSchema.xsd\">\n  <orderId>PO200901</orderId>\n  <items>\n    <item>\n      <itemId>100001</itemId>\n      <productId>B001</productId>\n      <amount>10</amount>\n      <price>11.95</price>\n    </item>\n  </items>\n  <books>\n    <book>\n      <bookId>B001</bookId>\n      <author>Orson Scott Card</author>\n      <review>\n        <reviewId>1</reviewId>\n        <comment>best book ever</comment>\n      </review>\n    </book>\n    <book>\n      <bookId>B002</bookId>\n      <author>Isaac Asimov</author>\n    </book>\n  </books>\n</mediaorder>\n"
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "join-self-left-outer"
+  },
+  {
+   "op": "deploy",
+   "case": "join-self-left-outer",
+   "statement": "s0",
+   "epl": "@name('s0') select count(*) from MediaOrder[books.book] as book unidirectional left outer join MediaOrder[items.item] as item on productId = bookId",
+   "fields": [
+    "count(*)"
+   ],
+   "listen": "s0"
+  },
+  {
+   "op": "send",
+   "case": "join-self-left-outer",
+   "eventType": "MediaOrder",
+   "payload": {
+    "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<mediaorder xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"mediaOrderSchema.xsd\">\n  <orderId>PO200901</orderId>\n  <items>\n    <item>\n      <itemId>200001</itemId>\n      <productId>B006</productId>\n      <amount>7</amount>\n      <price>7.45</price>\n    </item>\n    <item>\n      <itemId>200002</itemId>\n      <productId>B005</productId>\n      <amount>1</amount>\n      <price>67.99</price>\n    </item>\n    <item>\n      <itemId>200003</itemId>\n      <productId>B007</productId>\n      <amount>0</amount>\n      <price>0</price>\n    </item>\n    <item>\n      <itemId>200004</itemId>\n      <productId>B005</productId>\n      <amount>2</amount>\n      <price>63.99</price>\n    </item>\n  </items>\n  <books>\n    <book>\n      <bookId>B005</bookId>\n      <author>Heinlein</author>\n      <review>\n        <reviewId>1</reviewId>\n        <comment>best book ever</comment>\n      </review>\n      <review>\n        <reviewId>2</reviewId>\n        <comment>would recommend</comment>\n      </review>\n    </book>\n    <book>\n      <bookId>B006</bookId>\n      <author>Isaac Asimov</author>\n    </book>\n    <book>\n      <bookId>B008</bookId>\n      <author>Ian M Banks</author>\n    </book>\n  </books>\n</mediaorder>\n"
+   }
+  },
+  {
+   "op": "send",
+   "case": "join-self-left-outer",
+   "eventType": "MediaOrder",
+   "payload": {
+    "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<mediaorder xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"mediaOrderSchema.xsd\">\n  <orderId>PO200901</orderId>\n  <items>\n    <item>\n      <itemId>100001</itemId>\n      <productId>B001</productId>\n      <amount>10</amount>\n      <price>11.95</price>\n    </item>\n  </items>\n  <books>\n    <book>\n      <bookId>B001</bookId>\n      <author>Orson Scott Card</author>\n      <review>\n        <reviewId>1</reviewId>\n        <comment>best book ever</comment>\n      </review>\n    </book>\n    <book>\n      <bookId>B002</bookId>\n      <author>Isaac Asimov</author>\n    </book>\n  </books>\n</mediaorder>\n"
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "join-self-left-outer"
+  },
+  {
+   "op": "case",
+   "case": "join-self-full-outer"
+  },
+  {
+   "op": "deploy",
+   "case": "join-self-full-outer",
+   "statement": "s0",
+   "epl": "@name('s0') select orderId, book.bookId,item.itemId from MediaOrder[books.book] as book full outer join MediaOrder[select orderId, * from items.item] as item on productId = bookId order by bookId, item.itemId asc",
+   "fields": [
+    "book.bookId",
+    "item.itemId",
+    "orderId"
+   ],
+   "listen": "s0"
+  },
+  {
+   "op": "send",
+   "case": "join-self-full-outer",
+   "eventType": "MediaOrder",
+   "payload": {
+    "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<mediaorder xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"mediaOrderSchema.xsd\">\n  <orderId>PO200901</orderId>\n  <items>\n    <item>\n      <itemId>200001</itemId>\n      <productId>B006</productId>\n      <amount>7</amount>\n      <price>7.45</price>\n    </item>\n    <item>\n      <itemId>200002</itemId>\n      <productId>B005</productId>\n      <amount>1</amount>\n      <price>67.99</price>\n    </item>\n    <item>\n      <itemId>200003</itemId>\n      <productId>B007</productId>\n      <amount>0</amount>\n      <price>0</price>\n    </item>\n    <item>\n      <itemId>200004</itemId>\n      <productId>B005</productId>\n      <amount>2</amount>\n      <price>63.99</price>\n    </item>\n  </items>\n  <books>\n    <book>\n      <bookId>B005</bookId>\n      <author>Heinlein</author>\n      <review>\n        <reviewId>1</reviewId>\n        <comment>best book ever</comment>\n      </review>\n      <review>\n        <reviewId>2</reviewId>\n        <comment>would recommend</comment>\n      </review>\n    </book>\n    <book>\n      <bookId>B006</bookId>\n      <author>Isaac Asimov</author>\n    </book>\n    <book>\n      <bookId>B008</bookId>\n      <author>Ian M Banks</author>\n    </book>\n  </books>\n</mediaorder>\n"
+   }
+  },
+  {
+   "op": "send",
+   "case": "join-self-full-outer",
+   "eventType": "MediaOrder",
+   "payload": {
+    "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<mediaorder xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"mediaOrderSchema.xsd\">\n  <orderId>PO200901</orderId>\n  <items>\n    <item>\n      <itemId>100001</itemId>\n      <productId>B001</productId>\n      <amount>10</amount>\n      <price>11.95</price>\n    </item>\n  </items>\n  <books>\n    <book>\n      <bookId>B001</bookId>\n      <author>Orson Scott Card</author>\n      <review>\n        <reviewId>1</reviewId>\n        <comment>best book ever</comment>\n      </review>\n    </book>\n    <book>\n      <bookId>B002</bookId>\n      <author>Isaac Asimov</author>\n    </book>\n  </books>\n</mediaorder>\n"
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "join-self-full-outer"
+  },
+  {
+   "op": "deploy",
+   "case": "join-self-full-outer",
+   "statement": "s0",
+   "epl": "@name('s0') select count(*) from MediaOrder[books.book] as book full outer join MediaOrder[items.item] as item on productId = bookId",
+   "fields": [
+    "count(*)"
+   ],
+   "listen": "s0"
+  },
+  {
+   "op": "send",
+   "case": "join-self-full-outer",
+   "eventType": "MediaOrder",
+   "payload": {
+    "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<mediaorder xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"mediaOrderSchema.xsd\">\n  <orderId>PO200901</orderId>\n  <items>\n    <item>\n      <itemId>200001</itemId>\n      <productId>B006</productId>\n      <amount>7</amount>\n      <price>7.45</price>\n    </item>\n    <item>\n      <itemId>200002</itemId>\n      <productId>B005</productId>\n      <amount>1</amount>\n      <price>67.99</price>\n    </item>\n    <item>\n      <itemId>200003</itemId>\n      <productId>B007</productId>\n      <amount>0</amount>\n      <price>0</price>\n    </item>\n    <item>\n      <itemId>200004</itemId>\n      <productId>B005</productId>\n      <amount>2</amount>\n      <price>63.99</price>\n    </item>\n  </items>\n  <books>\n    <book>\n      <bookId>B005</bookId>\n      <author>Heinlein</author>\n      <review>\n        <reviewId>1</reviewId>\n        <comment>best book ever</comment>\n      </review>\n      <review>\n        <reviewId>2</reviewId>\n        <comment>would recommend</comment>\n      </review>\n    </book>\n    <book>\n      <bookId>B006</bookId>\n      <author>Isaac Asimov</author>\n    </book>\n    <book>\n      <bookId>B008</bookId>\n      <author>Ian M Banks</author>\n    </book>\n  </books>\n</mediaorder>\n"
+   }
+  },
+  {
+   "op": "send",
+   "case": "join-self-full-outer",
+   "eventType": "MediaOrder",
+   "payload": {
+    "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<mediaorder xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"mediaOrderSchema.xsd\">\n  <orderId>PO200901</orderId>\n  <items>\n    <item>\n      <itemId>100001</itemId>\n      <productId>B001</productId>\n      <amount>10</amount>\n      <price>11.95</price>\n    </item>\n  </items>\n  <books>\n    <book>\n      <bookId>B001</bookId>\n      <author>Orson Scott Card</author>\n      <review>\n        <reviewId>1</reviewId>\n        <comment>best book ever</comment>\n      </review>\n    </book>\n    <book>\n      <bookId>B002</bookId>\n      <author>Isaac Asimov</author>\n    </book>\n  </books>\n</mediaorder>\n"
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "join-self-full-outer"
+  },
+  {
+   "op": "deploy",
+   "case": "join-self-full-outer",
+   "statement": "s0",
+   "epl": "@name('s0') select count(*) from MediaOrder[books.book] as book unidirectional full outer join MediaOrder[items.item] as item on productId = bookId",
+   "fields": [
+    "count(*)"
+   ],
+   "listen": "s0"
+  },
+  {
+   "op": "send",
+   "case": "join-self-full-outer",
+   "eventType": "MediaOrder",
+   "payload": {
+    "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<mediaorder xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"mediaOrderSchema.xsd\">\n  <orderId>PO200901</orderId>\n  <items>\n    <item>\n      <itemId>200001</itemId>\n      <productId>B006</productId>\n      <amount>7</amount>\n      <price>7.45</price>\n    </item>\n    <item>\n      <itemId>200002</itemId>\n      <productId>B005</productId>\n      <amount>1</amount>\n      <price>67.99</price>\n    </item>\n    <item>\n      <itemId>200003</itemId>\n      <productId>B007</productId>\n      <amount>0</amount>\n      <price>0</price>\n    </item>\n    <item>\n      <itemId>200004</itemId>\n      <productId>B005</productId>\n      <amount>2</amount>\n      <price>63.99</price>\n    </item>\n  </items>\n  <books>\n    <book>\n      <bookId>B005</bookId>\n      <author>Heinlein</author>\n      <review>\n        <reviewId>1</reviewId>\n        <comment>best book ever</comment>\n      </review>\n      <review>\n        <reviewId>2</reviewId>\n        <comment>would recommend</comment>\n      </review>\n    </book>\n    <book>\n      <bookId>B006</bookId>\n      <author>Isaac Asimov</author>\n    </book>\n    <book>\n      <bookId>B008</bookId>\n      <author>Ian M Banks</author>\n    </book>\n  </books>\n</mediaorder>\n"
+   }
+  },
+  {
+   "op": "send",
+   "case": "join-self-full-outer",
+   "eventType": "MediaOrder",
+   "payload": {
+    "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<mediaorder xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"mediaOrderSchema.xsd\">\n  <orderId>PO200901</orderId>\n  <items>\n    <item>\n      <itemId>100001</itemId>\n      <productId>B001</productId>\n      <amount>10</amount>\n      <price>11.95</price>\n    </item>\n  </items>\n  <books>\n    <book>\n      <bookId>B001</bookId>\n      <author>Orson Scott Card</author>\n      <review>\n        <reviewId>1</reviewId>\n        <comment>best book ever</comment>\n      </review>\n    </book>\n    <book>\n      <bookId>B002</bookId>\n      <author>Isaac Asimov</author>\n    </book>\n  </books>\n</mediaorder>\n"
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "join-self-full-outer"
+  },
+  {
+   "op": "case",
+   "case": "financial"
+  },
+  {
+   "op": "deploy",
+   "case": "financial",
+   "statement": "module",
+   "epl": "create schema Symbol(symbol string, value double);\n@public @buseventtype create schema ForeignSymbols(companies Symbol[]);\n@public @buseventtype create schema LocalSymbols(companies Symbol[]);\n\n@public create table Mapping(foreignSymbol string primary key, localSymbol string primary key);\ncreate index MappingIndexForeignSymbol on Mapping(foreignSymbol);\ncreate index MappingIndexLocalSymbol on Mapping(localSymbol);\n\ninsert into SymbolsPair select * from ForeignSymbols#lastevent as foreign, LocalSymbols#lastevent as local;\non SymbolsPair\n  insert into SymbolsPairBeginEvent select null\n  insert into ForeignSymbolRow select * from [foreign.companies]\n  insert into LocalSymbolRow select * from [local.companies]\n  insert into SymbolsPairOutputEvent select null  insert into SymbolsPairEndEvent select null  output all;\n\ncreate context SymbolsPairContext start SymbolsPairBeginEvent end SymbolsPairEndEvent;\ncontext SymbolsPairContext create table Result(foreignSymbol string primary key, localSymbol string primary key, value double);\n\ncontext SymbolsPairContext on ForeignSymbolRow as fsr merge Result as result where result.foreignSymbol = fsr.symbol\n  when not matched then insert select fsr.symbol as foreignSymbol,\n    (select localSymbol from Mapping as mapping where mapping.foreignSymbol = fsr.symbol) as localSymbol, fsr.value as value\n  when matched and fsr.value > result.value then update set value = fsr.value;\n\ncontext SymbolsPairContext on LocalSymbolRow as lsr merge Result as result where result.localSymbol = lsr.symbol\n  when not matched then insert select (select foreignSymbol from Mapping as mapping where mapping.localSymbol = lsr.symbol) as foreignSymbol,    lsr.symbol as localSymbol, lsr.value as value\n  when matched and lsr.value > result.value then update set value = lsr.value;\n\n@name('out') context SymbolsPairContext on SymbolsPairOutputEvent select foreignSymbol, localSymbol, value from Result order by foreignSymbol asc;\n",
+   "fields": [
+    "foreignSymbol",
+    "localSymbol",
+    "value"
+   ],
+   "listen": "out"
+  },
+  {
+   "op": "faf",
+   "case": "financial",
+   "statement": "load-mapping",
+   "epl": "insert into Mapping select ?::string as foreignSymbol, ?::string as localSymbol",
+   "payload": {
+    "foreignSymbol": "ABC",
+    "localSymbol": "123"
+   }
+  },
+  {
+   "op": "faf",
+   "case": "financial",
+   "statement": "load-mapping",
+   "epl": "insert into Mapping select ?::string as foreignSymbol, ?::string as localSymbol",
+   "payload": {
+    "foreignSymbol": "DEF",
+    "localSymbol": "456"
+   }
+  },
+  {
+   "op": "faf",
+   "case": "financial",
+   "statement": "load-mapping",
+   "epl": "insert into Mapping select ?::string as foreignSymbol, ?::string as localSymbol",
+   "payload": {
+    "foreignSymbol": "GHI",
+    "localSymbol": "789"
+   }
+  },
+  {
+   "op": "faf",
+   "case": "financial",
+   "statement": "load-mapping",
+   "epl": "insert into Mapping select ?::string as foreignSymbol, ?::string as localSymbol",
+   "payload": {
+    "foreignSymbol": "JKL",
+    "localSymbol": "666"
+   }
+  },
+  {
+   "op": "send",
+   "case": "financial",
+   "eventType": "ForeignSymbols",
+   "payload": {
+    "companies": [
+     {
+      "symbol": "ABC",
+      "value": 500.0
+     },
+     {
+      "symbol": "DEF",
+      "value": 300.0
+     },
+     {
+      "symbol": "JKL",
+      "value": 400.0
+     }
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "case": "financial",
+   "eventType": "LocalSymbols",
+   "payload": {
+    "companies": [
+     {
+      "symbol": "123",
+      "value": 600.0
+     },
+     {
+      "symbol": "456",
+      "value": 100.0
+     },
+     {
+      "symbol": "789",
+      "value": 200.0
+     }
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "financial"
+  }
+ ]
+}

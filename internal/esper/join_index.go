@@ -698,7 +698,7 @@ func joinInnerKeyedTuplesIndexed(definition *joinDefinition, state *joinRuntimeS
 				return
 			}
 			candidate := append([]Event(nil), composition.tuple...)
-			if joinConditionsMatch(conditions, candidate, now, runtime) {
+			if joinConditionsMatch(conditions, candidate, now, runtime) && containedJoinTupleSameParent(candidate) {
 				result = append(result, joinKeyedTuple{events: candidate, key: joinStoredTupleLineageKey(currentStored)})
 			}
 			return

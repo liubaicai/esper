@@ -740,7 +740,9 @@ func ContainedParentField[V any](name string) Expression[V] {
 			parent, _ = ctx.Event.Ancestor(1)
 		}
 		if !parent.Schema().valid() {
-			return Missing()
+			// No parent (e.g. a left-only row in a full-outer join): the
+			// field is null, not missing.
+			return Null()
 		}
 		return parent.Get(name)
 	}}
@@ -1104,6 +1106,15 @@ func castPropertyValue[T any](value Value) Value {
 	}
 	if source.Type().ConvertibleTo(target) && (numericTypes(source.Type(), target) || target.Kind() == reflect.Interface) {
 		return Present(source.Convert(target).Interface())
+	}
+	// Esper's [property] expansion treats a scalar as a single-element
+	// collection: when the declared target is a slice/array and the source is
+	// a scalar, wrap it so Unnest over a single XML child or bean fragment
+	// yields one row instead of Missing.
+	if (target.Kind() == reflect.Slice || target.Kind() == reflect.Array) && source.Type().AssignableTo(target.Elem()) {
+		wrapped := reflect.MakeSlice(target, 1, 1)
+		wrapped.Index(0).Set(source)
+		return Present(wrapped.Interface())
 	}
 	return castValue[T](Present(source.Interface()))
 }

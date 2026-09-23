@@ -16671,6 +16671,9 @@ func joinKeyedTuples(definition *joinDefinition, state *joinRuntimeState, now ti
 						continue
 					}
 					tuple := []Event{left.event, right.event}
+					if !containedJoinSameParent(left.event, right.event) {
+						continue
+					}
 					if joinConditionsMatch(conditions, tuple, now, runtime) {
 						matched = true
 						matchedRight[rightPosition] = true
@@ -16685,6 +16688,9 @@ func joinKeyedTuples(definition *joinDefinition, state *joinRuntimeState, now ti
 						continue
 					}
 					tuple := []Event{left.event, right.event}
+					if !containedJoinSameParent(left.event, right.event) {
+						continue
+					}
 					if joinConditionsMatch(conditions, tuple, now, runtime) {
 						matched = true
 						matchedRight[rightSlot] = true
@@ -16734,7 +16740,7 @@ func joinKeyedTuples(definition *joinDefinition, state *joinRuntimeState, now ti
 				return
 			}
 			candidate := append([]Event(nil), current...)
-			if joinConditionsMatch(conditions, candidate, now, runtime) {
+			if joinConditionsMatch(conditions, candidate, now, runtime) && containedJoinTupleSameParent(candidate) {
 				result = append(result, joinKeyedTuple{events: candidate, key: joinStoredTupleLineageKey(currentStored)})
 			}
 			return
@@ -16804,7 +16810,7 @@ func joinChainedKeyedTuples(definition *joinDefinition, state *joinRuntimeState,
 					right := rightSide[rightPosition]
 					events := append(append([]Event(nil), left.events...), right.event)
 					stored := append(append([]storedEvent(nil), left.stored...), right)
-					if !joinStoredTupleMatchesLineageWithMissing(stored) || !joinConditionsMatch(edge.conditions, events, now, runtime) {
+					if !joinStoredTupleMatchesLineageWithMissing(stored) || !joinConditionsMatch(edge.conditions, events, now, runtime) || !containedJoinTupleSameParent(events) {
 						continue
 					}
 					matchedLeft = true
@@ -16818,7 +16824,7 @@ func joinChainedKeyedTuples(definition *joinDefinition, state *joinRuntimeState,
 				for rightSlot, right := range rightSide {
 					events := append(append([]Event(nil), left.events...), right.event)
 					stored := append(append([]storedEvent(nil), left.stored...), right)
-					if !joinStoredTupleMatchesLineageWithMissing(stored) || !joinConditionsMatch(edge.conditions, events, now, runtime) {
+					if !joinStoredTupleMatchesLineageWithMissing(stored) || !joinConditionsMatch(edge.conditions, events, now, runtime) || !containedJoinTupleSameParent(events) {
 						continue
 					}
 					matchedLeft = true
@@ -16877,7 +16883,7 @@ func joinOuterKeyedTuples(definition *joinDefinition, state *joinRuntimeState, n
 				return
 			}
 			candidate := append([]Event(nil), current...)
-			if !joinConditionsMatch(conditions, candidate, now, runtime) {
+			if !joinConditionsMatch(conditions, candidate, now, runtime) || !containedJoinTupleSameParent(candidate) {
 				return
 			}
 			result = append(result, joinKeyedTuple{events: candidate, key: joinStoredTupleLineageKey(currentStored)})
@@ -17009,6 +17015,39 @@ func joinConditionsMatch(conditions []JoinCondition, events []Event, now time.Ti
 		return false
 	}
 	return joinConditionsMatchWithVariables(conditions, events, now, runtime.variables)
+}
+
+// containedJoinSameParent reports whether two tuple events are contained
+// children of the same parent event type and, if so, whether they share the
+// same parent instance. Esper's contained-event join pairs only children of
+// the same parent event: a self-join over MediaOrder[books.book] x
+// MediaOrder[items.item] yields intra-event pairs only, never cross-event
+// pairs. Events without parents, or whose parents have different types, are
+// unconstrained.
+func containedJoinSameParent(left, right Event) bool {
+	leftParent, leftOk := left.Parent()
+	rightParent, rightOk := right.Parent()
+	if !leftOk || !rightOk {
+		return true
+	}
+	if leftParent.TypeName() != rightParent.TypeName() {
+		return true
+	}
+	return leftParent.identity == rightParent.identity
+}
+
+// containedJoinTupleSameParent applies the same-parent constraint pairwise
+// across a multi-source join tuple: every pair of contained events whose
+// parents share the same type must share the same parent instance.
+func containedJoinTupleSameParent(events []Event) bool {
+	for i := 0; i < len(events); i++ {
+		for j := i + 1; j < len(events); j++ {
+			if !containedJoinSameParent(events[i], events[j]) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func joinConditionsMatchWithVariables(conditions []JoinCondition, events []Event, now time.Time, variables map[string]Value) bool {
@@ -17554,7 +17593,10 @@ func containedCollectionItems(value any, sequence bool) ([]reflect.Value, error)
 		return items, nil
 	}
 	if collection.Kind() != reflect.Slice && collection.Kind() != reflect.Array {
-		return nil, fmt.Errorf("unnest property evaluated to %T, expected slice or array", value)
+		// Esper's [property] expansion treats a non-collection value as a
+		// single-element collection: a scalar XML child element, a single
+		// bean fragment, or a map all yield exactly one contained row.
+		return []reflect.Value{collection}, nil
 	}
 	items := make([]reflect.Value, collection.Len())
 	for index := 0; index < collection.Len(); index++ {

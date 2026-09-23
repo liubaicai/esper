@@ -671,7 +671,11 @@ func (s TriggerStream[T]) SetVariables(assignments ...VariableAssignmentExpr) Tr
 
 // SelectFromTable performs a primary-key lookup when the trigger arrives and
 // emits the requested table projection as a Row result. For a table without
-// primary-key columns, pass nil keys to read its single logical row.
+// primary-key columns, pass nil keys to read its single logical row. Passing
+// nil keys on a primary-key table performs a full table scan (one result row
+// per table row in scope), matching Esper's `select ... from Table` without a
+// where clause; in scan mode Field and TableField both address the table row
+// and OuterField addresses the trigger event.
 func (s TriggerStream[T]) SelectFromTable(table string, keys []Expr, selections ...Selection) TriggerQuery {
 	return TriggerQuery{
 		env: s.env,
@@ -688,6 +692,9 @@ func (s TriggerStream[T]) SelectFromTable(table string, keys []Expr, selections 
 
 // SelectFromTableWhere projects every table row matching a target-row
 // predicate. TableField addresses the row and Field addresses the trigger.
+// A nil predicate degenerates to the SelectFromTable nil-keys full scan:
+// every row in scope is projected and Field/TableField address the table row
+// (OuterField addresses the trigger), not the trigger event.
 func (s TriggerStream[T]) SelectFromTableWhere(table string, predicate Expression[bool], selections ...Selection) TriggerQuery {
 	return TriggerQuery{
 		env: s.env,
@@ -1071,6 +1078,10 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 			if len(definition.keys) != 0 {
 				return NewError(ErrorInvalidRule, "table predicate select cannot also provide primary-key expressions")
 			}
+		} else if len(definition.keys) == 0 {
+			// No predicate and no keys: a full table scan over every row of
+			// the target table, matching Esper's `select ... from Table`
+			// without a where clause.
 		} else {
 			if len(definition.keys) != len(table.primaryKey) {
 				return fmt.Errorf("table select requires one key expression for each primary-key column")
@@ -2201,9 +2212,40 @@ func executeSelectTableAction(ctx context.Context, engine *Engine, definition *t
 		return result, nil
 	}
 	evaluation := EvalContext{Engine: engine, Event: event, Now: now, Variables: variables}
+	if len(definition.keys) == 0 && len(table.Definition().primaryKey) > 0 {
+		// Full table scan: project every row in scope, matching Esper's
+		// `select ... from Table` without a where clause.
+		var rows []TableRow
+		var err error
+		if scope == "" {
+			rows, err = table.Snapshot(ctx)
+		} else {
+			rows, err = table.snapshotInScope(ctx, scope)
+		}
+		if err != nil {
+			return ResultBatch{}, err
+		}
+		result := ResultBatch{Time: now}
+		for _, row := range rows {
+			if err := contextErr(ctx); err != nil {
+				return ResultBatch{}, err
+			}
+			tableEvent, err := tableRowEvent(table, definition.table, row, now)
+			if err != nil {
+				return ResultBatch{}, err
+			}
+			rowEval := EvalContext{Engine: engine, Event: tableEvent, OuterEvent: event, Group: []Event{tableEvent}, Now: now, Variables: variables}
+			values := make([]Value, 0, len(definition.selections))
+			for _, selection := range definition.selections {
+				values = append(values, selection.Expr.eval(rowEval))
+			}
+			result.New = append(result.New, resultRow(newRow(resultSchema, values)))
+		}
+		return result, nil
+	}
 	keys, err := evaluateTriggerKeys(definition.keys, evaluation)
 	if err != nil {
-		return ResultBatch{}, err
+		return ResultBatch{Time: now}, err
 	}
 	row, found, err := table.getInScope(ctx, scope, keys...)
 	if err != nil {
