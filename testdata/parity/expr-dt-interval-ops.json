@@ -1,0 +1,993 @@
+{
+  "version": "esper-parity/v1",
+  "id": "expr-dt-interval-ops",
+  "description": "ExprDTIntervalOps ords 0/17/1: calendar-ops replays ExprDTIntervalCalendarOps (five where-clauses over the five A_<FT>/B_<FT> object-array field types, deployed in the select-clause form '<clause> as c0' so the observed boolean is total per A send), point-in-time-calendar replays ExprDTIntervalPointInTimeWCalendarOps (set('month',1).before over the five SupportDateTime representations), and invalid replays ExprDTIntervalInvalid's 23 tryInvalidCompile probes with pinned Java message prefixes.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTIntervalOps.java",
+  "javaRuntimes": [
+    "java-runtime-e29e7c3671fa1488e788",
+    "java-runtime-bcdd330f46ca3dd63da7",
+    "java-runtime-eb0d233c3d7f90db1120"
+  ],
+  "javaNames": [
+    "ExprDTIntervalCalendarOps",
+    "ExprDTIntervalPointInTimeWCalendarOps",
+    "ExprDTIntervalInvalid"
+  ],
+  "javaStaticIds": [
+    "java-7d6d5e191799aa72b645",
+    "java-583eee3ee090b7f63076",
+    "java-8b79d6633a735b6cc1ec"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "calendar-ops",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-e29e7c3671fa1488e788",
+      "executionName": "ExprDTIntervalCalendarOps",
+      "observation": "listener; 25 deployments (5 where-clauses x 5 field types) each send one B_<FT> seed then A_<FT> rows; Java asserts listener invoked iff expected under 'select * ... where <clause>' \u2014 the parity deploy renders the same clause as '<clause> as c0' so every A send emits one row carrying the observed boolean",
+      "epl": "@name('s0') select a.withDate(2001, 1, 1).before(b) as c0 from A_MSEC#lastevent as a, B_MSEC#lastevent as b"
+    },
+    {
+      "case": "point-in-time-calendar",
+      "ordinal": 17,
+      "runtimeId": "java-runtime-bcdd330f46ca3dd63da7",
+      "executionName": "ExprDTIntervalPointInTimeWCalendarOps",
+      "observation": "listener; one deployment emits c0..c4 per SupportDateTime send: the SupportBean seed produces no row (unidirectional), 2002-05-30T09:00:00.000 yields all-true and 2003-05-30T08:00:00.000 yields all-false",
+      "epl": "@name('s0') select longdate.set('month', 1).before(longPrimitive) as c0, utildate.set('month', 1).before(longPrimitive) as c1,caldate.set('month', 1).before(longPrimitive) as c2,localdate.set('month', 1).before(longPrimitive) as c3,zoneddate.set('month', 1).before(longPrimitive) as c4 from SupportDateTime unidirectional, SupportBean#lastevent"
+    },
+    {
+      "case": "invalid",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-eb0d233c3d7f90db1120",
+      "executionName": "ExprDTIntervalInvalid",
+      "observation": "compile-error; 23 tryInvalidCompile probes record the pinned Java message prefixes (startsWith assertion); the Go runner verifies the nearest expressible rejection for the representable subset and pins prefix-only for the unrepresentable rest",
+      "epl": "select a.before('x') from SupportTimeStartEndA as a"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "calendar-ops"
+    },
+    {
+      "op": "deploy",
+      "case": "calendar-ops",
+      "statement": "v1-msec",
+      "epl": "@name('s0') select a.withDate(2001, 1, 1).before(b) as c0 from A_MSEC#lastevent as a, B_MSEC#lastevent as b"
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "B_MSEC",
+      "payload": {
+        "start": "2002-05-30T09:00:00.000Z",
+        "duration": 0
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_MSEC",
+      "payload": {
+        "start": "2999-01-01T09:00:00.001Z",
+        "duration": 0,
+        "expected": true
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "calendar-ops",
+      "statement": "v1-date",
+      "epl": "@name('s0') select a.withDate(2001, 1, 1).before(b) as c0 from A_DATE#lastevent as a, B_DATE#lastevent as b"
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "B_DATE",
+      "payload": {
+        "start": "2002-05-30T09:00:00.000Z",
+        "duration": 0
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_DATE",
+      "payload": {
+        "start": "2999-01-01T09:00:00.001Z",
+        "duration": 0,
+        "expected": true
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "calendar-ops",
+      "statement": "v1-cal",
+      "epl": "@name('s0') select a.withDate(2001, 1, 1).before(b) as c0 from A_CAL#lastevent as a, B_CAL#lastevent as b"
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "B_CAL",
+      "payload": {
+        "start": "2002-05-30T09:00:00.000Z",
+        "duration": 0
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_CAL",
+      "payload": {
+        "start": "2999-01-01T09:00:00.001Z",
+        "duration": 0,
+        "expected": true
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "calendar-ops",
+      "statement": "v1-ldt",
+      "epl": "@name('s0') select a.withDate(2001, 1, 1).before(b) as c0 from A_LDT#lastevent as a, B_LDT#lastevent as b"
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "B_LDT",
+      "payload": {
+        "start": "2002-05-30T09:00:00.000Z",
+        "duration": 0
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_LDT",
+      "payload": {
+        "start": "2999-01-01T09:00:00.001Z",
+        "duration": 0,
+        "expected": true
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "calendar-ops",
+      "statement": "v1-zdt",
+      "epl": "@name('s0') select a.withDate(2001, 1, 1).before(b) as c0 from A_ZDT#lastevent as a, B_ZDT#lastevent as b"
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "B_ZDT",
+      "payload": {
+        "start": "2002-05-30T09:00:00.000Z",
+        "duration": 0
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_ZDT",
+      "payload": {
+        "start": "2999-01-01T09:00:00.001Z",
+        "duration": 0,
+        "expected": true
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "calendar-ops",
+      "statement": "v2-msec",
+      "epl": "@name('s0') select a.withDate(2001, 1, 1).before(b.withDate(2001, 1, 1)) as c0 from A_MSEC#lastevent as a, B_MSEC#lastevent as b"
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "B_MSEC",
+      "payload": {
+        "start": "2002-05-30T09:00:00.000Z",
+        "duration": 0
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_MSEC",
+      "payload": {
+        "start": "2999-01-01T10:00:00.001Z",
+        "duration": 0,
+        "expected": false
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_MSEC",
+      "payload": {
+        "start": "2999-01-01T08:00:00.001Z",
+        "duration": 0,
+        "expected": true
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "calendar-ops",
+      "statement": "v2-date",
+      "epl": "@name('s0') select a.withDate(2001, 1, 1).before(b.withDate(2001, 1, 1)) as c0 from A_DATE#lastevent as a, B_DATE#lastevent as b"
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "B_DATE",
+      "payload": {
+        "start": "2002-05-30T09:00:00.000Z",
+        "duration": 0
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_DATE",
+      "payload": {
+        "start": "2999-01-01T10:00:00.001Z",
+        "duration": 0,
+        "expected": false
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_DATE",
+      "payload": {
+        "start": "2999-01-01T08:00:00.001Z",
+        "duration": 0,
+        "expected": true
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "calendar-ops",
+      "statement": "v2-cal",
+      "epl": "@name('s0') select a.withDate(2001, 1, 1).before(b.withDate(2001, 1, 1)) as c0 from A_CAL#lastevent as a, B_CAL#lastevent as b"
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "B_CAL",
+      "payload": {
+        "start": "2002-05-30T09:00:00.000Z",
+        "duration": 0
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_CAL",
+      "payload": {
+        "start": "2999-01-01T10:00:00.001Z",
+        "duration": 0,
+        "expected": false
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_CAL",
+      "payload": {
+        "start": "2999-01-01T08:00:00.001Z",
+        "duration": 0,
+        "expected": true
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "calendar-ops",
+      "statement": "v2-ldt",
+      "epl": "@name('s0') select a.withDate(2001, 1, 1).before(b.withDate(2001, 1, 1)) as c0 from A_LDT#lastevent as a, B_LDT#lastevent as b"
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "B_LDT",
+      "payload": {
+        "start": "2002-05-30T09:00:00.000Z",
+        "duration": 0
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_LDT",
+      "payload": {
+        "start": "2999-01-01T10:00:00.001Z",
+        "duration": 0,
+        "expected": false
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_LDT",
+      "payload": {
+        "start": "2999-01-01T08:00:00.001Z",
+        "duration": 0,
+        "expected": true
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "calendar-ops",
+      "statement": "v2-zdt",
+      "epl": "@name('s0') select a.withDate(2001, 1, 1).before(b.withDate(2001, 1, 1)) as c0 from A_ZDT#lastevent as a, B_ZDT#lastevent as b"
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "B_ZDT",
+      "payload": {
+        "start": "2002-05-30T09:00:00.000Z",
+        "duration": 0
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_ZDT",
+      "payload": {
+        "start": "2999-01-01T10:00:00.001Z",
+        "duration": 0,
+        "expected": false
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_ZDT",
+      "payload": {
+        "start": "2999-01-01T08:00:00.001Z",
+        "duration": 0,
+        "expected": true
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "calendar-ops",
+      "statement": "v3-msec",
+      "epl": "@name('s0') select a.before(b) as c0 from A_MSEC#lastevent as a, B_MSEC#lastevent as b"
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "B_MSEC",
+      "payload": {
+        "start": "2002-05-30T09:00:00.000Z",
+        "duration": 0
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_MSEC",
+      "payload": {
+        "start": "2002-05-30T08:59:59.000Z",
+        "duration": 2000,
+        "expected": false
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "calendar-ops",
+      "statement": "v3-date",
+      "epl": "@name('s0') select a.before(b) as c0 from A_DATE#lastevent as a, B_DATE#lastevent as b"
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "B_DATE",
+      "payload": {
+        "start": "2002-05-30T09:00:00.000Z",
+        "duration": 0
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_DATE",
+      "payload": {
+        "start": "2002-05-30T08:59:59.000Z",
+        "duration": 2000,
+        "expected": false
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "calendar-ops",
+      "statement": "v3-cal",
+      "epl": "@name('s0') select a.before(b) as c0 from A_CAL#lastevent as a, B_CAL#lastevent as b"
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "B_CAL",
+      "payload": {
+        "start": "2002-05-30T09:00:00.000Z",
+        "duration": 0
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_CAL",
+      "payload": {
+        "start": "2002-05-30T08:59:59.000Z",
+        "duration": 2000,
+        "expected": false
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "calendar-ops",
+      "statement": "v3-ldt",
+      "epl": "@name('s0') select a.before(b) as c0 from A_LDT#lastevent as a, B_LDT#lastevent as b"
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "B_LDT",
+      "payload": {
+        "start": "2002-05-30T09:00:00.000Z",
+        "duration": 0
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_LDT",
+      "payload": {
+        "start": "2002-05-30T08:59:59.000Z",
+        "duration": 2000,
+        "expected": false
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "calendar-ops",
+      "statement": "v3-zdt",
+      "epl": "@name('s0') select a.before(b) as c0 from A_ZDT#lastevent as a, B_ZDT#lastevent as b"
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "B_ZDT",
+      "payload": {
+        "start": "2002-05-30T09:00:00.000Z",
+        "duration": 0
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_ZDT",
+      "payload": {
+        "start": "2002-05-30T08:59:59.000Z",
+        "duration": 2000,
+        "expected": false
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "calendar-ops",
+      "statement": "v4-msec",
+      "epl": "@name('s0') select a.withTime(8, 59, 59, 0).before(b) as c0 from A_MSEC#lastevent as a, B_MSEC#lastevent as b"
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "B_MSEC",
+      "payload": {
+        "start": "2002-05-30T09:00:00.000Z",
+        "duration": 0
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_MSEC",
+      "payload": {
+        "start": "2002-05-30T08:59:59.000Z",
+        "duration": 2000,
+        "expected": false
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "calendar-ops",
+      "statement": "v4-date",
+      "epl": "@name('s0') select a.withTime(8, 59, 59, 0).before(b) as c0 from A_DATE#lastevent as a, B_DATE#lastevent as b"
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "B_DATE",
+      "payload": {
+        "start": "2002-05-30T09:00:00.000Z",
+        "duration": 0
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_DATE",
+      "payload": {
+        "start": "2002-05-30T08:59:59.000Z",
+        "duration": 2000,
+        "expected": false
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "calendar-ops",
+      "statement": "v4-cal",
+      "epl": "@name('s0') select a.withTime(8, 59, 59, 0).before(b) as c0 from A_CAL#lastevent as a, B_CAL#lastevent as b"
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "B_CAL",
+      "payload": {
+        "start": "2002-05-30T09:00:00.000Z",
+        "duration": 0
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_CAL",
+      "payload": {
+        "start": "2002-05-30T08:59:59.000Z",
+        "duration": 2000,
+        "expected": false
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "calendar-ops",
+      "statement": "v4-ldt",
+      "epl": "@name('s0') select a.withTime(8, 59, 59, 0).before(b) as c0 from A_LDT#lastevent as a, B_LDT#lastevent as b"
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "B_LDT",
+      "payload": {
+        "start": "2002-05-30T09:00:00.000Z",
+        "duration": 0
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_LDT",
+      "payload": {
+        "start": "2002-05-30T08:59:59.000Z",
+        "duration": 2000,
+        "expected": false
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "calendar-ops",
+      "statement": "v4-zdt",
+      "epl": "@name('s0') select a.withTime(8, 59, 59, 0).before(b) as c0 from A_ZDT#lastevent as a, B_ZDT#lastevent as b"
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "B_ZDT",
+      "payload": {
+        "start": "2002-05-30T09:00:00.000Z",
+        "duration": 0
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_ZDT",
+      "payload": {
+        "start": "2002-05-30T08:59:59.000Z",
+        "duration": 2000,
+        "expected": false
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "calendar-ops",
+      "statement": "v5-msec",
+      "epl": "@name('s0') select a.after(b) as c0 from A_MSEC#lastevent as a, B_MSEC#lastevent as b"
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "B_MSEC",
+      "payload": {
+        "start": "2002-05-30T09:00:00.000Z",
+        "duration": 1000
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_MSEC",
+      "payload": {
+        "start": "2002-05-30T09:00:01.000Z",
+        "duration": 0,
+        "expected": false
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_MSEC",
+      "payload": {
+        "start": "2002-05-30T09:00:01.001Z",
+        "duration": 0,
+        "expected": true
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "calendar-ops",
+      "statement": "v5-date",
+      "epl": "@name('s0') select a.after(b) as c0 from A_DATE#lastevent as a, B_DATE#lastevent as b"
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "B_DATE",
+      "payload": {
+        "start": "2002-05-30T09:00:00.000Z",
+        "duration": 1000
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_DATE",
+      "payload": {
+        "start": "2002-05-30T09:00:01.000Z",
+        "duration": 0,
+        "expected": false
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_DATE",
+      "payload": {
+        "start": "2002-05-30T09:00:01.001Z",
+        "duration": 0,
+        "expected": true
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "calendar-ops",
+      "statement": "v5-cal",
+      "epl": "@name('s0') select a.after(b) as c0 from A_CAL#lastevent as a, B_CAL#lastevent as b"
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "B_CAL",
+      "payload": {
+        "start": "2002-05-30T09:00:00.000Z",
+        "duration": 1000
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_CAL",
+      "payload": {
+        "start": "2002-05-30T09:00:01.000Z",
+        "duration": 0,
+        "expected": false
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_CAL",
+      "payload": {
+        "start": "2002-05-30T09:00:01.001Z",
+        "duration": 0,
+        "expected": true
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "calendar-ops",
+      "statement": "v5-ldt",
+      "epl": "@name('s0') select a.after(b) as c0 from A_LDT#lastevent as a, B_LDT#lastevent as b"
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "B_LDT",
+      "payload": {
+        "start": "2002-05-30T09:00:00.000Z",
+        "duration": 1000
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_LDT",
+      "payload": {
+        "start": "2002-05-30T09:00:01.000Z",
+        "duration": 0,
+        "expected": false
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_LDT",
+      "payload": {
+        "start": "2002-05-30T09:00:01.001Z",
+        "duration": 0,
+        "expected": true
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "calendar-ops",
+      "statement": "v5-zdt",
+      "epl": "@name('s0') select a.after(b) as c0 from A_ZDT#lastevent as a, B_ZDT#lastevent as b"
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "B_ZDT",
+      "payload": {
+        "start": "2002-05-30T09:00:00.000Z",
+        "duration": 1000
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_ZDT",
+      "payload": {
+        "start": "2002-05-30T09:00:01.000Z",
+        "duration": 0,
+        "expected": false
+      }
+    },
+    {
+      "op": "send",
+      "case": "calendar-ops",
+      "eventType": "A_ZDT",
+      "payload": {
+        "start": "2002-05-30T09:00:01.001Z",
+        "duration": 0,
+        "expected": true
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "calendar-ops"
+    },
+    {
+      "op": "case",
+      "case": "point-in-time-calendar"
+    },
+    {
+      "op": "deploy",
+      "case": "point-in-time-calendar",
+      "statement": "s0",
+      "epl": "@name('s0') select longdate.set('month', 1).before(longPrimitive) as c0, utildate.set('month', 1).before(longPrimitive) as c1,caldate.set('month', 1).before(longPrimitive) as c2,localdate.set('month', 1).before(longPrimitive) as c3,zoneddate.set('month', 1).before(longPrimitive) as c4 from SupportDateTime unidirectional, SupportBean#lastevent"
+    },
+    {
+      "op": "send",
+      "case": "point-in-time-calendar",
+      "eventType": "SupportBean",
+      "payload": {
+        "longPrimitive": 1022749200000
+      }
+    },
+    {
+      "op": "send",
+      "case": "point-in-time-calendar",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "date": "2002-05-30T09:00:00.000Z",
+        "expected": true
+      }
+    },
+    {
+      "op": "send",
+      "case": "point-in-time-calendar",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "date": "2003-05-30T08:00:00.000Z",
+        "expected": false
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "point-in-time-calendar"
+    },
+    {
+      "op": "case",
+      "case": "invalid"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "before-string-param",
+      "epl": "select a.before('x') from SupportTimeStartEndA as a",
+      "expectError": "Failed to validate select-clause expression 'a.before('x')': Failed to resolve enumeration method, date-time method or mapped property 'a.before('x')': For date-time method 'before' the first parameter expression returns 'String', however requires a Date, Calendar, Long-type return value or event (with timestamp)"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "before-untimestamped-event",
+      "epl": "select a.before(b) from SupportTimeStartEndA#lastevent as a, SupportBean#lastevent as b",
+      "expectError": "Failed to validate select-clause expression 'a.before(b)': For date-time method 'before' the first parameter is event type 'SupportBean', however no timestamp property has been defined for this event type"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "before-boolean-param",
+      "epl": "select a.before(true) from SupportTimeStartEndA#lastevent as a, SupportBean#lastevent as b",
+      "expectError": "Failed to validate select-clause expression 'a.before(true)': For date-time method 'before' the first parameter expression returns 'boolean', however requires a Date, Calendar, Long-type return value or event (with timestamp)"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "before-no-params",
+      "epl": "select a.before() from SupportTimeStartEndA#lastevent as a, SupportBean#lastevent as b",
+      "expectError": "Failed to validate select-clause expression 'a.before()': Parameters mismatch for date-time method 'before', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing interval start value, or an expression providing timestamp or timestamped-event and an expression providing interval start value and an expression providing interval finishes value, but receives no parameters"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "before-string-target",
+      "epl": "select theString.before(a) from SupportTimeStartEndA#lastevent as a, SupportBean#lastevent as b",
+      "expectError": "Failed to validate select-clause expression 'theString.before(a)': Date-time enumeration method 'before' requires either a Calendar, Date, long, LocalDateTime or ZonedDateTime value as input or events of an event type that declares a timestamp property but received String"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "before-untimestamped-target",
+      "epl": "select b.before(a) from SupportTimeStartEndA#lastevent as a, SupportBean#lastevent as b",
+      "expectError": "Failed to validate select-clause expression 'b.before(a)': Date-time enumeration method 'before' requires either a Calendar, Date, long, LocalDateTime or ZonedDateTime value as input or events of an event type that declares a timestamp property"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "before-get-target",
+      "epl": "select a.get('month').before(a) from SupportTimeStartEndA#lastevent as a, SupportBean#lastevent as b",
+      "expectError": "Failed to validate select-clause expression 'a.get(\"month\").before(a)': Failed to resolve method 'get': Could not find enumeration method, date-time method, instance method or property named 'get'"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "before-string-threshold",
+      "epl": "select a.before(b, 'abc') from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b",
+      "expectError": "Failed to validate select-clause expression 'a.before(b,\"abc\")': Failed to validate date-time method 'before', expected a time-period expression or a numeric-type result for expression parameter 1 but received String "
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "before-string-threshold-2",
+      "epl": "select a.before(b, 1, 'def') from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b",
+      "expectError": "Failed to validate select-clause expression 'a.before(b,1,\"def\")': Failed to validate date-time method 'before', expected a time-period expression or a numeric-type result for expression parameter 2 but received String "
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "before-four-params",
+      "epl": "select a.before(b, 1, 2, 3) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b",
+      "expectError": "Failed to validate select-clause expression 'a.before(b,1,2,3)': Parameters mismatch for date-time method 'before', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing interval start value, or an expression providing timestamp or timestamped-event and an expression providing interval start value and an expression providing interval finishes value, but receives 4 expressions "
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "coincides-four-params",
+      "epl": "select a.coincides(b, 1, 2, 3) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b",
+      "expectError": "Failed to validate select-clause expression 'a.coincides(b,1,2,3)': Parameters mismatch for date-time method 'coincides', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing threshold for start and end value, or an expression providing timestamp or timestamped-event and an expression providing threshold for start value and an expression providing threshold for end value, but receives 4 expressions "
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "coincides-negative",
+      "epl": "select a.coincides(b, -1) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b",
+      "expectError": "Failed to validate select-clause expression 'a.coincides(b,-1)': The coincides date-time method does not allow negative start and end values "
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "during-four-params",
+      "epl": "select a.during(b, 1, 2, 3) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b",
+      "expectError": "Failed to validate select-clause expression 'a.during(b,1,2,3)': Parameters mismatch for date-time method 'during', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing maximum distance interval both start and end, or an expression providing timestamp or timestamped-event and an expression providing minimum distance interval both start and end and an expression providing maximum distance interval both start and end, or an expression providing timestamp or timestamped-event and an expression providing minimum distance start and an expression providing maximum distance start and an expression providing minimum distance end and an expression providing maximum distance end, but receives 4 expressions "
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "finishes-three-params",
+      "epl": "select a.finishes(b, 1, 2) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b",
+      "expectError": "Failed to validate select-clause expression 'a.finishes(b,1,2)': Parameters mismatch for date-time method 'finishes', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing maximum distance between end timestamps, but receives 3 expressions "
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "finishes-negative",
+      "epl": "select a.finishes(b, -1) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b",
+      "expectError": "Failed to validate select-clause expression 'a.finishes(b,-1)': The finishes date-time method does not allow negative threshold value "
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "finishedby-negative",
+      "epl": "select a.finishedby(b, -1) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b",
+      "expectError": "Failed to validate select-clause expression 'a.finishedby(b,-1)': The finishedby date-time method does not allow negative threshold value "
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "meets-three-params",
+      "epl": "select a.meets(b, 1, 2) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b",
+      "expectError": "Failed to validate select-clause expression 'a.meets(b,1,2)': Parameters mismatch for date-time method 'meets', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing maximum distance between start and end timestamps, but receives 3 expressions "
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "meets-negative",
+      "epl": "select a.meets(b, -1) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b",
+      "expectError": "Failed to validate select-clause expression 'a.meets(b,-1)': The meets date-time method does not allow negative threshold value "
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "metby-negative",
+      "epl": "select a.metBy(b, -1) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b",
+      "expectError": "Failed to validate select-clause expression 'a.metBy(b,-1)': The metBy date-time method does not allow negative threshold value "
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "overlaps-four-params",
+      "epl": "select a.overlaps(b, 1, 2, 3) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b",
+      "expectError": "Failed to validate select-clause expression 'a.overlaps(b,1,2,3)': Parameters mismatch for date-time method 'overlaps', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing maximum distance interval both start and end, or an expression providing timestamp or timestamped-event and an expression providing minimum distance interval both start and end and an expression providing maximum distance interval both start and end, but receives 4 expressions "
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "starts-four-params",
+      "epl": "select a.starts(b, 1, 2, 3) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b",
+      "expectError": "Failed to validate select-clause expression 'a.starts(b,1,2,3)': Parameters mismatch for date-time method 'starts', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing maximum distance between start timestamps, but receives 4 expressions "
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "starts-negative",
+      "epl": "select a.starts(b, -1) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b",
+      "expectError": "Failed to validate select-clause expression 'a.starts(b,-1)': The starts date-time method does not allow negative threshold value "
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "startedby-negative",
+      "epl": "select a.startedBy(b, -1) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b",
+      "expectError": "Failed to validate select-clause expression 'a.startedBy(b,-1)': The startedBy date-time method does not allow negative threshold value "
+    },
+    {
+      "op": "undeploy-all",
+      "case": "invalid"
+    }
+  ]
+}

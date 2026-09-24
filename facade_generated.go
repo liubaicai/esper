@@ -1626,6 +1626,15 @@ func DateTimeArgument(expression Expr) DateTimePluginArgument {
 	return internalengine.DateTimeArgument(expression)
 }
 
+// DateTimeBefore reports whether a point-in-time value is strictly before a
+// threshold: true iff threshold - value >= 1 millisecond (Java's default
+// before range [1, Long.MAX_VALUE] applied to the point interval (t,t)).
+// Null and missing operands produce Null, matching Esper's boxed Boolean
+// result. It mirrors DateTimeAfter with the comparison inverted.
+func DateTimeBefore(value, threshold Expr) Expression[bool] {
+	return internalengine.DateTimeBefore(value, threshold)
+}
+
 // DateTimeBetween compares date-time expressions by epoch milliseconds. The
 // two-argument Esper form is inclusive and normalizes reversed bounds.
 func DateTimeBetween(value, lower, upper Expr) Expression[bool] {
@@ -1749,6 +1758,33 @@ func DateTimeRoundFloor[T int64 | time.Time](value Expression[T], unit string) E
 // (31d: day >= 17, 30d: >= 16, Feb28: >= 15, Feb29: >= 16).
 func DateTimeRoundHalf[T int64 | time.Time](value Expression[T], unit string) Expression[T] {
 	return internalengine.DateTimeRoundHalf[T](value, unit)
+}
+
+// DateTimeSet applies Esper's set(field,n) calendar operation to a date-time
+// expression. The input representation is preserved: int64 epoch-millis
+// stays int64, time.Time stays time.Time. Field names follow Java's
+// CalendarFieldEnum aliases (year,month,dayofmonth,hour,minute,second,
+// millisecond plus plural/short forms); the month value is 1-based. An
+// unknown field is a build-time configuration error; null or missing input
+// produces Null.
+func DateTimeSet[V int64 | time.Time](value Expression[V], field string, n int) Expression[V] {
+	return internalengine.DateTimeSet[V](value, field, n)
+}
+
+// DateTimeWithDate applies Esper's withDate(year,month,day) calendar
+// operation, replacing the calendar date and keeping the time-of-day. The
+// month argument is 1-based. The input representation is preserved; null or
+// missing input produces Null.
+func DateTimeWithDate[V int64 | time.Time](value Expression[V], year, month, day int) Expression[V] {
+	return internalengine.DateTimeWithDate[V](value, year, month, day)
+}
+
+// DateTimeWithTime applies Esper's withTime(hour,minute,second,millis)
+// calendar operation, replacing the time-of-day and keeping the calendar
+// date. The input representation is preserved; null or missing input
+// produces Null.
+func DateTimeWithTime[V int64 | time.Time](value Expression[V], hour, minute, second, millis int) Expression[V] {
+	return internalengine.DateTimeWithTime[V](value, hour, minute, second, millis)
 }
 
 func DayOfMonth(value Expression[time.Time]) Expression[int64] {
@@ -5402,6 +5438,15 @@ func PluginAggregateWithFactory[T any](name string, input Expr, factory Aggregat
 	return internalengine.PluginAggregateWithFactory[T](name, input, factory)
 }
 
+// PointBounds collapses an interval bound to the point (start,start),
+// matching Java's point-target calendar-op evaluation
+// (intervalOp.evaluate(time,time)) and the parameter-side collapse of
+// calendar ops on timestamped events. The start is coerced to int64
+// epoch-millis so the result feeds Interval(Before/After/...) directly.
+func PointBounds(bounds IntervalBounds) IntervalBounds {
+	return internalengine.PointBounds(bounds)
+}
+
 // PositionalParameter is a descriptive alias for ParameterAt.  ParameterAt
 // is the shorter spelling used by the rest of the fluent API.
 func PositionalParameter[T any](position int) Expression[T] {
@@ -6180,6 +6225,13 @@ type Selection = internalengine.Selection
 // expressions instead of being embedded in a string rule.
 func SetArrayElement(column string, index, expression Expr) TableAssignment {
 	return internalengine.SetArrayElement(column, index, expression)
+}
+
+// SetBounds applies set(field,n) to an interval bound, preserving duration
+// exactly like WithDateBounds. Field names and the unknown-field build error
+// match DateTimeSet.
+func SetBounds(bounds IntervalBounds, field string, n int) IntervalBounds {
+	return internalengine.SetBounds(bounds, field, n)
 }
 
 func SetColumn(column string, expression Expr) TableAssignment {
@@ -8010,6 +8062,21 @@ func WithContext(name string) QueryOption {
 	return internalengine.WithContext(name)
 }
 
+// WithDateBounds applies withDate(year,month,day) to an interval bound,
+// preserving duration: Start = transform(start) and
+// End = transform(start) + (end - start), matching Java's
+// DTLocalCalOpsIntervalEval.evaluate(start,end). The month argument is
+// 1-based. Both sides emit int64 epoch-millis expressions so the result
+// feeds Interval(Before/After/...) directly.
+//
+// Java collapses calendar ops on the parameter-side event to a point; this
+// unit only exercises that form with duration 0, so the duration-preserving
+// transform is observably identical on both sides (see PointBounds for the
+// explicit point-collapse variant).
+func WithDateBounds(bounds IntervalBounds, year, month, day int) IntervalBounds {
+	return internalengine.WithDateBounds(bounds, year, month, day)
+}
+
 // WithDecimalMathContext configures significant-digit rounding for exact
 // decimal AvgExact aggregates evaluated by Engines using the Environment.
 // The value is copied when NewEnvironment applies this option. Invalid
@@ -8432,6 +8499,12 @@ func WithTableAggDecl(decl TableAggDecl) TableColumnOption {
 // every element of an array/slice composite value.
 func WithTableColumnNestedSchema(nested Schema) TableColumnOption {
 	return internalengine.WithTableColumnNestedSchema(nested)
+}
+
+// WithTimeBounds applies withTime(hour,minute,second,millis) to an interval
+// bound, preserving duration exactly like WithDateBounds.
+func WithTimeBounds(bounds IntervalBounds, hour, minute, second, millis int) IntervalBounds {
+	return internalengine.WithTimeBounds(bounds, hour, minute, second, millis)
 }
 
 // WithTimerWorkers enables AdvanceTimeAsync.

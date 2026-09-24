@@ -1,0 +1,2427 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-e29e7c3671fa1488e788",
+    "java-runtime-bcdd330f46ca3dd63da7",
+    "java-runtime-eb0d233c3d7f90db1120"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTIntervalOps.java"
+  ],
+  "javaExecutions": [
+    "ExprDTIntervalCalendarOps",
+    "ExprDTIntervalPointInTimeWCalendarOps",
+    "ExprDTIntervalInvalid"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "expr-dt-interval-ops",
+    "steps": [
+      {
+        "op": "case",
+        "case": "calendar-ops"
+      },
+      {
+        "op": "deploy",
+        "case": "calendar-ops",
+        "statement": "v1-msec",
+        "epl": "@name('s0') select a.withDate(2001, 1, 1).before(b) as c0 from A_MSEC#lastevent as a, B_MSEC#lastevent as b"
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "B_MSEC",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_MSEC",
+        "payload": {
+          "start": "2999-01-01T09:00:00.001Z",
+          "duration": 0,
+          "expected": true
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "calendar-ops",
+        "statement": "v1-date",
+        "epl": "@name('s0') select a.withDate(2001, 1, 1).before(b) as c0 from A_DATE#lastevent as a, B_DATE#lastevent as b"
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "B_DATE",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_DATE",
+        "payload": {
+          "start": "2999-01-01T09:00:00.001Z",
+          "duration": 0,
+          "expected": true
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "calendar-ops",
+        "statement": "v1-cal",
+        "epl": "@name('s0') select a.withDate(2001, 1, 1).before(b) as c0 from A_CAL#lastevent as a, B_CAL#lastevent as b"
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "B_CAL",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_CAL",
+        "payload": {
+          "start": "2999-01-01T09:00:00.001Z",
+          "duration": 0,
+          "expected": true
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "calendar-ops",
+        "statement": "v1-ldt",
+        "epl": "@name('s0') select a.withDate(2001, 1, 1).before(b) as c0 from A_LDT#lastevent as a, B_LDT#lastevent as b"
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "B_LDT",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_LDT",
+        "payload": {
+          "start": "2999-01-01T09:00:00.001Z",
+          "duration": 0,
+          "expected": true
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "calendar-ops",
+        "statement": "v1-zdt",
+        "epl": "@name('s0') select a.withDate(2001, 1, 1).before(b) as c0 from A_ZDT#lastevent as a, B_ZDT#lastevent as b"
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "B_ZDT",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_ZDT",
+        "payload": {
+          "start": "2999-01-01T09:00:00.001Z",
+          "duration": 0,
+          "expected": true
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "calendar-ops",
+        "statement": "v2-msec",
+        "epl": "@name('s0') select a.withDate(2001, 1, 1).before(b.withDate(2001, 1, 1)) as c0 from A_MSEC#lastevent as a, B_MSEC#lastevent as b"
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "B_MSEC",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_MSEC",
+        "payload": {
+          "start": "2999-01-01T10:00:00.001Z",
+          "duration": 0,
+          "expected": false
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_MSEC",
+        "payload": {
+          "start": "2999-01-01T08:00:00.001Z",
+          "duration": 0,
+          "expected": true
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "calendar-ops",
+        "statement": "v2-date",
+        "epl": "@name('s0') select a.withDate(2001, 1, 1).before(b.withDate(2001, 1, 1)) as c0 from A_DATE#lastevent as a, B_DATE#lastevent as b"
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "B_DATE",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_DATE",
+        "payload": {
+          "start": "2999-01-01T10:00:00.001Z",
+          "duration": 0,
+          "expected": false
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_DATE",
+        "payload": {
+          "start": "2999-01-01T08:00:00.001Z",
+          "duration": 0,
+          "expected": true
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "calendar-ops",
+        "statement": "v2-cal",
+        "epl": "@name('s0') select a.withDate(2001, 1, 1).before(b.withDate(2001, 1, 1)) as c0 from A_CAL#lastevent as a, B_CAL#lastevent as b"
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "B_CAL",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_CAL",
+        "payload": {
+          "start": "2999-01-01T10:00:00.001Z",
+          "duration": 0,
+          "expected": false
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_CAL",
+        "payload": {
+          "start": "2999-01-01T08:00:00.001Z",
+          "duration": 0,
+          "expected": true
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "calendar-ops",
+        "statement": "v2-ldt",
+        "epl": "@name('s0') select a.withDate(2001, 1, 1).before(b.withDate(2001, 1, 1)) as c0 from A_LDT#lastevent as a, B_LDT#lastevent as b"
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "B_LDT",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_LDT",
+        "payload": {
+          "start": "2999-01-01T10:00:00.001Z",
+          "duration": 0,
+          "expected": false
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_LDT",
+        "payload": {
+          "start": "2999-01-01T08:00:00.001Z",
+          "duration": 0,
+          "expected": true
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "calendar-ops",
+        "statement": "v2-zdt",
+        "epl": "@name('s0') select a.withDate(2001, 1, 1).before(b.withDate(2001, 1, 1)) as c0 from A_ZDT#lastevent as a, B_ZDT#lastevent as b"
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "B_ZDT",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_ZDT",
+        "payload": {
+          "start": "2999-01-01T10:00:00.001Z",
+          "duration": 0,
+          "expected": false
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_ZDT",
+        "payload": {
+          "start": "2999-01-01T08:00:00.001Z",
+          "duration": 0,
+          "expected": true
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "calendar-ops",
+        "statement": "v3-msec",
+        "epl": "@name('s0') select a.before(b) as c0 from A_MSEC#lastevent as a, B_MSEC#lastevent as b"
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "B_MSEC",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_MSEC",
+        "payload": {
+          "start": "2002-05-30T08:59:59.000Z",
+          "duration": 2000,
+          "expected": false
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "calendar-ops",
+        "statement": "v3-date",
+        "epl": "@name('s0') select a.before(b) as c0 from A_DATE#lastevent as a, B_DATE#lastevent as b"
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "B_DATE",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_DATE",
+        "payload": {
+          "start": "2002-05-30T08:59:59.000Z",
+          "duration": 2000,
+          "expected": false
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "calendar-ops",
+        "statement": "v3-cal",
+        "epl": "@name('s0') select a.before(b) as c0 from A_CAL#lastevent as a, B_CAL#lastevent as b"
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "B_CAL",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_CAL",
+        "payload": {
+          "start": "2002-05-30T08:59:59.000Z",
+          "duration": 2000,
+          "expected": false
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "calendar-ops",
+        "statement": "v3-ldt",
+        "epl": "@name('s0') select a.before(b) as c0 from A_LDT#lastevent as a, B_LDT#lastevent as b"
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "B_LDT",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_LDT",
+        "payload": {
+          "start": "2002-05-30T08:59:59.000Z",
+          "duration": 2000,
+          "expected": false
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "calendar-ops",
+        "statement": "v3-zdt",
+        "epl": "@name('s0') select a.before(b) as c0 from A_ZDT#lastevent as a, B_ZDT#lastevent as b"
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "B_ZDT",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_ZDT",
+        "payload": {
+          "start": "2002-05-30T08:59:59.000Z",
+          "duration": 2000,
+          "expected": false
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "calendar-ops",
+        "statement": "v4-msec",
+        "epl": "@name('s0') select a.withTime(8, 59, 59, 0).before(b) as c0 from A_MSEC#lastevent as a, B_MSEC#lastevent as b"
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "B_MSEC",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_MSEC",
+        "payload": {
+          "start": "2002-05-30T08:59:59.000Z",
+          "duration": 2000,
+          "expected": false
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "calendar-ops",
+        "statement": "v4-date",
+        "epl": "@name('s0') select a.withTime(8, 59, 59, 0).before(b) as c0 from A_DATE#lastevent as a, B_DATE#lastevent as b"
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "B_DATE",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_DATE",
+        "payload": {
+          "start": "2002-05-30T08:59:59.000Z",
+          "duration": 2000,
+          "expected": false
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "calendar-ops",
+        "statement": "v4-cal",
+        "epl": "@name('s0') select a.withTime(8, 59, 59, 0).before(b) as c0 from A_CAL#lastevent as a, B_CAL#lastevent as b"
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "B_CAL",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_CAL",
+        "payload": {
+          "start": "2002-05-30T08:59:59.000Z",
+          "duration": 2000,
+          "expected": false
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "calendar-ops",
+        "statement": "v4-ldt",
+        "epl": "@name('s0') select a.withTime(8, 59, 59, 0).before(b) as c0 from A_LDT#lastevent as a, B_LDT#lastevent as b"
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "B_LDT",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_LDT",
+        "payload": {
+          "start": "2002-05-30T08:59:59.000Z",
+          "duration": 2000,
+          "expected": false
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "calendar-ops",
+        "statement": "v4-zdt",
+        "epl": "@name('s0') select a.withTime(8, 59, 59, 0).before(b) as c0 from A_ZDT#lastevent as a, B_ZDT#lastevent as b"
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "B_ZDT",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_ZDT",
+        "payload": {
+          "start": "2002-05-30T08:59:59.000Z",
+          "duration": 2000,
+          "expected": false
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "calendar-ops",
+        "statement": "v5-msec",
+        "epl": "@name('s0') select a.after(b) as c0 from A_MSEC#lastevent as a, B_MSEC#lastevent as b"
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "B_MSEC",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 1000
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_MSEC",
+        "payload": {
+          "start": "2002-05-30T09:00:01.000Z",
+          "duration": 0,
+          "expected": false
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_MSEC",
+        "payload": {
+          "start": "2002-05-30T09:00:01.001Z",
+          "duration": 0,
+          "expected": true
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "calendar-ops",
+        "statement": "v5-date",
+        "epl": "@name('s0') select a.after(b) as c0 from A_DATE#lastevent as a, B_DATE#lastevent as b"
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "B_DATE",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 1000
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_DATE",
+        "payload": {
+          "start": "2002-05-30T09:00:01.000Z",
+          "duration": 0,
+          "expected": false
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_DATE",
+        "payload": {
+          "start": "2002-05-30T09:00:01.001Z",
+          "duration": 0,
+          "expected": true
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "calendar-ops",
+        "statement": "v5-cal",
+        "epl": "@name('s0') select a.after(b) as c0 from A_CAL#lastevent as a, B_CAL#lastevent as b"
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "B_CAL",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 1000
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_CAL",
+        "payload": {
+          "start": "2002-05-30T09:00:01.000Z",
+          "duration": 0,
+          "expected": false
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_CAL",
+        "payload": {
+          "start": "2002-05-30T09:00:01.001Z",
+          "duration": 0,
+          "expected": true
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "calendar-ops",
+        "statement": "v5-ldt",
+        "epl": "@name('s0') select a.after(b) as c0 from A_LDT#lastevent as a, B_LDT#lastevent as b"
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "B_LDT",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 1000
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_LDT",
+        "payload": {
+          "start": "2002-05-30T09:00:01.000Z",
+          "duration": 0,
+          "expected": false
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_LDT",
+        "payload": {
+          "start": "2002-05-30T09:00:01.001Z",
+          "duration": 0,
+          "expected": true
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "calendar-ops",
+        "statement": "v5-zdt",
+        "epl": "@name('s0') select a.after(b) as c0 from A_ZDT#lastevent as a, B_ZDT#lastevent as b"
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "B_ZDT",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 1000
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_ZDT",
+        "payload": {
+          "start": "2002-05-30T09:00:01.000Z",
+          "duration": 0,
+          "expected": false
+        }
+      },
+      {
+        "op": "send",
+        "case": "calendar-ops",
+        "eventType": "A_ZDT",
+        "payload": {
+          "start": "2002-05-30T09:00:01.001Z",
+          "duration": 0,
+          "expected": true
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "calendar-ops"
+      },
+      {
+        "op": "case",
+        "case": "point-in-time-calendar"
+      },
+      {
+        "op": "deploy",
+        "case": "point-in-time-calendar",
+        "statement": "s0",
+        "epl": "@name('s0') select longdate.set('month', 1).before(longPrimitive) as c0, utildate.set('month', 1).before(longPrimitive) as c1,caldate.set('month', 1).before(longPrimitive) as c2,localdate.set('month', 1).before(longPrimitive) as c3,zoneddate.set('month', 1).before(longPrimitive) as c4 from SupportDateTime unidirectional, SupportBean#lastevent"
+      },
+      {
+        "op": "send",
+        "case": "point-in-time-calendar",
+        "eventType": "SupportBean",
+        "payload": {
+          "longPrimitive": 1022749200000
+        }
+      },
+      {
+        "op": "send",
+        "case": "point-in-time-calendar",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": "2002-05-30T09:00:00.000Z",
+          "expected": true
+        }
+      },
+      {
+        "op": "send",
+        "case": "point-in-time-calendar",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": "2003-05-30T08:00:00.000Z",
+          "expected": false
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "point-in-time-calendar"
+      },
+      {
+        "op": "case",
+        "case": "invalid"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "before-string-param",
+        "expectError": "Failed to validate select-clause expression 'a.before('x')': Failed to resolve enumeration method, date-time method or mapped property 'a.before('x')': For date-time method 'before' the first parameter expression returns 'String', however requires a Date, Calendar, Long-type return value or event (with timestamp)",
+        "epl": "select a.before('x') from SupportTimeStartEndA as a"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "before-untimestamped-event",
+        "expectError": "Failed to validate select-clause expression 'a.before(b)': For date-time method 'before' the first parameter is event type 'SupportBean', however no timestamp property has been defined for this event type",
+        "epl": "select a.before(b) from SupportTimeStartEndA#lastevent as a, SupportBean#lastevent as b"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "before-boolean-param",
+        "expectError": "Failed to validate select-clause expression 'a.before(true)': For date-time method 'before' the first parameter expression returns 'boolean', however requires a Date, Calendar, Long-type return value or event (with timestamp)",
+        "epl": "select a.before(true) from SupportTimeStartEndA#lastevent as a, SupportBean#lastevent as b"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "before-no-params",
+        "expectError": "Failed to validate select-clause expression 'a.before()': Parameters mismatch for date-time method 'before', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing interval start value, or an expression providing timestamp or timestamped-event and an expression providing interval start value and an expression providing interval finishes value, but receives no parameters",
+        "epl": "select a.before() from SupportTimeStartEndA#lastevent as a, SupportBean#lastevent as b"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "before-string-target",
+        "expectError": "Failed to validate select-clause expression 'theString.before(a)': Date-time enumeration method 'before' requires either a Calendar, Date, long, LocalDateTime or ZonedDateTime value as input or events of an event type that declares a timestamp property but received String",
+        "epl": "select theString.before(a) from SupportTimeStartEndA#lastevent as a, SupportBean#lastevent as b"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "before-untimestamped-target",
+        "expectError": "Failed to validate select-clause expression 'b.before(a)': Date-time enumeration method 'before' requires either a Calendar, Date, long, LocalDateTime or ZonedDateTime value as input or events of an event type that declares a timestamp property",
+        "epl": "select b.before(a) from SupportTimeStartEndA#lastevent as a, SupportBean#lastevent as b"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "before-get-target",
+        "expectError": "Failed to validate select-clause expression 'a.get(\"month\").before(a)': Failed to resolve method 'get': Could not find enumeration method, date-time method, instance method or property named 'get'",
+        "epl": "select a.get('month').before(a) from SupportTimeStartEndA#lastevent as a, SupportBean#lastevent as b"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "before-string-threshold",
+        "expectError": "Failed to validate select-clause expression 'a.before(b,\"abc\")': Failed to validate date-time method 'before', expected a time-period expression or a numeric-type result for expression parameter 1 but received String ",
+        "epl": "select a.before(b, 'abc') from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "before-string-threshold-2",
+        "expectError": "Failed to validate select-clause expression 'a.before(b,1,\"def\")': Failed to validate date-time method 'before', expected a time-period expression or a numeric-type result for expression parameter 2 but received String ",
+        "epl": "select a.before(b, 1, 'def') from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "before-four-params",
+        "expectError": "Failed to validate select-clause expression 'a.before(b,1,2,3)': Parameters mismatch for date-time method 'before', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing interval start value, or an expression providing timestamp or timestamped-event and an expression providing interval start value and an expression providing interval finishes value, but receives 4 expressions ",
+        "epl": "select a.before(b, 1, 2, 3) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "coincides-four-params",
+        "expectError": "Failed to validate select-clause expression 'a.coincides(b,1,2,3)': Parameters mismatch for date-time method 'coincides', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing threshold for start and end value, or an expression providing timestamp or timestamped-event and an expression providing threshold for start value and an expression providing threshold for end value, but receives 4 expressions ",
+        "epl": "select a.coincides(b, 1, 2, 3) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "coincides-negative",
+        "expectError": "Failed to validate select-clause expression 'a.coincides(b,-1)': The coincides date-time method does not allow negative start and end values ",
+        "epl": "select a.coincides(b, -1) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "during-four-params",
+        "expectError": "Failed to validate select-clause expression 'a.during(b,1,2,3)': Parameters mismatch for date-time method 'during', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing maximum distance interval both start and end, or an expression providing timestamp or timestamped-event and an expression providing minimum distance interval both start and end and an expression providing maximum distance interval both start and end, or an expression providing timestamp or timestamped-event and an expression providing minimum distance start and an expression providing maximum distance start and an expression providing minimum distance end and an expression providing maximum distance end, but receives 4 expressions ",
+        "epl": "select a.during(b, 1, 2, 3) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "finishes-three-params",
+        "expectError": "Failed to validate select-clause expression 'a.finishes(b,1,2)': Parameters mismatch for date-time method 'finishes', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing maximum distance between end timestamps, but receives 3 expressions ",
+        "epl": "select a.finishes(b, 1, 2) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "finishes-negative",
+        "expectError": "Failed to validate select-clause expression 'a.finishes(b,-1)': The finishes date-time method does not allow negative threshold value ",
+        "epl": "select a.finishes(b, -1) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "finishedby-negative",
+        "expectError": "Failed to validate select-clause expression 'a.finishedby(b,-1)': The finishedby date-time method does not allow negative threshold value ",
+        "epl": "select a.finishedby(b, -1) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "meets-three-params",
+        "expectError": "Failed to validate select-clause expression 'a.meets(b,1,2)': Parameters mismatch for date-time method 'meets', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing maximum distance between start and end timestamps, but receives 3 expressions ",
+        "epl": "select a.meets(b, 1, 2) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "meets-negative",
+        "expectError": "Failed to validate select-clause expression 'a.meets(b,-1)': The meets date-time method does not allow negative threshold value ",
+        "epl": "select a.meets(b, -1) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "metby-negative",
+        "expectError": "Failed to validate select-clause expression 'a.metBy(b,-1)': The metBy date-time method does not allow negative threshold value ",
+        "epl": "select a.metBy(b, -1) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "overlaps-four-params",
+        "expectError": "Failed to validate select-clause expression 'a.overlaps(b,1,2,3)': Parameters mismatch for date-time method 'overlaps', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing maximum distance interval both start and end, or an expression providing timestamp or timestamped-event and an expression providing minimum distance interval both start and end and an expression providing maximum distance interval both start and end, but receives 4 expressions ",
+        "epl": "select a.overlaps(b, 1, 2, 3) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "starts-four-params",
+        "expectError": "Failed to validate select-clause expression 'a.starts(b,1,2,3)': Parameters mismatch for date-time method 'starts', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing maximum distance between start timestamps, but receives 4 expressions ",
+        "epl": "select a.starts(b, 1, 2, 3) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "starts-negative",
+        "expectError": "Failed to validate select-clause expression 'a.starts(b,-1)': The starts date-time method does not allow negative threshold value ",
+        "epl": "select a.starts(b, -1) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "startedby-negative",
+        "expectError": "Failed to validate select-clause expression 'a.startedBy(b,-1)': The startedBy date-time method does not allow negative threshold value ",
+        "epl": "select a.startedBy(b, -1) from SupportTimeStartEndA#lastevent as a, SupportTimeStartEndB#lastevent as b"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "invalid"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-dt-interval-ops",
+    "records": [
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 13,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 14,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 15,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 16,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 17,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 18,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 19,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 20,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 21,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 22,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 23,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 24,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 25,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 26,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 27,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 28,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 29,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 30,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 31,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 32,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 33,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 34,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 35,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "point-in-time-calendar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": true,
+              "c3": true,
+              "c4": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "point-in-time-calendar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": false,
+              "c3": false,
+              "c4": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "before-string-param",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.before('x')': Failed to resolve enumeration method, date-time method or mapped property 'a.before('x')': For date-time method 'before' the first parameter expression returns 'String', however requires a Date, Calendar, Long-type return value or event (with timestamp)"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "before-untimestamped-event",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.before(b)': For date-time method 'before' the first parameter is event type 'SupportBean', however no timestamp property has been defined for this event type"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "before-boolean-param",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.before(true)': For date-time method 'before' the first parameter expression returns 'boolean', however requires a Date, Calendar, Long-type return value or event (with timestamp)"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "before-no-params",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.before()': Parameters mismatch for date-time method 'before', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing interval start value, or an expression providing timestamp or timestamped-event and an expression providing interval start value and an expression providing interval finishes value, but receives no parameters"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "before-string-target",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'theString.before(a)': Date-time enumeration method 'before' requires either a Calendar, Date, long, LocalDateTime or ZonedDateTime value as input or events of an event type that declares a timestamp property but received String"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "before-untimestamped-target",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'b.before(a)': Date-time enumeration method 'before' requires either a Calendar, Date, long, LocalDateTime or ZonedDateTime value as input or events of an event type that declares a timestamp property"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "before-get-target",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.get(\"month\").before(a)': Failed to resolve method 'get': Could not find enumeration method, date-time method, instance method or property named 'get'"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "before-string-threshold",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.before(b,\"abc\")': Failed to validate date-time method 'before', expected a time-period expression or a numeric-type result for expression parameter 1 but received String "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "before-string-threshold-2",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.before(b,1,\"def\")': Failed to validate date-time method 'before', expected a time-period expression or a numeric-type result for expression parameter 2 but received String "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "before-four-params",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.before(b,1,2,3)': Parameters mismatch for date-time method 'before', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing interval start value, or an expression providing timestamp or timestamped-event and an expression providing interval start value and an expression providing interval finishes value, but receives 4 expressions "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "coincides-four-params",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.coincides(b,1,2,3)': Parameters mismatch for date-time method 'coincides', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing threshold for start and end value, or an expression providing timestamp or timestamped-event and an expression providing threshold for start value and an expression providing threshold for end value, but receives 4 expressions "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "coincides-negative",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.coincides(b,-1)': The coincides date-time method does not allow negative start and end values "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "during-four-params",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.during(b,1,2,3)': Parameters mismatch for date-time method 'during', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing maximum distance interval both start and end, or an expression providing timestamp or timestamped-event and an expression providing minimum distance interval both start and end and an expression providing maximum distance interval both start and end, or an expression providing timestamp or timestamped-event and an expression providing minimum distance start and an expression providing maximum distance start and an expression providing minimum distance end and an expression providing maximum distance end, but receives 4 expressions "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "finishes-three-params",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.finishes(b,1,2)': Parameters mismatch for date-time method 'finishes', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing maximum distance between end timestamps, but receives 3 expressions "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "finishes-negative",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.finishes(b,-1)': The finishes date-time method does not allow negative threshold value "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "finishedby-negative",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.finishedby(b,-1)': The finishedby date-time method does not allow negative threshold value "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "meets-three-params",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.meets(b,1,2)': Parameters mismatch for date-time method 'meets', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing maximum distance between start and end timestamps, but receives 3 expressions "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "meets-negative",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.meets(b,-1)': The meets date-time method does not allow negative threshold value "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "metby-negative",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.metBy(b,-1)': The metBy date-time method does not allow negative threshold value "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "overlaps-four-params",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.overlaps(b,1,2,3)': Parameters mismatch for date-time method 'overlaps', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing maximum distance interval both start and end, or an expression providing timestamp or timestamped-event and an expression providing minimum distance interval both start and end and an expression providing maximum distance interval both start and end, but receives 4 expressions "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "starts-four-params",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.starts(b,1,2,3)': Parameters mismatch for date-time method 'starts', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing maximum distance between start timestamps, but receives 4 expressions "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "starts-negative",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.starts(b,-1)': The starts date-time method does not allow negative threshold value "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "startedby-negative",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.startedBy(b,-1)': The startedBy date-time method does not allow negative threshold value "
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-dt-interval-ops",
+    "records": [
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 13,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 14,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 15,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 16,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 17,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 18,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 19,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 20,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 21,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 22,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 23,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 24,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 25,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 26,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 27,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 28,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 29,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 30,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 31,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 32,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 33,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 34,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "calendar-ops",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 35,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "point-in-time-calendar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": true,
+              "c3": true,
+              "c4": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "point-in-time-calendar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": false,
+              "c3": false,
+              "c4": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "before-string-param",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.before('x')': Failed to resolve enumeration method, date-time method or mapped property 'a.before('x')': For date-time method 'before' the first parameter expression returns 'String', however requires a Date, Calendar, Long-type return value or event (with timestamp)"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "before-untimestamped-event",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.before(b)': For date-time method 'before' the first parameter is event type 'SupportBean', however no timestamp property has been defined for this event type"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "before-boolean-param",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.before(true)': For date-time method 'before' the first parameter expression returns 'boolean', however requires a Date, Calendar, Long-type return value or event (with timestamp)"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "before-no-params",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.before()': Parameters mismatch for date-time method 'before', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing interval start value, or an expression providing timestamp or timestamped-event and an expression providing interval start value and an expression providing interval finishes value, but receives no parameters"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "before-string-target",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'theString.before(a)': Date-time enumeration method 'before' requires either a Calendar, Date, long, LocalDateTime or ZonedDateTime value as input or events of an event type that declares a timestamp property but received String"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "before-untimestamped-target",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'b.before(a)': Date-time enumeration method 'before' requires either a Calendar, Date, long, LocalDateTime or ZonedDateTime value as input or events of an event type that declares a timestamp property"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "before-get-target",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.get(\"month\").before(a)': Failed to resolve method 'get': Could not find enumeration method, date-time method, instance method or property named 'get'"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "before-string-threshold",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.before(b,\"abc\")': Failed to validate date-time method 'before', expected a time-period expression or a numeric-type result for expression parameter 1 but received String "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "before-string-threshold-2",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.before(b,1,\"def\")': Failed to validate date-time method 'before', expected a time-period expression or a numeric-type result for expression parameter 2 but received String "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "before-four-params",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.before(b,1,2,3)': Parameters mismatch for date-time method 'before', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing interval start value, or an expression providing timestamp or timestamped-event and an expression providing interval start value and an expression providing interval finishes value, but receives 4 expressions "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "coincides-four-params",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.coincides(b,1,2,3)': Parameters mismatch for date-time method 'coincides', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing threshold for start and end value, or an expression providing timestamp or timestamped-event and an expression providing threshold for start value and an expression providing threshold for end value, but receives 4 expressions "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "coincides-negative",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.coincides(b,-1)': The coincides date-time method does not allow negative start and end values "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "during-four-params",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.during(b,1,2,3)': Parameters mismatch for date-time method 'during', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing maximum distance interval both start and end, or an expression providing timestamp or timestamped-event and an expression providing minimum distance interval both start and end and an expression providing maximum distance interval both start and end, or an expression providing timestamp or timestamped-event and an expression providing minimum distance start and an expression providing maximum distance start and an expression providing minimum distance end and an expression providing maximum distance end, but receives 4 expressions "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "finishes-three-params",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.finishes(b,1,2)': Parameters mismatch for date-time method 'finishes', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing maximum distance between end timestamps, but receives 3 expressions "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "finishes-negative",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.finishes(b,-1)': The finishes date-time method does not allow negative threshold value "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "finishedby-negative",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.finishedby(b,-1)': The finishedby date-time method does not allow negative threshold value "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "meets-three-params",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.meets(b,1,2)': Parameters mismatch for date-time method 'meets', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing maximum distance between start and end timestamps, but receives 3 expressions "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "meets-negative",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.meets(b,-1)': The meets date-time method does not allow negative threshold value "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "metby-negative",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.metBy(b,-1)': The metBy date-time method does not allow negative threshold value "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "overlaps-four-params",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.overlaps(b,1,2,3)': Parameters mismatch for date-time method 'overlaps', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing maximum distance interval both start and end, or an expression providing timestamp or timestamped-event and an expression providing minimum distance interval both start and end and an expression providing maximum distance interval both start and end, but receives 4 expressions "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "starts-four-params",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.starts(b,1,2,3)': Parameters mismatch for date-time method 'starts', the method has multiple footprints accepting an expression providing timestamp or timestamped-event, or an expression providing timestamp or timestamped-event and an expression providing maximum distance between start timestamps, but receives 4 expressions "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "starts-negative",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.starts(b,-1)': The starts date-time method does not allow negative threshold value "
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "startedby-negative",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'a.startedBy(b,-1)': The startedBy date-time method does not allow negative threshold value "
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

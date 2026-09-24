@@ -55,34 +55,51 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly') committed and pushed as 9ac32d036; Git owns identity. Parity review PASS, two P3s fixed.
 
 ## Current work unit
-Active: Draft 4.522 ('epl-other-istream-rstream-keywords').
+Active: Draft 4.523 ('expr-dt-interval-ops').
 
-- Selection: `EPLOtherIStreamRStreamKeywords.java` ords 0/1/9 (3 of 10
-  executions; ords 2-8 covered elsewhere), no flags —
-  `EPLOtherRStreamOnlyOM` (`java-runtime-162eb033cafbb4532e4f`),
-  `EPLOtherRStreamOnlyCompile` (`java-runtime-9cff0da41992171acf55`),
-  `EPLOtherRStreamOutputSnapshot` (`java-runtime-8b199ae3084d181b5b02`).
+- Selection: `ExprDTIntervalOps.java` ords 0/1/17 (3 of 20 executions; the
+  other 17 covered elsewhere), no flags —
+  `ExprDTIntervalCalendarOps` (`java-runtime-e29e7c3671fa1488e788`),
+  `ExprDTIntervalInvalid` (`java-runtime-eb0d233c3d7f90db1120`),
+  `ExprDTIntervalPointInTimeWCalendarOps` (`java-runtime-bcdd330f46ca3dd63da7`).
   Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`.
-- [x] Scouts: JavaContract522 (frozen: ords 0/1/9 of 10; OM and Compile are
-  observably identical — select rstream * from SupportBean#length(3), 4 sends,
-  single expiry delivery of first-'a' bean in new slot, old null; ord9 is a
-  compile/deploy smoke with zero records) + GoSurface522 (no engine gaps;
-  WithRemoveStreamOnly + LengthWindow/TimeWindow + OutputSnapshot; deliverBatch
-  remaps old→new so traces carry expiry under `new`). Assets522 dispatched.
-- [x] Assets (Assets522): runner `internal/app/parity/epl_other_istream_rstream_keywords.go`,
-  scenario `testdata/parity/epl-other-istream-rstream-keywords.json` (3 cases /
-  13 steps), oracle `tools/java-oracle/EPLOtherIStreamRStreamKeywordsScenarioOracle.java`
-  + run.sh, run.go/run_test.go wiring (5-test family).
-- [x] Traces + diff (primary): Java trace via run.sh (2 records), Go trace via
-  runner, `-mode epl-other-istream-rstream-keywords-diff` -> `passing` /
-  0 differences.
-- [x] Manifest: `case.istream-rstream-keywords` extended to all 10 executions
-  (ords 0/1/9 added) + `eplother.stream-selector` javaRefs/goRefs/DV IDs.
-  Summary 753 cases / 379 DV / 1492 DV runtime IDs / unreferenced 540.
+- [x] Scouts: JavaContract523 (frozen: ords 0/1/17 of 20; calendar-ops 5
+  variants over 5 field types, point-in-time set('month',1).before, 23
+  invalid probes with pinned prefixes; month 0-based-lenient vs 1-based-strict
+  asymmetry unobservable in booleans) + GoSurface523 (GAPS: no
+  withDate/withTime/set calendar transforms, no point-in-time before;
+  Interval computers + DateTimeAfter exist; closest runner expr_dt_between.go).
+- [x] Contract frozen; parallel lanes dispatched: SharedCore523 (internal/esper
+  only: DateTimeSet/DateTimeWithDate/DateTimeWithTime/DateTimeBefore +
+  duration-preserving IntervalBounds transforms) + Assets523 (runner/scenario/
+  oracle/wiring only). Frozen API names in batch context; deviations must be
+  reported between lanes.
+- [x] Shared core (SharedCore523): `internal/esper/expr_dt_calops.go` +
+  `expr_dt_calops_test.go` — DateTimeSet/DateTimeWithDate/DateTimeWithTime
+  (rep-preserving, 1-based month, time.Date normalization), DateTimeBefore
+  (non-generic, strict point before), WithDateBounds/WithTimeBounds/SetBounds/
+  PointBounds (duration-preserving IntervalBounds transforms). genfacade run
+  by primary; new unit tests pass.
+- [x] Assets (Assets523): runner `internal/app/parity/expr_dt_interval_ops.go`,
+  scenario `testdata/parity/expr-dt-interval-ops.json` (3 cases / 118 steps),
+  oracle `tools/java-oracle/ExprDTIntervalOpsScenarioOracle.java` + run.sh,
+  run.go/run_test.go wiring. Primary fix: SendRecord type assertion.
+- [x] Traces + diff (primary): Java trace via run.sh (60 records: 35
+  calendar-ops + 2 point-in-time + 23 compile-error), Go trace via runner,
+  `-mode expr-dt-interval-ops-diff` -> `passing` / 0 differences.
+- [x] Manifest: `case.expr-dt-interval-ops-calops` born-DV (3 runtime IDs, 3
+  static IDs) + `expr.core` mapping/javaRefs/goRefs (no DV IDs — capability
+  stays `implemented`). Summary 754 cases / 380 DV / 1495 DV runtime IDs /
+  unreferenced 537.
 - [ ] Gates + parity review + commit: pending `make check`, independent
   reviewer, then commit/push.
 
 ## Previous work units (shipped)
+
+- Shipped: Draft 4.522 ('epl-other-istream-rstream-keywords') committed and
+  pushed as d9c514379; Git owns identity. `case.istream-rstream-keywords`
+  extended to all 10 executions (ords 0/1/9 added; 2 records, 0 differences,
+  zero engine changes). Parity review PASS, no findings.
 
 - Shipped: Draft 4.521 ('event-object-array-core') committed and pushed as
   f7a24357d; Git owns identity. Born-DV `case.event-object-array-core` under

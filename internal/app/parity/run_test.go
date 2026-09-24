@@ -77325,3 +77325,195 @@ func TestRunHelpIncludesEplOtherIStreamRStreamKeywords(t *testing.T) {
 		}
 	}
 }
+
+func TestRunExprDTIntervalOpsDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "expr-dt-interval-ops.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "expr-dt-interval-ops.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "expr-dt-interval-ops.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "expr-dt-interval-ops-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunExprDTIntervalOpsDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "calendar-boolean-drift",
+			mutate: func(trace *compat.Trace) {
+				// The first calendar-ops row pins c0=true.
+				trace.Records[0].New[0].Fields["c0"] = false
+			},
+		},
+		{
+			name: "point-in-time-column-drift",
+			mutate: func(trace *compat.Trace) {
+				// The first point-in-time row pins c0..c4 all true.
+				trace.Records[35].New[0].Fields["c4"] = false
+			},
+		},
+		{
+			name: "compile-error-prefix-drift",
+			mutate: func(trace *compat.Trace) {
+				// The first invalid probe pins its Java prefix.
+				trace.Records[37].Value = "different error"
+			},
+		},
+		{
+			name: "record-dropped",
+			mutate: func(trace *compat.Trace) {
+				// All 60 records must be present.
+				trace.Records = trace.Records[:59]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "expr-dt-interval-ops.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "expr-dt-interval-ops.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "expr-dt-interval-ops.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "expr-dt-interval-ops-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
+func TestRunExprDTIntervalOpsRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "expr-dt-interval-ops.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "expr-dt-interval-ops"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "expr-dt-interval-ops"`)...), 1)
+		}},
+		{name: "case-metadata", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 17`), []byte(`"ordinal": 16`), 1)
+		}},
+		{name: "epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`a.withTime(8, 59, 59, 0)`), []byte(`a.withTime(8, 59, 58, 0)`), 1)
+		}},
+		{name: "payload-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"duration": 2000`), []byte(`"duration": 2001`), 1)
+		}},
+		{name: "step-field-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "case",`), []byte(`"op": "case", "extra": 0,`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", "expr-dt-interval-ops",
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunExprDTIntervalOpsRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "expr-dt-interval-ops.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, exprDTIntervalOpsJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, exprDTIntervalOpsJavaExecutions) {
+		t.Fatalf("scenario metadata runtimes=%v names=%v", document.JavaRuntimes, document.JavaNames)
+	}
+	for _, entry := range document.Cases {
+		if exprDTIntervalOpsCaseRuntimeIDs[entry.Case] != entry.RuntimeID {
+			t.Fatalf("case %q runtimeId = %q, want %q", entry.Case, entry.RuntimeID, exprDTIntervalOpsCaseRuntimeIDs[entry.Case])
+		}
+	}
+}
+
+func TestRunHelpIncludesExprDTIntervalOps(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-h"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("help exit code = %d, stderr = %q", code, stderr.String())
+	}
+	for _, mode := range []string{
+		"expr-dt-interval-ops",
+		"expr-dt-interval-ops-diff",
+	} {
+		if !strings.Contains(stderr.String(), mode) {
+			t.Fatalf("help output omits %q: %s", mode, stderr.String())
+		}
+	}
+}
