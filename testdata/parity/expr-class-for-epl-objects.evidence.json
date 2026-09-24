@@ -1,0 +1,313 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-cb993aa0d17d61b0d45f",
+    "java-runtime-203a97dc1cba0371469c",
+    "java-runtime-1335a465f707da5fce60",
+    "java-runtime-785742544d6ada82189d"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/clazz/ExprClassForEPLObjects.java"
+  ],
+  "javaExecutions": [
+    "ExprClassResolutionFromClauseMethod",
+    "ExprClassResolutionOutputColType",
+    "ExprClassResolutionInvalid",
+    "ExprClassResolutionScript"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "expr-class-for-epl-objects",
+    "steps": [
+      {
+        "op": "case",
+        "case": "from-clause-method"
+      },
+      {
+        "op": "deploy",
+        "case": "from-clause-method",
+        "statement": "create-class",
+        "epl": "@public create inlined_class \"\"\"\n  public class MyFromClauseMethod {\n    public static MyBean[] getBeans() {\n       return new MyBean[] {new MyBean(1), new MyBean(2)};\n    }\n    public static class MyBean {\n      private final int id;      public MyBean(int id) {this.id = id;}\n      public int getId() {return id;}\n    }\n  }\n\"\"\" \n"
+      },
+      {
+        "op": "deploy",
+        "case": "from-clause-method",
+        "statement": "s0",
+        "epl": "@name('s0')@name('s0') select s.id as c0 from SupportBean as e,\nmethod:MyFromClauseMethod.getBeans() as s"
+      },
+      {
+        "op": "send",
+        "case": "from-clause-method",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "from-clause-method"
+      },
+      {
+        "op": "case",
+        "case": "output-col-type"
+      },
+      {
+        "op": "deploy",
+        "case": "output-col-type",
+        "statement": "s0",
+        "epl": "inlined_class \"\"\"\n  public class MyBean {\n    private final int id;    public MyBean(int id) {this.id = id;}\n    public int getId() {return id;}\n    public static MyBean getBean(int id) {return new MyBean(id);}\n  }\n\"\"\" \n@name('s0') select MyBean.getBean(intPrimitive) as c0 from SupportBean"
+      },
+      {
+        "op": "send",
+        "case": "output-col-type",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "output-col-type"
+      },
+      {
+        "op": "case",
+        "case": "invalid"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "annotation-class",
+        "expectError": "Failed to process statement annotations: Failed to resolve @-annotation class: Could not load annotation class by name 'MyAnnotation', please check imports",
+        "epl": "inlined_class \"\"\"\npublic @interface MyAnnotation{}\"\"\" \n@MyAnnotation @name('s0') select * from SupportBean\n"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "schema-bean-type",
+        "expectError": "Could not load class by name 'MyEventBean', please check imports",
+        "epl": "inlined_class \"\"\"\npublic class MyEventBean {}\"\"\" \ncreate schema MyEvent as MyEventBean\n"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "schema-property-type",
+        "expectError": "Nestable type configuration encountered an unexpected property type name",
+        "epl": "inlined_class \"\"\"\npublic class MyEventBean {}\"\"\" \ncreate schema MyEvent as (field1 MyEventBean)\n"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "window-property-type",
+        "expectError": "Nestable type configuration encountered an unexpected property type name",
+        "epl": "inlined_class \"\"\"\npublic class MyType {}\"\"\" \ncreate window MyWindow(myfield MyType)\n"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "table-column-type",
+        "epl": "inlined_class \"\"\"\npublic class MyType {}\"\"\" \ncreate table MyTable(myfield MyType)\n"
+      },
+      {
+        "op": "case",
+        "case": "script"
+      },
+      {
+        "op": "deploy",
+        "case": "script",
+        "statement": "s0",
+        "epl": "inlined_class \"\"\"\npublic class MyScriptResult {}\"\"\" \nexpression Object[] js:myItemProducerScript() [\nmyItemProducerScript();function myItemProducerScript() {  var arrayType = Java.type(\"MyScriptResult\");\n  var rows = new arrayType(2);\n  return rows;\n}]@name('s0') select myItemProducerScript() from SupportBean"
+      },
+      {
+        "op": "send",
+        "case": "script",
+        "expectError": "java.lang.RuntimeException: Unexpected exception in statement 's0'",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "unrepresentable",
+        "case": "script",
+        "statement": "script-java-type",
+        "expectError": "runtime script class lookup: Java.type(\"MyScriptResult\") fails under Nashorn because the script engine classloader cannot see inlined classes; Java sendEventBean raises EPException 'java.lang.RuntimeException: Unexpected exception in statement 's0'' while Go ScriptCall folds the provider error to Null - no Go runtime-error boundary"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "script"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-class-for-epl-objects",
+    "records": [
+      {
+        "case": "from-clause-method",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "output-col-type",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "annotation-class",
+        "sequence": 0,
+        "value": "Failed to process statement annotations: Failed to resolve @-annotation class: Could not load annotation class by name 'MyAnnotation', please check imports"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "schema-bean-type",
+        "sequence": 0,
+        "value": "Could not load class by name 'MyEventBean', please check imports"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "schema-property-type",
+        "sequence": 0,
+        "value": "Nestable type configuration encountered an unexpected property type name"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "window-property-type",
+        "sequence": 0,
+        "value": "Nestable type configuration encountered an unexpected property type name"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "table-column-type",
+        "sequence": 0
+      },
+      {
+        "case": "script",
+        "operation": "unrepresentable",
+        "statement": "script-java-type",
+        "sequence": 0,
+        "value": "runtime script class lookup: Java.type(\"MyScriptResult\") fails under Nashorn because the script engine classloader cannot see inlined classes; Java sendEventBean raises EPException 'java.lang.RuntimeException: Unexpected exception in statement 's0'' while Go ScriptCall folds the provider error to Null - no Go runtime-error boundary"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-class-for-epl-objects",
+    "records": [
+      {
+        "case": "from-clause-method",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "output-col-type",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "annotation-class",
+        "sequence": 0,
+        "value": "Failed to process statement annotations: Failed to resolve @-annotation class: Could not load annotation class by name 'MyAnnotation', please check imports"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "schema-bean-type",
+        "sequence": 0,
+        "value": "Could not load class by name 'MyEventBean', please check imports"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "schema-property-type",
+        "sequence": 0,
+        "value": "Nestable type configuration encountered an unexpected property type name"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "window-property-type",
+        "sequence": 0,
+        "value": "Nestable type configuration encountered an unexpected property type name"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "table-column-type",
+        "sequence": 0
+      },
+      {
+        "case": "script",
+        "operation": "unrepresentable",
+        "statement": "script-java-type",
+        "sequence": 0,
+        "value": "runtime script class lookup: Java.type(\"MyScriptResult\") fails under Nashorn because the script engine classloader cannot see inlined classes; Java sendEventBean raises EPException 'java.lang.RuntimeException: Unexpected exception in statement 's0'' while Go ScriptCall folds the provider error to Null - no Go runtime-error boundary"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

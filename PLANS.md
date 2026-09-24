@@ -55,35 +55,42 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly') committed and pushed as 9ac32d036; Git owns identity. Parity review PASS, two P3s fixed.
 
 ## Current work unit
-Active: Draft 4.527 ('expr-class-type-use').
+Active: Draft 4.528 ('expr-class-for-epl-objects').
 
-- Selection: `ExprClassTypeUse.java` all 4 executions, no flags —
- `ExprClassTypeUseEnum` (`java-runtime-c92db51ca175df9b4a5c`),
- `ExprClassTypeConst` (`java-runtime-8015ac40d3460b710377`),
- `ExprClassTypeInnerClass` (`java-runtime-6daa4310cb2a1762a0dd`),
- `ExprClassTypeNewKeyword` (`java-runtime-d6258e053355ac85022b`).
+- Selection: `ExprClassForEPLObjects.java` all 4 executions, no flags —
+ `ExprClassResolutionFromClauseMethod` (`java-runtime-cb993aa0d17d61b0d45f`),
+ `ExprClassResolutionOutputColType` (`java-runtime-203a97dc1cba0371469c`),
+ `ExprClassResolutionInvalid` (`java-runtime-1335a465f707da5fce60`),
+ `ExprClassResolutionScript` (`java-runtime-785742544d6ada82189d`).
  Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`.
-- [x] Contract frozen: JavaContract527 (4 executions: enum const method,
-  static const field, inner-class const, new keyword + getId; inlined_class
-  triple-quote EPL; Janino-compiled default-package classes) + GoSurface527
-  (no engine gaps; Enum→Literal+Method, Const→Func0, InnerClass→Func0,
-  NewKeyword→Construct+Method; closest runner expr_class_static_method.go).
-  Assets527 dispatched.
-- [x] Assets527 integrated: `internal/app/parity/expr_class_type_use.go` +
-  `testdata/parity/expr-class-type-use.json` (4 cases / 16 steps) +
-  oracle `tools/java-oracle/ExprClassTypeUseScenarioOracle.java` +
-  `run-expr-class-type-use.sh` + run.go/run_test.go wiring. Worker
+- [x] Contract frozen: JavaContract528 (4 executions: from-clause method
+  static getBeans→2 rows, output col type Construct+getId, 5 invalid
+  probes on invisible-class resolution sites, script Java.type runtime
+  failure) + GoSurface528 (no engine gaps; FromMethod+MethodProviderFunc,
+  Construct+Method, RegisterScript+ScriptCall, build-error records;
+  closest runner expr_class_type_use.go). Assets528 dispatched.
+- [x] Assets528 integrated: `internal/app/parity/expr_class_for_epl_objects.go` +
+  `testdata/parity/expr-class-for-epl-objects.json` (4 cases / 20 steps) +
+  oracle `tools/java-oracle/ExprClassForEPLObjectsScenarioOracle.java` +
+  `run-expr-class-for-epl-objects.sh` + run.go/run_test.go wiring. Worker
   verified zero-diff end-to-end before handoff. Zero engine changes.
-- [x] Differential replay: Java 4 records; Go 4 records. `-mode
-  expr-class-type-use-diff` status `passing` / 0 differences (identity
-  normalizer).
-- [x] Manifest: NEW case `case.expr-class-type-use` born-DV with the 4
-  IDs; `expr.core` mapping + goRefs extended. Summary 758 cases / 384 DV /
-  1510 DV runtime IDs / unreferenced 522.
+  Oracle classpath fix: added regression-run dependency:build-classpath
+  for Nashorn (script dialect 'js').
+- [x] Differential replay: Java 8 records; Go 8 records. `-mode
+  expr-class-for-epl-objects-diff` status `passing` / 0 differences
+  (identity normalizer).
+- [x] Manifest: NEW case `case.expr-class-for-epl-objects` born-DV with
+  the 4 IDs; `expr.core` mapping + goRefs extended. Summary 759 cases /
+  385 DV / 1514 DV runtime IDs / unreferenced 518.
 - [ ] Gates + parity review + commit: pending `make check`, independent
   reviewer, then commit/push.
 
 ## Previous work units (shipped)
+
+- Shipped: Draft 4.527 ('expr-class-type-use') committed and pushed as
+ c178ccf3c; Git owns identity. Born-DV `case.expr-class-type-use` under
+ `expr.core` (all 4 executions, 4 records, 0 differences). Zero engine
+ changes. Parity review PASS, zero findings.
 
 - Shipped: Draft 4.526 ('expr-dt-data-sources') committed and pushed as
  97baec688; Git owns identity. Born-DV `case.expr-dt-data-sources` under

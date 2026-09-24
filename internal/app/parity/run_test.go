@@ -78472,3 +78472,283 @@ func TestRunHelpIncludesExprClassTypeUse(t *testing.T) {
 		}
 	}
 }
+
+func TestRunExprClassForEPLObjectsDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "expr-class-for-epl-objects.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "expr-class-for-epl-objects.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "expr-class-for-epl-objects.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "expr-class-for-epl-objects-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if len(evidence.JavaRuntimeIDs) != 4 {
+		t.Fatalf("runtime ids = %d, want 4", len(evidence.JavaRuntimeIDs))
+	}
+	if len(evidence.JavaTrace.Records) != 8 ||
+		evidence.JavaTrace.Records[0].Case != "from-clause-method" ||
+		evidence.JavaTrace.Records[0].Operation != "listener" ||
+		len(evidence.JavaTrace.Records[0].New) != 2 ||
+		evidence.JavaTrace.Records[1].Case != "output-col-type" ||
+		evidence.JavaTrace.Records[2].Case != "invalid" ||
+		evidence.JavaTrace.Records[2].Operation != "compile-error" ||
+		evidence.JavaTrace.Records[6].Case != "invalid" ||
+		evidence.JavaTrace.Records[6].Operation != "compile-error" ||
+		evidence.JavaTrace.Records[7].Case != "script" ||
+		evidence.JavaTrace.Records[7].Operation != "unrepresentable" {
+		t.Fatalf("record layout = %#v", evidence.JavaTrace.Records)
+	}
+}
+
+func TestRunExprClassForEPLObjectsDiffRejectsTraceMutations(t *testing.T) {
+	// mutateField rewrites field on the leading new-data row of the first
+	// listener record for (caseName, sequence). Scanning by content keeps
+	// the mutations robust against the canonical record order the evidence
+	// stores; a miss leaves the trace unmutated so the diff passes and the
+	// "unexpectedly passed" check reports the bad field.
+	mutateField := func(caseName string, sequence uint64, field string, value any) func(*compat.Trace) {
+		return func(trace *compat.Trace) {
+			for i := range trace.Records {
+				rec := &trace.Records[i]
+				if rec.Case != caseName || rec.Sequence != sequence || len(rec.New) == 0 {
+					continue
+				}
+				if _, ok := rec.New[0].Fields[field]; ok {
+					rec.New[0].Fields[field] = value
+					return
+				}
+			}
+		}
+	}
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			// c0 is the method stream's id; drifting the first row means
+			// the getBeans() provider or the join projection broke.
+			name:   "from-clause-method-id-drift",
+			mutate: mutateField("from-clause-method", 1, "c0", 9),
+		},
+		{
+			// c0 renders MyBean.getBean(intPrimitive) through getId();
+			// drifting it means the constructed instance or its getter
+			// broke.
+			name:   "output-col-type-id-drift",
+			mutate: mutateField("output-col-type", 1, "c0", 9),
+		},
+		{
+			// The annotation-class probe pins the Java message prefix;
+			// drifting it means the recorded contract changed.
+			name: "invalid-prefix-drift",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					rec := &trace.Records[i]
+					if rec.Case == "invalid" && rec.Operation == "compile-error" && rec.Statement == "annotation-class" {
+						rec.Value = "different error"
+						return
+					}
+				}
+			},
+		},
+		{
+			// The script case pins the unrepresentable note documenting
+			// Java's EPException versus Go's Null fold.
+			name: "script-note-drift",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					rec := &trace.Records[i]
+					if rec.Case == "script" && rec.Operation == "unrepresentable" {
+						rec.Value = "different note"
+						return
+					}
+				}
+			},
+		},
+		{
+			name: "sequence-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].Sequence = 9
+			},
+		},
+		{
+			name: "dropped-record",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[1:]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "expr-class-for-epl-objects.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "expr-class-for-epl-objects.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "expr-class-for-epl-objects.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "expr-class-for-epl-objects-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, output)
+			}
+		})
+	}
+}
+
+func TestRunExprClassForEPLObjectsRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "expr-class-for-epl-objects.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "expr-class-for-epl-objects"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "expr-class-for-epl-objects"`)...), 1)
+		}},
+		{name: "case-ordinal-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 1`), []byte(`"ordinal": 9`), 1)
+		}},
+		{name: "runtime-id-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"java-runtime-cb993aa0d17d61b0d45f"`), []byte(`"java-runtime-bogus"`), 1)
+		}},
+		{name: "epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`select s.id as c0`), []byte(`select s.id as c9`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1",
+    "intPrimitive": 10`), []byte(`"theString": "E1",
+    "intPrimitive": 10,
+    "extra": 0`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 10`), []byte(`"intPrimitive": 10,
+    "intPrimitive": 2`), 1)
+		}},
+		{name: "payload-value-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 10`), []byte(`"intPrimitive": 99`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportBean"`), []byte(`"eventType": "bogus"`), 1)
+		}},
+		{name: "expect-error-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`Could not load class by name 'MyEventBean'`), []byte(`Could not load class by name 'BogusBean'`), 1)
+		}},
+		{name: "step-field-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "case",`), []byte(`"op": "case", "extra": 0,`), 1)
+		}},
+		{name: "step-op-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "build-error"`), []byte(`"op": "bogus"`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", "expr-class-for-epl-objects",
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunExprClassForEPLObjectsRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "expr-class-for-epl-objects.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, exprClassForEPLObjectsJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, exprClassForEPLObjectsJavaExecutions) {
+		t.Fatalf("scenario metadata runtimes=%v names=%v", document.JavaRuntimes, document.JavaNames)
+	}
+	wantCaseRuntimeIDs := map[string]string{
+		"from-clause-method": "java-runtime-cb993aa0d17d61b0d45f",
+		"output-col-type":    "java-runtime-203a97dc1cba0371469c",
+		"invalid":            "java-runtime-1335a465f707da5fce60",
+		"script":             "java-runtime-785742544d6ada82189d",
+	}
+	for _, entry := range document.Cases {
+		if wantCaseRuntimeIDs[entry.Case] != entry.RuntimeID {
+			t.Fatalf("case %q runtimeId = %q, want %q", entry.Case, entry.RuntimeID, wantCaseRuntimeIDs[entry.Case])
+		}
+	}
+}
+
+func TestRunHelpIncludesExprClassForEPLObjects(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-h"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("help exit code = %d, stderr = %q", code, stderr.String())
+	}
+	for _, mode := range []string{
+		"expr-class-for-epl-objects",
+		"expr-class-for-epl-objects-diff",
+	} {
+		if !strings.Contains(stderr.String(), mode) {
+			t.Fatalf("help output omits %q: %s", mode, stderr.String())
+		}
+	}
+}

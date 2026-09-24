@@ -606,6 +606,7 @@
     "TestExprCaseNode"
    ],
    "goRefs": [
+    "internal/app/parity/expr_class_for_epl_objects.go",
     "internal/app/parity/expr_class_type_use.go",
     "internal/app/parity/expr_dt_between.go",
     "internal/app/parity/expr_dt_data_sources.go",
@@ -49077,6 +49078,54 @@
     "java-runtime-d6258e053355ac85022b"
    ],
    "notes": "ExprClassTypeUse all 4 executions: enum const method (c0=2), static const (c0=test), inner-class const (c0=abc), new keyword + getId (c0=E1). 4 records, 0 differences."
+  },
+  {
+   "id": "case.expr-class-for-epl-objects",
+   "javaRuntimeIds": [
+    "java-runtime-cb993aa0d17d61b0d45f",
+    "java-runtime-203a97dc1cba0371469c",
+    "java-runtime-1335a465f707da5fce60",
+    "java-runtime-785742544d6ada82189d"
+   ],
+   "javaStaticIds": [
+    "java-3fd69b8c66fd163574ec"
+   ],
+   "javaNames": [
+    "ExprClassResolutionFromClauseMethod",
+    "ExprClassResolutionOutputColType",
+    "ExprClassResolutionInvalid",
+    "ExprClassResolutionScript"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/clazz/ExprClassForEPLObjects.java"
+   ],
+   "goTests": [
+    "internal/app/parity/expr_class_for_epl_objects.go",
+    "internal/app/parity/run_test.go"
+   ],
+   "tags": [
+    "expr",
+    "class",
+    "inlined-class",
+    "born-differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/expr-class-for-epl-objects.evidence.json"
+   ],
+   "difference": "Java inlined_class visibility boundaries: from-clause method (static getBeans\u21922 rows), output col type (Construct+getId), 5 invalid probes on invisible-class resolution sites (annotation/schema/window/table), script Java.type runtime failure (Nashorn can't see inlined class \u2192 EPException; Go folds to Null \u2014 unrepresentable record). EPL pinned but never replayed (no inlined_class directive).",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-cb993aa0d17d61b0d45f",
+    "java-runtime-203a97dc1cba0371469c",
+    "java-runtime-1335a465f707da5fce60",
+    "java-runtime-785742544d6ada82189d"
+   ],
+   "notes": "ExprClassForEPLObjects all 4 executions. 8 records (2 listener, 5 compile-error, 1 unrepresentable), 0 differences."
   }
  ],
  "mappings": [
@@ -52455,13 +52504,17 @@
   {
    "capabilityId": "expr.core",
    "caseId": "case.expr-class-type-use"
+  },
+  {
+   "capabilityId": "expr.core",
+   "caseId": "case.expr-class-for-epl-objects"
   }
  ],
  "summary": {
-  "inventoriedCases": 758,
-  "implementedCases": 756,
-  "differentialVerifiedCases": 384,
-  "differentialVerifiedRuntimeIds": 1510,
+  "inventoriedCases": 759,
+  "implementedCases": 757,
+  "differentialVerifiedCases": 385,
+  "differentialVerifiedRuntimeIds": 1514,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -52471,13 +52524,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4044,
-  "referencedJavaRuntimeIds": 3614,
+  "runtimeAssociationCount": 4048,
+  "referencedJavaRuntimeIds": 3618,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 522,
+  "unreferencedJavaRuntimeIds": 518,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 758,
+  "totalCases": 759,
   "totalCapabilities": 126
  }
 }
