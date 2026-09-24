@@ -2661,8 +2661,10 @@ func EventIdentityEquals(left, right Expr) Expression[bool] {
 // EventTime execution's object-array MyEvent(id,sts,ets)). Bound values are
 // coerced to engine units through dateTimeEngineUnits, so the result feeds
 // WithDateBounds/WithTimeBounds/SetBounds/PointBounds and Interval directly.
-// A source without the flagged fields, an out-of-range source index, or a
-// non-coercible bound value produces Missing/Null at evaluation time.
+// Source 0 also resolves against the single-stream event when no join tuple
+// is present (event-ref-as-interval, the ExprDTDataSources StartEndTS
+// shape). A source without the flagged fields, an out-of-range source index,
+// or a non-coercible bound value produces Missing/Null at evaluation time.
 func EventIntervalBounds(source int) IntervalBounds {
 	return internalengine.EventIntervalBounds(source)
 }

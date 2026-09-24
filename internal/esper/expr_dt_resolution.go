@@ -116,12 +116,15 @@ type dateTimeFieldExtract func(t time.Time) int64
 // extractor. Names follow Java's CalendarFieldEnum aliases (get('month')
 // reads the 0-based Calendar.MONTH) plus the underscored reformat names used
 // by the frozen contract (minute_of_hour, day_of_month, day_of_week,
-// hour_of_day). day_of_week returns Java's Calendar.DAY_OF_WEEK numbering
-// (1 = Sunday). Java's "week" is rejected: WEEK_OF_YEAR is locale-dependent
-// and not part of the frozen contract.
+// hour_of_day, day_of_year, millis_of_second, weekyear). day_of_week returns
+// Java's Calendar.DAY_OF_WEEK numbering (1 = Sunday). era returns
+// Calendar.ERA (1 = AD/CE, 0 = BC). weekyear/week_of_year/week return Java's
+// Calendar.WEEK_OF_YEAR (ChronoField.ALIGNED_WEEK_OF_YEAR for Java 8 types),
+// implemented as the ISO-8601 week number; the pinned harness runs UTC and
+// the contract dates agree between ISO and Java's locale-dependent week.
 func dateTimeGetFieldExtractor(field string) (dateTimeFieldExtract, error) {
 	switch strings.ToLower(strings.TrimSpace(field)) {
-	case "msec", "millisecond", "milliseconds", "milli_of_second":
+	case "msec", "millisecond", "milliseconds", "milli_of_second", "millis_of_second":
 		return func(t time.Time) int64 { return int64(t.Nanosecond()) / int64(time.Millisecond) }, nil
 	case "sec", "second", "seconds", "second_of_minute":
 		return func(t time.Time) int64 { return int64(t.Second()) }, nil
@@ -131,14 +134,25 @@ func dateTimeGetFieldExtractor(field string) (dateTimeFieldExtract, error) {
 		return func(t time.Time) int64 { return int64(t.Hour()) }, nil
 	case "day", "days", "dayofmonth", "day_of_month":
 		return func(t time.Time) int64 { return int64(t.Day()) }, nil
+	case "dayofyear", "day_of_year", "doy":
+		return func(t time.Time) int64 { return int64(t.YearDay()) }, nil
 	case "dayofweek", "day_of_week":
 		return func(t time.Time) int64 { return int64(t.Weekday()) + 1 }, nil
+	case "era":
+		return func(t time.Time) int64 {
+			if t.Year() > 0 {
+				return 1
+			}
+			return 0
+		}, nil
+	case "weekyear", "week_of_year", "week", "weeks":
+		return func(t time.Time) int64 { _, week := t.ISOWeek(); return int64(week) }, nil
 	case "month", "months", "month_of_year":
 		return func(t time.Time) int64 { return int64(t.Month()) - 1 }, nil
 	case "year", "years":
 		return func(t time.Time) int64 { return int64(t.Year()) }, nil
 	default:
-		return nil, fmt.Errorf("unknown date-time calendar field %q (valid: year,month,dayofmonth,day_of_week,hour,minute,second,millisecond)", field)
+		return nil, fmt.Errorf("unknown date-time calendar field %q (valid: year,month,weekyear,dayofmonth,day_of_year,day_of_week,hour,minute,second,millisecond,era)", field)
 	}
 }
 
@@ -298,8 +312,10 @@ func DateTimeToTime[V int64 | time.Time](value Expression[V]) Expression[time.Ti
 // EventTime execution's object-array MyEvent(id,sts,ets)). Bound values are
 // coerced to engine units through dateTimeEngineUnits, so the result feeds
 // WithDateBounds/WithTimeBounds/SetBounds/PointBounds and Interval directly.
-// A source without the flagged fields, an out-of-range source index, or a
-// non-coercible bound value produces Missing/Null at evaluation time.
+// Source 0 also resolves against the single-stream event when no join tuple
+// is present (event-ref-as-interval, the ExprDTDataSources StartEndTS
+// shape). A source without the flagged fields, an out-of-range source index,
+// or a non-coercible bound value produces Missing/Null at evaluation time.
 func EventIntervalBounds(source int) IntervalBounds {
 	return IntervalBounds{
 		Start: eventIntervalBoundExpr(source, false),
@@ -340,7 +356,9 @@ func eventIntervalBoundExpr(source int, end bool) Expression[int64] {
 }
 
 // joinSourceEvent resolves the event occupying one join-tuple slot, the same
-// scope JoinField and JoinEventValue read.
+// scope JoinField and JoinEventValue read. When no join tuple is present,
+// source 0 falls back to the single-stream event so an event reference can
+// serve as its own interval (Esper's event-ref-as-interval semantics).
 func joinSourceEvent(ctx EvalContext, source int) (Event, bool) {
 	if source < 0 {
 		return Event{}, false
@@ -349,6 +367,10 @@ func joinSourceEvent(ctx EvalContext, source int) (Event, bool) {
 	if events == nil {
 		tuple, ok := ctx.Event.Underlying().(joinTuple)
 		if !ok {
+			// Single-stream context: source 0 is the event itself.
+			if source == 0 && ctx.Event.Schema().valid() {
+				return ctx.Event, true
+			}
 			return Event{}, false
 		}
 		events = tuple.events

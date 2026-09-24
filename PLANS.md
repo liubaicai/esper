@@ -55,49 +55,50 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly') committed and pushed as 9ac32d036; Git owns identity. Parity review PASS, two P3s fixed.
 
 ## Current work unit
-Active: Draft 4.525 ('expr-dt-resolution').
+Active: Draft 4.526 ('expr-dt-data-sources').
 
-- Selection: `ExprDTResolution.java` all 4 executions, no flags —
- `ExprDTResolutionEventTime` x2 (`java-runtime-28a96cc89bb103f3750a`,
- `java-runtime-deee6eb6aef5c6bfa2a7`), `ExprDTLongProperty` x2
- (`java-runtime-35ef58e0d7badc88b6a8`, `java-runtime-81d2223362062b76b0a5`).
+- Selection: `ExprDTDataSources.java` all 4 executions, no flags —
+ `ExprDTDataSourcesStartEndTS` (`java-runtime-ab467628bb158bf8ce6c`),
+ `ExprDTDataSourcesFieldWValue` (`java-runtime-0ee5536b7a3d3d75f2eb`),
+ `ExprDTDataSourcesAllCombinations` (`java-runtime-e1d8bce93d3743e9137f`),
+ `ExprDTDataSourcesMinMax` (`java-runtime-fb5317848fcedbabf016`).
  Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`.
-- [x] Contract frozen: JavaContract525 (executions(isMicrosecond) →
-  [EventTime, LongProperty] ×2 configs; TimeAbacus semantics: long datetime
-  = epoch in engine units, calops split ms+remainder, toCalendar/toDate
-  truncate, minus/plus always ms, get=Calendar fields, current_timestamp=
-  engine units; EventTime = event-ref interval bounds + strict before) +
-  GoSurface525 (no resolution toggle exists — new WithTimeUnit needed;
-  no event-ref-as-datetime — new EventIntervalBounds needed; no
-  get/minus/toCalendar — new DateTimeGet/Minus/ToTime needed).
-- [x] Parallel lanes dispatched: SharedCore525 (expr_dt_resolution.go +
-  runtime.go WithTimeUnit + expr_time.go + expr_dt_calops.go +
-  expr_dt_between.go resolution-aware) + Assets525 (runner/scenario/
-  oracle/wiring only). Frozen API names in batch context.
-- [x] SharedCore525 integrated: `internal/esper/expr_dt_resolution.go` +
-  `expr_dt_resolution_test.go` + runtime.go (WithTimeUnit, EvalContext
-  propagation) + expr_time.go + expr_dt_calops.go + expr_dt_between.go +
-  expr.go (EvalContext.TimeUnit). TWO shared-core fixes converged by
-  primary: (1) join condition + filterJoinTuples EvalContext missing
-  Engine — threaded `engine *Engine` through `joinConditionMatches`/
-  `joinConditionsMatchWithVariables`/`filterJoinTuples`; (2) `timeUnit()`
-  fell back to ms on engine-less contexts — extended to read
-  `aggregateEngineFromVariables(ctx.Variables)` (variables-carried engine).
-- [x] Assets525 integrated: `internal/app/parity/expr_dt_resolution.go` +
-  `testdata/parity/expr-dt-resolution.json` (4 cases / 24 steps) +
-  oracle `tools/java-oracle/ExprDTResolutionScenarioOracle.java` +
-  `run-expr-dt-resolution.sh` + run.go/run_test.go wiring. Oracle
-  LocalDateTime normalize fix (cast before atZone).
-- [x] Differential replay: Java 8 records; Go 8 records. `-mode
-  expr-dt-resolution-diff` status `passing` / 0 differences (identity
+- [x] Contract frozen: JavaContract526 (4 executions: MinMax windowed+row
+  min/max as interval endpoints, AllCombinations 5-field x 11-getter
+  fan-out with java8 asymmetries, FieldWValue 16-col current_timestamp+
+  field getters, StartEndTS compile-only schema inheritance + 3 invalid
+  probes) + GoSurface526 (small delta: 3 DateTimeGet arms day_of_year/
+  era/weekyear + joinSourceEvent single-stream fallback; MinMax uses
+  existing Interval+BeforeThreshold+MinOf; no new API).
+- [x] Parallel lanes dispatched: SharedCore526 (expr_dt_resolution.go
+  DateTimeGet arms + joinSourceEvent fallback + tests) + Assets526
+  (runner/scenario/oracle/wiring only). Frozen API names in batch context.
+- [x] SharedCore526 integrated: `internal/esper/expr_dt_resolution.go`
+  DateTimeGet arms (day_of_year/era/weekyear + week/millis_of_second
+  aliases) + joinSourceEvent single-stream fallback + tests.
+- [x] Assets526 integrated: `internal/app/parity/expr_dt_data_sources.go` +
+  `testdata/parity/expr-dt-data-sources.json` (4 cases / 49 steps) +
+  oracle `tools/java-oracle/ExprDTDataSourcesScenarioOracle.java` +
+  `run-expr-dt-data-sources.sh` + run.go/run_test.go wiring. Worker
+  verified zero-diff end-to-end before handoff.
+- [x] Differential replay: Java 16 records; Go 16 records. `-mode
+  expr-dt-data-sources-diff` status `passing` / 0 differences (identity
   normalizer).
-- [x] Manifest: NEW case `case.expr-dt-resolution` born-DV with the 4
-  IDs; `expr.core` mapping + goRefs extended. Summary 756 cases / 382 DV /
-  1502 DV runtime IDs / unreferenced 530.
+- [x] Manifest: NEW case `case.expr-dt-data-sources` born-DV with the 4
+  IDs; `expr.core` mapping + goRefs extended. Summary 757 cases / 383 DV /
+  1506 DV runtime IDs / unreferenced 526.
 - [ ] Gates + parity review + commit: pending `make check`, independent
   reviewer, then commit/push.
 
 ## Previous work units (shipped)
+
+- Shipped: Draft 4.525 ('expr-dt-resolution') committed and pushed as
+ 7bff4591a; Git owns identity. Born-DV `case.expr-dt-resolution` under
+ `expr.core` (all 4 executions, 8 records, 0 differences). Shared core:
+ WithTimeUnit(Microseconds) + resolution-aware datetime ops +
+ EventIntervalBounds/IntervalBefore + Engine threading through join
+ conditions/filterJoinTuples/dataflow joins. Parity review PASS (one P2
+ fixed: dataflow join engine threading).
 
 - Shipped: Draft 4.524 ('expr-enum-select-from') committed and pushed as
  0c9075639; Git owns identity. Born-DV `case.expr-enum-select-from` under

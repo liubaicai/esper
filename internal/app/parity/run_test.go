@@ -77716,6 +77716,256 @@ func TestRunHelpIncludesExprDTResolution(t *testing.T) {
 	}
 }
 
+func TestRunExprDTDataSourcesDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "expr-dt-data-sources.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "expr-dt-data-sources.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "expr-dt-data-sources.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "expr-dt-data-sources-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if len(evidence.JavaRuntimeIDs) != 4 {
+		t.Fatalf("runtime ids = %d, want 4", len(evidence.JavaRuntimeIDs))
+	}
+}
+
+func TestRunExprDTDataSourcesDiffRejectsTraceMutations(t *testing.T) {
+	// mutateField rewrites field on the leading new-data row of the first
+	// listener record for (caseName, sequence). Scanning by content keeps
+	// the mutations robust against the canonical record order the evidence
+	// stores; a miss leaves the trace unmutated so the diff passes and the
+	// "unexpectedly passed" check reports the bad field.
+	mutateField := func(caseName string, sequence uint64, field string, value any) func(*compat.Trace) {
+		return func(trace *compat.Trace) {
+			for i := range trace.Records {
+				rec := &trace.Records[i]
+				if rec.Case != caseName || rec.Sequence != sequence || len(rec.New) == 0 {
+					continue
+				}
+				if _, ok := rec.New[0].Fields[field]; ok {
+					rec.New[0].Fields[field] = value
+					return
+				}
+			}
+		}
+	}
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			// c0 is the windowed min/max before; drifting it means the
+			// aggregate-as-interval-endpoint evaluation broke.
+			name:   "minmax-c0-drift",
+			mutate: mutateField("minmax", 2, "c0", false),
+		},
+		{
+			// c1 is the per-row min(a,b) before; drifting it means the
+			// ExprMinMaxRowNode endpoint broke.
+			name:   "minmax-c1-drift",
+			mutate: mutateField("minmax", 2, "c1", false),
+		},
+		{
+			// The zoneddate deploy pins the java.time DayOfWeek enum name;
+			// drifting it means the java8 representation broke.
+			name:   "all-combinations-dow-drift",
+			mutate: mutateField("all-combinations", 4, "c3", int64(5)),
+		},
+		{
+			// valmos is the millis-of-second getter; drifting it means the
+			// new DateTimeGet arm broke.
+			name:   "field-w-value-valmos-drift",
+			mutate: mutateField("field-w-value", 1, "valmos", int64(0)),
+		},
+		{
+			// The start-end-ts types record pins the declared timestamp
+			// property names.
+			name: "start-end-ts-types-drift",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					rec := &trace.Records[i]
+					if rec.Case == "start-end-ts" && rec.Operation == "types" {
+						if value, ok := rec.Value.(map[string]any); ok {
+							value["startTimestamp"] = "startTSOne"
+							return
+						}
+					}
+				}
+			},
+		},
+		{
+			name: "dropped-record",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[1:]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "expr-dt-data-sources.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "expr-dt-data-sources.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "expr-dt-data-sources.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "expr-dt-data-sources-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, output)
+			}
+		})
+	}
+}
+
+func TestRunExprDTDataSourcesRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "expr-dt-data-sources.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "expr-dt-data-sources"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "expr-dt-data-sources"`)...), 1)
+		}},
+		{name: "case-ordinal-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 3`), []byte(`"ordinal": 2`), 1)
+		}},
+		{name: "runtime-id-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"java-runtime-fb5317848fcedbabf016"`), []byte(`"java-runtime-bogus"`), 1)
+		}},
+		{name: "epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`min(longPrimitive).before(max(longBoxed), 1 second)`), []byte(`min(longPrimitive).before(max(longBoxed), 2 second)`), 1)
+		}},
+		{name: "epl-double-space-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`getmillisOfSecond()  as valmos`), []byte(`getmillisOfSecond() as valmos`), 1)
+		}},
+		{name: "payload-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"longPrimitive": 19000`), []byte(`"longPrimitive": 19001`), 1)
+		}},
+		{name: "expected-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"expected": [true, true]`), []byte(`"expected": [true, false]`), 1)
+		}},
+		{name: "advance-time-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"at": "2002-05-30T09:01:02.003Z"`), []byte(`"at": "2002-05-30T09:01:02.004Z"`), 1)
+		}},
+		{name: "expect-error-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`declares start timestamp as property 'startTS'`), []byte(`declares start timestamp as property 'startTSX'`), 1)
+		}},
+		{name: "step-field-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "case",`), []byte(`"op": "case", "extra": 0,`), 1)
+		}},
+		{name: "step-op-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "unrepresentable"`), []byte(`"op": "bogus"`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", "expr-dt-data-sources",
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunExprDTDataSourcesRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "expr-dt-data-sources.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, exprDTDataSourcesJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, exprDTDataSourcesJavaExecutions) {
+		t.Fatalf("scenario metadata runtimes=%v names=%v", document.JavaRuntimes, document.JavaNames)
+	}
+	for _, entry := range document.Cases {
+		if exprDTDataSourcesCaseRuntimeIDs[entry.Case] != entry.RuntimeID {
+			t.Fatalf("case %q runtimeId = %q, want %q", entry.Case, entry.RuntimeID, exprDTDataSourcesCaseRuntimeIDs[entry.Case])
+		}
+	}
+}
+
+func TestRunHelpIncludesExprDTDataSources(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-h"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("help exit code = %d, stderr = %q", code, stderr.String())
+	}
+	for _, mode := range []string{
+		"expr-dt-data-sources",
+		"expr-dt-data-sources-diff",
+	} {
+		if !strings.Contains(stderr.String(), mode) {
+			t.Fatalf("help output omits %q: %s", mode, stderr.String())
+		}
+	}
+}
+
 func TestRunExprEnumSelectFromDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "expr-enum-select-from.evidence.json"),

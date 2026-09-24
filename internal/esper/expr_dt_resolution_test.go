@@ -100,9 +100,13 @@ func TestDateTimeCalOpsPreserveMicrosecondRemainder(t *testing.T) {
 }
 
 // TestDateTimeGetExtractsCalendarFields mirrors the LongProperty execution's
-// c2/c3/c4 columns: get('month') is the 0-based Calendar.MONTH and
-// getMinuteOfHour() maps to "minute_of_hour". Under Microseconds the field
-// reads from the millisecond part.
+// c2/c3/c4 columns plus the ExprDTDataSources AllCombinations getters:
+// get('month') is the 0-based Calendar.MONTH, getMinuteOfHour() maps to
+// "minute_of_hour", getDayOfYear() to "day_of_year" (Calendar.DAY_OF_YEAR),
+// getEra() to "era" (Calendar.ERA = 1 for CE dates), getmillisOfSecond() to
+// "millis_of_second", and getweekyear() to "weekyear" (Calendar.WEEK_OF_YEAR,
+// the ISO week number). Under Microseconds the field reads from the
+// millisecond part.
 func TestDateTimeGetExtractsCalendarFields(t *testing.T) {
 	micros := dtResolutionLongPropertyTime.UnixMilli()*1000 + 123
 	microCtx := EvalContext{TimeUnit: Microseconds}
@@ -115,8 +119,14 @@ func TestDateTimeGetExtractsCalendarFields(t *testing.T) {
 		{"hour", 9},
 		{"second", 6},
 		{"millisecond", 7},
+		{"millis_of_second", 7},
 		{"day_of_month", 30},
+		{"day_of_year", 150}, // 2002-05-30 is day 150; Calendar.DAY_OF_YEAR
+		{"doy", 150},
 		{"day_of_week", 5}, // 2002-05-30 was a Thursday; Calendar.THURSDAY = 5
+		{"era", 1},         // Calendar.ERA = AD for CE dates
+		{"weekyear", 22},   // Calendar.WEEK_OF_YEAR = ISO week 22
+		{"week_of_year", 22},
 		{"year", 2002},
 	} {
 		if got := DateTimeGet[int64](Literal(micros), testCase.field).eval(microCtx); !got.Equal(Present(testCase.want)) {
@@ -232,6 +242,53 @@ func TestEventIntervalBoundsReadsSchemaTimestampFields(t *testing.T) {
 	}
 }
 
+// TestEventIntervalBoundsSingleStreamEvent covers the ExprDTDataSources
+// StartEndTS shape: outside a join, source 0 resolves to the context event
+// itself so an event reference can serve as its own interval. The flagged
+// starttimestamp/endtimestamp fields still supply the bounds; an unflagged
+// schema or a nonzero source stays Missing.
+func TestEventIntervalBoundsSingleStreamEvent(t *testing.T) {
+	env := NewEnvironment()
+	schema, err := RegisterObjectArray(env, "StartEndEvent", []FieldSpec{
+		{Name: "id", Type: reflect.TypeOf("")},
+		{Name: "sts", Type: reflect.TypeOf(int64(0)), StartTimestamp: true},
+		{Name: "ets", Type: reflect.TypeOf(int64(0)), EndTimestamp: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	event, err := ParseObjectArray(schema, []any{"A", int64(1000), int64(2000)}, time.Time{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := EvalContext{Event: event}
+	bounds := EventIntervalBounds(0)
+	if got := bounds.Start.eval(ctx); !got.Equal(Present(int64(1000))) {
+		t.Fatalf("single-stream start = %v, want 1000", got)
+	}
+	if got := bounds.End.eval(ctx); !got.Equal(Present(int64(2000))) {
+		t.Fatalf("single-stream end = %v, want 2000", got)
+	}
+	if got := EventIntervalBounds(1).Start.eval(ctx); !got.IsMissing() {
+		t.Fatalf("single-stream source 1 = %v, want missing", got)
+	}
+
+	// An unflagged schema still yields Missing bounds in the fallback.
+	plain, err := RegisterObjectArray(env, "PlainStartEndEvent", []FieldSpec{
+		{Name: "v", Type: reflect.TypeOf(int64(0))},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	plainEvent, err := ParseObjectArray(plain, []any{int64(1)}, time.Time{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := EventIntervalBounds(0).Start.eval(EvalContext{Event: plainEvent}); !got.IsMissing() {
+		t.Fatalf("unflagged single-stream start = %v, want missing", got)
+	}
+}
+
 // TestIntervalBeforeBoundaryAtOneEngineUnit mirrors the EventTime
 // execution's flip: a.withDate(2002,4,30).before(b) fires when the
 // transformed left end is one engine unit below the right start and does not
@@ -298,7 +355,7 @@ func TestDateTimeResolutionRejectsInvalidBuilders(t *testing.T) {
 		expr Expr
 		want string
 	}{
-		{"get-unknown-field", DateTimeGet[int64](Field[map[string]any, int64]("l"), "week"), "unknown date-time calendar field"},
+		{"get-unknown-field", DateTimeGet[int64](Field[map[string]any, int64]("l"), "fortnight"), "unknown date-time calendar field"},
 		{"get-nil-operand", DateTimeGet[int64](nil, "month"), "requires a date-time operand"},
 		{"minus-nil-operand", DateTimeMinus[int64](nil, 1), "requires a date-time operand"},
 		{"to-time-nil-operand", DateTimeToTime[int64](nil), "requires a date-time operand"},
