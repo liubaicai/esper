@@ -77103,3 +77103,225 @@ func TestRunHelpIncludesEventObjectArrayCore(t *testing.T) {
 		}
 	}
 }
+
+func TestRunEplOtherIStreamRStreamKeywordsDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-istream-rstream-keywords.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "epl-other-istream-rstream-keywords.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-istream-rstream-keywords.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "epl-other-istream-rstream-keywords-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunEplOtherIStreamRStreamKeywordsDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "om-expired-row-drift",
+			mutate: func(trace *compat.Trace) {
+				// The OM case's single delivery must carry the first 'a'
+				// bean expired FIFO from length(3).
+				trace.Records[0].New[0].Fields["theString"] = "d"
+			},
+		},
+		{
+			name: "om-old-data-fabricated",
+			mutate: func(trace *compat.Trace) {
+				// select rstream delivers expired events as newData only;
+				// oldData is always null.
+				trace.Records[0].Old = trace.Records[0].New
+			},
+		},
+		{
+			name: "om-expiry-row-lost",
+			mutate: func(trace *compat.Trace) {
+				// The fourth send must expire the first 'a' bean.
+				trace.Records[0].New = nil
+			},
+		},
+		{
+			name: "compile-expired-row-drift",
+			mutate: func(trace *compat.Trace) {
+				// The eplToModel case is observably identical to the OM
+				// case: same expiry row, same pinned fields.
+				trace.Records[1].New[0].Fields["intPrimitive"] = float64(9)
+			},
+		},
+		{
+			name: "compile-old-data-fabricated",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].Old = trace.Records[1].New
+			},
+		},
+		{
+			name: "snapshot-record-fabricated",
+			mutate: func(trace *compat.Trace) {
+				// The output-snapshot case is a compile/deploy/undeploy
+				// smoke: it emits no records.
+				trace.Records = append(trace.Records, compat.TraceRecord{
+					Case:      "rstream-output-snapshot",
+					Operation: "listener",
+					Statement: "s0",
+					Sequence:  1,
+				})
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-istream-rstream-keywords.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "epl-other-istream-rstream-keywords.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-istream-rstream-keywords.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "epl-other-istream-rstream-keywords-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
+func TestRunEplOtherIStreamRStreamKeywordsRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "epl-other-istream-rstream-keywords.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "epl-other-istream-rstream-keywords"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "epl-other-istream-rstream-keywords"`)...), 1)
+		}},
+		{name: "case-metadata", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 9`), []byte(`"ordinal": 8`), 1)
+		}},
+		{name: "epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`SupportBean#length(3)`), []byte(`SupportBean#length(4)`), 1)
+		}},
+		{name: "payload-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "d"`), []byte(`"theString": "e"`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"theString": "d", "intPrimitive": 2}`), []byte(`{"theString": "d", "theString": "e", "intPrimitive": 2}`), 1)
+		}},
+		{name: "step-field-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "case",`), []byte(`"op": "case", "extra": 0,`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", "epl-other-istream-rstream-keywords",
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunEplOtherIStreamRStreamKeywordsDiffRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-istream-rstream-keywords.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, eplOtherIStreamRStreamKeywordsJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, eplOtherIStreamRStreamKeywordsJavaExecutions) {
+		t.Fatalf("scenario metadata runtimes=%v names=%v", document.JavaRuntimes, document.JavaNames)
+	}
+	wantCaseRuntimeIDs := map[string]string{
+		"rstream-only-om":         "java-runtime-162eb033cafbb4532e4f",
+		"rstream-only-compile":    "java-runtime-9cff0da41992171acf55",
+		"rstream-output-snapshot": "java-runtime-8b199ae3084d181b5b02",
+	}
+	for _, entry := range document.Cases {
+		if wantCaseRuntimeIDs[entry.Case] != entry.RuntimeID {
+			t.Fatalf("case %q runtimeId = %q, want %q", entry.Case, entry.RuntimeID, wantCaseRuntimeIDs[entry.Case])
+		}
+	}
+}
+
+func TestRunHelpIncludesEplOtherIStreamRStreamKeywords(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-h"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("help exit code = %d, stderr = %q", code, stderr.String())
+	}
+	for _, mode := range []string{
+		"epl-other-istream-rstream-keywords",
+		"epl-other-istream-rstream-keywords-diff",
+	} {
+		if !strings.Contains(stderr.String(), mode) {
+			t.Fatalf("help output omits %q: %s", mode, stderr.String())
+		}
+	}
+}

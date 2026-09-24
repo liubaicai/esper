@@ -1,0 +1,121 @@
+{
+  "version": "esper-parity/v1",
+  "id": "epl-other-istream-rstream-keywords",
+  "description": "EPLOtherIStreamRStreamKeywords ord 0/1/9 replay (pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c): rstream-only-om (ord 0, EPLOtherRStreamOnlyOM) builds 'select rstream * from SupportBean#length(3)' via the SODA object model (SelectClause wildcard RSTREAM_ONLY over a FilterStream length(3) view, named s0 via annotation); rstream-only-compile (ord 1, EPLOtherRStreamOnlyCompile) reaches the identical statement through eplToModel — zero observable difference; rstream-output-snapshot (ord 9, EPLOtherRStreamOutputSnapshot) compileDeploys 'select rstream * from SupportBean#time(30 minutes) output snapshot' then undeployAll with no listener and no sends. Each rstream-only case sends a/a/b/d: the first three inserts fire nothing and the fourth expires the first 'a' bean, delivered as the single newData row with oldData null. The Java OM toEPL round-trip assertion has no Go counterpart (approved difference); undeployAll between executions is modelled as fresh runtimes per case.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherIStreamRStreamKeywords.java",
+  "javaRuntimes": [
+    "java-runtime-162eb033cafbb4532e4f",
+    "java-runtime-9cff0da41992171acf55",
+    "java-runtime-8b199ae3084d181b5b02"
+  ],
+  "javaNames": [
+    "EPLOtherRStreamOnlyOM",
+    "EPLOtherRStreamOnlyCompile",
+    "EPLOtherRStreamOutputSnapshot"
+  ],
+  "javaStaticIds": [
+    "java-e56acdb23677f35e3414",
+    "java-04de14f530434ce4c3a0",
+    "java-418f46e08d6693df74be"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "rstream-only-om",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-162eb033cafbb4532e4f",
+      "executionName": "EPLOtherRStreamOnlyOM",
+      "observation": "listener; 'select rstream * from SupportBean#length(3)' deployed via the SODA object model: sends a/a/b fire nothing (insert stream suppressed), send d expires the first 'a' bean which arrives as the single newData row {theString:a,intPrimitive:2} with oldData null",
+      "epl": "select rstream * from SupportBean#length(3)"
+    },
+    {
+      "case": "rstream-only-compile",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-9cff0da41992171acf55",
+      "executionName": "EPLOtherRStreamOnlyCompile",
+      "observation": "listener; 'select rstream * from SupportBean#length(3)' deployed via eplToModel: sends a/a/b fire nothing (insert stream suppressed), send d expires the first 'a' bean which arrives as the single newData row {theString:a,intPrimitive:2} with oldData null",
+      "epl": "select rstream * from SupportBean#length(3)"
+    },
+    {
+      "case": "rstream-output-snapshot",
+      "ordinal": 9,
+      "runtimeId": "java-runtime-8b199ae3084d181b5b02",
+      "executionName": "EPLOtherRStreamOutputSnapshot",
+      "observation": "none; 'select rstream * from SupportBean#time(30 minutes) output snapshot' compileDeploy + undeployAll smoke — no listener, no sends, no records",
+      "epl": "select rstream * from SupportBean#time(30 minutes) output snapshot"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "rstream-only-om"
+    },
+    {
+      "op": "send",
+      "case": "rstream-only-om",
+      "eventType": "SupportBean",
+      "payload": {"theString": "a", "intPrimitive": 2}
+    },
+    {
+      "op": "send",
+      "case": "rstream-only-om",
+      "eventType": "SupportBean",
+      "payload": {"theString": "a", "intPrimitive": 2}
+    },
+    {
+      "op": "send",
+      "case": "rstream-only-om",
+      "eventType": "SupportBean",
+      "payload": {"theString": "b", "intPrimitive": 2}
+    },
+    {
+      "op": "send",
+      "case": "rstream-only-om",
+      "eventType": "SupportBean",
+      "payload": {"theString": "d", "intPrimitive": 2}
+    },
+    {
+      "op": "case",
+      "case": "rstream-only-compile"
+    },
+    {
+      "op": "send",
+      "case": "rstream-only-compile",
+      "eventType": "SupportBean",
+      "payload": {"theString": "a", "intPrimitive": 2}
+    },
+    {
+      "op": "send",
+      "case": "rstream-only-compile",
+      "eventType": "SupportBean",
+      "payload": {"theString": "a", "intPrimitive": 2}
+    },
+    {
+      "op": "send",
+      "case": "rstream-only-compile",
+      "eventType": "SupportBean",
+      "payload": {"theString": "b", "intPrimitive": 2}
+    },
+    {
+      "op": "send",
+      "case": "rstream-only-compile",
+      "eventType": "SupportBean",
+      "payload": {"theString": "d", "intPrimitive": 2}
+    },
+    {
+      "op": "case",
+      "case": "rstream-output-snapshot"
+    },
+    {
+      "op": "deploy",
+      "case": "rstream-output-snapshot",
+      "statement": "s0",
+      "epl": "select rstream * from SupportBean#time(30 minutes) output snapshot"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "rstream-output-snapshot"
+    }
+  ]
+}

@@ -4787,15 +4787,17 @@
    "summary": "Stream selector semantics: irstream (insert+remove) reports new events in New and evicted in Old; rstream reports only evicted events in Old with no insert output",
    "javaRefs": [
     "EPLOtherIStreamRStreamConfigSelectorIRStream",
-    "EPLOtherIStreamRStreamConfigSelectorRStream"
+    "EPLOtherIStreamRStreamConfigSelectorRStream",
+    "EPLOtherIStreamRStreamKeywords"
    ],
    "goRefs": [
-    "internal/esper/view_parity_test.go",
     "internal/app/parity/epl_other_for_group_delivery.go",
-    "internal/esper/stream.go",
-    "internal/esper/runtime.go",
+    "internal/app/parity/epl_other_istream_rstream_keywords.go",
+    "internal/app/parity/epl_other_select_expr_stream_selector_remainder.go",
     "internal/esper/plan.go",
-    "internal/app/parity/epl_other_select_expr_stream_selector_remainder.go"
+    "internal/esper/runtime.go",
+    "internal/esper/stream.go",
+    "internal/esper/view_parity_test.go"
    ],
    "phase": 2,
    "status": "implemented",
@@ -4812,30 +4814,33 @@
     "java-runtime-043dced54921cbf3b571",
     "java-runtime-04453c1c3c73e4a9ba36",
     "java-runtime-0e4714c5a90f9e774235",
+    "java-runtime-162eb033cafbb4532e4f",
+    "java-runtime-1a7765c6b98eb79db7ce",
+    "java-runtime-1b0fc79aaff7449c2c6e",
     "java-runtime-1e4ca2cb69bc79b30c91",
     "java-runtime-26cbb822fec0dd23e976",
     "java-runtime-2fd326ba46db2a7e03c4",
     "java-runtime-490347196f7e74a39fd0",
     "java-runtime-4a8e3f2dc067ae2b7602",
     "java-runtime-4e3a14053213c9ffd08d",
+    "java-runtime-6238688d054ca4ece96e",
     "java-runtime-6556dd46777be4afa86f",
+    "java-runtime-68b49a5d4a1630d85f75",
     "java-runtime-6dbc99a56abddbf3d38a",
     "java-runtime-70753b738456d049f005",
+    "java-runtime-739ab323159d5359d1d4",
+    "java-runtime-784378ea15f390e587b2",
+    "java-runtime-8b199ae3084d181b5b02",
+    "java-runtime-8cf7563abbca0f451537",
+    "java-runtime-9cff0da41992171acf55",
+    "java-runtime-a89ce4feaab75c0bebc5",
     "java-runtime-bb3332c825b24eb5046a",
     "java-runtime-bc1c24102a3db1950ec8",
     "java-runtime-bdda0ee0cc72ee5d18a1",
     "java-runtime-ccc0bd023a72659c1a43",
     "java-runtime-d268f6c45cd4375e9c1c",
     "java-runtime-dccd7d03c70875f69975",
-    "java-runtime-f7193a89174e1e9c9ca0",
-    "java-runtime-739ab323159d5359d1d4",
-    "java-runtime-a89ce4feaab75c0bebc5",
-    "java-runtime-1b0fc79aaff7449c2c6e",
-    "java-runtime-6238688d054ca4ece96e",
-    "java-runtime-8cf7563abbca0f451537",
-    "java-runtime-1a7765c6b98eb79db7ce",
-    "java-runtime-784378ea15f390e587b2",
-    "java-runtime-68b49a5d4a1630d85f75"
+    "java-runtime-f7193a89174e1e9c9ca0"
    ],
    "difference": "Ord 3 EPLOtherObjectModelJoinAlias: SODA object-model compile path has no Go counterpart (intentionally-different). Ords 0/16 invalid probes pin Go rejection boundaries with Java message prefixes (intentionally-different)."
   },
@@ -35629,22 +35634,28 @@
   {
    "id": "case.istream-rstream-keywords",
    "javaRuntimeIds": [
+    "java-runtime-162eb033cafbb4532e4f",
+    "java-runtime-9cff0da41992171acf55",
     "java-runtime-d268f6c45cd4375e9c1c",
     "java-runtime-0e4714c5a90f9e774235",
     "java-runtime-26cbb822fec0dd23e976",
     "java-runtime-2fd326ba46db2a7e03c4",
     "java-runtime-490347196f7e74a39fd0",
     "java-runtime-bdda0ee0cc72ee5d18a1",
-    "java-runtime-ccc0bd023a72659c1a43"
+    "java-runtime-ccc0bd023a72659c1a43",
+    "java-runtime-8b199ae3084d181b5b02"
    ],
    "javaNames": [
+    "EPLOtherRStreamOnlyOM",
+    "EPLOtherRStreamOnlyCompile",
     "EPLOtherRStreamOnly",
     "EPLOtherRStreamInsertInto",
     "EPLOtherRStreamInsertIntoRStream",
     "EPLOtherRStreamJoin",
     "EPLOtherIStreamOnly",
     "EPLOtherIStreamInsertIntoRStream",
-    "EPLOtherIStreamJoin"
+    "EPLOtherIStreamJoin",
+    "EPLOtherRStreamOutputSnapshot"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherIStreamRStreamKeywords.java"
@@ -35655,23 +35666,36 @@
     "differential-verified"
    ],
    "evidence": [
-    "testdata/parity/istream-rstream-keywords.evidence.json"
+    "testdata/parity/istream-rstream-keywords.evidence.json",
+    "testdata/parity/epl-other-istream-rstream-keywords.evidence.json"
    ],
-   "scenario": "testdata/parity/istream-rstream-keywords.json",
-   "trace": "testdata/parity/istream-rstream-keywords.trace.json",
+   "scenario": [
+    "testdata/parity/istream-rstream-keywords.json",
+    "testdata/parity/epl-other-istream-rstream-keywords.json"
+   ],
+   "trace": [
+    "testdata/parity/istream-rstream-keywords.trace.json",
+    "testdata/parity/epl-other-istream-rstream-keywords.trace.json"
+   ],
    "goRefs": [
+    "internal/app/parity/epl_other_istream_rstream_keywords.go",
+    "internal/app/parity/run_test.go",
     "internal/esper/epl_other_istream_rstream_parity_test.go"
    ],
    "capability": "eplother.stream-selector",
    "differentialVerifiedRuntimeIds": [
+    "java-runtime-162eb033cafbb4532e4f",
+    "java-runtime-9cff0da41992171acf55",
     "java-runtime-d268f6c45cd4375e9c1c",
     "java-runtime-0e4714c5a90f9e774235",
     "java-runtime-26cbb822fec0dd23e976",
     "java-runtime-2fd326ba46db2a7e03c4",
     "java-runtime-490347196f7e74a39fd0",
     "java-runtime-bdda0ee0cc72ee5d18a1",
-    "java-runtime-ccc0bd023a72659c1a43"
-   ]
+    "java-runtime-ccc0bd023a72659c1a43",
+    "java-runtime-8b199ae3084d181b5b02"
+   ],
+   "notes": "All 10 executions of EPLOtherIStreamRStreamKeywords: ords 0/1 (SODA object-model and eplToModel rstream-only \u2014 observably identical; toEPL round-trip is Java-only) and ord 9 (bare `output snapshot` compile/deploy smoke) added by the epl-other-istream-rstream-keywords scenario; ords 2-8 via the Go parity test."
   },
   {
    "id": "case.epl-variable-onset-extended",
@@ -52157,7 +52181,7 @@
   "inventoriedCases": 753,
   "implementedCases": 751,
   "differentialVerifiedCases": 379,
-  "differentialVerifiedRuntimeIds": 1489,
+  "differentialVerifiedRuntimeIds": 1492,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -52167,10 +52191,10 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4023,
-  "referencedJavaRuntimeIds": 3593,
+  "runtimeAssociationCount": 4026,
+  "referencedJavaRuntimeIds": 3596,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 543,
+  "unreferencedJavaRuntimeIds": 540,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
   "totalCases": 753,
