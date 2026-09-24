@@ -89,6 +89,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include event-object-array-core and event-object-array-core-diff")
 		fmt.Fprintln(stderr, "runner modes include epl-other-istream-rstream-keywords and epl-other-istream-rstream-keywords-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-dt-interval-ops and expr-dt-interval-ops-diff")
+		fmt.Fprintln(stderr, "runner modes include expr-enum-select-from and expr-enum-select-from-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
@@ -142,6 +143,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultSetOutputLimitSimpleNoneScenario(file)
 	} else if *mode == "expr-enum-sumof-remainder" || *mode == "expr-enum-sumof-remainder-diff" {
 		scenario, err = loadExprEnumSumOfRemainderScenario(file)
+	} else if *mode == "expr-enum-select-from" || *mode == "expr-enum-select-from-diff" {
+		scenario, err = loadExprEnumSelectFromScenario(file)
 	} else if *mode == "epl-variable-output-rate" || *mode == "epl-variable-output-rate-diff" {
 		scenario, err = loadEplVariableOutputRateScenario(file)
 	} else if *mode == "epl-subselect-within-filter-having" || *mode == "epl-subselect-within-filter-having-diff" {
@@ -6179,6 +6182,23 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, resultsetRowPerGroupSimpleJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, resultsetRowPerGroupSimpleJavaSources),
 				splitMetadata(*javaExecutions, resultsetRowPerGroupSimpleJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "expr-enum-select-from" || *mode == "expr-enum-select-from-diff" {
+		trace, err := runExprEnumSelectFromScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "expr-enum-select-from-diff" {
+			return runDifferentialModeWithNormalizer(stdout, stderr, *javaTracePath, *evidencePath, exprEnumSelectFromJavaCommit,
+				splitMetadata(*javaRuntimeIDs, exprEnumSelectFromJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, exprEnumSelectFromJavaSources),
+				splitMetadata(*javaExecutions, exprEnumSelectFromJavaExecutions), scenario, trace,
+				normalizeExprEnumSelectFromTrace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

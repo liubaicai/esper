@@ -1,0 +1,713 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-54fc91f276056a1d66be",
+    "java-runtime-f8cd483364f4584c1bba",
+    "java-runtime-754f50455eb82b9e64a7"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumSelectFrom.java"
+  ],
+  "javaExecutions": [
+    "ExprEnumSelectFromEventsWIndexWSize",
+    "ExprEnumSelectFromScalarPlain",
+    "ExprEnumSelectFromScalarWIndexWSize"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "expr-enum-select-from",
+    "steps": [
+      {
+        "op": "case",
+        "case": "events-windex-wsize"
+      },
+      {
+        "op": "deploy",
+        "case": "events-windex-wsize",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "events-windex-wsize",
+        "eventType": "SupportBean_ST0_Container",
+        "payload": {
+          "contained": [
+            {
+              "id": "E1",
+              "key0": "12",
+              "p00": 0
+            },
+            {
+              "id": "E2",
+              "key0": "11",
+              "p00": 0
+            },
+            {
+              "id": "E3",
+              "key0": "2",
+              "p00": 0
+            }
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-windex-wsize",
+        "eventType": "SupportBean_ST0_Container",
+        "payload": {
+          "contained": [
+            {
+              "id": "E4",
+              "key0": "0",
+              "p00": 1
+            }
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-windex-wsize",
+        "eventType": "SupportBean_ST0_Container",
+        "payload": {
+          "contained": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-windex-wsize",
+        "eventType": "SupportBean_ST0_Container",
+        "payload": {
+          "contained": []
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "events-windex-wsize"
+      },
+      {
+        "op": "case",
+        "case": "scalar-plain"
+      },
+      {
+        "op": "deploy",
+        "case": "scalar-plain",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "scalar-plain",
+        "eventType": "SupportCollection",
+        "payload": {
+          "strvals": [
+            "E2",
+            "E1",
+            "E5",
+            "E4"
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "scalar-plain",
+        "eventType": "SupportCollection",
+        "payload": {
+          "strvals": [
+            "E1"
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "scalar-plain",
+        "eventType": "SupportCollection",
+        "payload": {
+          "strvals": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "scalar-plain",
+        "eventType": "SupportCollection",
+        "payload": {
+          "strvals": []
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "scalar-plain"
+      },
+      {
+        "op": "case",
+        "case": "scalar-windex-wsize"
+      },
+      {
+        "op": "deploy",
+        "case": "scalar-windex-wsize",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "scalar-windex-wsize",
+        "eventType": "SupportCollection",
+        "payload": {
+          "strvals": [
+            "E1",
+            "E2",
+            "E3"
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "scalar-windex-wsize",
+        "eventType": "SupportCollection",
+        "payload": {
+          "strvals": []
+        }
+      },
+      {
+        "op": "send",
+        "case": "scalar-windex-wsize",
+        "eventType": "SupportCollection",
+        "payload": {
+          "strvals": [
+            "E1"
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "scalar-windex-wsize",
+        "eventType": "SupportCollection",
+        "payload": {
+          "strvals": null
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "scalar-windex-wsize"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-enum-select-from",
+    "records": [
+      {
+        "case": "events-windex-wsize",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                {
+                  "v0": "E1",
+                  "v1": 0
+                },
+                {
+                  "v0": "E2",
+                  "v1": 1
+                },
+                {
+                  "v0": "E3",
+                  "v1": 2
+                }
+              ],
+              "c1": [
+                {
+                  "v0": "E1",
+                  "v1": 300
+                },
+                {
+                  "v0": "E2",
+                  "v1": 301
+                },
+                {
+                  "v0": "E3",
+                  "v1": 302
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-windex-wsize",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                {
+                  "v0": "E4",
+                  "v1": 0
+                }
+              ],
+              "c1": [
+                {
+                  "v0": "E4",
+                  "v1": 100
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-windex-wsize",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-windex-wsize",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [],
+              "c1": []
+            }
+          }
+        ]
+      },
+      {
+        "case": "scalar-plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                2,
+                1,
+                5,
+                4
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "scalar-plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                1
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "scalar-plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "scalar-plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": []
+            }
+          }
+        ]
+      },
+      {
+        "case": "scalar-windex-wsize",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                "E1_0",
+                "E2_1",
+                "E3_2"
+              ],
+              "c1": [
+                "E1_0_3",
+                "E2_1_3",
+                "E3_2_3"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "scalar-windex-wsize",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [],
+              "c1": []
+            }
+          }
+        ]
+      },
+      {
+        "case": "scalar-windex-wsize",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                "E1_0"
+              ],
+              "c1": [
+                "E1_0_1"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "scalar-windex-wsize",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-enum-select-from",
+    "records": [
+      {
+        "case": "events-windex-wsize",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                {
+                  "v0": "E1",
+                  "v1": 0
+                },
+                {
+                  "v0": "E2",
+                  "v1": 1
+                },
+                {
+                  "v0": "E3",
+                  "v1": 2
+                }
+              ],
+              "c1": [
+                {
+                  "v0": "E1",
+                  "v1": 300
+                },
+                {
+                  "v0": "E2",
+                  "v1": 301
+                },
+                {
+                  "v0": "E3",
+                  "v1": 302
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-windex-wsize",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                {
+                  "v0": "E4",
+                  "v1": 0
+                }
+              ],
+              "c1": [
+                {
+                  "v0": "E4",
+                  "v1": 100
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-windex-wsize",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-windex-wsize",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [],
+              "c1": []
+            }
+          }
+        ]
+      },
+      {
+        "case": "scalar-plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                2,
+                1,
+                5,
+                4
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "scalar-plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                1
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "scalar-plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "scalar-plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": []
+            }
+          }
+        ]
+      },
+      {
+        "case": "scalar-windex-wsize",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                "E1_0",
+                "E2_1",
+                "E3_2"
+              ],
+              "c1": [
+                "E1_0_3",
+                "E2_1_3",
+                "E3_2_3"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "scalar-windex-wsize",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [],
+              "c1": []
+            }
+          }
+        ]
+      },
+      {
+        "case": "scalar-windex-wsize",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                "E1_0"
+              ],
+              "c1": [
+                "E1_0_1"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "scalar-windex-wsize",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

@@ -55,46 +55,42 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly') committed and pushed as 9ac32d036; Git owns identity. Parity review PASS, two P3s fixed.
 
 ## Current work unit
-Active: Draft 4.523 ('expr-dt-interval-ops').
+Active: Draft 4.524 ('expr-enum-select-from').
 
-- Selection: `ExprDTIntervalOps.java` ords 0/1/17 (3 of 20 executions; the
-  other 17 covered elsewhere), no flags —
-  `ExprDTIntervalCalendarOps` (`java-runtime-e29e7c3671fa1488e788`),
-  `ExprDTIntervalInvalid` (`java-runtime-eb0d233c3d7f90db1120`),
-  `ExprDTIntervalPointInTimeWCalendarOps` (`java-runtime-bcdd330f46ca3dd63da7`).
+- Selection: `ExprEnumSelectFrom.java` ords 1/3/4 (3 of 5 executions; ords
+  0/2 already covered by `case.expr-enum-select`/`-aggregate`), no flags —
+  `ExprEnumSelectFromEventsWIndexWSize` (`java-runtime-54fc91f276056a1d66be`),
+  `ExprEnumSelectFromScalarPlain` (`java-runtime-f8cd483364f4584c1bba`),
+  `ExprEnumSelectFromScalarWIndexWSize` (`java-runtime-754f50455eb82b9e64a7`).
   Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`.
-- [x] Scouts: JavaContract523 (frozen: ords 0/1/17 of 20; calendar-ops 5
-  variants over 5 field types, point-in-time set('month',1).before, 23
-  invalid probes with pinned prefixes; month 0-based-lenient vs 1-based-strict
-  asymmetry unobservable in booleans) + GoSurface523 (GAPS: no
-  withDate/withTime/set calendar transforms, no point-in-time before;
-  Interval computers + DateTimeAfter exist; closest runner expr_dt_between.go).
-- [x] Contract frozen; parallel lanes dispatched: SharedCore523 (internal/esper
-  only: DateTimeSet/DateTimeWithDate/DateTimeWithTime/DateTimeBefore +
-  duration-preserving IntervalBounds transforms) + Assets523 (runner/scenario/
-  oracle/wiring only). Frozen API names in batch context; deviations must be
-  reported between lanes.
-- [x] Shared core (SharedCore523): `internal/esper/expr_dt_calops.go` +
-  `expr_dt_calops_test.go` — DateTimeSet/DateTimeWithDate/DateTimeWithTime
-  (rep-preserving, 1-based month, time.Date normalization), DateTimeBefore
-  (non-generic, strict point before), WithDateBounds/WithTimeBounds/SetBounds/
-  PointBounds (duration-preserving IntervalBounds transforms). genfacade run
-  by primary; new unit tests pass.
-- [x] Assets (Assets523): runner `internal/app/parity/expr_dt_interval_ops.go`,
-  scenario `testdata/parity/expr-dt-interval-ops.json` (3 cases / 118 steps),
-  oracle `tools/java-oracle/ExprDTIntervalOpsScenarioOracle.java` + run.sh,
-  run.go/run_test.go wiring. Primary fix: SendRecord type assertion.
-- [x] Traces + diff (primary): Java trace via run.sh (60 records: 35
-  calendar-ops + 2 point-in-time + 23 compile-error), Go trace via runner,
-  `-mode expr-dt-interval-ops-diff` -> `passing` / 0 differences.
-- [x] Manifest: `case.expr-dt-interval-ops-calops` born-DV (3 runtime IDs, 3
-  static IDs) + `expr.core` mapping/javaRefs/goRefs (no DV IDs — capability
-  stays `implemented`). Summary 754 cases / 380 DV / 1495 DV runtime IDs /
-  unreferenced 537.
+- [x] Assets524 integrated: `internal/app/parity/expr_enum_select_from.go` +
+  `testdata/parity/expr-enum-select-from.json` (3 cases / 21 steps) +
+  oracle `tools/java-oracle/ExprEnumSelectFromScenarioOracle.java` +
+  `run-expr-enum-select-from.sh` + run.go/run_test.go wiring. Go uses
+  RegisterMap+SendRecord (null vs empty collection distinction);
+  extractNum modeled as esper.Func1 mirror of MyService.extractNum.
+- [x] Differential replay: Java 12 records; Go 12 records. `-mode
+  expr-enum-select-from-diff` status `passing` / 0 differences (identity
+  normalizer). Zero engine changes.
+- [x] Manifest: NEW case `case.expr-enum-select-from` born-DV with the 3
+  IDs; `expr.enum` mapping + goRefs extended. Summary 755 cases / 381 DV /
+  1498 DV runtime IDs / unreferenced 534.
 - [ ] Gates + parity review + commit: pending `make check`, independent
   reviewer, then commit/push.
+- [x] Scouts: JavaContract524 (frozen: ords 1/3/4 of 5; ords 0/2 already
+  covered by case.expr-enum-select/-aggregate; selectFrom lambdas (v)/(v,i)/
+  (v,i,s), new{..} multi-column, extractNum SRF, null vs empty collection
+  semantics) + GoSurface524 (no engine gaps; EnumSelect/EnumSelectMap +
+  EnumElement/EnumField/EnumIndex/EnumSize; closest runner
+  expr_enum_sumof_remainder.go). Assets524 dispatched.
 
 ## Previous work units (shipped)
+
+- Shipped: Draft 4.523 ('expr-dt-interval-ops') committed and pushed as
+  8a898757e; Git owns identity. Born-DV `case.expr-dt-interval-ops-calops`
+  under `expr.core` (ords 0/1/17, 60 records, 0 differences). Shared core:
+  DateTimeSet/WithDate/WithTime/Before + duration-preserving bounds
+  transforms. Parity review PASS (three P3 fixes).
 
 - Shipped: Draft 4.522 ('epl-other-istream-rstream-keywords') committed and
   pushed as d9c514379; Git owns identity. `case.istream-rstream-keywords`

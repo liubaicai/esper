@@ -533,13 +533,14 @@
     "ExprEnumExceptIntersectUnion"
    ],
    "goRefs": [
+    "internal/app/parity/expr_enum_select_from.go",
+    "internal/esper/enum_access_aggregate_source_test.go",
     "internal/esper/enum_expr.go",
     "internal/esper/enum_expr_test.go",
-    "internal/esper/expr.go",
+    "internal/esper/enum_method_nested_source_test.go",
     "internal/esper/enum_select_from_test.go",
     "internal/esper/enum_table_source_test.go",
-    "internal/esper/enum_access_aggregate_source_test.go",
-    "internal/esper/enum_method_nested_source_test.go"
+    "internal/esper/expr.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -48870,6 +48871,53 @@
     "java-runtime-bcdd330f46ca3dd63da7"
    ],
    "notes": "Calendar transforms (set/withDate/withTime) preserve interval duration (end=newStart+origDuration) and collapse point targets; point-in-time before is strict (delta>=1ms). 60 records (35 calendar-ops + 2 point-in-time + 23 compile-error), 0 differences."
+  },
+  {
+   "id": "case.expr-enum-select-from",
+   "javaRuntimeIds": [
+    "java-runtime-54fc91f276056a1d66be",
+    "java-runtime-f8cd483364f4584c1bba",
+    "java-runtime-754f50455eb82b9e64a7"
+   ],
+   "javaStaticIds": [
+    "java-952dc3d4e9027831151a",
+    "java-4b6f2e5fc3f78b140fdb",
+    "java-0a95beaf68eb949bdc86"
+   ],
+   "javaNames": [
+    "ExprEnumSelectFromEventsWIndexWSize",
+    "ExprEnumSelectFromScalarPlain",
+    "ExprEnumSelectFromScalarWIndexWSize"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumSelectFrom.java"
+   ],
+   "goTests": [
+    "internal/app/parity/expr_enum_select_from.go",
+    "internal/app/parity/run_test.go"
+   ],
+   "tags": [
+    "expr",
+    "enummethod",
+    "select-from",
+    "born-differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/expr-enum-select-from.evidence.json"
+   ],
+   "difference": "Ords 1/3/4 of ExprEnumSelectFrom (ords 0/2 covered by case.expr-enum-select/-aggregate). Go event types are map-backed (RegisterMap+SendRecord) so null collections render {state:null} vs present-empty \u2014 struct-backed typed-nil slices cannot express the distinction. extractNum plug-in SRF modeled as esper.Func1 mirror.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-54fc91f276056a1d66be",
+    "java-runtime-f8cd483364f4584c1bba",
+    "java-runtime-754f50455eb82b9e64a7"
+   ],
+   "notes": "selectFrom lambdas (v)/(v,i)/(v,i,s) over event and scalar collections incl. new{v0,v1} multi-column, index/size params, extractNum SRF, null vs empty collection semantics. 12 records, 0 differences."
   }
  ],
  "mappings": [
@@ -52232,13 +52280,17 @@
   {
    "capabilityId": "expr.core",
    "caseId": "case.expr-dt-interval-ops-calops"
+  },
+  {
+   "capabilityId": "expr.enum",
+   "caseId": "case.expr-enum-select-from"
   }
  ],
  "summary": {
-  "inventoriedCases": 754,
-  "implementedCases": 752,
-  "differentialVerifiedCases": 380,
-  "differentialVerifiedRuntimeIds": 1495,
+  "inventoriedCases": 755,
+  "implementedCases": 753,
+  "differentialVerifiedCases": 381,
+  "differentialVerifiedRuntimeIds": 1498,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -52248,13 +52300,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4029,
-  "referencedJavaRuntimeIds": 3599,
+  "runtimeAssociationCount": 4032,
+  "referencedJavaRuntimeIds": 3602,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 537,
+  "unreferencedJavaRuntimeIds": 534,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 754,
+  "totalCases": 755,
   "totalCapabilities": 126
  }
 }
