@@ -56,6 +56,57 @@ activity or a single coverage percentage.
 
 ## Current work unit
 
+Active: Draft 4.536 ('epl-other-create-expression').
+
+- Selection: `EPLOtherCreateExpression.java` all 5 unreferenced executions:
+  ord 0 `EPLOtherInvalid`, ord 1 `EPLOtherParseSpecialAndMixedExprAndScript`,
+  ord 2 `EPLOtherExprAndScriptLifecycleAndFilter` (OBSERVEROPS flag), ord 3
+  `EPLOtherScriptUse`, ord 4 `EPLOtherExpressionUse`. Declared-expression
+  semantics exist in Go (`DeclaredExpressionParam`, expression_definition.go);
+  script dialects (JS/MVEL) likely unrepresentable — scouts to confirm the
+  split.
+- [x] Java contract scout (JavaContract536) + Go surface scout
+  (GoSurface536) complete; contract frozen at `.omp/contract-536.md`.
+  Representable: ord0 duplicate-declare, ord1 declared-expr halves,
+  ord2 declared-expr lifecycle/filter, ord4 parts A/C/D + part B via new
+  `WithExpression`. ord3 intentionally-different (script overloads by
+  arity + SODA round-trip, no Go surface). JS/MVEL bodies unrepresentable.
+- [x] Shared core (primary agent): `Query.WithExpression(name, expr)` —
+  statement-local declared expression shadowing env registrations;
+  `exprNode.expressionOverride` bound by `bindLocalExpressions` at Build;
+  `validateExpressionReferences` and `ExpressionRef` eval prefer the
+  override. Deferred subquery binding verified working (DefineExpression
+  with SubqueryValue body over a not-yet-existing named window resolves
+  at consumer Build; smoke test: local shadow → 10π, deferred subquery →
+  100). Expression tests green.
+- [x] Assets536 dispatched for scenario/oracle/runner/wiring.
+- [x] Assets536 delivered scenario (6 cases/101 steps), oracle, run.sh,
+  runner, wiring; verified zero-diff on /tmp copies.
+- [x] Java trace + Go trace + evidence generated; `-diff` passing /
+  0 differences (47 records each side); 6-test family green.
+- [x] Manifest: `case.epl-other-create-expression` (DV, ords 0/1/2/4) +
+  `case.epl-other-create-expression-script` (intentionally-different,
+  ord 3) under `expr.declared` (now differential-verified); 767 cases /
+  392 DV / 1547 DV runtime IDs / unreferenced 494. Roadmap + CHANGELOG
+  updated.
+- [x] Full gates GREEN: `make check` exit 0 (check-layout, go vet, full
+  go test ./...). gofmt clean, `git diff --check` clean.
+- [x] Parity review (Review536): first pass FAIL with two P2s — shared
+  exprNode mutation leaked statement-local overrides across statements
+  reusing an Expr, and bind never walked local bodies/subquery/delivery
+  surfaces. Fixed: bindLocalExpressions now fails loudly on every
+  conflicting rebind (different local body, env-validated node, plain
+  reuse of a bound node; identical-body rebind idempotent), never
+  descends into expressionBody (env definition), binds local bodies +
+  expressionArguments + subquery source/predicate/projection/groupBy/
+  having/columns/orderBy + window specs + derived aggregates +
+  deliveryExprs, caches override param specs (P3), runs under buildMu.
+  Regression tests TestStatementLocalExpressionSharedReferenceFailsLoudly
+  + TestStatementLocalExpressionSiblingAndCycle added. Confirmation
+  review: OVERALL PASS; residual P3 (expr-valued window specs +
+  source-less where/having outside the traversal) mirrors the
+  pre-existing visitWindowExpressions gap — consistent, not regressed.
+
 Active: Draft 4.535 ('infra-nwtable-on-select-aggregation').
 
 - Selection: `InfraNWTableOnSelect.java` all 5 execution classes ×
@@ -126,7 +177,7 @@ Active: Draft 4.535 ('infra-nwtable-on-select-aggregation').
   Confirmation review: OVERALL PASS, zero remaining findings.
 - [x] Post-review full gates GREEN: `make check` exit 0 (parity 89s,
   internal/esper 118s).
-- [x] Shipped; Git owns identity.
+- [x] Shipped: committed and pushed as `ba7fc7f58`.
 
 ## Current work unit
 

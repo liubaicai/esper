@@ -1,0 +1,679 @@
+{
+ "version": "esper-parity/v1",
+ "id": "epl-other-create-expression",
+ "description": "EPLOtherCreateExpression slice (ords 0-4): invalid replays the duplicate declared-expression compile-error (script duplicate-by-arity unrepresentable); parse-mixed-expr replays the declared-expression halves (myexpr concat select, scalarfilter enum chain with the stateless flag pinned as unrepresentable, js:callIt unrepresentable); lifecycle-filter replays the declared-expression filter pass (deploy MyFilter=1, filtered select, undeploy-all, redeploy =2, rebind proof; the js:MyFilter pass unrepresentable); script-use is intentionally-different (script overloading by arity plus SODA round-trips); expression-use replays parts A-D over a keepall named window and a no-key table (TwoPi/factorPi selects, statement-local TwoPi shadow, JoinMultiplication deploy, deferred subquery myexpr over MyInfra with the stateful flag pinned as unrepresentable). Deployed markers pin the module fan-out, listener records carry the new-data rows, compile-error records carry the pinned Java message, and unrepresentable records pin the Java surfaces with no Go boundary (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherCreateExpression.java).",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherCreateExpression.java",
+ "javaRuntimes": [
+  "java-runtime-e3078c54652f7f72cd73",
+  "java-runtime-2e66cbcd61d52f258cb4",
+  "java-runtime-c0c5df502bf2651e6acf",
+  "java-runtime-c2595ccced4ddaea854d",
+  "java-runtime-61a0f3f3916ac25443d7",
+  "java-runtime-61a0f3f3916ac25443d7"
+ ],
+ "javaNames": [
+  "EPLOtherInvalid",
+  "EPLOtherParseSpecialAndMixedExprAndScript",
+  "EPLOtherExprAndScriptLifecycleAndFilter",
+  "EPLOtherScriptUse",
+  "EPLOtherExpressionUse{namedWindow=true}",
+  "EPLOtherExpressionUse{namedWindow=false}"
+ ],
+ "javaStaticIds": [
+  "java-683caba87edd0bf7ecea",
+  "java-dd3e693c0a24401dc305",
+  "java-e292f8a1c482bb84b1e4",
+  "java-ae1621ba24392298ec2f",
+  "java-089123ca8c5a8e4a85b6",
+  "java-089123ca8c5a8e4a85b6"
+ ],
+ "javaFlags": [
+  "OBSERVEROPS"
+ ],
+ "cases": [
+  {
+   "case": "invalid",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-e3078c54652f7f72cd73",
+   "executionName": "EPLOtherInvalid",
+   "observation": "deployed+compile-error+unrepresentable; @public create expression E1 {''} deploys, then tryInvalidCompile rejects the redeclared E1 with 'Expression 'E1' has already been declared'; the js:abc script deploy and its same-arity duplicate rejection (name+parameter-count identity) have no Go script boundary",
+   "epl": "@name('s0') @public create expression E1 {''};\ncreate expression E1 {''};\n@public create expression int js:abc(p1, p2) [p1*p2];\ncreate expression int js:abc(a, a) [p1*p2];\n"
+  },
+  {
+   "case": "parse-mixed-expr",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-2e66cbcd61d52f258cb4",
+   "executionName": "EPLOtherParseSpecialAndMixedExprAndScript",
+   "observation": "deployed+listener+unrepresentable; myexpr {sb => '--'||theString||'--'} feeds select myexpr(sb) as c1 emitting {c1='--E1--'} on SupportBean(E1,1) (the Java select also projects myscript('x') as c0, unrepresentable); scalarfilter {s => strvals.where(y => y != 'E1')} chained .where(x => x != 'E2') over SupportCollection('E1,E2,E3,E4') emits val1=[E3,E4] and Java asserts s0 stateless; the js:callIt bean-factory select is unrepresentable",
+   "epl": "@public create expression string js:myscript(p1) [\"--\"+p1+\"--\"];\n@public create expression myexpr {sb => '--'||theString||'--'};\n@name('s0') select myexpr(sb) as c1 from SupportBean as sb;\n@public create expression scalarfilter {s =>    strvals.where(y => y != 'E1') };\n@name('s0') select scalarfilter(t).where(x => x != 'E2') as val1 from SupportCollection as t;\n@public create expression com.espertech.esper.common.internal.support.SupportBean js:callIt() [ new com.espertech.esper.common.internal.support.SupportBean('E1', 10); ];\n@name('s0') select callIt() as val0, callIt().getTheString() as val1 from SupportBean as sb;\n"
+  },
+  {
+   "case": "lifecycle-filter",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-c0c5df502bf2651e6acf",
+   "executionName": "EPLOtherExprAndScriptLifecycleAndFilter",
+   "observation": "deployed+listener+unrepresentable; MyFilter {sb => intPrimitive = 1} filters select * from SupportBean(MyFilter(sb)): E1/0 silent, E2/1 fires the full bean row; undeploy-all then expr-two redeploys MyFilter = 2 and s2 rebinds: E3/0 and E4/1 silent, E4/2 fires; the js:MyFilter script pass is unrepresentable",
+   "epl": "@name('expr-one') @public create expression MyFilter {sb => intPrimitive = 1};\n@name('s1') select * from SupportBean(MyFilter(sb)) as sb;\n@name('expr-two') @public create expression MyFilter {sb => intPrimitive = 2};\n@name('s2') select * from SupportBean(MyFilter(sb)) as sb;\n@name('expr-one') @public create expression boolean js:MyFilter(intPrimitive) [intPrimitive==1];\n@name('s1') select * from SupportBean(MyFilter(intPrimitive)) as sb;\n@name('expr-two') @public create expression boolean js:MyFilter(intPrimitive) [intPrimitive==2];\n@name('s2') select * from SupportBean(MyFilter(intPrimitive)) as sb;\n"
+  },
+  {
+   "case": "script-use",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-c2595ccced4ddaea854d",
+   "executionName": "EPLOtherScriptUse",
+   "observation": "unrepresentable; Java overloads js:abc by arity (p1*p2*10 vs p1*10), coerces the intPrimitive/doublePrimitive arguments, and SODA round-trips the somescript create-expression and select statements; no Go script or SODA boundary exists",
+   "epl": "@public create expression int js:abc(p1, p2) [p1*p2*10];\n@public create expression int js:abc(p1) [p1*10];\n@name('s0') select abc(intPrimitive, doublePrimitive) as c0, abc(intPrimitive) as c1 from SupportBean;\n@name('expr') @public create expression somescript(i1) ['a'];\n@name('select') select somescript(1) from SupportBean;\n"
+  },
+  {
+   "case": "expression-use-nw",
+   "ordinal": 4,
+   "runtimeId": "java-runtime-61a0f3f3916ac25443d7",
+   "executionName": "EPLOtherExpressionUse{namedWindow=true}",
+   "observation": "deployed+listener+unrepresentable; TwoPi/factorPi feed select TwoPi(), (select TwoPi() from SupportBean_S0#lastevent), factorPi(sb) emitting [2pi,2pi,3pi] on SupportBean(E1,3) after S0(10); statement-local TwoPi {Math.PI * 10} shadows the env registration emitting c0=10pi; JoinMultiplication deploys over two #lastevent streams; myexpr {(select intPrimitive from MyInfra)} binds the keepall window deferred and emits c0=100 on S0(1,'E1') with s0 asserted stateful",
+   "epl": "@public create expression TwoPi {Math.PI * 2};\n@public create expression factorPi {sb => Math.PI * intPrimitive};\n@name('s0') select TwoPi() as c0,(select TwoPi() from SupportBean_S0#lastevent) as c1,factorPi(sb) as c2 from SupportBean sb;\n@name('s0') expression TwoPi {Math.PI * 10} select TwoPi() as c0 from SupportBean;\n@name('expr') @public create expression JoinMultiplication {(s1,s2) => s1.intPrimitive*s2.id};\n@name('join') select JoinMultiplication(sb,s0) from SupportBean#lastevent as sb, SupportBean_S0#lastevent as s0;\n@public create expression myexpr {(select intPrimitive from MyInfra)};\n@public create window MyInfra#keepall as SupportBean;\ninsert into MyInfra select theString, intPrimitive from SupportBean;\n@name('s0') select myexpr() as c0 from SupportBean_S0;\n"
+  },
+  {
+   "case": "expression-use-table",
+   "ordinal": 4,
+   "runtimeId": "java-runtime-61a0f3f3916ac25443d7",
+   "executionName": "EPLOtherExpressionUse{namedWindow=false}",
+   "observation": "deployed+listener+unrepresentable; TwoPi/factorPi feed select TwoPi(), (select TwoPi() from SupportBean_S0#lastevent), factorPi(sb) emitting [2pi,2pi,3pi] on SupportBean(E1,3) after S0(10); statement-local TwoPi {Math.PI * 10} shadows the env registration emitting c0=10pi; JoinMultiplication deploys over two #lastevent streams; myexpr {(select intPrimitive from MyInfra)} binds the no-key table deferred and emits c0=100 on S0(1,'E1') with s0 asserted stateful",
+   "epl": "@public create expression TwoPi {Math.PI * 2};\n@public create expression factorPi {sb => Math.PI * intPrimitive};\n@name('s0') select TwoPi() as c0,(select TwoPi() from SupportBean_S0#lastevent) as c1,factorPi(sb) as c2 from SupportBean sb;\n@name('s0') expression TwoPi {Math.PI * 10} select TwoPi() as c0 from SupportBean;\n@name('expr') @public create expression JoinMultiplication {(s1,s2) => s1.intPrimitive*s2.id};\n@name('join') select JoinMultiplication(sb,s0) from SupportBean#lastevent as sb, SupportBean_S0#lastevent as s0;\n@public create expression myexpr {(select intPrimitive from MyInfra)};\n@public create table MyInfra(theString string, intPrimitive int);\ninsert into MyInfra select theString, intPrimitive from SupportBean;\n@name('s0') select myexpr() as c0 from SupportBean_S0;\n"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "invalid"
+  },
+  {
+   "op": "deploy",
+   "case": "invalid",
+   "statement": "s0",
+   "epl": "@name('s0') @public create expression E1 {''}"
+  },
+  {
+   "op": "deployed",
+   "case": "invalid",
+   "statement": "s0"
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "duplicate-expression",
+   "epl": "create expression E1 {''}",
+   "expectError": "Expression 'E1' has already been declared"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "invalid",
+   "statement": "script-duplicate",
+   "expectError": "Java deploys @public create expression int js:abc(p1, p2) [p1*p2] then rejects the same-arity redeclare with 'Script 'abc' that takes the same number of parameters has already been declared'; no Go script boundary"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "invalid"
+  },
+  {
+   "op": "case",
+   "case": "parse-mixed-expr"
+  },
+  {
+   "op": "deploy",
+   "case": "parse-mixed-expr",
+   "statement": "myexpr",
+   "epl": "@public create expression myexpr {sb => '--'||theString||'--'}"
+  },
+  {
+   "op": "deployed",
+   "case": "parse-mixed-expr",
+   "statement": "myexpr"
+  },
+  {
+   "op": "deploy",
+   "case": "parse-mixed-expr",
+   "statement": "s0",
+   "epl": "@name('s0') select myexpr(sb) as c1 from SupportBean as sb"
+  },
+  {
+   "op": "deployed",
+   "case": "parse-mixed-expr",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "parse-mixed-expr",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "undeploy",
+   "case": "parse-mixed-expr",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "parse-mixed-expr",
+   "statement": "scalarfilter",
+   "epl": "@public create expression scalarfilter {s =>    strvals.where(y => y != 'E1') }"
+  },
+  {
+   "op": "deployed",
+   "case": "parse-mixed-expr",
+   "statement": "scalarfilter"
+  },
+  {
+   "op": "deploy",
+   "case": "parse-mixed-expr",
+   "statement": "s0",
+   "epl": "@name('s0') select scalarfilter(t).where(x => x != 'E2') as val1 from SupportCollection as t"
+  },
+  {
+   "op": "deployed",
+   "case": "parse-mixed-expr",
+   "statement": "s0"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "parse-mixed-expr",
+   "statement": "stateless-s0",
+   "expectError": "Java asserts s0 isStatelessSelect=true for the chained scalarfilter select; the Go engine exposes no stateless-statement introspection"
+  },
+  {
+   "op": "send",
+   "case": "parse-mixed-expr",
+   "eventType": "SupportCollection",
+   "payload": {
+    "strvals": "E1,E2,E3,E4"
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "parse-mixed-expr"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "parse-mixed-expr",
+   "statement": "script-callit",
+   "expectError": "Java deploys js:callIt() returning a new SupportBean('E1',10) and selects callIt()/callIt().getTheString() emitting {val0.theString='E1',val0.intPrimitive=10,val1='E1'}; no Go script boundary"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "parse-mixed-expr"
+  },
+  {
+   "op": "case",
+   "case": "lifecycle-filter"
+  },
+  {
+   "op": "deploy",
+   "case": "lifecycle-filter",
+   "statement": "expr-one",
+   "epl": "@name('expr-one') @public create expression MyFilter {sb => intPrimitive = 1}"
+  },
+  {
+   "op": "deployed",
+   "case": "lifecycle-filter",
+   "statement": "expr-one"
+  },
+  {
+   "op": "deploy",
+   "case": "lifecycle-filter",
+   "statement": "s1",
+   "epl": "@name('s1') select * from SupportBean(MyFilter(sb)) as sb"
+  },
+  {
+   "op": "deployed",
+   "case": "lifecycle-filter",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "lifecycle-filter",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "lifecycle-filter",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "lifecycle-filter"
+  },
+  {
+   "op": "deploy",
+   "case": "lifecycle-filter",
+   "statement": "expr-two",
+   "epl": "@name('expr-two') @public create expression MyFilter {sb => intPrimitive = 2}"
+  },
+  {
+   "op": "deployed",
+   "case": "lifecycle-filter",
+   "statement": "expr-two"
+  },
+  {
+   "op": "deploy",
+   "case": "lifecycle-filter",
+   "statement": "s2",
+   "epl": "@name('s2') select * from SupportBean(MyFilter(sb)) as sb"
+  },
+  {
+   "op": "deployed",
+   "case": "lifecycle-filter",
+   "statement": "s2"
+  },
+  {
+   "op": "send",
+   "case": "lifecycle-filter",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "lifecycle-filter",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "lifecycle-filter",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "lifecycle-filter"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "lifecycle-filter",
+   "statement": "script-filter",
+   "expectError": "Java repeats the lifecycle for boolean js:MyFilter(intPrimitive) scripts (deploy =1, filtered select, undeploy-all, redeploy =2, rebind proof); no Go script boundary"
+  },
+  {
+   "op": "case",
+   "case": "script-use"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "script-use",
+   "statement": "script-overload-soda",
+   "expectError": "Java overloads js:abc by arity (p1*p2*10 vs p1*10) emitting {c0=350,c1=100} on makeBean(10,3.5), then SODA round-trips @name('expr') create expression somescript(i1) ['a'] and @name('select') select somescript(1) from SupportBean; no Go script or SODA boundary"
+  },
+  {
+   "op": "case",
+   "case": "expression-use-nw"
+  },
+  {
+   "op": "deploy",
+   "case": "expression-use-nw",
+   "statement": "TwoPi",
+   "epl": "@public create expression TwoPi {Math.PI * 2}"
+  },
+  {
+   "op": "deployed",
+   "case": "expression-use-nw",
+   "statement": "TwoPi"
+  },
+  {
+   "op": "deploy",
+   "case": "expression-use-nw",
+   "statement": "factorPi",
+   "epl": "@public create expression factorPi {sb => Math.PI * intPrimitive}"
+  },
+  {
+   "op": "deployed",
+   "case": "expression-use-nw",
+   "statement": "factorPi"
+  },
+  {
+   "op": "deploy",
+   "case": "expression-use-nw",
+   "statement": "s0",
+   "epl": "@name('s0') select TwoPi() as c0,(select TwoPi() from SupportBean_S0#lastevent) as c1,factorPi(sb) as c2 from SupportBean sb"
+  },
+  {
+   "op": "deployed",
+   "case": "expression-use-nw",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "expression-use-nw",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "expression-use-nw",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "undeploy",
+   "case": "expression-use-nw",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "expression-use-nw",
+   "statement": "s0",
+   "epl": "@name('s0') expression TwoPi {Math.PI * 10} select TwoPi() as c0 from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "expression-use-nw",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "expression-use-nw",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "deploy",
+   "case": "expression-use-nw",
+   "statement": "expr",
+   "epl": "@name('expr') @public create expression JoinMultiplication {(s1,s2) => s1.intPrimitive*s2.id}"
+  },
+  {
+   "op": "deployed",
+   "case": "expression-use-nw",
+   "statement": "expr"
+  },
+  {
+   "op": "deploy",
+   "case": "expression-use-nw",
+   "statement": "join",
+   "epl": "@name('join') select JoinMultiplication(sb,s0) from SupportBean#lastevent as sb, SupportBean_S0#lastevent as s0"
+  },
+  {
+   "op": "deployed",
+   "case": "expression-use-nw",
+   "statement": "join"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "expression-use-nw"
+  },
+  {
+   "op": "deploy",
+   "case": "expression-use-nw",
+   "statement": "myexpr",
+   "epl": "@public create expression myexpr {(select intPrimitive from MyInfra)}"
+  },
+  {
+   "op": "deployed",
+   "case": "expression-use-nw",
+   "statement": "myexpr"
+  },
+  {
+   "op": "deploy",
+   "case": "expression-use-nw",
+   "statement": "create",
+   "epl": "@public create window MyInfra#keepall as SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "expression-use-nw",
+   "statement": "create"
+  },
+  {
+   "op": "deploy",
+   "case": "expression-use-nw",
+   "statement": "insert",
+   "epl": "insert into MyInfra select theString, intPrimitive from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "expression-use-nw",
+   "statement": "insert"
+  },
+  {
+   "op": "deploy",
+   "case": "expression-use-nw",
+   "statement": "s0",
+   "epl": "@name('s0') select myexpr() as c0 from SupportBean_S0"
+  },
+  {
+   "op": "deployed",
+   "case": "expression-use-nw",
+   "statement": "s0"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "expression-use-nw",
+   "statement": "stateful-s0",
+   "expectError": "Java asserts s0 isStatelessSelect=false for the myexpr subquery select over named window MyInfra; the Go engine exposes no stateless-statement introspection"
+  },
+  {
+   "op": "send",
+   "case": "expression-use-nw",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 100
+   }
+  },
+  {
+   "op": "send",
+   "case": "expression-use-nw",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1,
+    "p00": "E1"
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "expression-use-nw"
+  },
+  {
+   "op": "case",
+   "case": "expression-use-table"
+  },
+  {
+   "op": "deploy",
+   "case": "expression-use-table",
+   "statement": "TwoPi",
+   "epl": "@public create expression TwoPi {Math.PI * 2}"
+  },
+  {
+   "op": "deployed",
+   "case": "expression-use-table",
+   "statement": "TwoPi"
+  },
+  {
+   "op": "deploy",
+   "case": "expression-use-table",
+   "statement": "factorPi",
+   "epl": "@public create expression factorPi {sb => Math.PI * intPrimitive}"
+  },
+  {
+   "op": "deployed",
+   "case": "expression-use-table",
+   "statement": "factorPi"
+  },
+  {
+   "op": "deploy",
+   "case": "expression-use-table",
+   "statement": "s0",
+   "epl": "@name('s0') select TwoPi() as c0,(select TwoPi() from SupportBean_S0#lastevent) as c1,factorPi(sb) as c2 from SupportBean sb"
+  },
+  {
+   "op": "deployed",
+   "case": "expression-use-table",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "expression-use-table",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "expression-use-table",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "undeploy",
+   "case": "expression-use-table",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "expression-use-table",
+   "statement": "s0",
+   "epl": "@name('s0') expression TwoPi {Math.PI * 10} select TwoPi() as c0 from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "expression-use-table",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "expression-use-table",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "deploy",
+   "case": "expression-use-table",
+   "statement": "expr",
+   "epl": "@name('expr') @public create expression JoinMultiplication {(s1,s2) => s1.intPrimitive*s2.id}"
+  },
+  {
+   "op": "deployed",
+   "case": "expression-use-table",
+   "statement": "expr"
+  },
+  {
+   "op": "deploy",
+   "case": "expression-use-table",
+   "statement": "join",
+   "epl": "@name('join') select JoinMultiplication(sb,s0) from SupportBean#lastevent as sb, SupportBean_S0#lastevent as s0"
+  },
+  {
+   "op": "deployed",
+   "case": "expression-use-table",
+   "statement": "join"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "expression-use-table"
+  },
+  {
+   "op": "deploy",
+   "case": "expression-use-table",
+   "statement": "myexpr",
+   "epl": "@public create expression myexpr {(select intPrimitive from MyInfra)}"
+  },
+  {
+   "op": "deployed",
+   "case": "expression-use-table",
+   "statement": "myexpr"
+  },
+  {
+   "op": "deploy",
+   "case": "expression-use-table",
+   "statement": "create",
+   "epl": "@public create table MyInfra(theString string, intPrimitive int)"
+  },
+  {
+   "op": "deployed",
+   "case": "expression-use-table",
+   "statement": "create"
+  },
+  {
+   "op": "deploy",
+   "case": "expression-use-table",
+   "statement": "insert",
+   "epl": "insert into MyInfra select theString, intPrimitive from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "expression-use-table",
+   "statement": "insert"
+  },
+  {
+   "op": "deploy",
+   "case": "expression-use-table",
+   "statement": "s0",
+   "epl": "@name('s0') select myexpr() as c0 from SupportBean_S0"
+  },
+  {
+   "op": "deployed",
+   "case": "expression-use-table",
+   "statement": "s0"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "expression-use-table",
+   "statement": "stateful-s0",
+   "expectError": "Java asserts s0 isStatelessSelect=false for the myexpr subquery select over table MyInfra; the Go engine exposes no stateless-statement introspection"
+  },
+  {
+   "op": "send",
+   "case": "expression-use-table",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 100
+   }
+  },
+  {
+   "op": "send",
+   "case": "expression-use-table",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1,
+    "p00": "E1"
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "expression-use-table"
+  }
+ ]
+}

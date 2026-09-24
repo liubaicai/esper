@@ -346,3 +346,97 @@ func TestNamedExpressionGroupedSubquerySnapshotAndEnumChainMatchEsper(t *testing
 		t.Fatalf("second limited groups = %#v, want %#v", got, wantOne)
 	}
 }
+
+func TestStatementLocalExpressionSharedReferenceFailsLoudly(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[namedExpressionEvent](env, "NamedExpressionEvent"); err != nil {
+		t.Fatal(err)
+	}
+	if err := DefineExpression[int64](env, "double-value", Multiply[int64](
+		Field[namedExpressionEvent, int64]("value"), Literal(int64(2)))); err != nil {
+		t.Fatal(err)
+	}
+
+	input := From[namedExpressionEvent](env, "NamedExpressionEvent")
+	shared := ExpressionRef[int64](env, "double-value")
+
+	// A plain statement binds the shared ref to the environment body.
+	if _, err := env.Build(Select(input, Alias("value", shared)).Query(StatementName("plain"))); err != nil {
+		t.Fatal(err)
+	}
+	// A second statement reusing the same ref with a statement-local body
+	// must fail loudly instead of silently rebinding the first statement.
+	if _, err := env.Build(Select(input, Alias("value", shared)).Query(StatementName("local")).
+		WithExpression("double-value", Literal(int64(7)))); err == nil {
+		t.Fatal("expected shared expression-ref rebind to fail")
+	} else if !strings.Contains(err.Error(), "another statement") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	fresh := ExpressionRef[int64](env, "double-value")
+	local := Multiply[int64](Field[namedExpressionEvent, int64]("value"), Literal(int64(7)))
+	if _, err := env.Build(Select(input, Alias("value", fresh)).Query(StatementName("local-first")).
+		WithExpression("double-value", local)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env.Build(Select(input, Alias("value", fresh)).Query(StatementName("plain-second"))); err == nil {
+		t.Fatal("expected plain reuse of a locally bound ref to fail")
+	}
+	// Rebuilding the same local query is idempotent when the identical local
+	// body is reused; a different body for the same name is a conflict.
+	if _, err := env.Build(Select(input, Alias("value", fresh)).Query(StatementName("local-again")).
+		WithExpression("double-value", local)); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestStatementLocalExpressionSiblingAndCycle(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[namedExpressionEvent](env, "NamedExpressionEvent"); err != nil {
+		t.Fatal(err)
+	}
+	input := From[namedExpressionEvent](env, "NamedExpressionEvent")
+
+	// A local body may reference a sibling local: local "quad" calls local
+	// "double", which shadows nothing but resolves inside the statement.
+	plan, err := env.Build(Select(input, Alias("value", ExpressionRef[int64](env, "quad"))).
+		Query(StatementName("siblings")).
+		WithExpression("double", Multiply[int64](Field[namedExpressionEvent, int64]("value"), Literal(int64(2)))).
+		WithExpression("quad", Multiply[int64](ExpressionRef[int64](env, "double"), Literal(int64(2)))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var result int64
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		if len(batch.New) > 0 {
+			row, ok := batch.New[0].Row()
+			if !ok {
+				t.Fatalf("result is not a row: %#v", batch.New[0])
+			}
+			result, _ = As[int64](row.Get("value"))
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), namedExpressionEvent{Value: 3}); err != nil {
+		t.Fatal(err)
+	}
+	if result != 12 {
+		t.Fatalf("sibling-local result = %d, want 12", result)
+	}
+
+	// A local body referencing itself is rejected as cyclic rather than
+	// falling through to an environment registration.
+	if _, err := env.Build(Select(input, Alias("value", ExpressionRef[int64](env, "self"))).
+		Query(StatementName("cyclic")).
+		WithExpression("self", Add[int64](ExpressionRef[int64](env, "self"), Literal(int64(1))))); err == nil {
+		t.Fatal("expected cyclic statement-local expression to fail")
+	} else if !strings.Contains(err.Error(), "cyclic") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

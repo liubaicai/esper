@@ -134,43 +134,92 @@ func ExpressionRef[T any](env *Environment, name string, arguments ...Expr) Expr
 		if env == nil || name == "" {
 			return Missing()
 		}
-		definition, ok := env.Expression(name)
-		if !ok || definition.Expr == nil {
+		// A statement-local expression shadows the environment registration:
+		// Build binds it through node.expressionOverride.
+		body := definitionExpression(node)
+		if body == nil {
 			return Missing()
 		}
-		if len(arguments) != len(definition.Parameters) {
+		parameters := definitionParameters(node)
+		if len(arguments) != len(parameters) {
 			return Missing()
 		}
 		if len(arguments) == 0 {
-			return castValue[T](definition.Expr.eval(ctx))
+			return castValue[T](body.eval(ctx))
 		}
 		bindings := make(map[string]Value, len(arguments))
 		// A scalar declared expression evaluates its arguments in the lexical
 		// call-site scope, even when its body enters a correlated subquery. An
 		// aggregate declaration must remain lazy so Sum/Count can evaluate the
 		// argument once for each event in the aggregate group.
-		captureArgumentContext := !expressionNodeContainsAggregate(definition.Expr.node())
+		captureArgumentContext := !expressionNodeContainsAggregate(body.node())
 		for index, argument := range arguments {
 			if argument == nil {
 				return Missing()
 			}
-			bindings[definition.Parameters[index].Name] = Present(expressionParameterBinding{
+			bindings[parameters[index].Name] = Present(expressionParameterBinding{
 				expression: argument,
 				context:    ctx,
 				hasContext: captureArgumentContext,
 			})
 		}
 		invocationContext := ctx
-		parameters := make(map[string]Value, len(ctx.Parameters)+len(bindings))
+		merged := make(map[string]Value, len(ctx.Parameters)+len(bindings))
 		for parameterName, value := range ctx.Parameters {
-			parameters[parameterName] = value
+			merged[parameterName] = value
 		}
 		for parameterName, value := range bindings {
-			parameters[parameterName] = value
+			merged[parameterName] = value
 		}
-		invocationContext.Parameters = parameters
-		return castValue[T](definition.Expr.eval(invocationContext))
+		invocationContext.Parameters = merged
+		return castValue[T](body.eval(invocationContext))
 	}}
+}
+
+// definitionExpression resolves the effective body of an expression
+// reference: the statement-local override when Build bound one, otherwise
+// the environment registration.
+func definitionExpression(node *exprNode) Expr {
+	if node == nil {
+		return nil
+	}
+	if node.expressionOverride != nil {
+		return node.expressionOverride
+	}
+	if node.expressionEnvironment == nil {
+		return nil
+	}
+	definition, ok := node.expressionEnvironment.Expression(node.expressionName)
+	if !ok || definition.Expr == nil {
+		return nil
+	}
+	return definition.Expr
+}
+
+// definitionParameters returns the parameter specs of the effective
+// expression body (override or environment registration).
+func definitionParameters(node *exprNode) []ExpressionParameterSpec {
+	if node == nil {
+		return nil
+	}
+	if node.expressionOverride != nil {
+		if node.expressionOverrideParameters != nil {
+			return node.expressionOverrideParameters
+		}
+		parameters, err := expressionParameterSpecs(node.expressionOverride)
+		if err != nil {
+			return nil
+		}
+		return parameters
+	}
+	if node.expressionEnvironment == nil {
+		return nil
+	}
+	definition, ok := node.expressionEnvironment.Expression(node.expressionName)
+	if !ok {
+		return nil
+	}
+	return definition.Parameters
 }
 
 // expressionParameterSpecs discovers named-expression parameters in source

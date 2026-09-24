@@ -1,0 +1,1632 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-e3078c54652f7f72cd73",
+    "java-runtime-2e66cbcd61d52f258cb4",
+    "java-runtime-c0c5df502bf2651e6acf",
+    "java-runtime-c2595ccced4ddaea854d",
+    "java-runtime-61a0f3f3916ac25443d7",
+    "java-runtime-61a0f3f3916ac25443d7"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherCreateExpression.java"
+  ],
+  "javaExecutions": [
+    "EPLOtherInvalid",
+    "EPLOtherParseSpecialAndMixedExprAndScript",
+    "EPLOtherExprAndScriptLifecycleAndFilter",
+    "EPLOtherScriptUse",
+    "EPLOtherExpressionUse{namedWindow=true}",
+    "EPLOtherExpressionUse{namedWindow=false}"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "epl-other-create-expression",
+    "steps": [
+      {
+        "op": "case",
+        "case": "invalid"
+      },
+      {
+        "op": "deploy",
+        "case": "invalid",
+        "statement": "s0",
+        "epl": "@name('s0') @public create expression E1 {''}"
+      },
+      {
+        "op": "deployed",
+        "case": "invalid",
+        "statement": "s0"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "duplicate-expression",
+        "expectError": "Expression 'E1' has already been declared",
+        "epl": "create expression E1 {''}"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "invalid",
+        "statement": "script-duplicate",
+        "expectError": "Java deploys @public create expression int js:abc(p1, p2) [p1*p2] then rejects the same-arity redeclare with 'Script 'abc' that takes the same number of parameters has already been declared'; no Go script boundary"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "invalid"
+      },
+      {
+        "op": "case",
+        "case": "parse-mixed-expr"
+      },
+      {
+        "op": "deploy",
+        "case": "parse-mixed-expr",
+        "statement": "myexpr",
+        "epl": "@public create expression myexpr {sb =\u003e '--'||theString||'--'}"
+      },
+      {
+        "op": "deployed",
+        "case": "parse-mixed-expr",
+        "statement": "myexpr"
+      },
+      {
+        "op": "deploy",
+        "case": "parse-mixed-expr",
+        "statement": "s0",
+        "epl": "@name('s0') select myexpr(sb) as c1 from SupportBean as sb"
+      },
+      {
+        "op": "deployed",
+        "case": "parse-mixed-expr",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "parse-mixed-expr",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "parse-mixed-expr",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "parse-mixed-expr",
+        "statement": "scalarfilter",
+        "epl": "@public create expression scalarfilter {s =\u003e    strvals.where(y =\u003e y != 'E1') }"
+      },
+      {
+        "op": "deployed",
+        "case": "parse-mixed-expr",
+        "statement": "scalarfilter"
+      },
+      {
+        "op": "deploy",
+        "case": "parse-mixed-expr",
+        "statement": "s0",
+        "epl": "@name('s0') select scalarfilter(t).where(x =\u003e x != 'E2') as val1 from SupportCollection as t"
+      },
+      {
+        "op": "deployed",
+        "case": "parse-mixed-expr",
+        "statement": "s0"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "parse-mixed-expr",
+        "statement": "stateless-s0",
+        "expectError": "Java asserts s0 isStatelessSelect=true for the chained scalarfilter select; the Go engine exposes no stateless-statement introspection"
+      },
+      {
+        "op": "send",
+        "case": "parse-mixed-expr",
+        "eventType": "SupportCollection",
+        "payload": {
+          "strvals": "E1,E2,E3,E4"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "parse-mixed-expr"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "parse-mixed-expr",
+        "statement": "script-callit",
+        "expectError": "Java deploys js:callIt() returning a new SupportBean('E1',10) and selects callIt()/callIt().getTheString() emitting {val0.theString='E1',val0.intPrimitive=10,val1='E1'}; no Go script boundary"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "parse-mixed-expr"
+      },
+      {
+        "op": "case",
+        "case": "lifecycle-filter"
+      },
+      {
+        "op": "deploy",
+        "case": "lifecycle-filter",
+        "statement": "expr-one",
+        "epl": "@name('expr-one') @public create expression MyFilter {sb =\u003e intPrimitive = 1}"
+      },
+      {
+        "op": "deployed",
+        "case": "lifecycle-filter",
+        "statement": "expr-one"
+      },
+      {
+        "op": "deploy",
+        "case": "lifecycle-filter",
+        "statement": "s1",
+        "epl": "@name('s1') select * from SupportBean(MyFilter(sb)) as sb"
+      },
+      {
+        "op": "deployed",
+        "case": "lifecycle-filter",
+        "statement": "s1"
+      },
+      {
+        "op": "send",
+        "case": "lifecycle-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "lifecycle-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "lifecycle-filter"
+      },
+      {
+        "op": "deploy",
+        "case": "lifecycle-filter",
+        "statement": "expr-two",
+        "epl": "@name('expr-two') @public create expression MyFilter {sb =\u003e intPrimitive = 2}"
+      },
+      {
+        "op": "deployed",
+        "case": "lifecycle-filter",
+        "statement": "expr-two"
+      },
+      {
+        "op": "deploy",
+        "case": "lifecycle-filter",
+        "statement": "s2",
+        "epl": "@name('s2') select * from SupportBean(MyFilter(sb)) as sb"
+      },
+      {
+        "op": "deployed",
+        "case": "lifecycle-filter",
+        "statement": "s2"
+      },
+      {
+        "op": "send",
+        "case": "lifecycle-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "lifecycle-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "lifecycle-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "lifecycle-filter"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "lifecycle-filter",
+        "statement": "script-filter",
+        "expectError": "Java repeats the lifecycle for boolean js:MyFilter(intPrimitive) scripts (deploy =1, filtered select, undeploy-all, redeploy =2, rebind proof); no Go script boundary"
+      },
+      {
+        "op": "case",
+        "case": "script-use"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "script-use",
+        "statement": "script-overload-soda",
+        "expectError": "Java overloads js:abc by arity (p1*p2*10 vs p1*10) emitting {c0=350,c1=100} on makeBean(10,3.5), then SODA round-trips @name('expr') create expression somescript(i1) ['a'] and @name('select') select somescript(1) from SupportBean; no Go script or SODA boundary"
+      },
+      {
+        "op": "case",
+        "case": "expression-use-nw"
+      },
+      {
+        "op": "deploy",
+        "case": "expression-use-nw",
+        "statement": "TwoPi",
+        "epl": "@public create expression TwoPi {Math.PI * 2}"
+      },
+      {
+        "op": "deployed",
+        "case": "expression-use-nw",
+        "statement": "TwoPi"
+      },
+      {
+        "op": "deploy",
+        "case": "expression-use-nw",
+        "statement": "factorPi",
+        "epl": "@public create expression factorPi {sb =\u003e Math.PI * intPrimitive}"
+      },
+      {
+        "op": "deployed",
+        "case": "expression-use-nw",
+        "statement": "factorPi"
+      },
+      {
+        "op": "deploy",
+        "case": "expression-use-nw",
+        "statement": "s0",
+        "epl": "@name('s0') select TwoPi() as c0,(select TwoPi() from SupportBean_S0#lastevent) as c1,factorPi(sb) as c2 from SupportBean sb"
+      },
+      {
+        "op": "deployed",
+        "case": "expression-use-nw",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "expression-use-nw",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "expression-use-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "expression-use-nw",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "expression-use-nw",
+        "statement": "s0",
+        "epl": "@name('s0') expression TwoPi {Math.PI * 10} select TwoPi() as c0 from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "expression-use-nw",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "expression-use-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "expression-use-nw",
+        "statement": "expr",
+        "epl": "@name('expr') @public create expression JoinMultiplication {(s1,s2) =\u003e s1.intPrimitive*s2.id}"
+      },
+      {
+        "op": "deployed",
+        "case": "expression-use-nw",
+        "statement": "expr"
+      },
+      {
+        "op": "deploy",
+        "case": "expression-use-nw",
+        "statement": "join",
+        "epl": "@name('join') select JoinMultiplication(sb,s0) from SupportBean#lastevent as sb, SupportBean_S0#lastevent as s0"
+      },
+      {
+        "op": "deployed",
+        "case": "expression-use-nw",
+        "statement": "join"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "expression-use-nw"
+      },
+      {
+        "op": "deploy",
+        "case": "expression-use-nw",
+        "statement": "myexpr",
+        "epl": "@public create expression myexpr {(select intPrimitive from MyInfra)}"
+      },
+      {
+        "op": "deployed",
+        "case": "expression-use-nw",
+        "statement": "myexpr"
+      },
+      {
+        "op": "deploy",
+        "case": "expression-use-nw",
+        "statement": "create",
+        "epl": "@public create window MyInfra#keepall as SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "expression-use-nw",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "expression-use-nw",
+        "statement": "insert",
+        "epl": "insert into MyInfra select theString, intPrimitive from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "expression-use-nw",
+        "statement": "insert"
+      },
+      {
+        "op": "deploy",
+        "case": "expression-use-nw",
+        "statement": "s0",
+        "epl": "@name('s0') select myexpr() as c0 from SupportBean_S0"
+      },
+      {
+        "op": "deployed",
+        "case": "expression-use-nw",
+        "statement": "s0"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "expression-use-nw",
+        "statement": "stateful-s0",
+        "expectError": "Java asserts s0 isStatelessSelect=false for the myexpr subquery select over named window MyInfra; the Go engine exposes no stateless-statement introspection"
+      },
+      {
+        "op": "send",
+        "case": "expression-use-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "case": "expression-use-nw",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "expression-use-nw"
+      },
+      {
+        "op": "case",
+        "case": "expression-use-table"
+      },
+      {
+        "op": "deploy",
+        "case": "expression-use-table",
+        "statement": "TwoPi",
+        "epl": "@public create expression TwoPi {Math.PI * 2}"
+      },
+      {
+        "op": "deployed",
+        "case": "expression-use-table",
+        "statement": "TwoPi"
+      },
+      {
+        "op": "deploy",
+        "case": "expression-use-table",
+        "statement": "factorPi",
+        "epl": "@public create expression factorPi {sb =\u003e Math.PI * intPrimitive}"
+      },
+      {
+        "op": "deployed",
+        "case": "expression-use-table",
+        "statement": "factorPi"
+      },
+      {
+        "op": "deploy",
+        "case": "expression-use-table",
+        "statement": "s0",
+        "epl": "@name('s0') select TwoPi() as c0,(select TwoPi() from SupportBean_S0#lastevent) as c1,factorPi(sb) as c2 from SupportBean sb"
+      },
+      {
+        "op": "deployed",
+        "case": "expression-use-table",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "expression-use-table",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "expression-use-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "expression-use-table",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "expression-use-table",
+        "statement": "s0",
+        "epl": "@name('s0') expression TwoPi {Math.PI * 10} select TwoPi() as c0 from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "expression-use-table",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "expression-use-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "expression-use-table",
+        "statement": "expr",
+        "epl": "@name('expr') @public create expression JoinMultiplication {(s1,s2) =\u003e s1.intPrimitive*s2.id}"
+      },
+      {
+        "op": "deployed",
+        "case": "expression-use-table",
+        "statement": "expr"
+      },
+      {
+        "op": "deploy",
+        "case": "expression-use-table",
+        "statement": "join",
+        "epl": "@name('join') select JoinMultiplication(sb,s0) from SupportBean#lastevent as sb, SupportBean_S0#lastevent as s0"
+      },
+      {
+        "op": "deployed",
+        "case": "expression-use-table",
+        "statement": "join"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "expression-use-table"
+      },
+      {
+        "op": "deploy",
+        "case": "expression-use-table",
+        "statement": "myexpr",
+        "epl": "@public create expression myexpr {(select intPrimitive from MyInfra)}"
+      },
+      {
+        "op": "deployed",
+        "case": "expression-use-table",
+        "statement": "myexpr"
+      },
+      {
+        "op": "deploy",
+        "case": "expression-use-table",
+        "statement": "create",
+        "epl": "@public create table MyInfra(theString string, intPrimitive int)"
+      },
+      {
+        "op": "deployed",
+        "case": "expression-use-table",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "expression-use-table",
+        "statement": "insert",
+        "epl": "insert into MyInfra select theString, intPrimitive from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "expression-use-table",
+        "statement": "insert"
+      },
+      {
+        "op": "deploy",
+        "case": "expression-use-table",
+        "statement": "s0",
+        "epl": "@name('s0') select myexpr() as c0 from SupportBean_S0"
+      },
+      {
+        "op": "deployed",
+        "case": "expression-use-table",
+        "statement": "s0"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "expression-use-table",
+        "statement": "stateful-s0",
+        "expectError": "Java asserts s0 isStatelessSelect=false for the myexpr subquery select over table MyInfra; the Go engine exposes no stateless-statement introspection"
+      },
+      {
+        "op": "send",
+        "case": "expression-use-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "case": "expression-use-table",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "expression-use-table"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-other-create-expression",
+    "records": [
+      {
+        "case": "invalid",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "duplicate-expression",
+        "sequence": 0,
+        "value": "Expression 'E1' has already been declared"
+      },
+      {
+        "case": "invalid",
+        "operation": "unrepresentable",
+        "statement": "script-duplicate",
+        "sequence": 0,
+        "value": "Java deploys @public create expression int js:abc(p1, p2) [p1*p2] then rejects the same-arity redeclare with 'Script 'abc' that takes the same number of parameters has already been declared'; no Go script boundary"
+      },
+      {
+        "case": "parse-mixed-expr",
+        "operation": "deployed",
+        "statement": "myexpr",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "parse-mixed-expr",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "parse-mixed-expr",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "--E1--"
+            }
+          }
+        ]
+      },
+      {
+        "case": "parse-mixed-expr",
+        "operation": "deployed",
+        "statement": "scalarfilter",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "parse-mixed-expr",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "parse-mixed-expr",
+        "operation": "unrepresentable",
+        "statement": "stateless-s0",
+        "sequence": 0,
+        "value": "Java asserts s0 isStatelessSelect=true for the chained scalarfilter select; the Go engine exposes no stateless-statement introspection"
+      },
+      {
+        "case": "parse-mixed-expr",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val1": [
+                "E3",
+                "E4"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "parse-mixed-expr",
+        "operation": "unrepresentable",
+        "statement": "script-callit",
+        "sequence": 0,
+        "value": "Java deploys js:callIt() returning a new SupportBean('E1',10) and selects callIt()/callIt().getTheString() emitting {val0.theString='E1',val0.intPrimitive=10,val1='E1'}; no Go script boundary"
+      },
+      {
+        "case": "lifecycle-filter",
+        "operation": "deployed",
+        "statement": "expr-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "lifecycle-filter",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "lifecycle-filter",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "lifecycle-filter",
+        "operation": "deployed",
+        "statement": "expr-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "lifecycle-filter",
+        "operation": "deployed",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "lifecycle-filter",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "lifecycle-filter",
+        "operation": "unrepresentable",
+        "statement": "script-filter",
+        "sequence": 0,
+        "value": "Java repeats the lifecycle for boolean js:MyFilter(intPrimitive) scripts (deploy =1, filtered select, undeploy-all, redeploy =2, rebind proof); no Go script boundary"
+      },
+      {
+        "case": "script-use",
+        "operation": "unrepresentable",
+        "statement": "script-overload-soda",
+        "sequence": 0,
+        "value": "Java overloads js:abc by arity (p1*p2*10 vs p1*10) emitting {c0=350,c1=100} on makeBean(10,3.5), then SODA round-trips @name('expr') create expression somescript(i1) ['a'] and @name('select') select somescript(1) from SupportBean; no Go script or SODA boundary"
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "deployed",
+        "statement": "TwoPi",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "deployed",
+        "statement": "factorPi",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 6.283185307179586,
+              "c1": 6.283185307179586,
+              "c2": 9.42477796076938
+            }
+          }
+        ]
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 31.41592653589793
+            }
+          }
+        ]
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "deployed",
+        "statement": "expr",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "deployed",
+        "statement": "join",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "deployed",
+        "statement": "myexpr",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "unrepresentable",
+        "statement": "stateful-s0",
+        "sequence": 0,
+        "value": "Java asserts s0 isStatelessSelect=false for the myexpr subquery select over named window MyInfra; the Go engine exposes no stateless-statement introspection"
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "deployed",
+        "statement": "TwoPi",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "deployed",
+        "statement": "factorPi",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 6.283185307179586,
+              "c1": 6.283185307179586,
+              "c2": 9.42477796076938
+            }
+          }
+        ]
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 31.41592653589793
+            }
+          }
+        ]
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "deployed",
+        "statement": "expr",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "deployed",
+        "statement": "join",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "deployed",
+        "statement": "myexpr",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "unrepresentable",
+        "statement": "stateful-s0",
+        "sequence": 0,
+        "value": "Java asserts s0 isStatelessSelect=false for the myexpr subquery select over table MyInfra; the Go engine exposes no stateless-statement introspection"
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 100
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-other-create-expression",
+    "records": [
+      {
+        "case": "invalid",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "duplicate-expression",
+        "sequence": 0,
+        "value": "Expression 'E1' has already been declared"
+      },
+      {
+        "case": "invalid",
+        "operation": "unrepresentable",
+        "statement": "script-duplicate",
+        "sequence": 0,
+        "value": "Java deploys @public create expression int js:abc(p1, p2) [p1*p2] then rejects the same-arity redeclare with 'Script 'abc' that takes the same number of parameters has already been declared'; no Go script boundary"
+      },
+      {
+        "case": "parse-mixed-expr",
+        "operation": "deployed",
+        "statement": "myexpr",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "parse-mixed-expr",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "parse-mixed-expr",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "--E1--"
+            }
+          }
+        ]
+      },
+      {
+        "case": "parse-mixed-expr",
+        "operation": "deployed",
+        "statement": "scalarfilter",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "parse-mixed-expr",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "parse-mixed-expr",
+        "operation": "unrepresentable",
+        "statement": "stateless-s0",
+        "sequence": 0,
+        "value": "Java asserts s0 isStatelessSelect=true for the chained scalarfilter select; the Go engine exposes no stateless-statement introspection"
+      },
+      {
+        "case": "parse-mixed-expr",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val1": [
+                "E3",
+                "E4"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "parse-mixed-expr",
+        "operation": "unrepresentable",
+        "statement": "script-callit",
+        "sequence": 0,
+        "value": "Java deploys js:callIt() returning a new SupportBean('E1',10) and selects callIt()/callIt().getTheString() emitting {val0.theString='E1',val0.intPrimitive=10,val1='E1'}; no Go script boundary"
+      },
+      {
+        "case": "lifecycle-filter",
+        "operation": "deployed",
+        "statement": "expr-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "lifecycle-filter",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "lifecycle-filter",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "lifecycle-filter",
+        "operation": "deployed",
+        "statement": "expr-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "lifecycle-filter",
+        "operation": "deployed",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "lifecycle-filter",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "lifecycle-filter",
+        "operation": "unrepresentable",
+        "statement": "script-filter",
+        "sequence": 0,
+        "value": "Java repeats the lifecycle for boolean js:MyFilter(intPrimitive) scripts (deploy =1, filtered select, undeploy-all, redeploy =2, rebind proof); no Go script boundary"
+      },
+      {
+        "case": "script-use",
+        "operation": "unrepresentable",
+        "statement": "script-overload-soda",
+        "sequence": 0,
+        "value": "Java overloads js:abc by arity (p1*p2*10 vs p1*10) emitting {c0=350,c1=100} on makeBean(10,3.5), then SODA round-trips @name('expr') create expression somescript(i1) ['a'] and @name('select') select somescript(1) from SupportBean; no Go script or SODA boundary"
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "deployed",
+        "statement": "TwoPi",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "deployed",
+        "statement": "factorPi",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 6.283185307179586,
+              "c1": 6.283185307179586,
+              "c2": 9.42477796076938
+            }
+          }
+        ]
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 31.41592653589793
+            }
+          }
+        ]
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "deployed",
+        "statement": "expr",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "deployed",
+        "statement": "join",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "deployed",
+        "statement": "myexpr",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "unrepresentable",
+        "statement": "stateful-s0",
+        "sequence": 0,
+        "value": "Java asserts s0 isStatelessSelect=false for the myexpr subquery select over named window MyInfra; the Go engine exposes no stateless-statement introspection"
+      },
+      {
+        "case": "expression-use-nw",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "deployed",
+        "statement": "TwoPi",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "deployed",
+        "statement": "factorPi",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 6.283185307179586,
+              "c1": 6.283185307179586,
+              "c2": 9.42477796076938
+            }
+          }
+        ]
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 31.41592653589793
+            }
+          }
+        ]
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "deployed",
+        "statement": "expr",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "deployed",
+        "statement": "join",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "deployed",
+        "statement": "myexpr",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "unrepresentable",
+        "statement": "stateful-s0",
+        "sequence": 0,
+        "value": "Java asserts s0 isStatelessSelect=false for the myexpr subquery select over table MyInfra; the Go engine exposes no stateless-statement introspection"
+      },
+      {
+        "case": "expression-use-table",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 100
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

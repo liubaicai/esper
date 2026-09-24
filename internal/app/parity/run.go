@@ -88,6 +88,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include event-map-properties and event-map-properties-diff")
 		fmt.Fprintln(stderr, "runner modes include event-object-array-core and event-object-array-core-diff")
 		fmt.Fprintln(stderr, "runner modes include epl-other-istream-rstream-keywords and epl-other-istream-rstream-keywords-diff")
+		fmt.Fprintln(stderr, "runner modes include epl-other-create-expression and epl-other-create-expression-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-dt-interval-ops and expr-dt-interval-ops-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-dt-resolution and expr-dt-resolution-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-dt-data-sources and expr-dt-data-sources-diff")
@@ -342,6 +343,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWTableSubqCorrelCoerceScenario(file)
 	} else if *mode == "epl-other-stream-expr" || *mode == "epl-other-stream-expr-diff" {
 		scenario, err = loadEplOtherStreamExprScenario(file)
+	} else if *mode == "epl-other-create-expression" || *mode == "epl-other-create-expression-diff" {
+		scenario, err = loadEplOtherCreateExpressionScenario(file)
 	} else if *mode == "epl-other-select-expr-stream-selector" || *mode == "epl-other-select-expr-stream-selector-diff" {
 		scenario, err = loadEplOtherSelectExprStreamSelectorScenario(file)
 	} else if *mode == "infra-nwtable-start-stop" || *mode == "infra-nwtable-start-stop-diff" {
@@ -838,6 +841,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, eplOtherStreamExprJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, eplOtherStreamExprJavaSources),
 				splitMetadata(*javaExecutions, eplOtherStreamExprJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "epl-other-create-expression" || *mode == "epl-other-create-expression-diff" {
+		trace, err := runEplOtherCreateExpressionScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "epl-other-create-expression-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, eplOtherCreateExpressionJavaCommit,
+				splitMetadata(*javaRuntimeIDs, eplOtherCreateExpressionJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, eplOtherCreateExpressionJavaSources),
+				splitMetadata(*javaExecutions, eplOtherCreateExpressionJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

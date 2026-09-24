@@ -3453,6 +3453,26 @@ type Query struct {
 	// queries.
 	where  Expr
 	having Expr
+	// localExpressions holds statement-local declared expressions that shadow
+	// environment registrations of the same name for this statement only
+	// (Esper's `expression name {...} select ...` form).
+	localExpressions map[string]Expr
+}
+
+// WithExpression returns a copy of the query carrying a statement-local
+// declared expression. The local definition shadows an environment
+// registration of the same name inside this statement's expressions,
+// mirroring Esper's `expression TwoPi {Math.PI * 10} select TwoPi() ...`
+// form. Parameters are declared by embedding ExpressionParam nodes in the
+// body, exactly like DefineExpression.
+func (q Query) WithExpression(name string, expression Expr) Query {
+	locals := make(map[string]Expr, len(q.localExpressions)+1)
+	for key, value := range q.localExpressions {
+		locals[key] = value
+	}
+	locals[strings.TrimSpace(name)] = expression
+	q.localExpressions = locals
+	return q
 }
 
 func (q Query) Name() string   { return q.name }

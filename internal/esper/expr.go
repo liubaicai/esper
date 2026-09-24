@@ -91,8 +91,18 @@ type exprNode struct {
 	// types without mistaking the body for an argument.
 	expressionArguments []*exprNode
 	expressionBody      *exprNode
-	children            []*exprNode
-	subquery            *subqueryDefinition
+	// expressionOverride carries a statement-local declared expression that
+	// shadows the environment registration of the same name (Esper's
+	// statement-local `expression name {...}` form). Build sets it from
+	// Query.localExpressions; validation and evaluation prefer it over the
+	// environment lookup.
+	expressionOverride Expr
+	// expressionOverrideParameters caches the parameter specs discovered on
+	// the override body at Build so evaluation does not re-walk the body per
+	// event (the environment path reuses definition.Parameters).
+	expressionOverrideParameters []ExpressionParameterSpec
+	children                     []*exprNode
+	subquery                     *subqueryDefinition
 	// pureBuiltin marks the engine-owned function nodes (Lower/Upper/Trim and
 	// the other deterministic helpers the expression package builds itself).
 	// User functions registered through Func* stay unmarked, so predicates

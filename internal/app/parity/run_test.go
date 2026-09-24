@@ -81084,3 +81084,332 @@ func TestRunHelpIncludesExprClassClassDependency(t *testing.T) {
 		}
 	}
 }
+
+func TestRunEplOtherCreateExpressionDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", eplOtherCreateExpressionID,
+		"-scenario", filepath.Join(root, eplOtherCreateExpressionID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertEplOtherCreateExpressionTrace(t, trace)
+}
+
+func TestRunEplOtherCreateExpressionRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, eplOtherCreateExpressionID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "invalid"`), []byte(`"case": "invalid", "extra": 0`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-c0c5df502bf2651e6acf"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "select-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`select myexpr(sb) as c1`), []byte(`select myexpr(sb) as c9`), 1)
+		}},
+		{name: "filter-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`MyFilter {sb => intPrimitive = 2}`), []byte(`MyFilter {sb => intPrimitive = 3}`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1",
+    "intPrimitive": 1`), []byte(`"theString": "E1",
+    "intPrimitive": 1,
+    "extra": 0`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportBean_S0"`), []byte(`"eventType": "WrongEvent"`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", eplOtherCreateExpressionID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunEplOtherCreateExpressionRuntimeIDMappingMatchesScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, eplOtherCreateExpressionID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenario struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &scenario); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenario.JavaRuntimes, eplOtherCreateExpressionJavaRuntimeIDs) {
+		t.Fatalf("javaRuntimes = %#v", scenario.JavaRuntimes)
+	}
+	if !reflect.DeepEqual(scenario.JavaNames, eplOtherCreateExpressionJavaExecutions) {
+		t.Fatalf("javaNames = %#v", scenario.JavaNames)
+	}
+	for index, definition := range scenario.Cases {
+		if definition.RuntimeID != eplOtherCreateExpressionJavaRuntimeIDs[index] {
+			t.Fatalf("case %q runtimeId = %q, want %q", definition.Case, definition.RuntimeID, eplOtherCreateExpressionJavaRuntimeIDs[index])
+		}
+	}
+}
+
+func assertEplOtherCreateExpressionTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != eplOtherCreateExpressionID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 47 {
+		t.Fatalf("trace records = %d, want 47", len(trace.Records))
+	}
+	counts := map[string]map[string]int{}
+	for _, record := range trace.Records {
+		if counts[record.Case] == nil {
+			counts[record.Case] = map[string]int{}
+		}
+		counts[record.Case][record.Operation]++
+	}
+	want := map[string]map[string]int{
+		"invalid":              {"deployed": 1, "compile-error": 1, "unrepresentable": 1},
+		"parse-mixed-expr":     {"deployed": 4, "listener": 2, "unrepresentable": 2},
+		"lifecycle-filter":     {"deployed": 4, "listener": 2, "unrepresentable": 1},
+		"script-use":           {"unrepresentable": 1},
+		"expression-use-nw":    {"deployed": 10, "listener": 3, "unrepresentable": 1},
+		"expression-use-table": {"deployed": 10, "listener": 3, "unrepresentable": 1},
+	}
+	if !reflect.DeepEqual(counts, want) {
+		t.Fatalf("record counts = %#v, want %#v", counts, want)
+	}
+}
+
+func TestRunEplOtherCreateExpressionDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), eplOtherCreateExpressionID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", eplOtherCreateExpressionID + "-diff",
+		"-scenario", filepath.Join(root, eplOtherCreateExpressionID+".json"),
+		"-java-trace", filepath.Join(root, eplOtherCreateExpressionID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != eplOtherCreateExpressionJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, eplOtherCreateExpressionJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{eplOtherCreateExpressionSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, eplOtherCreateExpressionJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertEplOtherCreateExpressionTrace(t, evidence.JavaTrace)
+	assertEplOtherCreateExpressionTrace(t, evidence.GoTrace)
+}
+
+func TestRunEplOtherCreateExpressionDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "lifecycle-rebind-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "lifecycle-filter" && rec.Operation == "listener" && rec.Statement == "s2" {
+						rec.New[0].Fields["intPrimitive"] = json.Number("1")
+						return
+					}
+				}
+				panic("no lifecycle-filter s2 record")
+			},
+		},
+		{
+			name: "scalarfilter-value-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "parse-mixed-expr" && rec.Operation == "listener" && rec.Statement == "s0" && rec.Sequence == 2 {
+						rec.New[0].Fields["val1"] = []any{"E3"}
+						return
+					}
+				}
+				panic("no parse-mixed-expr s0 record 2")
+			},
+		},
+		{
+			name: "local-shadow-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "expression-use-nw" && rec.Operation == "listener" && rec.Statement == "s0" && rec.Sequence == 2 {
+						rec.New[0].Fields["c0"] = json.Number("6.283185307179586")
+						return
+					}
+				}
+				panic("no expression-use-nw s0 record 2")
+			},
+		},
+		{
+			name: "deferred-subquery-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "expression-use-table" && rec.Operation == "listener" && rec.Statement == "s0" && rec.Sequence == 3 {
+						rec.New[0].Fields["c0"] = json.Number("101")
+						return
+					}
+				}
+				panic("no expression-use-table s0 record 3")
+			},
+		},
+		{
+			name: "compile-error-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "invalid" && rec.Operation == "compile-error" {
+						rec.Value = "Expression 'E9' has already been declared"
+						return
+					}
+				}
+				panic("no invalid compile-error record")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join(root, eplOtherCreateExpressionID+".evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), eplOtherCreateExpressionID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", eplOtherCreateExpressionID + "-diff",
+				"-scenario", filepath.Join(root, eplOtherCreateExpressionID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunEplOtherCreateExpressionCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, eplOtherCreateExpressionID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, eplOtherCreateExpressionID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, eplOtherCreateExpressionID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if evidence.JavaCommit != eplOtherCreateExpressionJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, eplOtherCreateExpressionJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{eplOtherCreateExpressionSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, eplOtherCreateExpressionJavaExecutions) {
+		t.Fatalf("checked-in Java metadata = %#v", evidence)
+	}
+	assertEplOtherCreateExpressionTrace(t, javaTrace)
+	assertEplOtherCreateExpressionTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, eplOtherCreateExpressionID+".json")
+	scenarioData, err := os.ReadFile(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rawScenario struct {
+		Version string        `json:"version"`
+		ID      string        `json:"id"`
+		Steps   []compat.Step `json:"steps"`
+	}
+	if err := json.Unmarshal(scenarioData, &rawScenario); err != nil {
+		t.Fatal(err)
+	}
+	scenario := compat.Scenario{Version: rawScenario.Version, ID: rawScenario.ID, Steps: rawScenario.Steps}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatalf("checked-in scenario differs from evidence scenario")
+	}
+}

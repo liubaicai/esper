@@ -642,6 +642,9 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 	}
 	e.buildMu.Lock()
 	defer e.buildMu.Unlock()
+	if err := bindLocalExpressions(query); err != nil {
+		return Plan{}, WrapError(ErrorInvalidRule, "statement-local expression", err)
+	}
 	if query.deliveryMode == deliveryGrouped && len(query.deliveryExprs) == 0 {
 		return Plan{}, NewError(ErrorInvalidRule, "grouped delivery requires one or more grouping expressions")
 	}
@@ -3113,18 +3116,33 @@ func (e *Environment) validateExpressionReferences(node *exprNode, visiting map[
 		if node.expressionEnvironment != nil && node.expressionEnvironment != e {
 			return NewError(ErrorDependency, fmt.Sprintf("expression definition %q belongs to a different environment", name))
 		}
-		definition, ok := e.Expression(name)
-		if !ok || definition.Expr == nil || definition.Expr.node() == nil {
-			return NewError(ErrorUnknownName, fmt.Sprintf("expression definition %q is not registered", name))
+		// A statement-local expression shadows the environment registration:
+		// validate against the override body and its discovered parameters.
+		var body Expr
+		var parameters []ExpressionParameterSpec
+		if node.expressionOverride != nil {
+			body = node.expressionOverride
+			specs, specErr := expressionParameterSpecs(body)
+			if specErr != nil {
+				return specErr
+			}
+			parameters = specs
+		} else {
+			definition, ok := e.Expression(name)
+			if !ok || definition.Expr == nil || definition.Expr.node() == nil {
+				return NewError(ErrorUnknownName, fmt.Sprintf("expression definition %q is not registered", name))
+			}
+			body = definition.Expr
+			parameters = definition.Parameters
 		}
-		if !expressionTypesCompatible(node.typ, definition.Expr.Type()) {
-			return NewError(ErrorTypeMismatch, fmt.Sprintf("expression definition %q returns %s, reference expects %s", name, definition.Expr.Type(), node.typ))
+		if !expressionTypesCompatible(node.typ, body.Type()) {
+			return NewError(ErrorTypeMismatch, fmt.Sprintf("expression definition %q returns %s, reference expects %s", name, body.Type(), node.typ))
 		}
 		arguments := node.expressionArguments
-		if len(arguments) != len(definition.Parameters) {
-			return NewError(ErrorInvalidRule, fmt.Sprintf("expression definition %q expects %d arguments, received %d", name, len(definition.Parameters), len(arguments)))
+		if len(arguments) != len(parameters) {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("expression definition %q expects %d arguments, received %d", name, len(parameters), len(arguments)))
 		}
-		for index, parameter := range definition.Parameters {
+		for index, parameter := range parameters {
 			argument := arguments[index]
 			if argument == nil {
 				return NewError(ErrorInvalidRule, fmt.Sprintf("expression definition %q argument %d is required", name, index))
@@ -3137,7 +3155,7 @@ func (e *Environment) validateExpressionReferences(node *exprNode, visiting map[
 			return NewError(ErrorInvalidRule, fmt.Sprintf("expression definition %q has a cyclic dependency", name))
 		}
 		visiting[name] = true
-		node.expressionBody = definition.Expr.node()
+		node.expressionBody = body.node()
 		bodyPresent := false
 		for _, child := range node.children {
 			if child == node.expressionBody {
@@ -3148,7 +3166,7 @@ func (e *Environment) validateExpressionReferences(node *exprNode, visiting map[
 		if !bodyPresent {
 			node.children = append(node.children, node.expressionBody)
 		}
-		if err := e.validateExpressionReferences(definition.Expr.node(), visiting); err != nil {
+		if err := e.validateExpressionReferences(body.node(), visiting); err != nil {
 			delete(visiting, name)
 			return err
 		}
@@ -3156,6 +3174,231 @@ func (e *Environment) validateExpressionReferences(node *exprNode, visiting map[
 	}
 	for _, child := range node.children {
 		if err := e.validateExpressionReferences(child, visiting); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// bindLocalExpressions attaches statement-local declared expressions to the
+// matching expression-ref nodes so validation and evaluation resolve the
+// local body instead of the environment registration. Local definitions may
+// reference each other and the environment; a local name shadowing an
+// environment name is the documented Esper behavior.
+//
+// The override lives on the expression-ref node, so a node can only carry
+// one local binding. Expr values are reusable across queries: when a shared
+// ref node would receive a conflicting binding — a different local body, or
+// a local body after the node already resolved the environment registration
+// for another statement — Build fails loudly instead of silently changing
+// the earlier statement's semantics. Rebinding the identical local body is
+// idempotent so a query can be rebuilt.
+func bindLocalExpressions(query Query) error {
+	locals := query.localExpressions
+	for name, expression := range locals {
+		if strings.TrimSpace(name) == "" {
+			return fmt.Errorf("statement-local expression name is required")
+		}
+		if expression == nil || expression.node() == nil {
+			return fmt.Errorf("statement-local expression %q requires an expression", name)
+		}
+	}
+	var bindStreamNode func(node *streamNode) error
+	var bind func(node *exprNode) error
+	bind = func(node *exprNode) error {
+		if node == nil {
+			return nil
+		}
+		if node.kind == "expression-ref" {
+			name := strings.TrimSpace(node.expressionName)
+			local, hasLocal := locals[name]
+			// Validation appends the resolved body to children; a node whose
+			// children already contain expressionBody was bound into a
+			// previously built statement and must not be rebound.
+			validated := false
+			for _, child := range node.children {
+				if child != nil && child == node.expressionBody {
+					validated = true
+					break
+				}
+			}
+			switch {
+			case hasLocal && node.expressionOverride != nil && node.expressionOverride.node() != local.node():
+				return fmt.Errorf("expression %q is already bound to a different statement-local body by another statement; create a fresh ExpressionRef for this query", name)
+			case hasLocal && node.expressionOverride == nil && validated:
+				return fmt.Errorf("expression %q already resolved the environment registration for another statement; create a fresh ExpressionRef for this query", name)
+			case !hasLocal && node.expressionOverride != nil:
+				return fmt.Errorf("expression %q is bound to a statement-local body by another statement; create a fresh ExpressionRef for this query", name)
+			case hasLocal:
+				node.expressionOverride = local
+				parameters, err := expressionParameterSpecs(local)
+				if err != nil {
+					return err
+				}
+				node.expressionOverrideParameters = parameters
+			}
+		}
+		for _, child := range node.children {
+			// node.expressionBody is appended to children by validation and
+			// points into the environment-registered definition. Binding
+			// inside it would stamp statement-local overrides onto the shared
+			// definition body for every statement that uses it.
+			if child == node.expressionBody {
+				continue
+			}
+			if err := bind(child); err != nil {
+				return err
+			}
+		}
+		for _, argument := range node.expressionArguments {
+			if err := bind(argument); err != nil {
+				return err
+			}
+		}
+		if node.subquery != nil {
+			if err := bindStreamNode(node.subquery.source); err != nil {
+				return err
+			}
+			for _, expression := range []Expr{node.subquery.predicate, node.subquery.projection, node.subquery.groupBy, node.subquery.having} {
+				if expression != nil {
+					if err := bind(expression.node()); err != nil {
+						return err
+					}
+				}
+			}
+			for _, selection := range node.subquery.columns {
+				if selection.Expr != nil {
+					if err := bind(selection.Expr.node()); err != nil {
+						return err
+					}
+				}
+			}
+			for _, key := range node.subquery.orderBy {
+				if key.Expression != nil {
+					if err := bind(key.Expression.node()); err != nil {
+						return err
+					}
+				}
+			}
+		}
+		return nil
+	}
+	bindExpr := func(expression Expr) error {
+		if expression == nil {
+			return nil
+		}
+		return bind(expression.node())
+	}
+	var bindWindow func(window WindowSpec) error
+	bindWindow = func(window WindowSpec) error {
+		switch value := window.(type) {
+		case TimeWindowSpec:
+			return bindExpr(value.Expr)
+		case ExpressionWindowSpec:
+			return bindExpr(value.Keep)
+		case ExpressionBatchWindowSpec:
+			return bindExpr(value.Trigger)
+		case GroupWindowSpec:
+			for _, key := range value.effectiveKeys() {
+				if err := bindExpr(key); err != nil {
+					return err
+				}
+			}
+			return bindWindow(value.Inner)
+		case CompositeWindowSpec:
+			for _, child := range value.Windows {
+				if err := bindWindow(child); err != nil {
+					return err
+				}
+			}
+		case ExternallyTimedWindowSpec:
+			return bindExpr(value.Timestamp)
+		case TimeOrderWindowSpec:
+			return bindExpr(value.Timestamp)
+		case TimeToLiveAtWindowSpec:
+			return bindExpr(value.Timestamp)
+		case SortedWindowSpec:
+			for _, key := range value.UniqueKeys {
+				if err := bindExpr(key); err != nil {
+					return err
+				}
+			}
+			for _, key := range value.Keys {
+				if err := bindExpr(key.Expr); err != nil {
+					return err
+				}
+			}
+		case UniqueWindowSpec:
+			for _, key := range value.keyExpressions() {
+				if err := bindExpr(key); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+	bindStreamNode = func(node *streamNode) error {
+		for current := node; current != nil; current = current.input {
+			if current.predicate != nil {
+				if err := bind(current.predicate.node()); err != nil {
+					return err
+				}
+			}
+			if current.contained != nil && current.contained.property != nil {
+				if err := bind(current.contained.property.node()); err != nil {
+					return err
+				}
+			}
+			if err := bindWindow(current.window); err != nil {
+				return err
+			}
+			if err := bindWindow(current.patternWindow); err != nil {
+				return err
+			}
+			if current.derived != nil && current.derived.aggregate != nil {
+				for _, key := range current.derived.aggregate.groupBy {
+					if err := bind(key.node()); err != nil {
+						return err
+					}
+				}
+				for _, expression := range []Expr{current.derived.aggregate.where, current.derived.aggregate.having} {
+					if expression != nil {
+						if err := bind(expression.node()); err != nil {
+							return err
+						}
+					}
+				}
+				for _, selection := range current.derived.aggregate.selections {
+					if selection.Expr != nil {
+						if err := bind(selection.Expr.node()); err != nil {
+							return err
+						}
+					}
+				}
+			}
+		}
+		return nil
+	}
+	if err := visitQueryExpressions(nil, query, func(expression Expr) error {
+		if expression == nil {
+			return nil
+		}
+		return bind(expression.node())
+	}); err != nil {
+		return err
+	}
+	for _, expression := range query.deliveryExprs {
+		if expression != nil {
+			if err := bind(expression.node()); err != nil {
+				return err
+			}
+		}
+	}
+	// Local bodies may reference sibling locals and the environment; bind
+	// refs inside each body so they resolve the same overrides. Cyclic local
+	// references are rejected by validateExpressionReferences.
+	for _, expression := range locals {
+		if err := bind(expression.node()); err != nil {
 			return err
 		}
 	}
