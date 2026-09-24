@@ -55,37 +55,39 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly') committed and pushed as 9ac32d036; Git owns identity. Parity review PASS, two P3s fixed.
 
 ## Current work unit
-Active: Draft 4.528 ('expr-class-for-epl-objects').
+Active: Draft 4.529 ('expr-class-class-dependency').
 
-- Selection: `ExprClassForEPLObjects.java` all 4 executions, no flags —
- `ExprClassResolutionFromClauseMethod` (`java-runtime-cb993aa0d17d61b0d45f`),
- `ExprClassResolutionOutputColType` (`java-runtime-203a97dc1cba0371469c`),
- `ExprClassResolutionInvalid` (`java-runtime-1335a465f707da5fce60`),
- `ExprClassResolutionScript` (`java-runtime-785742544d6ada82189d`).
+- Selection: `ExprClassClassDependency.java` all 3 executions, no flags —
+ `ExprClassClassDependencyAllLocal` (`java-runtime-f53aa2ad87c7997d7c36`),
+ `ExprClassClassDependencyInvalid` (`java-runtime-247c1169dd5c24bd21f0`),
+ `ExprClassClassDependencyClasspath` (`java-runtime-bc85bc8d79bc09bb8500`).
  Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`.
-- [x] Contract frozen: JavaContract528 (4 executions: from-clause method
-  static getBeans→2 rows, output col type Construct+getId, 5 invalid
-  probes on invisible-class resolution sites, script Java.type runtime
-  failure) + GoSurface528 (no engine gaps; FromMethod+MethodProviderFunc,
-  Construct+Method, RegisterScript+ScriptCall, build-error records;
-  closest runner expr_class_type_use.go). Assets528 dispatched.
-- [x] Assets528 integrated: `internal/app/parity/expr_class_for_epl_objects.go` +
-  `testdata/parity/expr-class-for-epl-objects.json` (4 cases / 20 steps) +
-  oracle `tools/java-oracle/ExprClassForEPLObjectsScenarioOracle.java` +
-  `run-expr-class-for-epl-objects.sh` + run.go/run_test.go wiring. Worker
-  verified zero-diff end-to-end before handoff. Zero engine changes.
-  Oracle classpath fix: added regression-run dependency:build-classpath
-  for Nashorn (script dialect 'js').
-- [x] Differential replay: Java 8 records; Go 8 records. `-mode
-  expr-class-for-epl-objects-diff` status `passing` / 0 differences
+- [x] Contract frozen: JavaContract529 (3 executions: AllLocal Func1
+ composition c0="|>E1<|", Invalid 2 unrepresentable compile-error probes
+ with trailing-space prefix difference, Classpath 2 cycles FQN/import
+ c0="'E1'") + GoSurface529 (no engine gaps; Func1/DefineExpression,
+ build-error records; closest runner expr_class_for_epl_objects.go).
+ Assets529 dispatched.
+- [x] Assets529 integrated: `internal/app/parity/expr_class_class_dependency.go` +
+  `testdata/parity/expr-class-class-dependency.json` (3 cases / 15 steps) +
+  oracle `tools/java-oracle/ExprClassClassDependencyScenarioOracle.java` +
+  `run-expr-class-class-dependency.sh` + run.go/run_test.go wiring. Zero
+  engine changes.
+- [x] Differential replay: Java 5 records; Go 5 records. `-mode
+  expr-class-class-dependency-diff` status `passing` / 0 differences
   (identity normalizer).
-- [x] Manifest: NEW case `case.expr-class-for-epl-objects` born-DV with
-  the 4 IDs; `expr.core` mapping + goRefs extended. Summary 759 cases /
-  385 DV / 1514 DV runtime IDs / unreferenced 518.
+- [x] Manifest: NEW case `case.expr-class-class-dependency` born-DV with
+  the 3 IDs; `expr.core` mapping + goRefs extended. Summary 760 cases /
+  386 DV / 1517 DV runtime IDs / unreferenced 515.
 - [ ] Gates + parity review + commit: pending `make check`, independent
   reviewer, then commit/push.
 
 ## Previous work units (shipped)
+
+- Shipped: Draft 4.528 ('expr-class-for-epl-objects') committed and pushed
+ as 8deb00b98; Git owns identity. Born-DV `case.expr-class-for-epl-objects`
+ under `expr.core` (all 4 executions, 8 records, 0 differences). Zero
+ engine changes. Parity review PASS, zero findings.
 
 - Shipped: Draft 4.527 ('expr-class-type-use') committed and pushed as
  c178ccf3c; Git owns identity. Born-DV `case.expr-class-type-use` under

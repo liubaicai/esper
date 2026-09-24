@@ -1,0 +1,140 @@
+{
+ "version": "esper-parity/v1",
+ "id": "expr-class-class-dependency",
+ "description": "ExprClassClassDependency ordinals 0-2 (all executions): all-local deploys one statement carrying two inlined_class blocks (MyUtil.someFunction wraps |p|, MyClass.doIt calls MyUtil.someFunction(\">\"+p+\"<\")) and selects MyClass.doIt(theString) as c0, yielding c0=\"|>E1<|\" for SupportBean(\"E1\",1); invalid compiles @public create inlined_class MyUtil onto the path then runs two tryInvalidCompile probes (a statement-local inlined_class and a create inlined_class depending on the path-provided class) that fail because inlined-class Janino cannot see path-provided classes, pinning the prefixes \"Failed to compile an inlined-class:\" and \"Failed to compile an inlined-class: \" (trailing space); classpath runs two deploy/undeploy cycles where inlined MyUtil.doIt calls ExprClassClassDependency.supportQuoteString by fully-qualified name then by import (the import line has no trailing newline), each SupportBean(\"E1\",1) yielding c0=\"'E1'\". Go has no inlined_class directive, so class members bind as typed Go expressions (Func1 composition for all-local, a Func1 closure over the supportQuoteString helper for classpath); the invalid probes are unrepresentable on the typed Go surface and pin the Java prefixes only.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/clazz/ExprClassClassDependency.java",
+ "javaRuntimes": [
+  "java-runtime-f53aa2ad87c7997d7c36",
+  "java-runtime-247c1169dd5c24bd21f0",
+  "java-runtime-bc85bc8d79bc09bb8500"
+ ],
+ "javaNames": [
+  "ExprClassClassDependencyAllLocal",
+  "ExprClassClassDependencyInvalid",
+  "ExprClassClassDependencyClasspath"
+ ],
+ "javaStaticIds": [
+  "java-9027f7526d0d0a784faa",
+  "java-c83ffad3efc5ef5bef30",
+  "java-a8a6b01c7c18cdfb950a"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "all-local",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-f53aa2ad87c7997d7c36",
+   "executionName": "ExprClassClassDependencyAllLocal",
+   "observation": "listener; the statement-local inlined_class pair compiles in one Janino batch so MyClass.doIt sees MyUtil.someFunction: SupportBean(\"E1\",1) yields c0=\"|>E1<|\" (MyUtil wraps |p| around MyClass's >p<)",
+   "epl": "@name('s0') inlined_class \"\"\"\n    public class MyUtil {\n        public static String someFunction(String parameter) {\n            return \"|\" + parameter + \"|\";\n        }\n    }\n\"\"\" \ninlined_class \"\"\"\n    public class MyClass {\n        public static String doIt(String parameter) {\n            return MyUtil.someFunction(\">\" + parameter + \"<\");\n        }\n    }\n\"\"\" \nselect MyClass.doIt(theString) as c0 from SupportBean\n"
+  },
+  {
+   "case": "invalid",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-247c1169dd5c24bd21f0",
+   "executionName": "ExprClassClassDependencyInvalid",
+   "observation": "compile-error; two tryInvalidCompile probes pin the Java message prefixes: a statement-local inlined_class and a create inlined_class depending on the path-provided MyUtil both fail because inlined-class Janino cannot see path-provided classes (the prefixes differ only by trailing space)",
+   "epl": "@public create inlined_class \"\"\"\n    public class MyUtil {\n        public static String someFunction(String parameter) {\n            return \"|\" + parameter + \"|\";\n        }\n    }\n\"\"\"inlined_class \"\"\"\n    public class MyClass {\n        public static String doIt(String parameter) {\n            return MyUtil.someFunction(\">\" + parameter + \"<\");\n        }\n    }\n\"\"\" \nselect MyClass.doIt(theString) as c0 from SupportBean\ncreate inlined_class \"\"\"\n    public class MyClass {\n        public static String doIt(String parameter) {\n            return MyUtil.someFunction(\">\" + parameter + \"<\");\n        }\n    }\n\"\"\""
+  },
+  {
+   "case": "classpath",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-bc85bc8d79bc09bb8500",
+   "executionName": "ExprClassClassDependencyClasspath",
+   "observation": "listener; two deploy/undeploy cycles: inlined MyUtil.doIt calls ExprClassClassDependency.supportQuoteString by fully-qualified name then by import (the import line has no trailing newline): each SupportBean(\"E1\",1) yields c0=\"'E1'\"",
+   "epl": "@name('s0') inlined_class \"\"\"\n    public class MyUtil {\n        public static String doIt(String parameter) {\n            return com.espertech.esper.regressionlib.suite.expr.clazz.ExprClassClassDependency.supportQuoteString(parameter);\n        }\n    }\n\"\"\" \nselect MyUtil.doIt(theString) as c0 from SupportBean\n@name('s0') inlined_class \"\"\"\n    import com.espertech.esper.regressionlib.suite.expr.clazz.ExprClassClassDependency;    public class MyUtil {\n        public static String doIt(String parameter) {\n            return ExprClassClassDependency.supportQuoteString(parameter);\n        }\n    }\n\"\"\" \nselect MyUtil.doIt(theString) as c0 from SupportBean\n"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "all-local"
+  },
+  {
+   "op": "deploy",
+   "case": "all-local",
+   "statement": "s0",
+   "epl": "@name('s0') inlined_class \"\"\"\n    public class MyUtil {\n        public static String someFunction(String parameter) {\n            return \"|\" + parameter + \"|\";\n        }\n    }\n\"\"\" \ninlined_class \"\"\"\n    public class MyClass {\n        public static String doIt(String parameter) {\n            return MyUtil.someFunction(\">\" + parameter + \"<\");\n        }\n    }\n\"\"\" \nselect MyClass.doIt(theString) as c0 from SupportBean\n"
+  },
+  {
+   "op": "send",
+   "case": "all-local",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "all-local"
+  },
+  {
+   "op": "case",
+   "case": "invalid"
+  },
+  {
+   "op": "deploy",
+   "case": "invalid",
+   "statement": "create-class",
+   "epl": "@public create inlined_class \"\"\"\n    public class MyUtil {\n        public static String someFunction(String parameter) {\n            return \"|\" + parameter + \"|\";\n        }\n    }\n\"\"\""
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "local-on-path-class",
+   "epl": "inlined_class \"\"\"\n    public class MyClass {\n        public static String doIt(String parameter) {\n            return MyUtil.someFunction(\">\" + parameter + \"<\");\n        }\n    }\n\"\"\" \nselect MyClass.doIt(theString) as c0 from SupportBean\n",
+   "expectError": "Failed to compile an inlined-class:"
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "create-on-path-class",
+   "epl": "create inlined_class \"\"\"\n    public class MyClass {\n        public static String doIt(String parameter) {\n            return MyUtil.someFunction(\">\" + parameter + \"<\");\n        }\n    }\n\"\"\"",
+   "expectError": "Failed to compile an inlined-class: "
+  },
+  {
+   "op": "case",
+   "case": "classpath"
+  },
+  {
+   "op": "deploy",
+   "case": "classpath",
+   "statement": "s0",
+   "epl": "@name('s0') inlined_class \"\"\"\n    public class MyUtil {\n        public static String doIt(String parameter) {\n            return com.espertech.esper.regressionlib.suite.expr.clazz.ExprClassClassDependency.supportQuoteString(parameter);\n        }\n    }\n\"\"\" \nselect MyUtil.doIt(theString) as c0 from SupportBean\n"
+  },
+  {
+   "op": "send",
+   "case": "classpath",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "classpath"
+  },
+  {
+   "op": "deploy",
+   "case": "classpath",
+   "statement": "s0",
+   "epl": "@name('s0') inlined_class \"\"\"\n    import com.espertech.esper.regressionlib.suite.expr.clazz.ExprClassClassDependency;    public class MyUtil {\n        public static String doIt(String parameter) {\n            return ExprClassClassDependency.supportQuoteString(parameter);\n        }\n    }\n\"\"\" \nselect MyUtil.doIt(theString) as c0 from SupportBean\n"
+  },
+  {
+   "op": "send",
+   "case": "classpath",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "classpath"
+  }
+ ]
+}

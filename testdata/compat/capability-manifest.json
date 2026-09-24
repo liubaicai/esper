@@ -606,6 +606,7 @@
     "TestExprCaseNode"
    ],
    "goRefs": [
+    "internal/app/parity/expr_class_class_dependency.go",
     "internal/app/parity/expr_class_for_epl_objects.go",
     "internal/app/parity/expr_class_type_use.go",
     "internal/app/parity/expr_dt_between.go",
@@ -49126,6 +49127,53 @@
     "java-runtime-785742544d6ada82189d"
    ],
    "notes": "ExprClassForEPLObjects all 4 executions. 8 records (2 listener, 5 compile-error, 1 unrepresentable), 0 differences."
+  },
+  {
+   "id": "case.expr-class-class-dependency",
+   "javaRuntimeIds": [
+    "java-runtime-f53aa2ad87c7997d7c36",
+    "java-runtime-247c1169dd5c24bd21f0",
+    "java-runtime-bc85bc8d79bc09bb8500"
+   ],
+   "javaStaticIds": [
+    "java-9027f7526d0d0a784faa",
+    "java-c83ffad3efc5ef5bef30",
+    "java-a8a6b01c7c18cdfb950a"
+   ],
+   "javaNames": [
+    "ExprClassClassDependencyAllLocal",
+    "ExprClassClassDependencyInvalid",
+    "ExprClassClassDependencyClasspath"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/clazz/ExprClassClassDependency.java"
+   ],
+   "goTests": [
+    "internal/app/parity/expr_class_class_dependency.go",
+    "internal/app/parity/run_test.go"
+   ],
+   "tags": [
+    "expr",
+    "class",
+    "inlined-class",
+    "born-differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/expr-class-class-dependency.evidence.json"
+   ],
+   "difference": "Java inlined_class cross-class dependency: all-local (MyClass.doIt\u2192MyUtil.someFunction same-module javac batch, c0=|>E1<|), invalid (2 unrepresentable probes \u2014 cross-module inlined-class dep fails at Janino compile, prefixes differ by trailing space), classpath (inlined_class\u2192classpath class via FQN and import, c0='E1'). EPL pinned but never replayed (no inlined_class directive).",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-f53aa2ad87c7997d7c36",
+    "java-runtime-247c1169dd5c24bd21f0",
+    "java-runtime-bc85bc8d79bc09bb8500"
+   ],
+   "notes": "ExprClassClassDependency all 3 executions. 5 records (3 listener + 2 compile-error), 0 differences."
   }
  ],
  "mappings": [
@@ -52508,13 +52556,17 @@
   {
    "capabilityId": "expr.core",
    "caseId": "case.expr-class-for-epl-objects"
+  },
+  {
+   "capabilityId": "expr.core",
+   "caseId": "case.expr-class-class-dependency"
   }
  ],
  "summary": {
-  "inventoriedCases": 759,
-  "implementedCases": 757,
-  "differentialVerifiedCases": 385,
-  "differentialVerifiedRuntimeIds": 1514,
+  "inventoriedCases": 760,
+  "implementedCases": 758,
+  "differentialVerifiedCases": 386,
+  "differentialVerifiedRuntimeIds": 1517,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -52524,13 +52576,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4048,
-  "referencedJavaRuntimeIds": 3618,
+  "runtimeAssociationCount": 4051,
+  "referencedJavaRuntimeIds": 3621,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 518,
+  "unreferencedJavaRuntimeIds": 515,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 759,
+  "totalCases": 760,
   "totalCapabilities": 126
  }
 }

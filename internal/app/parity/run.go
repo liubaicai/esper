@@ -94,6 +94,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include expr-enum-select-from and expr-enum-select-from-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-type-use and expr-class-type-use-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-for-epl-objects and expr-class-for-epl-objects-diff")
+		fmt.Fprintln(stderr, "runner modes include expr-class-class-dependency and expr-class-class-dependency-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
@@ -153,6 +154,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadExprClassTypeUseScenario(file)
 	} else if *mode == "expr-class-for-epl-objects" || *mode == "expr-class-for-epl-objects-diff" {
 		scenario, err = loadExprClassForEPLObjectsScenario(file)
+	} else if *mode == "expr-class-class-dependency" || *mode == "expr-class-class-dependency-diff" {
+		scenario, err = loadExprClassClassDependencyScenario(file)
 	} else if *mode == "epl-variable-output-rate" || *mode == "epl-variable-output-rate-diff" {
 		scenario, err = loadEplVariableOutputRateScenario(file)
 	} else if *mode == "epl-subselect-within-filter-having" || *mode == "epl-subselect-within-filter-having-diff" {
@@ -5744,6 +5747,23 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaSourceFiles, exprClassForEPLObjectsJavaSources),
 				splitMetadata(*javaExecutions, exprClassForEPLObjectsJavaExecutions), scenario, trace,
 				normalizeExprClassForEPLObjectsTrace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "expr-class-class-dependency" || *mode == "expr-class-class-dependency-diff" {
+		trace, err := runExprClassClassDependencyScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "expr-class-class-dependency-diff" {
+			return runDifferentialModeWithNormalizer(stdout, stderr, *javaTracePath, *evidencePath, exprClassClassDependencyJavaCommit,
+				splitMetadata(*javaRuntimeIDs, exprClassClassDependencyJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, exprClassClassDependencyJavaSources),
+				splitMetadata(*javaExecutions, exprClassClassDependencyJavaExecutions), scenario, trace,
+				normalizeExprClassClassDependencyTrace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

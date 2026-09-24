@@ -78752,3 +78752,192 @@ func TestRunHelpIncludesExprClassForEPLObjects(t *testing.T) {
 		}
 	}
 }
+
+func TestRunExprClassClassDependencyDirectReplay(t *testing.T) {
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "expr-class-class-dependency.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "expr-class-class-dependency",
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	var trace compat.Trace
+	if err := json.Unmarshal(stdout.Bytes(), &trace); err != nil {
+		t.Fatal(err)
+	}
+	if len(trace.Records) != 5 {
+		t.Fatalf("records = %d, want 5", len(trace.Records))
+	}
+	// all-local: one listener record c0="|>E1<|" (MyUtil wraps |p| around
+	// MyClass's >p<).
+	if trace.Records[0].Case != "all-local" ||
+		trace.Records[0].Operation != "listener" ||
+		trace.Records[0].Statement != "s0" ||
+		trace.Records[0].Sequence != 1 ||
+		len(trace.Records[0].New) != 1 ||
+		trace.Records[0].New[0].Fields["c0"] != "|>E1<|" {
+		t.Fatalf("all-local record = %#v", trace.Records[0])
+	}
+	// invalid: two compile-error records pinning the Java prefixes (the
+	// prefixes differ only by trailing space).
+	if trace.Records[1].Case != "invalid" ||
+		trace.Records[1].Operation != "compile-error" ||
+		trace.Records[1].Statement != "local-on-path-class" ||
+		trace.Records[1].Value != "Failed to compile an inlined-class:" {
+		t.Fatalf("invalid probe A record = %#v", trace.Records[1])
+	}
+	if trace.Records[2].Case != "invalid" ||
+		trace.Records[2].Operation != "compile-error" ||
+		trace.Records[2].Statement != "create-on-path-class" ||
+		trace.Records[2].Value != "Failed to compile an inlined-class: " {
+		t.Fatalf("invalid probe B record = %#v", trace.Records[2])
+	}
+	// classpath: two listener records, one per deploy/undeploy cycle, each
+	// c0="'E1'".
+	for index, sequence := range []uint64{1, 2} {
+		record := trace.Records[3+index]
+		if record.Case != "classpath" ||
+			record.Operation != "listener" ||
+			record.Statement != "s0" ||
+			record.Sequence != sequence ||
+			len(record.New) != 1 ||
+			record.New[0].Fields["c0"] != "'E1'" {
+			t.Fatalf("classpath record %d = %#v", index, record)
+		}
+	}
+}
+
+func TestRunExprClassClassDependencyRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "expr-class-class-dependency.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "expr-class-class-dependency"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "expr-class-class-dependency"`)...), 1)
+		}},
+		{name: "case-ordinal-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 1`), []byte(`"ordinal": 9`), 1)
+		}},
+		{name: "runtime-id-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"java-runtime-f53aa2ad87c7997d7c36"`), []byte(`"java-runtime-bogus"`), 1)
+		}},
+		{name: "epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`select MyClass.doIt(theString)`), []byte(`select MyClass.doIt(intPrimitive)`), 1)
+		}},
+		{name: "import-quirk-drift", mutate: func(data []byte) []byte {
+			// The import line has no trailing newline; restoring one must
+			// fail the byte-exact pin.
+			return bytes.Replace(data,
+				[]byte(`ExprClassClassDependency;    public class MyUtil {`),
+				[]byte(`ExprClassClassDependency;\n    public class MyUtil {`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1",
+    "intPrimitive": 1`), []byte(`"theString": "E1",
+    "intPrimitive": 1,
+    "extra": 0`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 1`), []byte(`"intPrimitive": 1,
+    "intPrimitive": 2`), 1)
+		}},
+		{name: "payload-value-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 1`), []byte(`"intPrimitive": 99`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportBean"`), []byte(`"eventType": "bogus"`), 1)
+		}},
+		{name: "expect-error-drift", mutate: func(data []byte) []byte {
+			// Probe B's prefix ends in a space; dropping it must fail the
+			// byte-exact pin.
+			return bytes.Replace(data, []byte(`"expectError": "Failed to compile an inlined-class: "`), []byte(`"expectError": "Failed to compile an inlined-class:"`), 1)
+		}},
+		{name: "step-field-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "case",`), []byte(`"op": "case", "extra": 0,`), 1)
+		}},
+		{name: "step-op-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "build-error"`), []byte(`"op": "bogus"`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", "expr-class-class-dependency",
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunExprClassClassDependencyRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "expr-class-class-dependency.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, exprClassClassDependencyJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, exprClassClassDependencyJavaExecutions) {
+		t.Fatalf("scenario metadata runtimes=%v names=%v", document.JavaRuntimes, document.JavaNames)
+	}
+	wantCaseRuntimeIDs := map[string]string{
+		"all-local": "java-runtime-f53aa2ad87c7997d7c36",
+		"invalid":   "java-runtime-247c1169dd5c24bd21f0",
+		"classpath": "java-runtime-bc85bc8d79bc09bb8500",
+	}
+	for _, entry := range document.Cases {
+		if wantCaseRuntimeIDs[entry.Case] != entry.RuntimeID {
+			t.Fatalf("case %q runtimeId = %q, want %q", entry.Case, entry.RuntimeID, wantCaseRuntimeIDs[entry.Case])
+		}
+	}
+}
+
+func TestRunHelpIncludesExprClassClassDependency(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-h"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("help exit code = %d, stderr = %q", code, stderr.String())
+	}
+	for _, mode := range []string{
+		"expr-class-class-dependency",
+		"expr-class-class-dependency-diff",
+	} {
+		if !strings.Contains(stderr.String(), mode) {
+			t.Fatalf("help output omits %q: %s", mode, stderr.String())
+		}
+	}
+}
