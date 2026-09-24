@@ -418,6 +418,14 @@ func (ctx EvalContext) groupEventContext(event Event, index int) EvalContext {
 		Variables:             ctx.Variables,
 		Parameters:            ctx.Parameters,
 	}
+	// NamedWindowField/TableField inside an aggregate input must still reach
+	// the candidate row: the member being aggregated is that row. Preserve an
+	// enclosing merge chain's InitialGroup when present; otherwise the member
+	// itself is the target row in scope.
+	result.InitialGroup = ctx.InitialGroup
+	if len(result.InitialGroup) == 0 {
+		result.InitialGroup = []Event{event}
+	}
 	if index >= 0 && index < len(ctx.GroupTags) {
 		result.Tags = ctx.GroupTags[index]
 	}
@@ -1152,6 +1160,24 @@ func NamedWindowField[V any](name string) Expression[V] {
 // InitialTableField.
 func InitialNamedWindowField[V any](name string) Expression[V] {
 	return initialTargetField[V]("named-window-field", "initial.named-window."+name, name)
+}
+
+// StreamWildcard is the Go fluent counterpart of Esper's stream-wildcard
+// select item ("mwc.*") on an on-select trigger: it projects the candidate
+// named-window event or table row itself. In a grouped on-select the
+// projection fans out one result row per group member, mirroring Esper's
+// fragment-per-row delivery; in an ungrouped select it resolves to the
+// candidate row of the per-row projection.
+func StreamWildcard() Expression[Event] {
+	return makeExpr[Event]("stream-wildcard", "*", nil, func(ctx EvalContext) Value {
+		if len(ctx.Group) > 0 {
+			return Present(ctx.Group[0])
+		}
+		if ctx.Event.Schema().valid() {
+			return Present(ctx.Event)
+		}
+		return Missing()
+	})
 }
 
 func targetField[V any](kind, description, name string) Expression[V] {

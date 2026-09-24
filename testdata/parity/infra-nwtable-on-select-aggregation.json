@@ -1,0 +1,1198 @@
+{
+ "version": "esper-parity/v1",
+ "id": "infra-nwtable-on-select-aggregation",
+ "description": "InfraNWTableOnSelect aggregation slice (ords 6/7, 16-21, 26-27): five execution classes run once over a keepall named window and once over a primary-key table. The having-stream-wildcard cases group the correlated rows and emit one fragment event per group row (having-wildcard, ord 6/7); the ungrouped aggregation cases collapse the on-select snapshot to a single sum row, including the correlated where-clause variant whose empty match set still emits one null-sum row (select-aggregation ord 16/17, correlated ord 18/19); the grouping cases run two on-selects in one module — plain group-by ordered desc and the having-filtered variant — over a composite-PK store that retains duplicate a values (grouping, ord 20/21); and the multikey cases group by an int[] array column loaded through fire-and-forget inserts (multikey-w-array, ord 26/27). Deployed markers pin the module fan-out, listener records carry the new-data rows, and types records pin the select statements' output property types (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnSelect.java).",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnSelect.java",
+ "javaRuntimes": [
+  "java-runtime-a83c289aeff7f22c5d10",
+  "java-runtime-113be8d12970feaf2fd0",
+  "java-runtime-192de61f3c60d848e6c2",
+  "java-runtime-99d89e9beadeae52ce8b",
+  "java-runtime-fa42452055bf6fa1e4fd",
+  "java-runtime-485188699c51be24f2cb",
+  "java-runtime-36a62fff425f4c9b8cb6",
+  "java-runtime-964dbe543e45c3f14f00",
+  "java-runtime-d10a8674ccc6ecc5c70d",
+  "java-runtime-5b8dddb5496cfbefa7d7"
+ ],
+ "javaNames": [
+  "InfraSelectAggregationHavingStreamWildcard{namedWindow=true}",
+  "InfraSelectAggregationHavingStreamWildcard{namedWindow=false}",
+  "InfraSelectAggregation{namedWindow=true}",
+  "InfraSelectAggregation{namedWindow=false}",
+  "InfraSelectAggregationCorrelated{namedWindow=true}",
+  "InfraSelectAggregationCorrelated{namedWindow=false}",
+  "InfraSelectAggregationGrouping{namedWindow=true}",
+  "InfraSelectAggregationGrouping{namedWindow=false}",
+  "InfraOnSelectMultikeyWArray{namedWindow=true}",
+  "InfraOnSelectMultikeyWArray{namedWindow=false}"
+ ],
+ "javaStaticIds": [
+  "java-2ec871e1e4d7e32c39a8",
+  "java-2ec871e1e4d7e32c39a8",
+  "java-36dad03f6eadeaa780c1",
+  "java-36dad03f6eadeaa780c1",
+  "java-46aadb56f6ef28b6b2bd",
+  "java-46aadb56f6ef28b6b2bd",
+  "java-acc31838f7d1ff0ce7a6",
+  "java-acc31838f7d1ff0ce7a6",
+  "java-81de7615b15d1c9671eb",
+  "java-81de7615b15d1c9671eb"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "having-wildcard-nw",
+   "ordinal": 6,
+   "runtimeId": "java-runtime-a83c289aeff7f22c5d10",
+   "executionName": "InfraSelectAggregationHavingStreamWildcard{namedWindow=true}",
+   "observation": "deployed+listener; keepall window MyInfraSHS(a,b) fed by the SupportBean insert; on-A select mwc.* as mwcwin where id = a group by a having sum(b) = 20 emits two fragment events (mwcwin.a='E1' each) when A('E1') fires after E1/16, E2/2, E1/4",
+   "epl": "@public create window MyInfraSHS#keepall as (a string, b int);\ninsert into MyInfraSHS select theString as a, intPrimitive as b from SupportBean;\n@name('select') on SupportBean_A select mwc.* as mwcwin from MyInfraSHS mwc where id = a group by a having sum(b) = 20;\n"
+  },
+  {
+   "case": "having-wildcard-table",
+   "ordinal": 7,
+   "runtimeId": "java-runtime-113be8d12970feaf2fd0",
+   "executionName": "InfraSelectAggregationHavingStreamWildcard{namedWindow=false}",
+   "observation": "deployed+listener; composite-PK table MyInfraSHS(a,b) fed by the SupportBean insert; the same on-A stream-wildcard select emits two fragment events when A('E1') fires after E1/16, E2/2, E1/4",
+   "epl": "@public create table MyInfraSHS as (a string primary key, b int primary key);\ninsert into MyInfraSHS select theString as a, intPrimitive as b from SupportBean;\n@name('select') on SupportBean_A select mwc.* as mwcwin from MyInfraSHS mwc where id = a group by a having sum(b) = 20;\n"
+  },
+  {
+   "case": "select-agg-nw",
+   "ordinal": 16,
+   "runtimeId": "java-runtime-192de61f3c60d848e6c2",
+   "executionName": "InfraSelectAggregation{namedWindow=true}",
+   "observation": "deployed+listener+types; keepall window MyInfraSA(a,b) fed by the SupportBean insert; on-A select sum(b) as sumb emits {sumb=6} after E1/1,E2/2,E3/3, {sumb=4} after the on-B delete removes E2, and {sumb=14} after E4/10; the select event type pins one Integer property sumb",
+   "epl": "@name('create') @public create window MyInfraSA#keepall as select theString as a, intPrimitive as b from SupportBean;\n@name('select') on SupportBean_A select sum(b) as sumb from MyInfraSA;\ninsert into MyInfraSA select theString as a, intPrimitive as b from SupportBean;\non SupportBean_B delete from MyInfraSA where id = a;\n"
+  },
+  {
+   "case": "select-agg-table",
+   "ordinal": 17,
+   "runtimeId": "java-runtime-99d89e9beadeae52ce8b",
+   "executionName": "InfraSelectAggregation{namedWindow=false}",
+   "observation": "deployed+listener+types; composite-PK table MyInfraSA(a,b) fed by the SupportBean insert; the same ungrouped sum select emits {sumb=6}, {sumb=4} after the on-B delete removes E2, and {sumb=14} after E4/10; the select event type pins one Integer property sumb",
+   "epl": "@name('create') @public create table MyInfraSA (a string primary key, b int primary key);\n@name('select') on SupportBean_A select sum(b) as sumb from MyInfraSA;\ninsert into MyInfraSA select theString as a, intPrimitive as b from SupportBean;\non SupportBean_B delete from MyInfraSA where id = a;\n"
+  },
+  {
+   "case": "correlated-nw",
+   "ordinal": 18,
+   "runtimeId": "java-runtime-fa42452055bf6fa1e4fd",
+   "executionName": "InfraSelectAggregationCorrelated{namedWindow=true}",
+   "observation": "deployed+listener+types; one module (keepall window MyInfraSAC, on-A select sum(b) as sumb where a = id, SupportBean insert) with listeners on select and create: A('A1') emits {sumb=null} over the empty match set, A('E2') emits {sumb=2} then {sumb=12} once the second E2 row (composite PK allows duplicate a) lands; the select event type pins one Integer property sumb",
+   "epl": "@name('create') @public create window MyInfraSAC#keepall as select theString as a, intPrimitive as b from SupportBean;\n@name('select') on SupportBean_A select sum(b) as sumb from MyInfraSAC where a = id;\ninsert into MyInfraSAC select theString as a, intPrimitive as b from SupportBean;\n"
+  },
+  {
+   "case": "correlated-table",
+   "ordinal": 19,
+   "runtimeId": "java-runtime-485188699c51be24f2cb",
+   "executionName": "InfraSelectAggregationCorrelated{namedWindow=false}",
+   "observation": "deployed+listener+types; one module (composite-PK table MyInfraSAC, on-A select sum(b) as sumb where a = id, SupportBean insert) with listeners on select and create: A('A1') emits {sumb=null} over the empty match set, A('E2') emits {sumb=2} then {sumb=12}; the select event type pins one Integer property sumb",
+   "epl": "@name('create') @public create table MyInfraSAC(a string primary key, b int primary key);\n@name('select') on SupportBean_A select sum(b) as sumb from MyInfraSAC where a = id;\ninsert into MyInfraSAC select theString as a, intPrimitive as b from SupportBean;\n"
+  },
+  {
+   "case": "grouping-nw",
+   "ordinal": 20,
+   "runtimeId": "java-runtime-36a62fff425f4c9b8cb6",
+   "executionName": "InfraSelectAggregationGrouping{namedWindow=true}",
+   "observation": "deployed+listener+types; one module (keepall window MyInfraSAG, on-A select a,sum(b) group by a order by a desc, on-A selectTwo adding having sum(b) > 5, named SupportBean insert): A('A1') on the empty store fires neither listener; after E1/1,E2/2,E1/5 select emits [{E2,2},{E1,6}] and selectTwo [{E1,6}]; after E4/-1,E2/10,E1/100 select emits [{E4,-1},{E2,12},{E1,106}] and selectTwo [{E2,12},{E1,106}]; the on-B delete removes both E2 rows so A('A3') emits [{E4,-1},{E1,106}] and [{E1,106}]; the select event type pins a=String, sumb=Integer",
+   "epl": "@name('create') @public create window MyInfraSAG#keepall as select theString as a, intPrimitive as b from SupportBean;\n@name('select') on SupportBean_A select a, sum(b) as sumb from MyInfraSAG group by a order by a desc;\n@name('selectTwo') on SupportBean_A select a, sum(b) as sumb from MyInfraSAG group by a having sum(b) > 5 order by a desc;\n@name('insert') insert into MyInfraSAG select theString as a, intPrimitive as b from SupportBean;\non SupportBean_B delete from MyInfraSAG where id = a;\n"
+  },
+  {
+   "case": "grouping-table",
+   "ordinal": 21,
+   "runtimeId": "java-runtime-964dbe543e45c3f14f00",
+   "executionName": "InfraSelectAggregationGrouping{namedWindow=false}",
+   "observation": "deployed+listener+types; one module (composite-PK table MyInfraSAG, the same two grouped on-selects, named SupportBean insert): identical trigger sequence — select emits [{E2,2},{E1,6}] then [{E4,-1},{E2,12},{E1,106}] then [{E4,-1},{E1,106}] after the on-B delete; selectTwo emits [{E1,6}] then [{E2,12},{E1,106}] then [{E1,106}]; the select event type pins a=String, sumb=Integer",
+   "epl": "@name('create') @public create table MyInfraSAG(a string primary key, b int primary key);\n@name('select') on SupportBean_A select a, sum(b) as sumb from MyInfraSAG group by a order by a desc;\n@name('selectTwo') on SupportBean_A select a, sum(b) as sumb from MyInfraSAG group by a having sum(b) > 5 order by a desc;\n@name('insert') insert into MyInfraSAG select theString as a, intPrimitive as b from SupportBean;\non SupportBean_B delete from MyInfraSAG where id = a;\n"
+  },
+  {
+   "case": "multikey-w-array-nw",
+   "ordinal": 26,
+   "runtimeId": "java-runtime-d10a8674ccc6ecc5c70d",
+   "executionName": "InfraOnSelectMultikeyWArray{namedWindow=true}",
+   "observation": "deployed+listener; keepall window MyInfraPC(id,array int[],value) loaded by four fire-and-forget inserts; on-SupportBean select array, sum(value) as thesum group by array emits {thesum=21} for the shared {1,2} key after E1/E2, then [{thesum=42},{thesum=22}] any-order after E3({1,2},21) and E4({1},22)",
+   "epl": "@name('create') @public create window MyInfraPC#keepall as (id string, array int[], value int);\n@name('s0') on SupportBean select array, sum(value) as thesum from MyInfraPC group by array;\ninsert into MyInfraPC values('E1', {1, 2}, 10);\ninsert into MyInfraPC values('E2', {1, 2}, 11);\ninsert into MyInfraPC values('E3', {1, 2}, 21);\ninsert into MyInfraPC values('E4', {1}, 22);\n"
+  },
+  {
+   "case": "multikey-w-array-table",
+   "ordinal": 27,
+   "runtimeId": "java-runtime-5b8dddb5496cfbefa7d7",
+   "executionName": "InfraOnSelectMultikeyWArray{namedWindow=false}",
+   "observation": "deployed+listener; table MyInfraPC(id primary key, array int[], value) loaded by the same four fire-and-forget inserts; the on-SupportBean grouped select emits {thesum=21} then [{thesum=42},{thesum=22}] any-order",
+   "epl": "@name('create') @public create table MyInfraPC(id string primary key, array int[], value int);\n@name('s0') on SupportBean select array, sum(value) as thesum from MyInfraPC group by array;\ninsert into MyInfraPC values('E1', {1, 2}, 10);\ninsert into MyInfraPC values('E2', {1, 2}, 11);\ninsert into MyInfraPC values('E3', {1, 2}, 21);\ninsert into MyInfraPC values('E4', {1}, 22);\n"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "having-wildcard-nw"
+  },
+  {
+   "op": "deploy",
+   "case": "having-wildcard-nw",
+   "statement": "create",
+   "epl": "@public create window MyInfraSHS#keepall as (a string, b int)"
+  },
+  {
+   "op": "deployed",
+   "case": "having-wildcard-nw",
+   "statement": "create"
+  },
+  {
+   "op": "deploy",
+   "case": "having-wildcard-nw",
+   "statement": "insert",
+   "epl": "insert into MyInfraSHS select theString as a, intPrimitive as b from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "having-wildcard-nw",
+   "statement": "insert"
+  },
+  {
+   "op": "deploy",
+   "case": "having-wildcard-nw",
+   "statement": "select",
+   "epl": "@name('select') on SupportBean_A select mwc.* as mwcwin from MyInfraSHS mwc where id = a group by a having sum(b) = 20"
+  },
+  {
+   "op": "deployed",
+   "case": "having-wildcard-nw",
+   "statement": "select"
+  },
+  {
+   "op": "send",
+   "case": "having-wildcard-nw",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 16
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-wildcard-nw",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-wildcard-nw",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 4
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-wildcard-nw",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "E1"
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "having-wildcard-nw"
+  },
+  {
+   "op": "case",
+   "case": "having-wildcard-table"
+  },
+  {
+   "op": "deploy",
+   "case": "having-wildcard-table",
+   "statement": "create",
+   "epl": "@public create table MyInfraSHS as (a string primary key, b int primary key)"
+  },
+  {
+   "op": "deployed",
+   "case": "having-wildcard-table",
+   "statement": "create"
+  },
+  {
+   "op": "deploy",
+   "case": "having-wildcard-table",
+   "statement": "insert",
+   "epl": "insert into MyInfraSHS select theString as a, intPrimitive as b from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "having-wildcard-table",
+   "statement": "insert"
+  },
+  {
+   "op": "deploy",
+   "case": "having-wildcard-table",
+   "statement": "select",
+   "epl": "@name('select') on SupportBean_A select mwc.* as mwcwin from MyInfraSHS mwc where id = a group by a having sum(b) = 20"
+  },
+  {
+   "op": "deployed",
+   "case": "having-wildcard-table",
+   "statement": "select"
+  },
+  {
+   "op": "send",
+   "case": "having-wildcard-table",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 16
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-wildcard-table",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-wildcard-table",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 4
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-wildcard-table",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "E1"
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "having-wildcard-table"
+  },
+  {
+   "op": "case",
+   "case": "select-agg-nw"
+  },
+  {
+   "op": "deploy",
+   "case": "select-agg-nw",
+   "statement": "create",
+   "epl": "@name('create') @public create window MyInfraSA#keepall as select theString as a, intPrimitive as b from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "select-agg-nw",
+   "statement": "create"
+  },
+  {
+   "op": "deploy",
+   "case": "select-agg-nw",
+   "statement": "select",
+   "epl": "@name('select') on SupportBean_A select sum(b) as sumb from MyInfraSA"
+  },
+  {
+   "op": "deployed",
+   "case": "select-agg-nw",
+   "statement": "select"
+  },
+  {
+   "op": "deploy",
+   "case": "select-agg-nw",
+   "statement": "insert",
+   "epl": "insert into MyInfraSA select theString as a, intPrimitive as b from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "select-agg-nw",
+   "statement": "insert"
+  },
+  {
+   "op": "send",
+   "case": "select-agg-nw",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "select-agg-nw",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "select-agg-nw",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "case": "select-agg-nw",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A1"
+   }
+  },
+  {
+   "op": "deploy",
+   "case": "select-agg-nw",
+   "statement": "delete",
+   "epl": "on SupportBean_B delete from MyInfraSA where id = a"
+  },
+  {
+   "op": "deployed",
+   "case": "select-agg-nw",
+   "statement": "delete"
+  },
+  {
+   "op": "send",
+   "case": "select-agg-nw",
+   "eventType": "SupportBean_B",
+   "payload": {
+    "id": "E2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "select-agg-nw",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "select-agg-nw",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "select-agg-nw",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A3"
+   }
+  },
+  {
+   "op": "types",
+   "case": "select-agg-nw",
+   "statement": "select"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "select-agg-nw"
+  },
+  {
+   "op": "case",
+   "case": "select-agg-table"
+  },
+  {
+   "op": "deploy",
+   "case": "select-agg-table",
+   "statement": "create",
+   "epl": "@name('create') @public create table MyInfraSA (a string primary key, b int primary key)"
+  },
+  {
+   "op": "deployed",
+   "case": "select-agg-table",
+   "statement": "create"
+  },
+  {
+   "op": "deploy",
+   "case": "select-agg-table",
+   "statement": "select",
+   "epl": "@name('select') on SupportBean_A select sum(b) as sumb from MyInfraSA"
+  },
+  {
+   "op": "deployed",
+   "case": "select-agg-table",
+   "statement": "select"
+  },
+  {
+   "op": "deploy",
+   "case": "select-agg-table",
+   "statement": "insert",
+   "epl": "insert into MyInfraSA select theString as a, intPrimitive as b from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "select-agg-table",
+   "statement": "insert"
+  },
+  {
+   "op": "send",
+   "case": "select-agg-table",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "select-agg-table",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "select-agg-table",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "case": "select-agg-table",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A1"
+   }
+  },
+  {
+   "op": "deploy",
+   "case": "select-agg-table",
+   "statement": "delete",
+   "epl": "on SupportBean_B delete from MyInfraSA where id = a"
+  },
+  {
+   "op": "deployed",
+   "case": "select-agg-table",
+   "statement": "delete"
+  },
+  {
+   "op": "send",
+   "case": "select-agg-table",
+   "eventType": "SupportBean_B",
+   "payload": {
+    "id": "E2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "select-agg-table",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "select-agg-table",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "select-agg-table",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A3"
+   }
+  },
+  {
+   "op": "types",
+   "case": "select-agg-table",
+   "statement": "select"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "select-agg-table"
+  },
+  {
+   "op": "case",
+   "case": "correlated-nw"
+  },
+  {
+   "op": "deploy",
+   "case": "correlated-nw",
+   "statement": "create",
+   "epl": "@name('create') @public create window MyInfraSAC#keepall as select theString as a, intPrimitive as b from SupportBean"
+  },
+  {
+   "op": "deploy",
+   "case": "correlated-nw",
+   "statement": "select",
+   "epl": "@name('select') on SupportBean_A select sum(b) as sumb from MyInfraSAC where a = id"
+  },
+  {
+   "op": "deploy",
+   "case": "correlated-nw",
+   "statement": "insert",
+   "epl": "insert into MyInfraSAC select theString as a, intPrimitive as b from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "correlated-nw",
+   "statement": "create"
+  },
+  {
+   "op": "deployed",
+   "case": "correlated-nw",
+   "statement": "select"
+  },
+  {
+   "op": "deployed",
+   "case": "correlated-nw",
+   "statement": "insert"
+  },
+  {
+   "op": "send",
+   "case": "correlated-nw",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "correlated-nw",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "correlated-nw",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "case": "correlated-nw",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "correlated-nw",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "E2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "correlated-nw",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "correlated-nw",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "E2"
+   }
+  },
+  {
+   "op": "types",
+   "case": "correlated-nw",
+   "statement": "select"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "correlated-nw"
+  },
+  {
+   "op": "case",
+   "case": "correlated-table"
+  },
+  {
+   "op": "deploy",
+   "case": "correlated-table",
+   "statement": "create",
+   "epl": "@name('create') @public create table MyInfraSAC(a string primary key, b int primary key)"
+  },
+  {
+   "op": "deploy",
+   "case": "correlated-table",
+   "statement": "select",
+   "epl": "@name('select') on SupportBean_A select sum(b) as sumb from MyInfraSAC where a = id"
+  },
+  {
+   "op": "deploy",
+   "case": "correlated-table",
+   "statement": "insert",
+   "epl": "insert into MyInfraSAC select theString as a, intPrimitive as b from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "correlated-table",
+   "statement": "create"
+  },
+  {
+   "op": "deployed",
+   "case": "correlated-table",
+   "statement": "select"
+  },
+  {
+   "op": "deployed",
+   "case": "correlated-table",
+   "statement": "insert"
+  },
+  {
+   "op": "send",
+   "case": "correlated-table",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "correlated-table",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "correlated-table",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "case": "correlated-table",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "correlated-table",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "E2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "correlated-table",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "correlated-table",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "E2"
+   }
+  },
+  {
+   "op": "types",
+   "case": "correlated-table",
+   "statement": "select"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "correlated-table"
+  },
+  {
+   "op": "case",
+   "case": "grouping-nw"
+  },
+  {
+   "op": "deploy",
+   "case": "grouping-nw",
+   "statement": "create",
+   "epl": "@name('create') @public create window MyInfraSAG#keepall as select theString as a, intPrimitive as b from SupportBean"
+  },
+  {
+   "op": "deploy",
+   "case": "grouping-nw",
+   "statement": "select",
+   "epl": "@name('select') on SupportBean_A select a, sum(b) as sumb from MyInfraSAG group by a order by a desc"
+  },
+  {
+   "op": "deploy",
+   "case": "grouping-nw",
+   "statement": "selectTwo",
+   "epl": "@name('selectTwo') on SupportBean_A select a, sum(b) as sumb from MyInfraSAG group by a having sum(b) > 5 order by a desc"
+  },
+  {
+   "op": "deploy",
+   "case": "grouping-nw",
+   "statement": "insert",
+   "epl": "@name('insert') insert into MyInfraSAG select theString as a, intPrimitive as b from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "grouping-nw",
+   "statement": "create"
+  },
+  {
+   "op": "deployed",
+   "case": "grouping-nw",
+   "statement": "select"
+  },
+  {
+   "op": "deployed",
+   "case": "grouping-nw",
+   "statement": "selectTwo"
+  },
+  {
+   "op": "deployed",
+   "case": "grouping-nw",
+   "statement": "insert"
+  },
+  {
+   "op": "send",
+   "case": "grouping-nw",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "grouping-nw",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "grouping-nw",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "grouping-nw",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "case": "grouping-nw",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "grouping-nw",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": -1
+   }
+  },
+  {
+   "op": "send",
+   "case": "grouping-nw",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "grouping-nw",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 100
+   }
+  },
+  {
+   "op": "send",
+   "case": "grouping-nw",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A2"
+   }
+  },
+  {
+   "op": "deploy",
+   "case": "grouping-nw",
+   "statement": "delete",
+   "epl": "on SupportBean_B delete from MyInfraSAG where id = a"
+  },
+  {
+   "op": "deployed",
+   "case": "grouping-nw",
+   "statement": "delete"
+  },
+  {
+   "op": "send",
+   "case": "grouping-nw",
+   "eventType": "SupportBean_B",
+   "payload": {
+    "id": "E2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "grouping-nw",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A3"
+   }
+  },
+  {
+   "op": "types",
+   "case": "grouping-nw",
+   "statement": "select"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "grouping-nw"
+  },
+  {
+   "op": "case",
+   "case": "grouping-table"
+  },
+  {
+   "op": "deploy",
+   "case": "grouping-table",
+   "statement": "create",
+   "epl": "@name('create') @public create table MyInfraSAG(a string primary key, b int primary key)"
+  },
+  {
+   "op": "deploy",
+   "case": "grouping-table",
+   "statement": "select",
+   "epl": "@name('select') on SupportBean_A select a, sum(b) as sumb from MyInfraSAG group by a order by a desc"
+  },
+  {
+   "op": "deploy",
+   "case": "grouping-table",
+   "statement": "selectTwo",
+   "epl": "@name('selectTwo') on SupportBean_A select a, sum(b) as sumb from MyInfraSAG group by a having sum(b) > 5 order by a desc"
+  },
+  {
+   "op": "deploy",
+   "case": "grouping-table",
+   "statement": "insert",
+   "epl": "@name('insert') insert into MyInfraSAG select theString as a, intPrimitive as b from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "grouping-table",
+   "statement": "create"
+  },
+  {
+   "op": "deployed",
+   "case": "grouping-table",
+   "statement": "select"
+  },
+  {
+   "op": "deployed",
+   "case": "grouping-table",
+   "statement": "selectTwo"
+  },
+  {
+   "op": "deployed",
+   "case": "grouping-table",
+   "statement": "insert"
+  },
+  {
+   "op": "send",
+   "case": "grouping-table",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "grouping-table",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "grouping-table",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "grouping-table",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "case": "grouping-table",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "grouping-table",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": -1
+   }
+  },
+  {
+   "op": "send",
+   "case": "grouping-table",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "grouping-table",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 100
+   }
+  },
+  {
+   "op": "send",
+   "case": "grouping-table",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A2"
+   }
+  },
+  {
+   "op": "deploy",
+   "case": "grouping-table",
+   "statement": "delete",
+   "epl": "on SupportBean_B delete from MyInfraSAG where id = a"
+  },
+  {
+   "op": "deployed",
+   "case": "grouping-table",
+   "statement": "delete"
+  },
+  {
+   "op": "send",
+   "case": "grouping-table",
+   "eventType": "SupportBean_B",
+   "payload": {
+    "id": "E2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "grouping-table",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A3"
+   }
+  },
+  {
+   "op": "types",
+   "case": "grouping-table",
+   "statement": "select"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "grouping-table"
+  },
+  {
+   "op": "case",
+   "case": "multikey-w-array-nw"
+  },
+  {
+   "op": "deploy",
+   "case": "multikey-w-array-nw",
+   "statement": "create",
+   "epl": "@name('create') @public create window MyInfraPC#keepall as (id string, array int[], value int)"
+  },
+  {
+   "op": "deployed",
+   "case": "multikey-w-array-nw",
+   "statement": "create"
+  },
+  {
+   "op": "deploy",
+   "case": "multikey-w-array-nw",
+   "statement": "s0",
+   "epl": "@name('s0') on SupportBean select array, sum(value) as thesum from MyInfraPC group by array"
+  },
+  {
+   "op": "deployed",
+   "case": "multikey-w-array-nw",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "multikey-w-array-nw",
+   "statement": "FafInsert",
+   "epl": "insert into MyInfraPC values('E1', {1, 2}, 10)"
+  },
+  {
+   "op": "deploy",
+   "case": "multikey-w-array-nw",
+   "statement": "FafInsert",
+   "epl": "insert into MyInfraPC values('E2', {1, 2}, 11)"
+  },
+  {
+   "op": "send",
+   "case": "multikey-w-array-nw",
+   "eventType": "SupportBean",
+   "payload": {}
+  },
+  {
+   "op": "deploy",
+   "case": "multikey-w-array-nw",
+   "statement": "FafInsert",
+   "epl": "insert into MyInfraPC values('E3', {1, 2}, 21)"
+  },
+  {
+   "op": "deploy",
+   "case": "multikey-w-array-nw",
+   "statement": "FafInsert",
+   "epl": "insert into MyInfraPC values('E4', {1}, 22)"
+  },
+  {
+   "op": "send",
+   "case": "multikey-w-array-nw",
+   "eventType": "SupportBean",
+   "payload": {}
+  },
+  {
+   "op": "undeploy-all",
+   "case": "multikey-w-array-nw"
+  },
+  {
+   "op": "case",
+   "case": "multikey-w-array-table"
+  },
+  {
+   "op": "deploy",
+   "case": "multikey-w-array-table",
+   "statement": "create",
+   "epl": "@name('create') @public create table MyInfraPC(id string primary key, array int[], value int)"
+  },
+  {
+   "op": "deployed",
+   "case": "multikey-w-array-table",
+   "statement": "create"
+  },
+  {
+   "op": "deploy",
+   "case": "multikey-w-array-table",
+   "statement": "s0",
+   "epl": "@name('s0') on SupportBean select array, sum(value) as thesum from MyInfraPC group by array"
+  },
+  {
+   "op": "deployed",
+   "case": "multikey-w-array-table",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "multikey-w-array-table",
+   "statement": "FafInsert",
+   "epl": "insert into MyInfraPC values('E1', {1, 2}, 10)"
+  },
+  {
+   "op": "deploy",
+   "case": "multikey-w-array-table",
+   "statement": "FafInsert",
+   "epl": "insert into MyInfraPC values('E2', {1, 2}, 11)"
+  },
+  {
+   "op": "send",
+   "case": "multikey-w-array-table",
+   "eventType": "SupportBean",
+   "payload": {}
+  },
+  {
+   "op": "deploy",
+   "case": "multikey-w-array-table",
+   "statement": "FafInsert",
+   "epl": "insert into MyInfraPC values('E3', {1, 2}, 21)"
+  },
+  {
+   "op": "deploy",
+   "case": "multikey-w-array-table",
+   "statement": "FafInsert",
+   "epl": "insert into MyInfraPC values('E4', {1}, 22)"
+  },
+  {
+   "op": "send",
+   "case": "multikey-w-array-table",
+   "eventType": "SupportBean",
+   "payload": {}
+  },
+  {
+   "op": "undeploy-all",
+   "case": "multikey-w-array-table"
+  }
+ ]
+}

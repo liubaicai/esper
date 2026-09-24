@@ -56,6 +56,80 @@ activity or a single coverage percentage.
 
 ## Current work unit
 
+Active: Draft 4.535 ('infra-nwtable-on-select-aggregation').
+
+- Selection: `InfraNWTableOnSelect.java` all 5 execution classes ×
+  namedWindow={true,false} = 10 executions, no flags —
+  `InfraSelectAggregation` (`java-runtime-192de61f3c60d848e6c2` /
+  `java-runtime-99d89e9beadeae52ce8b`), `InfraSelectAggregationCorrelated`
+  (`java-runtime-fa42452055bf6fa1e4fd` / `java-runtime-485188699c51be24f2cb`),
+  `InfraSelectAggregationGrouping` (`java-runtime-36a62fff425f4c9b8cb6` /
+  `java-runtime-964dbe543e45c3f14f00`),
+  `InfraSelectAggregationHavingStreamWildcard`
+  (`java-runtime-a83c289aeff7f22c5d10` / `java-runtime-113be8d12970feaf2fd0`),
+  `InfraOnSelectMultikeyWArray` (`java-runtime-d10a8674ccc6ecc5c70d` /
+  `java-runtime-5b8dddb5496cfbefa7d7`). Java commit
+  `9e1b9f1cc9117fea4bf33ab043762c045d73839c`. Contract in
+  `.omp/contract-535.md`.
+- [x] Contract frozen: JavaContract535 + GoSurface535 scouts dispatched;
+  Assets535 (parity-asset-worker) dispatched for runner/scenario/oracle.
+- [x] Shared core (primary agent, `internal/esper`):
+  (1) `triggerDefinition.having` + `TriggerQuery.Having` — post-aggregation
+  predicate evaluated per group row (grouped) or per folded row (ungrouped
+  aggregate); rejected at build on non-select triggers.
+  (2) `SelectFromTableGroupBy`/`SelectFromTableRollup` — table-side grouped
+  on-select mirroring the named-window pair; grouped validation binds plain
+  fields to the table schema via a bindable(input|table) helper.
+  (3) Ungrouped aggregate folding in `executeSelectTableAction` (where +
+  full-scan branches) and `executeSelectNamedWindowAction`: a selection
+  carrying an aggregate collapses the matched snapshot to one row; empty
+  match set still emits one row with null aggregates (Java parity).
+  (4) `StreamWildcard()` Expression[Event] (kind `stream-wildcard`) — the
+  `mwc.*` select item; grouped path fans out one row per group member
+  carrying the member event, `having` evaluated per group before fan-out.
+  (5) `encodeKey` content-encodes slice/array group keys (Java
+  `Arrays.equals` parity for `group by array` over `int[]`); nil slices
+  stay distinct from empty slices (Java null-array key is its own
+  partition — caught by TestKeyContextMultikeyArrayOfPrimitiveParity and
+  four sibling tests).
+  (6) Grouped table-select routing added to the `where` branch (was missing:
+  groupByKeys silently ignored when a predicate was present).
+  (7) `groupEventContext` preserves `InitialGroup`, falling back to the
+  aggregate member itself, so `NamedWindowField`/`TableField` inside
+  aggregate inputs (e.g. `Sum(NamedWindowField("b"))` in a correlated
+  ungrouped on-select) resolve the candidate row instead of Missing.
+  (8) `facade_generated.go` regenerated for `StreamWildcard`.
+- [x] `go build`/`gofmt`/`go vet` clean; full `internal/esper` suite green
+  (118s) after the nil-vs-empty encodeKey fix.
+- [x] Assets535 integrated: runner + scenario (10 cases / 166 steps) +
+  oracle + run.sh + wiring; run.sh jq pins re-derived by the worker after
+  a stale-count rejection.
+- [x] Java trace (74 records) + Go trace + `-diff` evidence: `passing` /
+  0 differences. Regression found and fixed in this unit: the in-keyword
+  runner used `FirstEventValue()` as a stream-wildcard stand-in, which the
+  new ungrouped fold collapsed; replaced with `StreamWildcard()` and the
+  epl-other-plan-in-keyword trace re-verified byte-identical (114 records).
+- [x] Manifest: `case.infra-nwtable-on-select-aggregation` born-DV (10
+  runtime IDs) + `trigger.table-named-window` mapping; also added the
+  missing `case.infra-nwtable-event-type` → `infra.namedwindow.views`
+  mapping left over from Draft 4.534. Summary recomputed per the
+  compat validator rules: 765 cases / 391 DV / 1543 DV runtime IDs /
+  4077 associations / referenced 3637 / unreferenced 499.
+- [x] Roadmap + CHANGELOG entries added (Draft 4.535).
+- [x] Full local gates GREEN: `make check` exit 0 (check-layout incl.
+  facade drift, go vet, full go test; parity 91s, internal/esper 118s).
+- [x] Independent parity review (ParityReview535): initial FAIL on P1 —
+  manifest declared 6 goTests, only 3 existed. Worker added the missing
+  DiffWritesPassingEvidence / CheckedInEvidenceMatchesTraceAndReplay /
+  DiffRejectsTraceMutations (5 mutation cases) tests; P3s fixed (field-kind
+  cross-wiring, ungrouped NW having validation + doc, rollup doc note).
+  Confirmation review: OVERALL PASS, zero remaining findings.
+- [x] Post-review full gates GREEN: `make check` exit 0 (parity 89s,
+  internal/esper 118s).
+- [x] Shipped; Git owns identity.
+
+## Current work unit
+
 Active: Draft 4.534 ('infra-nwtable-event-type').
 
 - Selection: `InfraNWTableEventType.java` all 3 executions, no flags —

@@ -6744,6 +6744,16 @@ type Stream[T any] = internalengine.Stream[T]
 
 type StreamSelector = internalengine.StreamSelector
 
+// StreamWildcard is the Go fluent counterpart of Esper's stream-wildcard
+// select item ("mwc.*") on an on-select trigger: it projects the candidate
+// named-window event or table row itself. In a grouped on-select the
+// projection fans out one result row per group member, mirroring Esper's
+// fragment-per-row delivery; in an ungrouped select it resolves to the
+// candidate row of the per-row projection.
+func StreamWildcard() Expression[Event] {
+	return internalengine.StreamWildcard()
+}
+
 func StringLength(value Expression[string]) Expression[int64] {
 	return internalengine.StringLength(value)
 }

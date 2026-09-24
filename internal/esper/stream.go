@@ -3450,7 +3450,7 @@ type Query struct {
 	// where and having are the source-less query predicates: Esper allows
 	// WHERE/HAVING on a select without a from-clause, where both filter the
 	// single projected row. They are rejected at build time for sourced
-	// queries, which use Filter/Having on the stream builders instead.
+	// queries.
 	where  Expr
 	having Expr
 }

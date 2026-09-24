@@ -544,7 +544,7 @@ func eplOtherPlanInKeywordQuery(env *esper.Environment, engine *esper.Engine, ca
 	case caseName == "multi-idx-window" && epl == eplOtherPlanInKeywordMultiIdxWindow:
 		return esper.OnEvent(s0).SelectFromNamedWindow("S1Window", multiIdxTriggerPredicate(windowField),
 			esper.Alias("s0", esper.EventValue[esper.Event]()),
-			esper.Alias("s1", esper.FirstEventValue()),
+			esper.Alias("s1", esper.StreamWildcard()),
 		).Query(esper.StatementName(statement)), nil
 
 	case caseName == "multi-idx-table" && epl == eplOtherPlanInKeywordCreateS1Table:
@@ -574,7 +574,7 @@ func eplOtherPlanInKeywordQuery(env *esper.Environment, engine *esper.Engine, ca
 	case caseName == "multi-idx-table" && epl == eplOtherPlanInKeywordMultiIdxTable:
 		return esper.OnEvent(s0).SelectFromTableWhere("S1Table", multiIdxTriggerPredicate(tableField),
 			esper.Alias("s0", esper.EventValue[esper.Event]()),
-			esper.Alias("s1", esper.FirstEventValue()),
+			esper.Alias("s1", esper.StreamWildcard()),
 		).Query(esper.StatementName(statement)), nil
 
 	case caseName == "multi-idx-subquery" && epl == eplOtherPlanInKeywordMultiIdxSubquery:
@@ -625,7 +625,7 @@ func eplOtherPlanInKeywordQuery(env *esper.Environment, engine *esper.Engine, ca
 
 	case caseName == "single-idx-window" && epl == eplOtherPlanInKeywordSingleIdxWindow:
 		return esper.OnEvent(s1).SelectFromNamedWindow("S0Window", singleIdxTriggerPredicate(windowField),
-			esper.Alias("s0", esper.FirstEventValue()),
+			esper.Alias("s0", esper.StreamWildcard()),
 			esper.Alias("s1", esper.EventValue[esper.Event]()),
 		).Query(esper.StatementName(statement)), nil
 
@@ -650,7 +650,7 @@ func eplOtherPlanInKeywordQuery(env *esper.Environment, engine *esper.Engine, ca
 
 	case caseName == "single-idx-table" && epl == eplOtherPlanInKeywordSingleIdxTable:
 		return esper.OnEvent(s1).SelectFromTableWhere("S0Table", singleIdxTriggerPredicate(tableField),
-			esper.Alias("s0", esper.FirstEventValue()),
+			esper.Alias("s0", esper.StreamWildcard()),
 			esper.Alias("s1", esper.EventValue[esper.Event]()),
 		).Query(esper.StatementName(statement)), nil
 

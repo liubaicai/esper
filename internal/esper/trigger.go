@@ -341,6 +341,9 @@ type triggerDefinition struct {
 	// detail-level rows.
 	groupByKeys   []Expr
 	groupByRollup bool
+	// having applies a post-aggregation predicate to the grouped on-select
+	// form; it is evaluated per emitted group row after aggregation.
+	having Expression[bool]
 }
 
 type tableMutationResult struct {
@@ -398,6 +401,20 @@ func (q TriggerQuery) InModule(module Module) TriggerQuery {
 	}
 	definition := *q.definition
 	definition.moduleName = module.name
+	q.definition = &definition
+	return q
+}
+
+// Having applies a post-aggregation predicate to an on-select trigger. On a
+// grouped on-select it is evaluated per emitted group row after aggregation;
+// on an ungrouped aggregate on-select it is evaluated over the single folded
+// row. It is rejected at build time on non-select triggers.
+func (q TriggerQuery) Having(predicate Expression[bool]) TriggerQuery {
+	if q.definition == nil {
+		return q
+	}
+	definition := *q.definition
+	definition.having = predicate
 	q.definition = &definition
 	return q
 }
@@ -709,6 +726,30 @@ func (s TriggerStream[T]) SelectFromTableWhere(table string, predicate Expressio
 	}
 }
 
+// SelectFromTableGroupBy reads matching table rows once per trigger and emits
+// one row per first-seen group — the plain "on <trigger> select ... from
+// <table> group by ..." form. Unlike SelectFromTableRollup it emits only the
+// detail-level group rows, with no coarser rollup levels and no overall row.
+func (s TriggerStream[T]) SelectFromTableGroupBy(table string, predicate Expression[bool], keys []Expr, selections ...Selection) TriggerQuery {
+	query := s.SelectFromTableWhere(table, predicate, selections...)
+	query.definition.groupByKeys = append([]Expr(nil), keys...)
+	return query
+}
+
+// SelectFromTableRollup reads matching table rows once per trigger and emits
+// one row per rollup level per group: the full-key detail level first, then
+// progressively coarser levels, the overall level last — mirroring Esper's
+// "on <trigger> select ... from <table> group by rollup(...)" form.
+// Coarser-level nulling currently applies to plain Field selections only;
+// TableField selections emit the group representative's value at coarser
+// levels (a known gap until a rollup scenario exercises it).
+func (s TriggerStream[T]) SelectFromTableRollup(table string, predicate Expression[bool], keys []Expr, selections ...Selection) TriggerQuery {
+	query := s.SelectFromTableWhere(table, predicate, selections...)
+	query.definition.groupByKeys = append([]Expr(nil), keys...)
+	query.definition.groupByRollup = true
+	return query
+}
+
 func (s TriggerStream[T]) trigger(table string, action triggerActionKind, assignments []TableAssignment, keys []Expr) TriggerQuery {
 	return TriggerQuery{
 		env: s.env,
@@ -750,7 +791,6 @@ func (s TriggerStream[T]) namedWindowTrigger(window string, action triggerAction
 		},
 	}
 }
-
 func (q TriggerQuery) Query(options ...QueryOption) Query {
 	spec := querySpec{selector: SelectIStream, output: OutputAll()}
 	for _, option := range options {
@@ -990,6 +1030,9 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 	if definition == nil || (definition.input == nil && definition.pattern == nil) {
 		return NewError(ErrorInvalidRule, "trigger requires a source")
 	}
+	if definition.having != nil && definition.action != triggerSelectTable {
+		return NewError(ErrorInvalidRule, "having applies only to on-select triggers")
+	}
 	if definition.pattern != nil {
 		if err := validatePattern(definition.pattern); err != nil {
 			return err
@@ -1117,13 +1160,67 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 				return NewError(ErrorInvalidRule, "Previous function cannot be used in this context")
 			}
 			var expressionErr error
-			if definition.where != nil {
+			if len(definition.groupByKeys) > 0 {
+				// Grouped on-select validates projections against the table
+				// schema in the dedicated group-key block below.
+			} else if definition.where != nil {
 				expressionErr = e.validateTriggerTargetExpression(definition.input, table.schema, selection.Expr, "table-field")
 			} else {
 				expressionErr = e.validateExprFields(tableNode, selection.Expr)
 			}
 			if expressionErr != nil {
 				return fmt.Errorf("table select projection %q: %w", selection.Name, expressionErr)
+			}
+		}
+		if len(definition.groupByKeys) > 0 {
+			// Grouped on-select binds plain field expressions to the table
+			// schema (the queried side), while target-scoped expressions
+			// keep resolving against the trigger input.
+			if definition.groupByRollup {
+				for _, selection := range definition.selections {
+					if expressionTreeContainsLocalGroup(selection.Expr) {
+						return NewError(ErrorInvalidRule, "Roll-up and group-by parameters cannot be combined")
+					}
+				}
+			}
+			bindable := func(expression Expr) error {
+				inputErr := e.validateExprFields(definition.input, expression)
+				if inputErr == nil {
+					return nil
+				}
+				tableErr := e.validateExprFields(tableNode, expression)
+				if tableErr == nil {
+					return nil
+				}
+				return tableErr
+			}
+			for _, key := range definition.groupByKeys {
+				if err := bindable(key); err != nil {
+					return fmt.Errorf("table select group key: %w", err)
+				}
+			}
+			for _, selection := range definition.selections {
+				if selection.Expr == nil {
+					continue
+				}
+				if err := bindable(selection.Expr); err != nil {
+					return fmt.Errorf("table select projection %q: %w", selection.Name, err)
+				}
+			}
+		}
+		if definition.having != nil {
+			if definition.having.Type() != typeOf[bool]() {
+				return NewError(ErrorTypeMismatch, "table select having predicate must return bool")
+			}
+			if len(definition.groupByKeys) > 0 {
+				inputErr := e.validateExprFields(definition.input, definition.having)
+				if inputErr != nil {
+					if tableErr := e.validateExprFields(tableNode, definition.having); tableErr != nil {
+						return fmt.Errorf("table select having: %w", tableErr)
+					}
+				}
+			} else if err := e.validateTriggerTargetExpression(definition.input, table.schema, definition.having, "table-field"); err != nil {
+				return fmt.Errorf("table select having: %w", err)
 			}
 		}
 		return nil
@@ -1658,6 +1755,28 @@ func (e *Environment) validateNamedWindowTrigger(definition *triggerDefinition) 
 			}
 			if err := bindable(selection.Expr); err != nil {
 				return fmt.Errorf("named-window select projection %q: %w", selection.Name, err)
+			}
+		}
+		if definition.having != nil {
+			if definition.having.Type() != typeOf[bool]() {
+				return NewError(ErrorTypeMismatch, "named-window select having predicate must return bool")
+			}
+			if err := bindable(definition.having); err != nil {
+				return fmt.Errorf("named-window select having: %w", err)
+			}
+		}
+	}
+	if definition.action == triggerSelectTable && len(definition.groupByKeys) == 0 && definition.having != nil {
+		// Ungrouped having evaluates over the folded aggregate row; its
+		// fields must bind to the trigger input or the named-window schema.
+		if definition.having.Type() != typeOf[bool]() {
+			return NewError(ErrorTypeMismatch, "named-window select having predicate must return bool")
+		}
+		windowInput := &streamNode{kind: streamNamedWindow, moduleName: definition.moduleName, sourceName: definition.table}
+		inputErr := e.validateExprFields(definition.input, definition.having)
+		if inputErr != nil {
+			if windowErr := e.validateExprFields(windowInput, definition.having); windowErr != nil {
+				return fmt.Errorf("named-window select having: %w", windowErr)
 			}
 		}
 	}
@@ -2203,6 +2322,7 @@ func executeSelectTableAction(ctx context.Context, engine *Engine, definition *t
 			return ResultBatch{}, err
 		}
 		result := ResultBatch{Time: now}
+		matched := make([]Event, 0, len(rows))
 		for _, row := range rows {
 			if err := contextErr(ctx); err != nil {
 				return ResultBatch{}, err
@@ -2212,11 +2332,44 @@ func executeSelectTableAction(ctx context.Context, engine *Engine, definition *t
 				return ResultBatch{}, err
 			}
 			evaluation := EvalContext{Engine: engine, Event: event, Group: []Event{tableEvent}, Now: now, Variables: variables}
-			matched, ok := boolValue(definition.where.eval(evaluation))
-			if !ok || !matched {
+			ok, isBool := boolValue(definition.where.eval(evaluation))
+			if !isBool || !ok {
 				continue
 			}
+			matched = append(matched, tableEvent)
+		}
+		if len(definition.groupByKeys) > 0 {
+			return groupedSelectNamedWindowResult(definition, engine, event, now, variables, matched, resultSchema, result, nil, nil), nil
+		}
+		// Ungrouped aggregate folding: when a selection carries an aggregate
+		// expression, the matched snapshot collapses to a single row (SQL
+		// semantics). An empty matched set still emits one row with null
+		// aggregates; a non-aggregate projection emits one row per event.
+		hasAggregate := false
+		for _, selection := range definition.selections {
+			if isAggregateExpression(selection.Expr) {
+				hasAggregate = true
+				break
+			}
+		}
+		if hasAggregate && len(definition.selections) > 0 {
+			evaluation := EvalContext{Engine: engine, Event: event, Group: matched, Now: now, Variables: variables, aggregateEvaluation: true}
 			values := make([]Value, 0, len(definition.selections))
+			for _, selection := range definition.selections {
+				values = append(values, evaluateAggregateExpression(selection.Expr, evaluation))
+			}
+			if definition.having != nil {
+				matched, ok := boolValue(definition.having.eval(evaluation))
+				if !ok || !matched {
+					return result, nil
+				}
+			}
+			result.New = append(result.New, resultRow(newRow(resultSchema, values)))
+			return result, nil
+		}
+		for _, tableEvent := range matched {
+			values := make([]Value, 0, len(definition.selections))
+			evaluation := EvalContext{Engine: engine, Event: event, Group: []Event{tableEvent}, Now: now, Variables: variables}
 			for _, selection := range definition.selections {
 				values = append(values, selection.Expr.eval(evaluation))
 			}
@@ -2239,6 +2392,7 @@ func executeSelectTableAction(ctx context.Context, engine *Engine, definition *t
 			return ResultBatch{}, err
 		}
 		result := ResultBatch{Time: now}
+		matched := make([]Event, 0, len(rows))
 		for _, row := range rows {
 			if err := contextErr(ctx); err != nil {
 				return ResultBatch{}, err
@@ -2247,6 +2401,38 @@ func executeSelectTableAction(ctx context.Context, engine *Engine, definition *t
 			if err != nil {
 				return ResultBatch{}, err
 			}
+			matched = append(matched, tableEvent)
+		}
+		if len(definition.groupByKeys) > 0 {
+			return groupedSelectNamedWindowResult(definition, engine, event, now, variables, matched, resultSchema, result, nil, nil), nil
+		}
+		// Ungrouped aggregate folding: when a selection carries an aggregate
+		// expression, the matched snapshot collapses to a single row (SQL
+		// semantics). An empty matched set still emits one row with null
+		// aggregates; a non-aggregate projection emits one row per event.
+		hasAggregate := false
+		for _, selection := range definition.selections {
+			if isAggregateExpression(selection.Expr) {
+				hasAggregate = true
+				break
+			}
+		}
+		if hasAggregate && len(definition.selections) > 0 {
+			evaluation := EvalContext{Engine: engine, Event: event, Group: matched, Now: now, Variables: variables, aggregateEvaluation: true}
+			values := make([]Value, 0, len(definition.selections))
+			for _, selection := range definition.selections {
+				values = append(values, evaluateAggregateExpression(selection.Expr, evaluation))
+			}
+			if definition.having != nil {
+				matched, ok := boolValue(definition.having.eval(evaluation))
+				if !ok || !matched {
+					return result, nil
+				}
+			}
+			result.New = append(result.New, resultRow(newRow(resultSchema, values)))
+			return result, nil
+		}
+		for _, tableEvent := range matched {
 			rowEval := EvalContext{Engine: engine, Event: tableEvent, OuterEvent: event, Group: []Event{tableEvent}, Now: now, Variables: variables}
 			values := make([]Value, 0, len(definition.selections))
 			for _, selection := range definition.selections {
@@ -2326,6 +2512,35 @@ func executeSelectNamedWindowAction(ctx context.Context, engine *Engine, definit
 	}
 	if len(definition.groupByKeys) > 0 {
 		return groupedSelectNamedWindowResult(definition, engine, event, now, variables, matched, resultSchema, result, tags, tagValues), nil
+	}
+	// Ungrouped aggregate folding: when a selection carries an aggregate
+	// expression, the matched snapshot collapses to a single row (SQL
+	// semantics). An empty matched set still emits one row with null
+	// aggregates; a non-aggregate projection emits one row per event.
+	hasAggregate := false
+	for _, selection := range definition.selections {
+		if isAggregateExpression(selection.Expr) {
+			hasAggregate = true
+			break
+		}
+	}
+	if hasAggregate && len(definition.selections) > 0 {
+		evaluation := EvalContext{Engine: engine, Event: event, Group: matched, Now: now, Variables: variables, aggregateEvaluation: true, Tags: tags, TagValues: tagValues}
+		if definition.pattern != nil && len(matched) > 0 {
+			evaluation.Event = matched[0]
+		}
+		values := make([]Value, 0, len(definition.selections))
+		for _, selection := range definition.selections {
+			values = append(values, evaluateAggregateExpression(selection.Expr, evaluation))
+		}
+		if definition.having != nil {
+			matched, ok := boolValue(definition.having.eval(evaluation))
+			if !ok || !matched {
+				return result, nil
+			}
+		}
+		result.New = append(result.New, resultRow(newRow(resultSchema, values)))
+		return result, nil
 	}
 	for _, candidate := range matched {
 		if len(definition.selections) == 0 {
@@ -2424,6 +2639,40 @@ func groupedSelectNamedWindowResult(definition *triggerDefinition, engine *Engin
 					evaluation.groupingValues[key] = Null()
 					evaluation.groupingPresent[key] = false
 				}
+			}
+			if definition.having != nil {
+				matched, ok := boolValue(definition.having.eval(evaluation))
+				if !ok || !matched {
+					continue
+				}
+			}
+			wildcard := false
+			for _, selection := range definition.selections {
+				if selection.Expr != nil && selection.Expr.node() != nil && selection.Expr.node().kind == "stream-wildcard" {
+					wildcard = true
+					break
+				}
+			}
+			if wildcard {
+				// A stream-wildcard selection ("mwc.*") emits one row per
+				// group member carrying the member event, mirroring Esper's
+				// fragment-per-row delivery. Other selections keep the group
+				// scope so aggregates still see every member.
+				for _, member := range grp.events {
+					memberEval := evaluation
+					memberEval.Event = member
+					memberEval.Group = []Event{member}
+					values := make([]Value, 0, len(definition.selections))
+					for _, selection := range definition.selections {
+						selectionEval := memberEval
+						if selection.Expr == nil || selection.Expr.node() == nil || selection.Expr.node().kind != "stream-wildcard" {
+							selectionEval = evaluation
+						}
+						values = append(values, evaluateAggregateExpression(selection.Expr, selectionEval))
+					}
+					result.New = append(result.New, resultRow(newRow(resultSchema, values)))
+				}
+				continue
 			}
 			values := make([]Value, 0, len(definition.selections))
 			for _, selection := range definition.selections {

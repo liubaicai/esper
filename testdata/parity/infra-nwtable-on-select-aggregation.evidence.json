@@ -1,0 +1,3073 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-a83c289aeff7f22c5d10",
+    "java-runtime-113be8d12970feaf2fd0",
+    "java-runtime-192de61f3c60d848e6c2",
+    "java-runtime-99d89e9beadeae52ce8b",
+    "java-runtime-fa42452055bf6fa1e4fd",
+    "java-runtime-485188699c51be24f2cb",
+    "java-runtime-36a62fff425f4c9b8cb6",
+    "java-runtime-964dbe543e45c3f14f00",
+    "java-runtime-d10a8674ccc6ecc5c70d",
+    "java-runtime-5b8dddb5496cfbefa7d7"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnSelect.java"
+  ],
+  "javaExecutions": [
+    "InfraSelectAggregationHavingStreamWildcard{namedWindow=true}",
+    "InfraSelectAggregationHavingStreamWildcard{namedWindow=false}",
+    "InfraSelectAggregation{namedWindow=true}",
+    "InfraSelectAggregation{namedWindow=false}",
+    "InfraSelectAggregationCorrelated{namedWindow=true}",
+    "InfraSelectAggregationCorrelated{namedWindow=false}",
+    "InfraSelectAggregationGrouping{namedWindow=true}",
+    "InfraSelectAggregationGrouping{namedWindow=false}",
+    "InfraOnSelectMultikeyWArray{namedWindow=true}",
+    "InfraOnSelectMultikeyWArray{namedWindow=false}"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-on-select-aggregation",
+    "steps": [
+      {
+        "op": "case",
+        "case": "having-wildcard-nw"
+      },
+      {
+        "op": "deploy",
+        "case": "having-wildcard-nw",
+        "statement": "create",
+        "epl": "@public create window MyInfraSHS#keepall as (a string, b int)"
+      },
+      {
+        "op": "deployed",
+        "case": "having-wildcard-nw",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "having-wildcard-nw",
+        "statement": "insert",
+        "epl": "insert into MyInfraSHS select theString as a, intPrimitive as b from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "having-wildcard-nw",
+        "statement": "insert"
+      },
+      {
+        "op": "deploy",
+        "case": "having-wildcard-nw",
+        "statement": "select",
+        "epl": "@name('select') on SupportBean_A select mwc.* as mwcwin from MyInfraSHS mwc where id = a group by a having sum(b) = 20"
+      },
+      {
+        "op": "deployed",
+        "case": "having-wildcard-nw",
+        "statement": "select"
+      },
+      {
+        "op": "send",
+        "case": "having-wildcard-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 16
+        }
+      },
+      {
+        "op": "send",
+        "case": "having-wildcard-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "having-wildcard-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "having-wildcard-nw",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E1"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "having-wildcard-nw"
+      },
+      {
+        "op": "case",
+        "case": "having-wildcard-table"
+      },
+      {
+        "op": "deploy",
+        "case": "having-wildcard-table",
+        "statement": "create",
+        "epl": "@public create table MyInfraSHS as (a string primary key, b int primary key)"
+      },
+      {
+        "op": "deployed",
+        "case": "having-wildcard-table",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "having-wildcard-table",
+        "statement": "insert",
+        "epl": "insert into MyInfraSHS select theString as a, intPrimitive as b from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "having-wildcard-table",
+        "statement": "insert"
+      },
+      {
+        "op": "deploy",
+        "case": "having-wildcard-table",
+        "statement": "select",
+        "epl": "@name('select') on SupportBean_A select mwc.* as mwcwin from MyInfraSHS mwc where id = a group by a having sum(b) = 20"
+      },
+      {
+        "op": "deployed",
+        "case": "having-wildcard-table",
+        "statement": "select"
+      },
+      {
+        "op": "send",
+        "case": "having-wildcard-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 16
+        }
+      },
+      {
+        "op": "send",
+        "case": "having-wildcard-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "having-wildcard-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "having-wildcard-table",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E1"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "having-wildcard-table"
+      },
+      {
+        "op": "case",
+        "case": "select-agg-nw"
+      },
+      {
+        "op": "deploy",
+        "case": "select-agg-nw",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyInfraSA#keepall as select theString as a, intPrimitive as b from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "select-agg-nw",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "select-agg-nw",
+        "statement": "select",
+        "epl": "@name('select') on SupportBean_A select sum(b) as sumb from MyInfraSA"
+      },
+      {
+        "op": "deployed",
+        "case": "select-agg-nw",
+        "statement": "select"
+      },
+      {
+        "op": "deploy",
+        "case": "select-agg-nw",
+        "statement": "insert",
+        "epl": "insert into MyInfraSA select theString as a, intPrimitive as b from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "select-agg-nw",
+        "statement": "insert"
+      },
+      {
+        "op": "send",
+        "case": "select-agg-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "select-agg-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "select-agg-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "select-agg-nw",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "select-agg-nw",
+        "statement": "delete",
+        "epl": "on SupportBean_B delete from MyInfraSA where id = a"
+      },
+      {
+        "op": "deployed",
+        "case": "select-agg-nw",
+        "statement": "delete"
+      },
+      {
+        "op": "send",
+        "case": "select-agg-nw",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "select-agg-nw",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "select-agg-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "select-agg-nw",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A3"
+        }
+      },
+      {
+        "op": "types",
+        "case": "select-agg-nw",
+        "statement": "select"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "select-agg-nw"
+      },
+      {
+        "op": "case",
+        "case": "select-agg-table"
+      },
+      {
+        "op": "deploy",
+        "case": "select-agg-table",
+        "statement": "create",
+        "epl": "@name('create') @public create table MyInfraSA (a string primary key, b int primary key)"
+      },
+      {
+        "op": "deployed",
+        "case": "select-agg-table",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "select-agg-table",
+        "statement": "select",
+        "epl": "@name('select') on SupportBean_A select sum(b) as sumb from MyInfraSA"
+      },
+      {
+        "op": "deployed",
+        "case": "select-agg-table",
+        "statement": "select"
+      },
+      {
+        "op": "deploy",
+        "case": "select-agg-table",
+        "statement": "insert",
+        "epl": "insert into MyInfraSA select theString as a, intPrimitive as b from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "select-agg-table",
+        "statement": "insert"
+      },
+      {
+        "op": "send",
+        "case": "select-agg-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "select-agg-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "select-agg-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "select-agg-table",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "select-agg-table",
+        "statement": "delete",
+        "epl": "on SupportBean_B delete from MyInfraSA where id = a"
+      },
+      {
+        "op": "deployed",
+        "case": "select-agg-table",
+        "statement": "delete"
+      },
+      {
+        "op": "send",
+        "case": "select-agg-table",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "select-agg-table",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "select-agg-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "select-agg-table",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A3"
+        }
+      },
+      {
+        "op": "types",
+        "case": "select-agg-table",
+        "statement": "select"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "select-agg-table"
+      },
+      {
+        "op": "case",
+        "case": "correlated-nw"
+      },
+      {
+        "op": "deploy",
+        "case": "correlated-nw",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyInfraSAC#keepall as select theString as a, intPrimitive as b from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "correlated-nw",
+        "statement": "select",
+        "epl": "@name('select') on SupportBean_A select sum(b) as sumb from MyInfraSAC where a = id"
+      },
+      {
+        "op": "deploy",
+        "case": "correlated-nw",
+        "statement": "insert",
+        "epl": "insert into MyInfraSAC select theString as a, intPrimitive as b from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "correlated-nw",
+        "statement": "create"
+      },
+      {
+        "op": "deployed",
+        "case": "correlated-nw",
+        "statement": "select"
+      },
+      {
+        "op": "deployed",
+        "case": "correlated-nw",
+        "statement": "insert"
+      },
+      {
+        "op": "send",
+        "case": "correlated-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-nw",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-nw",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-nw",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E2"
+        }
+      },
+      {
+        "op": "types",
+        "case": "correlated-nw",
+        "statement": "select"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "correlated-nw"
+      },
+      {
+        "op": "case",
+        "case": "correlated-table"
+      },
+      {
+        "op": "deploy",
+        "case": "correlated-table",
+        "statement": "create",
+        "epl": "@name('create') @public create table MyInfraSAC(a string primary key, b int primary key)"
+      },
+      {
+        "op": "deploy",
+        "case": "correlated-table",
+        "statement": "select",
+        "epl": "@name('select') on SupportBean_A select sum(b) as sumb from MyInfraSAC where a = id"
+      },
+      {
+        "op": "deploy",
+        "case": "correlated-table",
+        "statement": "insert",
+        "epl": "insert into MyInfraSAC select theString as a, intPrimitive as b from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "correlated-table",
+        "statement": "create"
+      },
+      {
+        "op": "deployed",
+        "case": "correlated-table",
+        "statement": "select"
+      },
+      {
+        "op": "deployed",
+        "case": "correlated-table",
+        "statement": "insert"
+      },
+      {
+        "op": "send",
+        "case": "correlated-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-table",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-table",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-table",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E2"
+        }
+      },
+      {
+        "op": "types",
+        "case": "correlated-table",
+        "statement": "select"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "correlated-table"
+      },
+      {
+        "op": "case",
+        "case": "grouping-nw"
+      },
+      {
+        "op": "deploy",
+        "case": "grouping-nw",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyInfraSAG#keepall as select theString as a, intPrimitive as b from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "grouping-nw",
+        "statement": "select",
+        "epl": "@name('select') on SupportBean_A select a, sum(b) as sumb from MyInfraSAG group by a order by a desc"
+      },
+      {
+        "op": "deploy",
+        "case": "grouping-nw",
+        "statement": "selectTwo",
+        "epl": "@name('selectTwo') on SupportBean_A select a, sum(b) as sumb from MyInfraSAG group by a having sum(b) \u003e 5 order by a desc"
+      },
+      {
+        "op": "deploy",
+        "case": "grouping-nw",
+        "statement": "insert",
+        "epl": "@name('insert') insert into MyInfraSAG select theString as a, intPrimitive as b from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "grouping-nw",
+        "statement": "create"
+      },
+      {
+        "op": "deployed",
+        "case": "grouping-nw",
+        "statement": "select"
+      },
+      {
+        "op": "deployed",
+        "case": "grouping-nw",
+        "statement": "selectTwo"
+      },
+      {
+        "op": "deployed",
+        "case": "grouping-nw",
+        "statement": "insert"
+      },
+      {
+        "op": "send",
+        "case": "grouping-nw",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "grouping-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "grouping-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "grouping-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "send",
+        "case": "grouping-nw",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "grouping-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "case": "grouping-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "grouping-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "case": "grouping-nw",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A2"
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "grouping-nw",
+        "statement": "delete",
+        "epl": "on SupportBean_B delete from MyInfraSAG where id = a"
+      },
+      {
+        "op": "deployed",
+        "case": "grouping-nw",
+        "statement": "delete"
+      },
+      {
+        "op": "send",
+        "case": "grouping-nw",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "grouping-nw",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A3"
+        }
+      },
+      {
+        "op": "types",
+        "case": "grouping-nw",
+        "statement": "select"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "grouping-nw"
+      },
+      {
+        "op": "case",
+        "case": "grouping-table"
+      },
+      {
+        "op": "deploy",
+        "case": "grouping-table",
+        "statement": "create",
+        "epl": "@name('create') @public create table MyInfraSAG(a string primary key, b int primary key)"
+      },
+      {
+        "op": "deploy",
+        "case": "grouping-table",
+        "statement": "select",
+        "epl": "@name('select') on SupportBean_A select a, sum(b) as sumb from MyInfraSAG group by a order by a desc"
+      },
+      {
+        "op": "deploy",
+        "case": "grouping-table",
+        "statement": "selectTwo",
+        "epl": "@name('selectTwo') on SupportBean_A select a, sum(b) as sumb from MyInfraSAG group by a having sum(b) \u003e 5 order by a desc"
+      },
+      {
+        "op": "deploy",
+        "case": "grouping-table",
+        "statement": "insert",
+        "epl": "@name('insert') insert into MyInfraSAG select theString as a, intPrimitive as b from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "grouping-table",
+        "statement": "create"
+      },
+      {
+        "op": "deployed",
+        "case": "grouping-table",
+        "statement": "select"
+      },
+      {
+        "op": "deployed",
+        "case": "grouping-table",
+        "statement": "selectTwo"
+      },
+      {
+        "op": "deployed",
+        "case": "grouping-table",
+        "statement": "insert"
+      },
+      {
+        "op": "send",
+        "case": "grouping-table",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "grouping-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "grouping-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "grouping-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "send",
+        "case": "grouping-table",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "grouping-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "case": "grouping-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "grouping-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "case": "grouping-table",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A2"
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "grouping-table",
+        "statement": "delete",
+        "epl": "on SupportBean_B delete from MyInfraSAG where id = a"
+      },
+      {
+        "op": "deployed",
+        "case": "grouping-table",
+        "statement": "delete"
+      },
+      {
+        "op": "send",
+        "case": "grouping-table",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "grouping-table",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A3"
+        }
+      },
+      {
+        "op": "types",
+        "case": "grouping-table",
+        "statement": "select"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "grouping-table"
+      },
+      {
+        "op": "case",
+        "case": "multikey-w-array-nw"
+      },
+      {
+        "op": "deploy",
+        "case": "multikey-w-array-nw",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyInfraPC#keepall as (id string, array int[], value int)"
+      },
+      {
+        "op": "deployed",
+        "case": "multikey-w-array-nw",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "multikey-w-array-nw",
+        "statement": "s0",
+        "epl": "@name('s0') on SupportBean select array, sum(value) as thesum from MyInfraPC group by array"
+      },
+      {
+        "op": "deployed",
+        "case": "multikey-w-array-nw",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "multikey-w-array-nw",
+        "statement": "FafInsert",
+        "epl": "insert into MyInfraPC values('E1', {1, 2}, 10)"
+      },
+      {
+        "op": "deploy",
+        "case": "multikey-w-array-nw",
+        "statement": "FafInsert",
+        "epl": "insert into MyInfraPC values('E2', {1, 2}, 11)"
+      },
+      {
+        "op": "send",
+        "case": "multikey-w-array-nw",
+        "eventType": "SupportBean",
+        "payload": {}
+      },
+      {
+        "op": "deploy",
+        "case": "multikey-w-array-nw",
+        "statement": "FafInsert",
+        "epl": "insert into MyInfraPC values('E3', {1, 2}, 21)"
+      },
+      {
+        "op": "deploy",
+        "case": "multikey-w-array-nw",
+        "statement": "FafInsert",
+        "epl": "insert into MyInfraPC values('E4', {1}, 22)"
+      },
+      {
+        "op": "send",
+        "case": "multikey-w-array-nw",
+        "eventType": "SupportBean",
+        "payload": {}
+      },
+      {
+        "op": "undeploy-all",
+        "case": "multikey-w-array-nw"
+      },
+      {
+        "op": "case",
+        "case": "multikey-w-array-table"
+      },
+      {
+        "op": "deploy",
+        "case": "multikey-w-array-table",
+        "statement": "create",
+        "epl": "@name('create') @public create table MyInfraPC(id string primary key, array int[], value int)"
+      },
+      {
+        "op": "deployed",
+        "case": "multikey-w-array-table",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "multikey-w-array-table",
+        "statement": "s0",
+        "epl": "@name('s0') on SupportBean select array, sum(value) as thesum from MyInfraPC group by array"
+      },
+      {
+        "op": "deployed",
+        "case": "multikey-w-array-table",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "multikey-w-array-table",
+        "statement": "FafInsert",
+        "epl": "insert into MyInfraPC values('E1', {1, 2}, 10)"
+      },
+      {
+        "op": "deploy",
+        "case": "multikey-w-array-table",
+        "statement": "FafInsert",
+        "epl": "insert into MyInfraPC values('E2', {1, 2}, 11)"
+      },
+      {
+        "op": "send",
+        "case": "multikey-w-array-table",
+        "eventType": "SupportBean",
+        "payload": {}
+      },
+      {
+        "op": "deploy",
+        "case": "multikey-w-array-table",
+        "statement": "FafInsert",
+        "epl": "insert into MyInfraPC values('E3', {1, 2}, 21)"
+      },
+      {
+        "op": "deploy",
+        "case": "multikey-w-array-table",
+        "statement": "FafInsert",
+        "epl": "insert into MyInfraPC values('E4', {1}, 22)"
+      },
+      {
+        "op": "send",
+        "case": "multikey-w-array-table",
+        "eventType": "SupportBean",
+        "payload": {}
+      },
+      {
+        "op": "undeploy-all",
+        "case": "multikey-w-array-table"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-on-select-aggregation",
+    "records": [
+      {
+        "case": "having-wildcard-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "having-wildcard-nw",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "having-wildcard-nw",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "having-wildcard-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mwcwin": "{a=E1, b=16}"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mwcwin": "{a=E1, b=4}"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-wildcard-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "having-wildcard-table",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "having-wildcard-table",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "having-wildcard-table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mwcwin": [
+                "E1",
+                16
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mwcwin": [
+                "E1",
+                4
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "select-agg-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "select-agg-nw",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "select-agg-nw",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "select-agg-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumb": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "select-agg-nw",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "select-agg-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumb": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "select-agg-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumb": 14
+            }
+          }
+        ]
+      },
+      {
+        "case": "select-agg-nw",
+        "operation": "types",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "name": "sumb",
+            "type": "Integer"
+          }
+        ]
+      },
+      {
+        "case": "select-agg-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "select-agg-table",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "select-agg-table",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "select-agg-table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumb": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "select-agg-table",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "select-agg-table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumb": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "select-agg-table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumb": 14
+            }
+          }
+        ]
+      },
+      {
+        "case": "select-agg-table",
+        "operation": "types",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "name": "sumb",
+            "type": "Integer"
+          }
+        ]
+      },
+      {
+        "case": "correlated-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "correlated-nw",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "correlated-nw",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "correlated-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "b": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumb": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "b": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumb": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-nw",
+        "operation": "types",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "name": "sumb",
+            "type": "Integer"
+          }
+        ]
+      },
+      {
+        "case": "correlated-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "correlated-table",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "correlated-table",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "correlated-table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumb": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumb": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-table",
+        "operation": "types",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "name": "sumb",
+            "type": "Integer"
+          }
+        ]
+      },
+      {
+        "case": "grouping-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "grouping-nw",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "grouping-nw",
+        "operation": "deployed",
+        "statement": "selectTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "grouping-nw",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "grouping-nw",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "sumb": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouping-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "sumb": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "sumb": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouping-nw",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "sumb": 12
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "sumb": 106
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouping-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E4",
+              "sumb": -1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "sumb": 12
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "sumb": 106
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouping-nw",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "grouping-nw",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "sumb": 106
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouping-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E4",
+              "sumb": -1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "sumb": 106
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouping-nw",
+        "operation": "types",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "name": "a",
+            "type": "String"
+          },
+          {
+            "name": "sumb",
+            "type": "Integer"
+          }
+        ]
+      },
+      {
+        "case": "grouping-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "grouping-table",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "grouping-table",
+        "operation": "deployed",
+        "statement": "selectTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "grouping-table",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "grouping-table",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "sumb": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouping-table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "sumb": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "sumb": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouping-table",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "sumb": 12
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "sumb": 106
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouping-table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E4",
+              "sumb": -1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "sumb": 12
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "sumb": 106
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouping-table",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "grouping-table",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "sumb": 106
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouping-table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E4",
+              "sumb": -1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "sumb": 106
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouping-table",
+        "operation": "types",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "name": "a",
+            "type": "String"
+          },
+          {
+            "name": "sumb",
+            "type": "Integer"
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multikey-w-array-nw",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multikey-w-array-nw",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "array": [
+                1,
+                2
+              ],
+              "thesum": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array-nw",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "array": [
+                1
+              ],
+              "thesum": 22
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "array": [
+                1,
+                2
+              ],
+              "thesum": 42
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multikey-w-array-table",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multikey-w-array-table",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "array": [
+                1,
+                2
+              ],
+              "thesum": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array-table",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "array": [
+                1
+              ],
+              "thesum": 22
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "array": [
+                1,
+                2
+              ],
+              "thesum": 42
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-on-select-aggregation",
+    "records": [
+      {
+        "case": "having-wildcard-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "having-wildcard-nw",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "having-wildcard-nw",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "having-wildcard-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mwcwin": "{a=E1, b=16}"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mwcwin": "{a=E1, b=4}"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-wildcard-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "having-wildcard-table",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "having-wildcard-table",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "having-wildcard-table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mwcwin": [
+                "E1",
+                16
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mwcwin": [
+                "E1",
+                4
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "select-agg-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "select-agg-nw",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "select-agg-nw",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "select-agg-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumb": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "select-agg-nw",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "select-agg-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumb": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "select-agg-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumb": 14
+            }
+          }
+        ]
+      },
+      {
+        "case": "select-agg-nw",
+        "operation": "types",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "name": "sumb",
+            "type": "Integer"
+          }
+        ]
+      },
+      {
+        "case": "select-agg-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "select-agg-table",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "select-agg-table",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "select-agg-table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumb": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "select-agg-table",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "select-agg-table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumb": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "select-agg-table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumb": 14
+            }
+          }
+        ]
+      },
+      {
+        "case": "select-agg-table",
+        "operation": "types",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "name": "sumb",
+            "type": "Integer"
+          }
+        ]
+      },
+      {
+        "case": "correlated-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "correlated-nw",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "correlated-nw",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "correlated-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "b": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumb": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "b": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumb": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-nw",
+        "operation": "types",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "name": "sumb",
+            "type": "Integer"
+          }
+        ]
+      },
+      {
+        "case": "correlated-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "correlated-table",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "correlated-table",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "correlated-table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumb": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumb": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumb": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-table",
+        "operation": "types",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "name": "sumb",
+            "type": "Integer"
+          }
+        ]
+      },
+      {
+        "case": "grouping-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "grouping-nw",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "grouping-nw",
+        "operation": "deployed",
+        "statement": "selectTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "grouping-nw",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "grouping-nw",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "sumb": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouping-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "sumb": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "sumb": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouping-nw",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "sumb": 12
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "sumb": 106
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouping-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E4",
+              "sumb": -1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "sumb": 12
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "sumb": 106
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouping-nw",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "grouping-nw",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "sumb": 106
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouping-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E4",
+              "sumb": -1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "sumb": 106
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouping-nw",
+        "operation": "types",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "name": "a",
+            "type": "String"
+          },
+          {
+            "name": "sumb",
+            "type": "Integer"
+          }
+        ]
+      },
+      {
+        "case": "grouping-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "grouping-table",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "grouping-table",
+        "operation": "deployed",
+        "statement": "selectTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "grouping-table",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "grouping-table",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "sumb": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouping-table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "sumb": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "sumb": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouping-table",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "sumb": 12
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "sumb": 106
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouping-table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E4",
+              "sumb": -1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "sumb": 12
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "sumb": 106
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouping-table",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "grouping-table",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "sumb": 106
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouping-table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E4",
+              "sumb": -1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "sumb": 106
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouping-table",
+        "operation": "types",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "name": "a",
+            "type": "String"
+          },
+          {
+            "name": "sumb",
+            "type": "Integer"
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multikey-w-array-nw",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multikey-w-array-nw",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "array": [
+                1,
+                2
+              ],
+              "thesum": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array-nw",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "array": [
+                1
+              ],
+              "thesum": 22
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "array": [
+                1,
+                2
+              ],
+              "thesum": 42
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multikey-w-array-table",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multikey-w-array-table",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "array": [
+                1,
+                2
+              ],
+              "thesum": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array-table",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "array": [
+                1
+              ],
+              "thesum": 22
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "array": [
+                1,
+                2
+              ],
+              "thesum": 42
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

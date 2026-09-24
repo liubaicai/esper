@@ -1523,7 +1523,8 @@
     "internal/app/parity/infra_table_faf_execute_query.go",
     "internal/app/parity/infra_table_subquery.go",
     "internal/app/parity/infra_table_context.go",
-    "internal/app/parity/infra_table_invalid.go"
+    "internal/app/parity/infra_table_invalid.go",
+    "internal/app/parity/infra_nwtable_on_select_aggregation.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -1645,7 +1646,17 @@
     "java-runtime-70e525638c5fbaf37752",
     "java-runtime-7c97277eedfa76b7e0cf",
     "java-runtime-fd2a7de8e5606de63b80",
-    "java-runtime-b9b6435f81135ce15040"
+    "java-runtime-b9b6435f81135ce15040",
+    "java-runtime-a83c289aeff7f22c5d10",
+    "java-runtime-113be8d12970feaf2fd0",
+    "java-runtime-192de61f3c60d848e6c2",
+    "java-runtime-99d89e9beadeae52ce8b",
+    "java-runtime-fa42452055bf6fa1e4fd",
+    "java-runtime-485188699c51be24f2cb",
+    "java-runtime-36a62fff425f4c9b8cb6",
+    "java-runtime-964dbe543e45c3f14f00",
+    "java-runtime-d10a8674ccc6ecc5c70d",
+    "java-runtime-5b8dddb5496cfbefa7d7"
    ],
    "representativeScenarioIds": [
     "named-window-mutation",
@@ -31101,6 +31112,98 @@
    "difference": "Go covers the non-aggregate named-window/table on-select executions with typed trigger APIs: indexed predicate selects, correlated selects with delete, filtered/ordered selects, trigger+window projections with limit, and invalid boundaries (aggregate-in-where, unknown infra, prev-in-select). Runtime additions: on-select results now apply order-by and limit/offset, and trigger WHERE/select validation rejects aggregates and prev/prior. The remaining executions need on-select aggregate/group/having, window()/enum projections, pattern triggers and index-plan hooks, which are still open."
   },
   {
+   "id": "case.infra-nwtable-on-select-aggregation",
+   "javaRuntimeIds": [
+    "java-runtime-a83c289aeff7f22c5d10",
+    "java-runtime-113be8d12970feaf2fd0",
+    "java-runtime-192de61f3c60d848e6c2",
+    "java-runtime-99d89e9beadeae52ce8b",
+    "java-runtime-fa42452055bf6fa1e4fd",
+    "java-runtime-485188699c51be24f2cb",
+    "java-runtime-36a62fff425f4c9b8cb6",
+    "java-runtime-964dbe543e45c3f14f00",
+    "java-runtime-d10a8674ccc6ecc5c70d",
+    "java-runtime-5b8dddb5496cfbefa7d7"
+   ],
+   "javaStaticIds": [
+    "java-2ec871e1e4d7e32c39a8",
+    "java-2ec871e1e4d7e32c39a8",
+    "java-36dad03f6eadeaa780c1",
+    "java-36dad03f6eadeaa780c1",
+    "java-46aadb56f6ef28b6b2bd",
+    "java-46aadb56f6ef28b6b2bd",
+    "java-acc31838f7d1ff0ce7a6",
+    "java-acc31838f7d1ff0ce7a6",
+    "java-81de7615b15d1c9671eb",
+    "java-81de7615b15d1c9671eb"
+   ],
+   "javaNames": [
+    "InfraSelectAggregationHavingStreamWildcard{namedWindow=true}",
+    "InfraSelectAggregationHavingStreamWildcard{namedWindow=false}",
+    "InfraSelectAggregation{namedWindow=true}",
+    "InfraSelectAggregation{namedWindow=false}",
+    "InfraSelectAggregationCorrelated{namedWindow=true}",
+    "InfraSelectAggregationCorrelated{namedWindow=false}",
+    "InfraSelectAggregationGrouping{namedWindow=true}",
+    "InfraSelectAggregationGrouping{namedWindow=false}",
+    "InfraOnSelectMultikeyWArray{namedWindow=true}",
+    "InfraOnSelectMultikeyWArray{namedWindow=false}"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnSelect.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnSelectAggDirectReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnSelectAggDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnSelectAggCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnSelectAggDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnSelectAggRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnSelectAggRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "correctness",
+    "infra",
+    "named-window",
+    "table",
+    "on-select",
+    "aggregation",
+    "group-by",
+    "having",
+    "stream-wildcard",
+    "correlated",
+    "multikey",
+    "array-key",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-nwtable-on-select-aggregation.json",
+    "testdata/parity/infra-nwtable-on-select-aggregation.trace.json",
+    "testdata/parity/infra-nwtable-on-select-aggregation.go.trace.json",
+    "testdata/parity/infra-nwtable-on-select-aggregation.evidence.json",
+    "tools/java-oracle/InfraNWTableOnSelectAggregationScenarioOracle.java",
+    "tools/java-oracle/run-infra-nwtable-on-select-aggregation.sh"
+   ],
+   "notes": "InfraNWTableOnSelect ordinals 6/7, 16-21, 26-27 born-differential: grouped on-select with having + stream wildcard (mwc.* fragment fan-out, one row per group member), ungrouped aggregate folding (sum over the whole matched snapshot emits one row; empty match still emits one null-aggregate row), correlated ungrouped on-select (where id = a), grouped on-select with order-by and a second having variant, and multikey group-by over int[] array columns (content-encoded keys, Java Arrays.equals parity). Java/Go 74 records each, 0 differences. Shared-core additions: TriggerQuery.Having post-aggregation predicate; SelectFromTableGroupBy/SelectFromTableRollup; ungrouped aggregate folding in both named-window and table select actions; StreamWildcard() Expression[Event]; encodeKey content-encoding for slice/array keys (nil slice distinct from empty); grouped table-select routing in the where branch; groupEventContext preserves InitialGroup so NamedWindowField/TableField resolve inside aggregate inputs; facade regenerated for StreamWildcard. Scenario testdata/parity/infra-nwtable-on-select-aggregation.json (10 cases / 166 steps); Java trace generated by tools/java-oracle/InfraNWTableOnSelectAggregationScenarioOracle.java via tools/java-oracle/run-infra-nwtable-on-select-aggregation.sh at commit 9e1b9f1cc9117fea4bf33ab043762c045d73839c.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-a83c289aeff7f22c5d10",
+    "java-runtime-113be8d12970feaf2fd0",
+    "java-runtime-192de61f3c60d848e6c2",
+    "java-runtime-99d89e9beadeae52ce8b",
+    "java-runtime-fa42452055bf6fa1e4fd",
+    "java-runtime-485188699c51be24f2cb",
+    "java-runtime-36a62fff425f4c9b8cb6",
+    "java-runtime-964dbe543e45c3f14f00",
+    "java-runtime-d10a8674ccc6ecc5c70d",
+    "java-runtime-5b8dddb5496cfbefa7d7"
+   ]
+  },
+  {
    "id": "case.inventory.resultset-output-limit-row-per-group-rollup",
    "javaRuntimeIds": [
     "java-runtime-7c5309b323dde51e021e",
@@ -52779,13 +52882,21 @@
   {
    "capabilityId": "infra.namedwindow.views",
    "caseId": "case.infra-named-window-subquery"
+  },
+  {
+   "capabilityId": "trigger.table-named-window",
+   "caseId": "case.infra-nwtable-on-select-aggregation"
+  },
+  {
+   "capabilityId": "infra.namedwindow.views",
+   "caseId": "case.infra-nwtable-event-type"
   }
  ],
  "summary": {
-  "inventoriedCases": 764,
-  "implementedCases": 762,
-  "differentialVerifiedCases": 390,
-  "differentialVerifiedRuntimeIds": 1533,
+  "inventoriedCases": 765,
+  "implementedCases": 763,
+  "differentialVerifiedCases": 391,
+  "differentialVerifiedRuntimeIds": 1543,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -52795,13 +52906,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4067,
+  "runtimeAssociationCount": 4077,
   "referencedJavaRuntimeIds": 3637,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 499,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 764,
+  "totalCases": 765,
   "totalCapabilities": 126
  }
 }

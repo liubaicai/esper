@@ -1780,6 +1780,23 @@ func encodeKey(values []any) string {
 				value = reflected.Elem().Interface()
 			}
 		}
+		// Array/slice keys encode by content so two distinct slices with the
+		// same elements share a partition, matching Java's Arrays.equals
+		// semantics for object-array group keys. A nil slice stays distinct
+		// from an empty slice: Java treats a null array key as its own
+		// partition rather than Arrays.equals-equal to an empty array.
+		if reflected := reflect.ValueOf(value); reflected.IsValid() && (reflected.Kind() == reflect.Slice || reflected.Kind() == reflect.Array) {
+			if reflected.Kind() == reflect.Slice && reflected.IsNil() {
+				parts = append(parts, fmt.Sprintf("%T:<nil>", value))
+				continue
+			}
+			elements := make([]any, 0, reflected.Len())
+			for i := 0; i < reflected.Len(); i++ {
+				elements = append(elements, reflected.Index(i).Interface())
+			}
+			parts = append(parts, fmt.Sprintf("%T:%#v", value, elements))
+			continue
+		}
 		parts = append(parts, fmt.Sprintf("%T:%#v", value, value))
 	}
 	return strings.Join(parts, "\x1f")

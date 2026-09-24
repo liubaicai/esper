@@ -96,6 +96,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include expr-class-for-epl-objects and expr-class-for-epl-objects-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-class-dependency and expr-class-class-dependency-diff")
 		fmt.Fprintln(stderr, "runner modes include infra-nwtable-event-type and infra-nwtable-event-type-diff")
+		fmt.Fprintln(stderr, "runner modes include infra-nwtable-on-select-aggregation and infra-nwtable-on-select-aggregation-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
@@ -175,6 +176,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadEplOtherPlanInKeywordScenario(file)
 	} else if *mode == "infra-nwtable-on-delete" || *mode == "infra-nwtable-on-delete-diff" {
 		scenario, err = loadInfraNWTableOnDeleteScenario(file)
+	} else if *mode == "infra-nwtable-on-select-aggregation" || *mode == "infra-nwtable-on-select-aggregation-diff" {
+		scenario, err = loadInfraNWTableOnSelectAggScenario(file)
 	} else if *mode == "infra-nwtable-on-update" || *mode == "infra-nwtable-on-update-diff" {
 		scenario, err = loadInfraNWTableOnUpdateScenario(file)
 	} else if *mode == "infra-nwtable-on-merge" || *mode == "infra-nwtable-on-merge-diff" {
@@ -563,6 +566,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNWTableOnDeleteJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNWTableOnDeleteJavaSources),
 				splitMetadata(*javaExecutions, infraNWTableOnDeleteJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-nwtable-on-select-aggregation" || *mode == "infra-nwtable-on-select-aggregation-diff" {
+		trace, err := runInfraNWTableOnSelectAggScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-nwtable-on-select-aggregation-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, infraNWTableOnSelectAggJavaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNWTableOnSelectAggJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNWTableOnSelectAggJavaSources),
+				splitMetadata(*javaExecutions, infraNWTableOnSelectAggJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
