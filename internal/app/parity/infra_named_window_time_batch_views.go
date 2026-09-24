@@ -611,9 +611,9 @@ func runInfraNWRTBCase(ctx context.Context, scenario compat.Scenario, spec infra
 	var windowSchema esper.Schema
 	var err error
 	if spec.accumInt {
-		windowSchema, err = esper.RegisterStruct[infraNWRTBKVInt](env, spec.windowName)
+		windowSchema, err = esper.RegisterStruct[infraNWRTBKVInt](env, spec.windowName+"Type")
 	} else {
-		windowSchema, err = esper.RegisterStruct[infraNWRTBKVLong](env, spec.windowName)
+		windowSchema, err = esper.RegisterStruct[infraNWRTBKVLong](env, spec.windowName+"Type")
 	}
 	if err != nil {
 		return nil, err

@@ -28,7 +28,7 @@ func TestTriggerPatternMultimatchMatchesInfraPatternMultimatch(t *testing.T) {
 			var targetSchema Schema
 			if namedWindow {
 				var err error
-				targetSchema, err = RegisterMap(env, targetName, []FieldSpec{
+				targetSchema, err = RegisterMap(env, targetName+"Type", []FieldSpec{
 					FieldDef("c1", reflect.TypeOf("")),
 					FieldDef("c2", reflect.TypeOf("")),
 				})

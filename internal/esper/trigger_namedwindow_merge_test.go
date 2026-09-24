@@ -99,7 +99,7 @@ func TestNamedWindowMergeInsertOnlyContainedEventsMatchesEsper(t *testing.T) {
 			if _, err := RegisterStruct[namedWindowMergeContainer](env, "NamedWindowMergeContainer"); err != nil {
 				t.Fatal(err)
 			}
-			targetSchema, err := RegisterMap(env, "NamedWindowMergeContainedTarget", []FieldSpec{
+			targetSchema, err := RegisterMap(env, "NamedWindowMergeContainedTargetType", []FieldSpec{
 				FieldDef("symbol", reflect.TypeOf("")),
 				FieldDef("price", reflect.TypeOf(float64(0))),
 			})
@@ -169,7 +169,7 @@ func TestNamedWindowMergePropertyInsertAndMethodProjectionMatchesEsper(t *testin
 	if _, err := RegisterStruct[namedWindowMergeBean](env, "NamedWindowMergePropertyInput"); err != nil {
 		t.Fatal(err)
 	}
-	targetSchema, err := RegisterMap(env, "NamedWindowMergePropertyTarget", []FieldSpec{
+	targetSchema, err := RegisterMap(env, "NamedWindowMergePropertyTargetType", []FieldSpec{
 		OptionalFieldDef("theString", reflect.TypeOf("")),
 		FieldDef("intPrimitive", reflect.TypeOf(int(0))),
 	})
@@ -240,7 +240,7 @@ func TestNamedWindowMergeUpdateNonPropertySetMatchesEsper(t *testing.T) {
 	if _, err := RegisterStruct[namedWindowMergeUpdateSignal](env, "NamedWindowMergeUpdateSignal"); err != nil {
 		t.Fatal(err)
 	}
-	targetSchema, err := RegisterStruct[namedWindowMergeSetterTarget](env, "NamedWindowMergeSetterTarget", WithAccessorStyle(AccessorJavaBean))
+	targetSchema, err := RegisterStruct[namedWindowMergeSetterTarget](env, "NamedWindowMergeSetterTargetType", WithAccessorStyle(AccessorJavaBean))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -723,7 +723,7 @@ func TestNamedWindowMergeAssignsCurrentAndPreviousEventsMatchesEsper(t *testing.
 	if _, err := RegisterStruct[namedWindowMergeEvent](env, "NamedWindowMergeRHSInput"); err != nil {
 		t.Fatal(err)
 	}
-	targetSchema, err := RegisterMap(env, "NamedWindowMergeRHSTarget", []FieldSpec{
+	targetSchema, err := RegisterMap(env, "NamedWindowMergeRHSTargetType", []FieldSpec{
 		FieldDef("id", reflect.TypeOf("")),
 		OptionalFieldDef("current", reflect.TypeOf(Event{})),
 		OptionalFieldDef("previous", reflect.TypeOf(Event{})),
@@ -786,7 +786,7 @@ func TestNamedWindowMergeTriggeredByNamedWindowDispatchMatchesEsper(t *testing.T
 		FieldDef("id", reflect.TypeOf(int(0))),
 	}
 	for _, name := range []string{"NamedWindowMergeDispatchA", "NamedWindowMergeDispatchB"} {
-		schema, err := RegisterMap(env, name, fields)
+		schema, err := RegisterMap(env, name+"Type", fields)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -926,10 +926,10 @@ func TestNamedWindowConsumerCallbackDrainsNestedNamedWindowWave(t *testing.T) {
 	env := NewEnvironment()
 	fields := []FieldSpec{FieldDef("id", reflect.TypeOf(int(0)))}
 	for _, name := range []string{"NamedWindowCallbackSource", "NamedWindowCallbackMiddle", "NamedWindowCallbackTarget"} {
-		if _, err := RegisterMap(env, name, fields); err != nil {
+		if _, err := RegisterMap(env, name+"Type", fields); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := CreateNamedWindow(env, name, mustSchema(env, name), NamedWindowRetention(KeepAll())); err != nil {
+		if _, err := CreateNamedWindow(env, name, mustSchema(env, name+"Type"), NamedWindowRetention(KeepAll())); err != nil {
 			t.Fatal(err)
 		}
 	}

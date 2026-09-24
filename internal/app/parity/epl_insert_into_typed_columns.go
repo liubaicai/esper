@@ -355,7 +355,7 @@ func buildEplInsertIntoTypedColumnsCase(env *esper.Environment, caseName string)
 		// The schema registers under the window's own name so the iterated
 		// row's event-type name is EmptyPropWin, matching the Java window
 		// type assertion.
-		windowSchema, err := esper.RegisterMap(env, "EmptyPropWin", nil)
+		windowSchema, err := esper.RegisterMap(env, "EmptyPropWinType", nil)
 		if err != nil {
 			return nil, nil, err
 		}

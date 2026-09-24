@@ -2049,6 +2049,12 @@ func (e *Environment) RegisterNamedWindowInModule(moduleName, name string, schem
 	if _, exists := e.namedWindows[key]; exists {
 		return NamedWindowDefinition{}, duplicateModuleObjectError(DeploymentResourceNamedWindow, key)
 	}
+	// Java's CreateWindowUtil rejects a window name that collides with an
+	// existing event type or schema; Go schemas are global, so the check
+	// uses the bare name regardless of the window's module scope.
+	if _, exists := e.schemas[name]; exists {
+		return NamedWindowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("An event type or schema by name '%s' already exists", name))
+	}
 	definition.moduleName = moduleName
 	e.namedWindows[key] = definition
 	if moduleName != "" {

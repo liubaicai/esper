@@ -816,11 +816,11 @@ func runInfraNWGWCase(ctx context.Context, scenario compat.Scenario, spec infraN
 	var err error
 	switch spec.shape {
 	case infraNWGWKVRows:
-		windowSchema, err = esper.RegisterStruct[infraNWGWKV](env, spec.windowName)
+		windowSchema, err = esper.RegisterStruct[infraNWGWKV](env, spec.windowName+"Type")
 	case infraNWGWGroupedRows:
-		windowSchema, err = esper.RegisterStruct[infraNWGWGrouped](env, spec.windowName)
+		windowSchema, err = esper.RegisterStruct[infraNWGWGrouped](env, spec.windowName+"Type")
 	case infraNWGWGroupedFullRows:
-		windowSchema, err = esper.RegisterStruct[infraNWGWGroupedFull](env, spec.windowName)
+		windowSchema, err = esper.RegisterStruct[infraNWGWGroupedFull](env, spec.windowName+"Type")
 	default:
 		return nil, fmt.Errorf("unexpected window shape %d for case %q", spec.shape, spec.name)
 	}

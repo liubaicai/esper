@@ -23,9 +23,10 @@ func TestTriggerMergeInsertOtherStreamRepresentationMatrix(t *testing.T) {
 			t.Run(representation+"/"+map[bool]string{true: "named-window", false: "table"}[namedWindow], func(t *testing.T) {
 				env := NewEnvironment()
 				const (
-					sourceName = "TriggerMergeRepresentationSource"
-					targetName = "TriggerMergeRepresentationTarget"
-					outputName = "TriggerMergeRepresentationOutput"
+					sourceName     = "TriggerMergeRepresentationSource"
+					targetName     = "TriggerMergeRepresentationTarget"
+					targetTypeName = "TriggerMergeRepresentationTargetType"
+					outputName     = "TriggerMergeRepresentationOutput"
 				)
 				fields := []FieldSpec{
 					FieldDef("name", reflect.TypeOf("")),
@@ -46,7 +47,7 @@ func TestTriggerMergeInsertOtherStreamRepresentationMatrix(t *testing.T) {
 						t.Fatal(err)
 					}
 					if namedWindow {
-						targetSchema, err = RegisterMap(env, targetName, fields)
+						targetSchema, err = RegisterMap(env, targetTypeName, fields)
 						if err != nil {
 							t.Fatal(err)
 						}
@@ -63,7 +64,7 @@ func TestTriggerMergeInsertOtherStreamRepresentationMatrix(t *testing.T) {
 						t.Fatal(err)
 					}
 					if namedWindow {
-						targetSchema, err = RegisterObjectArray(env, targetName, fields)
+						targetSchema, err = RegisterObjectArray(env, targetTypeName, fields)
 						if err != nil {
 							t.Fatal(err)
 						}
@@ -80,7 +81,7 @@ func TestTriggerMergeInsertOtherStreamRepresentationMatrix(t *testing.T) {
 						t.Fatal(err)
 					}
 					if namedWindow {
-						targetSchema, err = RegisterAvro(env, targetName, fields)
+						targetSchema, err = RegisterAvro(env, targetTypeName, fields)
 						if err != nil {
 							t.Fatal(err)
 						}
@@ -114,7 +115,7 @@ func TestTriggerMergeInsertOtherStreamRepresentationMatrix(t *testing.T) {
 						t.Fatal(err)
 					}
 					if namedWindow {
-						targetSchema, err = RegisterJSON(env, targetName, fields)
+						targetSchema, err = RegisterJSON(env, targetTypeName, fields)
 						if err != nil {
 							t.Fatal(err)
 						}
@@ -135,7 +136,7 @@ func TestTriggerMergeInsertOtherStreamRepresentationMatrix(t *testing.T) {
 						t.Fatal(err)
 					}
 					if namedWindow {
-						targetSchema, err = RegisterJSONFor[triggerMergeRepresentationJSONEvent](env, targetName, nil)
+						targetSchema, err = RegisterJSONFor[triggerMergeRepresentationJSONEvent](env, targetTypeName, nil)
 						if err != nil {
 							t.Fatal(err)
 						}
@@ -156,7 +157,7 @@ func TestTriggerMergeInsertOtherStreamRepresentationMatrix(t *testing.T) {
 						t.Fatal(err)
 					}
 					if namedWindow {
-						targetSchema, err = RegisterStruct[triggerMergeRepresentationEvent](env, targetName)
+						targetSchema, err = RegisterStruct[triggerMergeRepresentationEvent](env, targetTypeName)
 						if err != nil {
 							t.Fatal(err)
 						}

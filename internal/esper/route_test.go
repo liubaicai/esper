@@ -1029,14 +1029,14 @@ func TestFireAndForgetRouteToNamedWindowDispatchesConsumers(t *testing.T) {
 		FieldDef("symbol", reflect.TypeOf("")),
 		FieldDef("price", reflect.TypeOf(float64(0))),
 	}
-	sourceSchema, err := RegisterMap(env, "FAFNamedRouteSource", fields)
+	sourceSchema, err := RegisterMap(env, "FAFNamedRouteSourceType", fields)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := CreateNamedWindow(env, "FAFNamedRouteSource", sourceSchema, NamedWindowRetention(KeepAll())); err != nil {
 		t.Fatal(err)
 	}
-	targetSchema, err := RegisterMap(env, "FAFNamedRouteTarget", fields)
+	targetSchema, err := RegisterMap(env, "FAFNamedRouteTargetType", fields)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1106,13 +1106,13 @@ func TestFireAndForgetRouteToNamedWindowDispatchesConsumers(t *testing.T) {
 func TestRouteFireAndForgetRollsBackNamedWindowOnRouteFailure(t *testing.T) {
 	env := NewEnvironment()
 	fields := []FieldSpec{FieldDef("symbol", reflect.TypeOf(""))}
-	if _, err := RegisterMap(env, "FAFRouteRollbackSource", fields); err != nil {
+	if _, err := RegisterMap(env, "FAFRouteRollbackSourceType", fields); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := CreateNamedWindow(env, "FAFRouteRollbackSource", mustSchema(env, "FAFRouteRollbackSource"), NamedWindowRetention(KeepAll())); err != nil {
+	if _, err := CreateNamedWindow(env, "FAFRouteRollbackSource", mustSchema(env, "FAFRouteRollbackSourceType"), NamedWindowRetention(KeepAll())); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := CreateNamedWindow(env, "FAFRouteRollbackTarget", mustSchema(env, "FAFRouteRollbackSource"), NamedWindowRetention(KeepAll()), NamedWindowUniqueIndex("unique-symbol", "symbol")); err != nil {
+	if _, err := CreateNamedWindow(env, "FAFRouteRollbackTarget", mustSchema(env, "FAFRouteRollbackSourceType"), NamedWindowRetention(KeepAll()), NamedWindowUniqueIndex("unique-symbol", "symbol")); err != nil {
 		t.Fatal(err)
 	}
 	routePlan, err := env.Build(FromNamedWindow(env, "FAFRouteRollbackSource").InsertInto("FAFRouteRollbackTarget", StatementName("faf-route-rollback")))
@@ -1143,13 +1143,13 @@ func TestRouteFireAndForgetRollsBackNamedWindowOnRouteFailure(t *testing.T) {
 func TestRouteFireAndForgetRollsBackConsumerRuntimeOnRouteFailure(t *testing.T) {
 	env := NewEnvironment()
 	fields := []FieldSpec{FieldDef("symbol", reflect.TypeOf(""))}
-	if _, err := RegisterMap(env, "FAFConsumerRollbackSource", fields); err != nil {
+	if _, err := RegisterMap(env, "FAFConsumerRollbackSourceType", fields); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := CreateNamedWindow(env, "FAFConsumerRollbackSource", mustSchema(env, "FAFConsumerRollbackSource"), NamedWindowRetention(KeepAll())); err != nil {
+	if _, err := CreateNamedWindow(env, "FAFConsumerRollbackSource", mustSchema(env, "FAFConsumerRollbackSourceType"), NamedWindowRetention(KeepAll())); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := CreateNamedWindow(env, "FAFConsumerRollbackTarget", mustSchema(env, "FAFConsumerRollbackSource"), NamedWindowRetention(KeepAll()), NamedWindowUniqueIndex("unique-symbol", "symbol")); err != nil {
+	if _, err := CreateNamedWindow(env, "FAFConsumerRollbackTarget", mustSchema(env, "FAFConsumerRollbackSourceType"), NamedWindowRetention(KeepAll()), NamedWindowUniqueIndex("unique-symbol", "symbol")); err != nil {
 		t.Fatal(err)
 	}
 	routePlan, err := env.Build(FromNamedWindow(env, "FAFConsumerRollbackSource").InsertInto("FAFConsumerRollbackTarget", StatementName("faf-consumer-rollback-route")))
@@ -1222,16 +1222,16 @@ func TestRouteFireAndForgetRollsBackConsumerRuntimeOnRouteFailure(t *testing.T) 
 func TestRouteFireAndForgetRejectsOpaqueAggregateConsumer(t *testing.T) {
 	env := NewEnvironment()
 	fields := []FieldSpec{FieldDef("symbol", reflect.TypeOf(""))}
-	if _, err := RegisterMap(env, "FAFOpaqueConsumerSource", fields); err != nil {
+	if _, err := RegisterMap(env, "FAFOpaqueConsumerSourceType", fields); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := CreateNamedWindow(env, "FAFOpaqueConsumerSource", mustSchema(env, "FAFOpaqueConsumerSource"), NamedWindowRetention(KeepAll())); err != nil {
+	if _, err := CreateNamedWindow(env, "FAFOpaqueConsumerSource", mustSchema(env, "FAFOpaqueConsumerSourceType"), NamedWindowRetention(KeepAll())); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := RegisterMap(env, "FAFOpaqueConsumerTarget", fields); err != nil {
+	if _, err := RegisterMap(env, "FAFOpaqueConsumerTargetType", fields); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := CreateNamedWindow(env, "FAFOpaqueConsumerTarget", mustSchema(env, "FAFOpaqueConsumerTarget"), NamedWindowRetention(KeepAll())); err != nil {
+	if _, err := CreateNamedWindow(env, "FAFOpaqueConsumerTarget", mustSchema(env, "FAFOpaqueConsumerTargetType"), NamedWindowRetention(KeepAll())); err != nil {
 		t.Fatal(err)
 	}
 	if err := RegisterAggregatePluginFactory[int64](env, "faf-opaque-consumer", func(AggregatePluginFactoryContext) AggregatePluginState[int64] {
@@ -1323,10 +1323,10 @@ func TestInsertIntoNamedWindowDoesNotDeliverToOtherWindowConsumers(t *testing.T)
 	env := NewEnvironment()
 	fields := []FieldSpec{FieldDef("symbol", reflect.TypeOf(""))}
 	for _, name := range []string{"RouteGuardW1", "RouteGuardW2"} {
-		if _, err := RegisterMap(env, name, fields); err != nil {
+		if _, err := RegisterMap(env, name+"Type", fields); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := CreateNamedWindow(env, name, mustSchema(env, name), NamedWindowRetention(KeepAll())); err != nil {
+		if _, err := CreateNamedWindow(env, name, mustSchema(env, name+"Type"), NamedWindowRetention(KeepAll())); err != nil {
 			t.Fatal(err)
 		}
 	}

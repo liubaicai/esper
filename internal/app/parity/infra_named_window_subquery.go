@@ -694,7 +694,7 @@ func infraNWSubqueryBuildPlan(env *esper.Environment, spec infraNWSubqueryCaseSp
 	case "two-consumer-window":
 		switch statement {
 		case "create":
-			schema, err := esper.NewMapSchema("MyWindowTwo", []esper.FieldSpec{
+			schema, err := esper.NewMapSchema("MyWindowTwoType", []esper.FieldSpec{
 				esper.FieldDef("mycount", infraNWSubqueryLongType),
 			})
 			if err != nil {

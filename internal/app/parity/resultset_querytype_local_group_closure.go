@@ -347,7 +347,7 @@ func runResultSetQueryTypeLocalGroupClosureCase(ctx context.Context, spec result
 		// plain grouped on-select. sum(intPrimitive, group_by:()) is
 		// statement-wide over all taken rows, so the zero-key LocalGroupBy
 		// evaluates through the trigger's AllGroup binding.
-		windowSchema, err := esper.RegisterStruct[resultSetQueryTypeLocalGroupClosureBean](env, "MyWindow")
+		windowSchema, err := esper.RegisterStruct[resultSetQueryTypeLocalGroupClosureBean](env, "MyWindowType")
 		if err != nil {
 			return nil, err
 		}

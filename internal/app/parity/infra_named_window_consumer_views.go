@@ -913,9 +913,9 @@ func runInfraNWCViewCase(ctx context.Context, scenario compat.Scenario, spec inf
 	var err error
 	switch spec.shape {
 	case infraNWCViewUniqueIntRows, infraNWCViewKeepAllIntRows:
-		windowSchema, err = esper.RegisterStruct[infraNWCViewKVInt](env, spec.windowName)
+		windowSchema, err = esper.RegisterStruct[infraNWCViewKVInt](env, spec.windowName+"Type")
 	case infraNWCViewKeepAllMapRows:
-		windowSchema, err = esper.RegisterStruct[infraNWCViewKVLong](env, spec.windowName)
+		windowSchema, err = esper.RegisterStruct[infraNWCViewKVLong](env, spec.windowName+"Type")
 	default:
 		return nil, fmt.Errorf("unexpected window shape %d for case %q", spec.shape, spec.name)
 	}

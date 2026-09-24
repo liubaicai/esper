@@ -49334,6 +49334,53 @@
     "java-runtime-95adfcdb21f327e1cc4e"
    ],
    "notes": "InfraNamedWindowSubquery all 3 executions. 15 records (10 deployed + 4 listener + 1 variable), 0 differences."
+  },
+  {
+   "id": "case.infra-nwtable-event-type",
+   "javaRuntimeIds": [
+    "java-runtime-d3c3a24f11288969df7e",
+    "java-runtime-8dc1233d90336dcdb929",
+    "java-runtime-14412293edec92196bd9"
+   ],
+   "javaStaticIds": [
+    "java-08b4a7da65c76bf5abdc",
+    "java-50c0d9ea894da18ddb54",
+    "java-c007ca393634b73ec8b5"
+   ],
+   "javaNames": [
+    "InfraNWTableEventTypeInvalid",
+    "InfraNWTableEventTypeDefineFields",
+    "InfraNWTableEventTypeInsertIntoProtected"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableEventType.java"
+   ],
+   "goTests": [
+    "internal/app/parity/infra_nwtable_event_type.go",
+    "internal/app/parity/run_test.go"
+   ],
+   "tags": [
+    "infra",
+    "nwtable",
+    "event-type",
+    "born-differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-nwtable-event-type.evidence.json"
+   ],
+   "difference": "Named-window/table event-type surface: window/table name collision against an existing event type rejected at compile (invalid); create-window/create-table inline column types c0=Integer[] (int[]) and c1=int[] (int[primitive]) asserted via positional descriptors (define-fields); protected-window module replays two Fubar map events through private insert-into into keepall Snafu window (insert-into-protected). Shared core: CreateNamedWindow/CreateTable now reject a name already registered as an event type or schema (Java parity).",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-d3c3a24f11288969df7e",
+    "java-runtime-8dc1233d90336dcdb929",
+    "java-runtime-14412293edec92196bd9"
+   ],
+   "notes": "InfraNWTableEventType all 3 executions. 10 records (2 compile-error + 4 deployed + 2 types + 1 snapshot + 1 undeploy-all marker), 0 differences."
   }
  ],
  "mappings": [
@@ -52735,10 +52782,10 @@
   }
  ],
  "summary": {
-  "inventoriedCases": 763,
-  "implementedCases": 761,
-  "differentialVerifiedCases": 389,
-  "differentialVerifiedRuntimeIds": 1530,
+  "inventoriedCases": 764,
+  "implementedCases": 762,
+  "differentialVerifiedCases": 390,
+  "differentialVerifiedRuntimeIds": 1533,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -52748,13 +52795,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4064,
-  "referencedJavaRuntimeIds": 3634,
+  "runtimeAssociationCount": 4067,
+  "referencedJavaRuntimeIds": 3637,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 502,
+  "unreferencedJavaRuntimeIds": 499,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 763,
+  "totalCases": 764,
   "totalCapabilities": 126
  }
 }

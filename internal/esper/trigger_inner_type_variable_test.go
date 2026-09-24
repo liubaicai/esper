@@ -28,6 +28,7 @@ func TestTriggerInnerTypeAndVariableBranchesMatchInfraInnerTypeAndVariable(t *te
 				env := NewEnvironment()
 				const sourceName = "TriggerInnerVariableSource"
 				const targetName = "TriggerInnerVariableTarget"
+				const targetTypeName = "TriggerInnerVariableTargetType"
 				var (
 					innerSchema  Schema
 					targetSchema Schema
@@ -49,7 +50,7 @@ func TestTriggerInnerTypeAndVariableBranchesMatchInfraInnerTypeAndVariable(t *te
 					if _, err := RegisterStruct[triggerInnerVariableEvent](env, sourceName); err != nil {
 						t.Fatal(err)
 					}
-					targetSchema, err = RegisterStruct[triggerInnerVariableTarget](env, targetName)
+					targetSchema, err = RegisterStruct[triggerInnerVariableTarget](env, targetTypeName)
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -79,7 +80,7 @@ func TestTriggerInnerTypeAndVariableBranchesMatchInfraInnerTypeAndVariable(t *te
 					}, WithNestedPropertySchema("col2", innerSchema)); err != nil {
 						t.Fatal(err)
 					}
-					targetSchema, err = RegisterMap(env, targetName, []FieldSpec{
+					targetSchema, err = RegisterMap(env, targetTypeName, []FieldSpec{
 						FieldDef("c1", reflect.TypeOf("")),
 						FieldDef("c2", reflect.TypeOf(map[string]any{})),
 					}, WithNestedPropertySchema("c2", innerSchema))
@@ -112,7 +113,7 @@ func TestTriggerInnerTypeAndVariableBranchesMatchInfraInnerTypeAndVariable(t *te
 					}, WithNestedPropertySchema("col2", innerSchema)); err != nil {
 						t.Fatal(err)
 					}
-					targetSchema, err = RegisterObjectArray(env, targetName, []FieldSpec{
+					targetSchema, err = RegisterObjectArray(env, targetTypeName, []FieldSpec{
 						FieldDef("c1", reflect.TypeOf("")),
 						FieldDef("c2", reflect.TypeOf([]any{})),
 					}, WithNestedPropertySchema("c2", innerSchema))

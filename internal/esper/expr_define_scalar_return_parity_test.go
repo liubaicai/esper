@@ -85,7 +85,7 @@ func testExprDefineScalarReturnOnSelectCaseCast(t *testing.T) {
 	if _, err := RegisterStruct[exprDefineScalarReturnObject](env, "SupportBeanObject"); err != nil {
 		t.Fatal(err)
 	}
-	windowSchema, err := RegisterMap(env, "ScalarReturnWindow", []FieldSpec{
+	windowSchema, err := RegisterMap(env, "ScalarReturnWindowType", []FieldSpec{
 		FieldDef("myObject", reflect.TypeOf(int64(0))),
 	})
 	if err != nil {

@@ -56,6 +56,29 @@ activity or a single coverage percentage.
 
 ## Current work unit
 
+Active: Draft 4.534 ('infra-nwtable-event-type').
+
+- Selection: `InfraNWTableEventType.java` all 3 executions, no flags —
+  `InfraNWTableEventTypeInvalid` (`java-runtime-d3c3a24f11288969df7e`),
+  `InfraNWTableEventTypeDefineFields` (`java-runtime-8dc1233d90336dcdb929`),
+  `InfraNWTableEventTypeInsertIntoProtected` (`java-runtime-14412293edec92196bd9`).
+- [x] Contract frozen: JavaContract534 + GoSurface534 scouts dispatched.
+- [x] Assets534 integrated: `internal/app/parity/infra_nwtable_event_type.go` +
+  `testdata/parity/infra-nwtable-event-type.json` (4 cases / 10 steps) +
+  oracle + run script + run.go/run_test.go wiring.
+- [x] **Engine fix (shared core)**: `CreateNamedWindow`/`CreateTable` now
+  reject a name already registered as an event type or schema (Java parity).
+  ~20 test/runner files renamed colliding schema registrations to `*Type`.
+- [x] Differential replay: Java 10 records; Go 10 records. `-mode
+  infra-nwtable-event-type-diff` status `passing` / 0 differences.
+- [x] Manifest: NEW case `case.infra-nwtable-event-type` born-DV with
+  the 3 IDs; `infra.namedwindow.views` mapping + goRefs extended.
+  Summary 764 cases / 390 DV / 1533 DV runtime IDs / unreferenced 499.
+- [x] Shipped; Git owns identity. Draft 4.534 committed and pushed as
+  `HEAD`. Independent reviewer `ParityReview534` returned PASS.
+
+## Current work unit
+
 Active: Draft 4.533 ('infra-named-window-subquery').
 
 - Selection: `InfraNamedWindowSubquery.java` all 3 executions, no flags —
@@ -81,11 +104,11 @@ Active: Draft 4.533 ('infra-named-window-subquery').
 - [x] Manifest: NEW case `case.infra-named-window-subquery` born-DV with
   the 3 IDs; `infra.namedwindow.views` mapping + goRefs extended.
   Summary 763 cases / 389 DV / 1530 DV runtime IDs / unreferenced 502.
-- [x] Gates + parity review + commit: `make check` exit 0 (parity 91.2s,
-  internal/esper 117.4s); independent reviewer `ParityReview533` returned
-  PASS (three P3 informational: oracle doc comment reworded, variable
-  record gained `sequence:0`, Go loader case-marker pin matches sibling
-  convention). Committing.
+- [x] Shipped; Git owns identity. Draft 4.533 committed and pushed as
+  `d40c3af26`. Independent reviewer `ParityReview533` returned PASS
+  (three P3 informational: oracle doc comment reworded, variable record
+  gained `sequence:0`, Go loader case-marker pin matches sibling
+  convention).
 ## Current work unit
 Active: Draft 4.532 ('infra-named-window-on-select').
 

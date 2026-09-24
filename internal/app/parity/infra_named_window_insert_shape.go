@@ -637,10 +637,10 @@ func infraNWSStartEnvironment(spec infraNWSCaseSpec) (*esper.Environment, error)
 		if _, err := esper.RegisterStruct[infraNWSSupportBean](env, "SupportBean"); err != nil {
 			return nil, err
 		}
-		if _, err := esper.RegisterStruct[infraNWSKeyValueLong](env, "MyWindowDISM"); err != nil {
+		if _, err := esper.RegisterStruct[infraNWSKeyValueLong](env, "MyWindowDISMType"); err != nil {
 			return nil, err
 		}
-		if _, err := esper.CreateNamedWindow(env, "MyWindowDISM", mustInfraNWSSchema(env, "MyWindowDISM"), esper.NamedWindowRetention(esper.KeepAll())); err != nil {
+		if _, err := esper.CreateNamedWindow(env, "MyWindowDISM", mustInfraNWSSchema(env, "MyWindowDISMType"), esper.NamedWindowRetention(esper.KeepAll())); err != nil {
 			return nil, err
 		}
 	case "intersection":
@@ -658,12 +658,12 @@ func infraNWSStartEnvironment(spec infraNWSCaseSpec) (*esper.Environment, error)
 		if _, err := esper.RegisterStruct[infraNWSSupportBean](env, "SupportBean"); err != nil {
 			return nil, err
 		}
-		if _, err := esper.RegisterObjectArray(env, "MyNWWindowObjectArray", []esper.FieldSpec{
+		if _, err := esper.RegisterObjectArray(env, "MyNWWindowObjectArrayType", []esper.FieldSpec{
 			esper.FieldDef("p0", reflect.TypeOf(0)),
 		}); err != nil {
 			return nil, err
 		}
-		if _, err := esper.CreateNamedWindow(env, "MyNWWindowObjectArray", mustInfraNWSSchema(env, "MyNWWindowObjectArray"), esper.NamedWindowRetention(esper.KeepAll())); err != nil {
+		if _, err := esper.CreateNamedWindow(env, "MyNWWindowObjectArray", mustInfraNWSSchema(env, "MyNWWindowObjectArrayType"), esper.NamedWindowRetention(esper.KeepAll())); err != nil {
 			return nil, err
 		}
 	case "on-insert-preemptive-two-window":

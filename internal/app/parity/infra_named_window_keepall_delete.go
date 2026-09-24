@@ -562,9 +562,9 @@ func runInfraNWKDCase(ctx context.Context, scenario compat.Scenario, spec infraN
 	var windowSchema esper.Schema
 	var err error
 	if spec.valueKind == infraNWKDValueInt {
-		windowSchema, err = esper.RegisterStruct[infraNWKDKVInt](env, "MyWindow")
+		windowSchema, err = esper.RegisterStruct[infraNWKDKVInt](env, "MyWindowType")
 	} else {
-		windowSchema, err = esper.RegisterStruct[infraNWKDKVLong](env, "MyWindow")
+		windowSchema, err = esper.RegisterStruct[infraNWKDKVLong](env, "MyWindowType")
 	}
 	if err != nil {
 		return nil, err

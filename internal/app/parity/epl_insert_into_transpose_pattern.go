@@ -86,7 +86,7 @@ func runTransposePatternThisAsColumn(ctx context.Context, scenario compat.Scenar
 	if err != nil {
 		return compat.Trace{}, err
 	}
-	oneWindowSchema, err := esper.RegisterMap(env, "OneWindow", []esper.FieldSpec{
+	oneWindowSchema, err := esper.RegisterMap(env, "OneWindowType", []esper.FieldSpec{
 		esper.FieldDef("alertId", reflect.TypeOf("")),
 		esper.FieldDef("this", reflect.TypeOf(esper.Event{})),
 	}, esper.WithNestedPropertySchema("this", sourceSchema))
@@ -96,7 +96,7 @@ func runTransposePatternThisAsColumn(ctx context.Context, scenario compat.Scenar
 	if _, err := esper.CreateNamedWindow(env, "OneWindow", oneWindowSchema, esper.NamedWindowRetention(esper.TimeWindow(24*time.Hour))); err != nil {
 		return compat.Trace{}, err
 	}
-	twoWindowSchema, err := esper.RegisterMap(env, "TwoWindow", []esper.FieldSpec{
+	twoWindowSchema, err := esper.RegisterMap(env, "TwoWindowType", []esper.FieldSpec{
 		esper.FieldDef("alertId", reflect.TypeOf("")),
 		esper.FieldDef("theString", reflect.TypeOf("")),
 		esper.FieldDef("intPrimitive", reflect.TypeOf(0)),

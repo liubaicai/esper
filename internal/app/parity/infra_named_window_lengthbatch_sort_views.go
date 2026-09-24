@@ -564,9 +564,9 @@ func runInfraNWRBCase(ctx context.Context, scenario compat.Scenario, spec infraN
 	var err error
 	switch spec.sendKind {
 	case infraNWRBBatchInt, infraNWRBSortInt:
-		windowSchema, err = esper.RegisterStruct[infraNWRBKVInt](env, spec.windowName)
+		windowSchema, err = esper.RegisterStruct[infraNWRBKVInt](env, spec.windowName+"Type")
 	default:
-		windowSchema, err = esper.RegisterStruct[infraNWRBKVLong](env, spec.windowName)
+		windowSchema, err = esper.RegisterStruct[infraNWRBKVLong](env, spec.windowName+"Type")
 	}
 	if err != nil {
 		return nil, err

@@ -93,7 +93,7 @@ func TestEPLInsertIntoThisAsColumnParity(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	oneWindowSchema, err := RegisterMap(env, "OneWindow", []FieldSpec{
+	oneWindowSchema, err := RegisterMap(env, "OneWindowType", []FieldSpec{
 		FieldDef("alertId", reflect.TypeOf("")),
 		FieldDef("this", reflect.TypeOf(Event{})),
 	}, WithNestedPropertySchema("this", sourceSchema))
@@ -105,7 +105,7 @@ func TestEPLInsertIntoThisAsColumnParity(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	twoWindowSchema, err := RegisterMap(env, "TwoWindow", []FieldSpec{
+	twoWindowSchema, err := RegisterMap(env, "TwoWindowType", []FieldSpec{
 		FieldDef("alertId", reflect.TypeOf("")),
 		FieldDef("theString", reflect.TypeOf("")),
 		FieldDef("intPrimitive", reflect.TypeOf(0)),

@@ -1,0 +1,379 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-d3c3a24f11288969df7e",
+    "java-runtime-8dc1233d90336dcdb929",
+    "java-runtime-14412293edec92196bd9"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableEventType.java"
+  ],
+  "javaExecutions": [
+    "InfraNWTableEventTypeInvalid",
+    "InfraNWTableEventTypeDefineFields",
+    "InfraNWTableEventTypeInsertIntoProtected"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-event-type",
+    "steps": [
+      {
+        "op": "case",
+        "case": "invalid"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "window-name-collision",
+        "expectError": "Error starting statement: An event type or schema by name 'SchemaOne' already exists",
+        "epl": "create schema SchemaOne as (p0 string);\ncreate window SchemaOne#keepall as SchemaOne;\n"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "table-name-collision",
+        "expectError": "An event type by name 'SchemaTwo' has already been declared",
+        "epl": "create schema SchemaTwo as (p0 string);\ncreate table SchemaTwo(c0 int);\n"
+      },
+      {
+        "op": "case",
+        "case": "define-fields-window"
+      },
+      {
+        "op": "deploy",
+        "case": "define-fields-window",
+        "statement": "s0",
+        "epl": "@name('s0') @public create window MyInfra#keepall as (c0 int[], c1 int[primitive])"
+      },
+      {
+        "op": "deployed",
+        "case": "define-fields-window",
+        "statement": "s0"
+      },
+      {
+        "op": "types",
+        "case": "define-fields-window",
+        "statement": "s0"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "define-fields-window"
+      },
+      {
+        "op": "case",
+        "case": "define-fields-table"
+      },
+      {
+        "op": "deploy",
+        "case": "define-fields-table",
+        "statement": "s0",
+        "epl": "@name('s0') @public create table MyInfra (c0 int[], c1 int[primitive])"
+      },
+      {
+        "op": "deployed",
+        "case": "define-fields-table",
+        "statement": "s0"
+      },
+      {
+        "op": "types",
+        "case": "define-fields-table",
+        "statement": "s0"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "define-fields-table"
+      },
+      {
+        "op": "case",
+        "case": "insert-into-protected"
+      },
+      {
+        "op": "deploy",
+        "case": "insert-into-protected",
+        "statement": "event",
+        "epl": "@name('event') @public @buseventtype @public create map schema Fubar as (foo string, bar double)"
+      },
+      {
+        "op": "deploy",
+        "case": "insert-into-protected",
+        "statement": "window",
+        "epl": "@name('window') @protected create window Snafu#keepall as Fubar"
+      },
+      {
+        "op": "deploy",
+        "case": "insert-into-protected",
+        "statement": "insert",
+        "epl": "@name('insert') @private insert into Snafu select * from Fubar"
+      },
+      {
+        "op": "deployed",
+        "case": "insert-into-protected",
+        "statement": "event"
+      },
+      {
+        "op": "deployed",
+        "case": "insert-into-protected",
+        "statement": "window"
+      },
+      {
+        "op": "deployed",
+        "case": "insert-into-protected",
+        "statement": "insert"
+      },
+      {
+        "op": "send",
+        "case": "insert-into-protected",
+        "eventType": "Fubar",
+        "payload": {
+          "foo": "a",
+          "bar": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "insert-into-protected",
+        "eventType": "Fubar",
+        "payload": {
+          "foo": "b",
+          "bar": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "insert-into-protected",
+        "statement": "window"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insert-into-protected"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-event-type",
+    "records": [
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "window-name-collision",
+        "sequence": 0,
+        "value": "Error starting statement: An event type or schema by name 'SchemaOne' already exists"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "table-name-collision",
+        "sequence": 0,
+        "value": "An event type by name 'SchemaTwo' has already been declared"
+      },
+      {
+        "case": "define-fields-window",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "define-fields-window",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "name": "c0",
+            "type": "Integer[]"
+          },
+          {
+            "name": "c1",
+            "type": "int[]"
+          }
+        ]
+      },
+      {
+        "case": "define-fields-table",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "define-fields-table",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "name": "c0",
+            "type": "Integer[]"
+          },
+          {
+            "name": "c1",
+            "type": "int[]"
+          }
+        ]
+      },
+      {
+        "case": "insert-into-protected",
+        "operation": "deployed",
+        "statement": "event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insert-into-protected",
+        "operation": "deployed",
+        "statement": "window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insert-into-protected",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insert-into-protected",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bar": 1,
+              "foo": "a"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "bar": 2,
+              "foo": "b"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-event-type",
+    "records": [
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "window-name-collision",
+        "sequence": 0,
+        "value": "Error starting statement: An event type or schema by name 'SchemaOne' already exists"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "table-name-collision",
+        "sequence": 0,
+        "value": "An event type by name 'SchemaTwo' has already been declared"
+      },
+      {
+        "case": "define-fields-window",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "define-fields-window",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "name": "c0",
+            "type": "Integer[]"
+          },
+          {
+            "name": "c1",
+            "type": "int[]"
+          }
+        ]
+      },
+      {
+        "case": "define-fields-table",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "define-fields-table",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "name": "c0",
+            "type": "Integer[]"
+          },
+          {
+            "name": "c1",
+            "type": "int[]"
+          }
+        ]
+      },
+      {
+        "case": "insert-into-protected",
+        "operation": "deployed",
+        "statement": "event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insert-into-protected",
+        "operation": "deployed",
+        "statement": "window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insert-into-protected",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insert-into-protected",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bar": 1,
+              "foo": "a"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "bar": 2,
+              "foo": "b"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

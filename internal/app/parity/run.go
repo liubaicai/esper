@@ -95,6 +95,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include expr-class-type-use and expr-class-type-use-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-for-epl-objects and expr-class-for-epl-objects-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-class-dependency and expr-class-class-dependency-diff")
+		fmt.Fprintln(stderr, "runner modes include infra-nwtable-event-type and infra-nwtable-event-type-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
@@ -302,6 +303,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWOSScenario(file)
 	} else if *mode == "infra-named-window-subquery" || *mode == "infra-named-window-subquery-diff" {
 		scenario, err = loadInfraNWSubqueryScenario(file)
+	} else if *mode == "infra-nwtable-event-type" || *mode == "infra-nwtable-event-type-diff" {
+		scenario, err = loadInfraNWTableEventTypeScenario(file)
 	} else if *mode == "infra-named-window-retention-views" || *mode == "infra-named-window-retention-views-diff" {
 		scenario, err = loadInfraNWRVScenario(file)
 	} else if *mode == "infra-named-window-unique-views" || *mode == "infra-named-window-unique-views-diff" {
@@ -1536,6 +1539,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNWSubqueryJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNWSubqueryJavaSources),
 				splitMetadata(*javaExecutions, infraNWSubqueryJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-nwtable-event-type" || *mode == "infra-nwtable-event-type-diff" {
+		trace, err := runInfraNWTableEventTypeScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-nwtable-event-type-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNWTableEventTypeJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNWTableEventTypeJavaSources),
+				splitMetadata(*javaExecutions, infraNWTableEventTypeJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

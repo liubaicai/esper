@@ -31,7 +31,7 @@ func TestTriggerInfraPropertyEvalInsertNoMatch(t *testing.T) {
 				t.Fatal(err)
 			}
 			if namedWindow {
-				targetSchema, err := RegisterMap(env, targetName, []FieldSpec{
+				targetSchema, err := RegisterMap(env, targetName+"Type", []FieldSpec{
 					FieldDef("c1", reflect.TypeOf("")),
 					FieldDef("c2", reflect.TypeOf("")),
 				})
@@ -145,7 +145,7 @@ func TestTriggerInfraPropertyEvalUpdate(t *testing.T) {
 				t.Fatal(err)
 			}
 			if namedWindow {
-				targetSchema, err := RegisterMap(env, targetName, []FieldSpec{
+				targetSchema, err := RegisterMap(env, targetName+"Type", []FieldSpec{
 					FieldDef("p0", reflect.TypeOf("")),
 					FieldDef("p1", reflect.TypeOf(int(0))),
 				})
@@ -241,7 +241,7 @@ func TestTriggerInfraDeleteThenUpdateMatchesEsperTargetSemantics(t *testing.T) {
 				t.Fatal(err)
 			}
 			if namedWindow {
-				schema, err := RegisterMap(env, targetName, []FieldSpec{
+				schema, err := RegisterMap(env, targetName+"Type", []FieldSpec{
 					FieldDef("p0", reflect.TypeOf("")),
 					FieldDef("p1", reflect.TypeOf(int(0))),
 				})

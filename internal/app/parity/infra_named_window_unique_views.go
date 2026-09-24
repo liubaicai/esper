@@ -535,9 +535,9 @@ func runInfraNWRUCase(ctx context.Context, scenario compat.Scenario, spec infraN
 	var err error
 	switch spec.sendKind {
 	case infraNWRUUniqueInt:
-		windowSchema, err = esper.RegisterStruct[infraNWRUKVInt](env, spec.windowName)
+		windowSchema, err = esper.RegisterStruct[infraNWRUKVInt](env, spec.windowName+"Type")
 	default:
-		windowSchema, err = esper.RegisterStruct[infraNWRUKVLong](env, spec.windowName)
+		windowSchema, err = esper.RegisterStruct[infraNWRUKVLong](env, spec.windowName+"Type")
 	}
 	if err != nil {
 		return nil, err

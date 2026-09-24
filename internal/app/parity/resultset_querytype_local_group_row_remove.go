@@ -389,7 +389,7 @@ func runResultSetQueryTypeLocalGroupRowRemoveCase(ctx context.Context, spec resu
 	if _, err := esper.RegisterStruct[resultSetQueryTypeLocalGroupRowRemoveS1](env, "SupportBean_S1"); err != nil {
 		return nil, err
 	}
-	windowSchema, err := esper.RegisterStruct[resultSetQueryTypeLocalGroupByBean](env, "MyWindow")
+	windowSchema, err := esper.RegisterStruct[resultSetQueryTypeLocalGroupByBean](env, "MyWindowType")
 	if err != nil {
 		return nil, err
 	}

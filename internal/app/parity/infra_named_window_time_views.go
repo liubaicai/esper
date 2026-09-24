@@ -580,11 +580,11 @@ func runInfraNWRTCase(ctx context.Context, scenario compat.Scenario, spec infraN
 	var err error
 	switch spec.sendKind {
 	case infraNWRTTimeInt:
-		windowSchema, err = esper.RegisterStruct[infraNWRTKVInt](env, spec.windowName)
+		windowSchema, err = esper.RegisterStruct[infraNWRTKVInt](env, spec.windowName+"Type")
 	case infraNWRTTimeBean:
-		windowSchema, err = esper.RegisterStruct[infraNWRTBean](env, spec.windowName)
+		windowSchema, err = esper.RegisterStruct[infraNWRTBean](env, spec.windowName+"Type")
 	default:
-		windowSchema, err = esper.RegisterStruct[infraNWRTKVLong](env, spec.windowName)
+		windowSchema, err = esper.RegisterStruct[infraNWRTKVLong](env, spec.windowName+"Type")
 	}
 	if err != nil {
 		return nil, err

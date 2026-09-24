@@ -547,7 +547,7 @@ func runInfraNWRXCase(ctx context.Context, scenario compat.Scenario, spec infraN
 		return nil, err
 	}
 	var windowSchema esper.Schema
-	windowSchema, err := esper.RegisterStruct[infraNWRXKVLong](env, spec.windowName)
+	windowSchema, err := esper.RegisterStruct[infraNWRXKVLong](env, spec.windowName+"Type")
 	if err != nil {
 		return nil, err
 	}

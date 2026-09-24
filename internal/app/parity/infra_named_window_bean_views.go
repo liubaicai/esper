@@ -997,7 +997,7 @@ func infraNWBVStartCycle(ctx context.Context, spec infraNWBVCaseSpec, now time.T
 		if _, err := esper.RegisterStruct[infraNWBVBeanS0](env, "SupportBean_S0"); err != nil {
 			return nil, err
 		}
-		if windowSchema, err = esper.RegisterStruct[infraNWBVBeanContained](env, spec.windowName); err != nil {
+		if windowSchema, err = esper.RegisterStruct[infraNWBVBeanContained](env, spec.windowName+"Type"); err != nil {
 			return nil, err
 		}
 	case infraNWBVBeanSchemaAliasRows:
@@ -1017,7 +1017,7 @@ func infraNWBVStartCycle(ctx context.Context, spec infraNWBVCaseSpec, now time.T
 		if _, err := esper.RegisterStruct[infraNWBVOverrideOneA](env, "SupportOverrideOneA"); err != nil {
 			return nil, err
 		}
-		if windowSchema, err = esper.RegisterStruct[infraNWBVOverrideBase](env, spec.windowName); err != nil {
+		if windowSchema, err = esper.RegisterStruct[infraNWBVOverrideBase](env, spec.windowName+"Type"); err != nil {
 			return nil, err
 		}
 	default:

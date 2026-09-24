@@ -17,7 +17,7 @@ func TestTriggerInfraInvalidBuildCases(t *testing.T) {
 				t.Fatal(err)
 			}
 			if namedWindow {
-				targetSchema, err := RegisterStruct[triggerInfraFlowEvent](env, targetName)
+				targetSchema, err := RegisterStruct[triggerInfraFlowEvent](env, targetName+"Type")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -171,7 +171,7 @@ func TestTriggerInfraInvalidBuildCases(t *testing.T) {
 			}
 			_ = otherSchema
 			_ = outerSource
-			compositeTarget, err := RegisterMap(env, "TriggerInvalidCompositeTarget", []FieldSpec{
+			compositeTarget, err := RegisterMap(env, "TriggerInvalidCompositeTargetType", []FieldSpec{
 				FieldDef("c", reflect.TypeOf(map[string]any{})),
 			}, WithNestedPropertySchema("c", compositeSchema))
 			if err != nil {

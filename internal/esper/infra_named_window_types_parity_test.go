@@ -825,19 +825,19 @@ func TestInfraNWTEventTypeColumnDefParity(t *testing.T) {
 			var windowSchema Schema
 			switch representation.kind {
 			case SchemaMap:
-				windowSchema, err = RegisterMap(env, "SchemaWindow", windowFields, WithNestedPropertySchema("s1", oneSchema))
+				windowSchema, err = RegisterMap(env, "SchemaWindowType", windowFields, WithNestedPropertySchema("s1", oneSchema))
 			case SchemaObjectArray:
-				windowSchema, err = RegisterObjectArray(env, "SchemaWindow", windowFields, WithNestedPropertySchema("s1", oneSchema))
+				windowSchema, err = RegisterObjectArray(env, "SchemaWindowType", windowFields, WithNestedPropertySchema("s1", oneSchema))
 			case SchemaJSON:
 				if representation.provided {
-					windowSchema, err = RegisterJSONFor[infraNWTSchemaWindow](env, "SchemaWindow", nil)
+					windowSchema, err = RegisterJSONFor[infraNWTSchemaWindow](env, "SchemaWindowType", nil)
 				} else {
-					windowSchema, err = RegisterJSON(env, "SchemaWindow", windowFields, WithNestedPropertySchema("s1", oneSchema))
+					windowSchema, err = RegisterJSON(env, "SchemaWindowType", windowFields, WithNestedPropertySchema("s1", oneSchema))
 				}
 			case SchemaAvro:
-				windowSchema, err = RegisterAvro(env, "SchemaWindow", windowFields, WithNestedPropertySchema("s1", oneSchema))
+				windowSchema, err = RegisterAvro(env, "SchemaWindowType", windowFields, WithNestedPropertySchema("s1", oneSchema))
 			default:
-				windowSchema, err = RegisterMap(env, "SchemaWindow", windowFields, WithNestedPropertySchema("s1", oneSchema))
+				windowSchema, err = RegisterMap(env, "SchemaWindowType", windowFields, WithNestedPropertySchema("s1", oneSchema))
 			}
 			if err != nil {
 				t.Fatal(err)

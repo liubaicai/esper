@@ -325,7 +325,7 @@ func infraNWTableOnMergeIDTUCreateInfra(env *esper.Environment, caseName string,
 			})
 			return err
 		}
-		schema, err := esper.RegisterMap(env, "InsertOnlyInfra", []esper.FieldSpec{
+		schema, err := esper.RegisterMap(env, "InsertOnlyInfraType", []esper.FieldSpec{
 			esper.FieldDef("p0", reflect.TypeOf("")),
 			esper.FieldDef("p1", reflect.TypeOf(int64(0))),
 		})
@@ -343,7 +343,7 @@ func infraNWTableOnMergeIDTUCreateInfra(env *esper.Environment, caseName string,
 		})
 		return err
 	}
-	schema, err := esper.RegisterMap(env, "MyInfra", []esper.FieldSpec{
+	schema, err := esper.RegisterMap(env, "MyInfraType", []esper.FieldSpec{
 		esper.FieldDef("p0", reflect.TypeOf("")),
 		esper.FieldDef("p1", reflect.TypeOf(int64(0))),
 	})

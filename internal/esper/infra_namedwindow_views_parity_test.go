@@ -3570,7 +3570,7 @@ func TestInfraNWViewsSelectStreamDotStarInsertParity(t *testing.T) {
 	if _, err := RegisterStruct[nwViewsBeanFull](env, "SupportBean"); err != nil {
 		t.Fatal(err)
 	}
-	windowSchema, err := RegisterObjectArray(env, "MyNWWindowObjectArray", []FieldSpec{
+	windowSchema, err := RegisterObjectArray(env, "MyNWWindowObjectArrayType", []FieldSpec{
 		FieldDef("p0", reflect.TypeOf(0)),
 	})
 	if err != nil {
@@ -3795,7 +3795,7 @@ func TestInfraNWViewsBeanContainedParity(t *testing.T) {
 	if _, err := RegisterStruct[nwViewsBeanS0](env, "SupportBean_S0"); err != nil {
 		t.Fatal(err)
 	}
-	windowSchema, err := RegisterStruct[nwViewsBeanContained](env, "MyWindowBC")
+	windowSchema, err := RegisterStruct[nwViewsBeanContained](env, "MyWindowBCType")
 	if err != nil {
 		t.Fatal(err)
 	}

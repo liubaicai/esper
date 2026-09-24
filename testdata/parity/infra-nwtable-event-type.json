@@ -1,0 +1,189 @@
+{
+ "version": "esper-parity/v1",
+ "id": "infra-nwtable-event-type",
+ "description": "InfraNWTableEventType named-window/table event-type slice (ords 0-2): two tryInvalidCompile probes pinning the window/table name-collision messages against an existing event type (invalid, ord 0); the two define-fields cycles asserting the s0 event type's positional column types c0=Integer[] (int[]) and c1=int[] (int[primitive]) for the keepall window and unkeyed table variants (define-fields-window/-table, ord 1, one shared runtime); and the protected-window module replaying two Fubar map events through the private insert-into into the keepall Snafu window whose iterator yields foo/bar a:1, b:2 in order (insert-into-protected, ord 2). Compile-error records carry the pinned Java message prefixes; types records carry positional {name,type} entries with Java class names; the snapshot record mirrors assertPropsPerRowIterator (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableEventType.java).",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableEventType.java",
+ "javaRuntimes": [
+  "java-runtime-d3c3a24f11288969df7e",
+  "java-runtime-8dc1233d90336dcdb929",
+  "java-runtime-14412293edec92196bd9"
+ ],
+ "javaNames": [
+  "InfraNWTableEventTypeInvalid",
+  "InfraNWTableEventTypeDefineFields",
+  "InfraNWTableEventTypeInsertIntoProtected"
+ ],
+ "javaStaticIds": [
+  "java-08b4a7da65c76bf5abdc",
+  "java-50c0d9ea894da18ddb54",
+  "java-c007ca393634b73ec8b5"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "invalid",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-d3c3a24f11288969df7e",
+   "executionName": "InfraNWTableEventTypeInvalid",
+   "observation": "compile-error; two tryInvalidCompile probes: create window SchemaOne#keepall colliding with the SchemaOne event type (prefix 'Error starting statement: An event type or schema by name 'SchemaOne' already exists') and create table SchemaTwo colliding with the SchemaTwo event type (prefix 'An event type by name 'SchemaTwo' has already been declared')",
+   "epl": "create schema SchemaOne as (p0 string);\ncreate window SchemaOne#keepall as SchemaOne;\ncreate schema SchemaTwo as (p0 string);\ncreate table SchemaTwo(c0 int);\n"
+  },
+  {
+   "case": "define-fields-window",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-8dc1233d90336dcdb929",
+   "executionName": "InfraNWTableEventTypeDefineFields",
+   "observation": "deployed+types; @name('s0') @public create window MyInfra#keepall as (c0 int[], c1 int[primitive]): the s0 event type's positional descriptors pin c0=Integer[] and c1=int[]",
+   "epl": "@name('s0') @public create window MyInfra#keepall as (c0 int[], c1 int[primitive])"
+  },
+  {
+   "case": "define-fields-table",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-8dc1233d90336dcdb929",
+   "executionName": "InfraNWTableEventTypeDefineFields",
+   "observation": "deployed+types; @name('s0') @public create table MyInfra (c0 int[], c1 int[primitive]): the same positional descriptors pin c0=Integer[] and c1=int[] for the table variant (second cycle of the shared execution)",
+   "epl": "@name('s0') @public create table MyInfra (c0 int[], c1 int[primitive])"
+  },
+  {
+   "case": "insert-into-protected",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-14412293edec92196bd9",
+   "executionName": "InfraNWTableEventTypeInsertIntoProtected",
+   "observation": "deployed+snapshot; one three-statement module (public bus map schema Fubar(foo string, bar double), protected keepall window Snafu as Fubar, private insert into Snafu select *): two Fubar map sends route into the window whose iterator yields {foo:a,bar:1},{foo:b,bar:2} in order",
+   "epl": "module test;\n@name('event') @public @buseventtype @public create map schema Fubar as (foo string, bar double);\n@name('window') @protected create window Snafu#keepall as Fubar;\n@name('insert') @private insert into Snafu select * from Fubar;\n"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "invalid"
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "window-name-collision",
+   "epl": "create schema SchemaOne as (p0 string);\ncreate window SchemaOne#keepall as SchemaOne;\n",
+   "expectError": "Error starting statement: An event type or schema by name 'SchemaOne' already exists"
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "table-name-collision",
+   "epl": "create schema SchemaTwo as (p0 string);\ncreate table SchemaTwo(c0 int);\n",
+   "expectError": "An event type by name 'SchemaTwo' has already been declared"
+  },
+  {
+   "op": "case",
+   "case": "define-fields-window"
+  },
+  {
+   "op": "deploy",
+   "case": "define-fields-window",
+   "statement": "s0",
+   "epl": "@name('s0') @public create window MyInfra#keepall as (c0 int[], c1 int[primitive])"
+  },
+  {
+   "op": "deployed",
+   "case": "define-fields-window",
+   "statement": "s0"
+  },
+  {
+   "op": "types",
+   "case": "define-fields-window",
+   "statement": "s0"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "define-fields-window"
+  },
+  {
+   "op": "case",
+   "case": "define-fields-table"
+  },
+  {
+   "op": "deploy",
+   "case": "define-fields-table",
+   "statement": "s0",
+   "epl": "@name('s0') @public create table MyInfra (c0 int[], c1 int[primitive])"
+  },
+  {
+   "op": "deployed",
+   "case": "define-fields-table",
+   "statement": "s0"
+  },
+  {
+   "op": "types",
+   "case": "define-fields-table",
+   "statement": "s0"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "define-fields-table"
+  },
+  {
+   "op": "case",
+   "case": "insert-into-protected"
+  },
+  {
+   "op": "deploy",
+   "case": "insert-into-protected",
+   "statement": "event",
+   "epl": "@name('event') @public @buseventtype @public create map schema Fubar as (foo string, bar double)"
+  },
+  {
+   "op": "deploy",
+   "case": "insert-into-protected",
+   "statement": "window",
+   "epl": "@name('window') @protected create window Snafu#keepall as Fubar"
+  },
+  {
+   "op": "deploy",
+   "case": "insert-into-protected",
+   "statement": "insert",
+   "epl": "@name('insert') @private insert into Snafu select * from Fubar"
+  },
+  {
+   "op": "deployed",
+   "case": "insert-into-protected",
+   "statement": "event"
+  },
+  {
+   "op": "deployed",
+   "case": "insert-into-protected",
+   "statement": "window"
+  },
+  {
+   "op": "deployed",
+   "case": "insert-into-protected",
+   "statement": "insert"
+  },
+  {
+   "op": "send",
+   "case": "insert-into-protected",
+   "eventType": "Fubar",
+   "payload": {
+    "foo": "a",
+    "bar": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "insert-into-protected",
+   "eventType": "Fubar",
+   "payload": {
+    "foo": "b",
+    "bar": 2
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "insert-into-protected",
+   "statement": "window"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "insert-into-protected"
+  }
+ ]
+}

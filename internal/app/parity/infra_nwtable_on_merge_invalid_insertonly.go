@@ -264,7 +264,7 @@ func runInfraNWTableOnMergeInvalidInsertOnlyCase(ctx context.Context, steps []co
 		// as (p0 string, p1 int)` — the window is an env-level artifact on
 		// the Go side; the 'Window' deploy step attaches the consumer query
 		// the Java iterator reads.
-		schema, err := esper.RegisterMap(env, "InsertOnlyInfra", []esper.FieldSpec{
+		schema, err := esper.RegisterMap(env, "InsertOnlyInfraType", []esper.FieldSpec{
 			esper.FieldDef("p0", reflect.TypeOf("")),
 			esper.FieldDef("p1", reflect.TypeOf(int64(0))),
 		})

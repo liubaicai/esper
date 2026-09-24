@@ -33,7 +33,7 @@ func TestNamedWindowStatementOutputPrecedesConsumers(t *testing.T) {
 	if _, err := RegisterStruct[market](env, "SupportMarketDataBean"); err != nil {
 		t.Fatal(err)
 	}
-	schema, err := RegisterStruct[kv](env, "MyWindow")
+	schema, err := RegisterStruct[kv](env, "MyWindowType")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,7 +137,7 @@ func TestNamedWindowDoubleInsertDispatchesPerInsertBoundary(t *testing.T) {
 	if _, err := RegisterStruct[bean](env, "SupportBean"); err != nil {
 		t.Fatal(err)
 	}
-	schema, err := RegisterStruct[kv](env, "MyWindowDISM")
+	schema, err := RegisterStruct[kv](env, "MyWindowDISMType")
 	if err != nil {
 		t.Fatal(err)
 	}
