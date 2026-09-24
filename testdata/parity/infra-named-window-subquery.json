@@ -1,0 +1,268 @@
+{
+ "version": "esper-parity/v1",
+ "id": "infra-named-window-subquery",
+ "description": "InfraNamedWindowSubquery named-window subquery slice (ords 0-2): an on-window set trigger whose scalar subquery observes the just-inserted #length(1) row and assigns the deployment variable myvar (two-consumer-window, ord 0), a late-deployed select-* consumer whose uncorrelated count(*) subquery filter passes for the post-attach E3 insert while the pre-attach E1/E2 preload stays unobserved (late-consumer-aggregation, ord 1), and an exists-subquery with a parens named-window filter re-evaluated live per SupportBean_S0 trigger (filter-in-parens, ord 2). Deployed markers pin the module fan-out; the ord-0 variable record carries the myvar value the Java assertRuntime pins (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowSubquery.java).",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowSubquery.java",
+ "javaRuntimes": [
+  "java-runtime-901e88676d86ad580af1",
+  "java-runtime-4261803b5e9dcef8a867",
+  "java-runtime-95adfcdb21f327e1cc4e"
+ ],
+ "javaNames": [
+  "InfraSubqueryTwoConsumerWindow",
+  "InfraSubqueryLateConsumerAggregation",
+  "InfraSubqueryWithFilterInParens"
+ ],
+ "javaStaticIds": [
+  "java-f8f4ec7164371451341d",
+  "java-ff6a2dd6de98a3f1bb81",
+  "java-557b2408e6489254dd8e"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "two-consumer-window",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-901e88676d86ad580af1",
+   "executionName": "InfraSubqueryTwoConsumerWindow",
+   "observation": "deployed+variable; one four-statement module (length-1 window over (mycount long), constant-1L insert-count, create variable long myvar = 0, on-window assign setting myvar to the scalar mycount subquery): the E1 insert fires the on-set trigger after the window root view holds the row, so the subquery-consumer sees the just-inserted row and myvar reads 1 (a pre-insert evaluation would leave it null)",
+   "epl": "\n create window MyWindowTwo#length(1) as (mycount long);\n @Name('insert-count') insert into MyWindowTwo select 1L as mycount from SupportBean;\n create variable long myvar = 0;\n @Name('assign') on MyWindowTwo set myvar = (select mycount from MyWindowTwo);"
+  },
+  {
+   "case": "late-consumer-aggregation",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-4261803b5e9dcef8a867",
+   "executionName": "InfraSubqueryLateConsumerAggregation",
+   "observation": "listener+deployed; three separately deployed statements sharing one path (@public keepall window, wildcard insert, s0 select-* whose where clause is an uncorrelated count(*) subquery over the same window): E1/E2 insert between the insert and s0 deploys so the s0 preload output stays unobserved (the listener attaches after deploy), and the post-attach E3 insert fires the listener once with the full SupportBean row",
+   "epl": "@public create window MyWindow#keepall as SupportBean;\ninsert into MyWindow select * from SupportBean;\n@name('s0') select * from MyWindow where (select count(*) from MyWindow) > 0;\n"
+  },
+  {
+   "case": "filter-in-parens",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-95adfcdb21f327e1cc4e",
+   "executionName": "InfraSubqueryWithFilterInParens",
+   "observation": "listener+deployed; one three-statement module (keepall window, wildcard insert, s0 selecting exists(select * from MyWindow(theString='E1')) as c0 from SupportBean_S0): each S0(0) trigger re-evaluates the parens-filtered exists-subquery against live window contents, yielding c0 false on the empty window, false after the E2 insert and true after the E1 insert, each as exactly one new event with no old data",
+   "epl": "create window MyWindow#keepall as SupportBean;\n@name('insert') insert into MyWindow select * from SupportBean;\n@name('s0') select exists (select * from MyWindow(theString='E1')) as c0 from SupportBean_S0;\n"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "two-consumer-window"
+  },
+  {
+   "op": "deploy",
+   "case": "two-consumer-window",
+   "statement": "create",
+   "epl": "create window MyWindowTwo#length(1) as (mycount long)"
+  },
+  {
+   "op": "deploy",
+   "case": "two-consumer-window",
+   "statement": "insert-count",
+   "epl": "@Name('insert-count') insert into MyWindowTwo select 1L as mycount from SupportBean"
+  },
+  {
+   "op": "deploy",
+   "case": "two-consumer-window",
+   "statement": "variable",
+   "epl": "create variable long myvar = 0"
+  },
+  {
+   "op": "deploy",
+   "case": "two-consumer-window",
+   "statement": "assign",
+   "epl": "@Name('assign') on MyWindowTwo set myvar = (select mycount from MyWindowTwo)"
+  },
+  {
+   "op": "deployed",
+   "case": "two-consumer-window",
+   "statement": "create"
+  },
+  {
+   "op": "deployed",
+   "case": "two-consumer-window",
+   "statement": "insert-count"
+  },
+  {
+   "op": "deployed",
+   "case": "two-consumer-window",
+   "statement": "variable"
+  },
+  {
+   "op": "deployed",
+   "case": "two-consumer-window",
+   "statement": "assign"
+  },
+  {
+   "op": "send",
+   "case": "two-consumer-window",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "read-variable",
+   "case": "two-consumer-window",
+   "name": "myvar"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "two-consumer-window"
+  },
+  {
+   "op": "case",
+   "case": "late-consumer-aggregation"
+  },
+  {
+   "op": "deploy",
+   "case": "late-consumer-aggregation",
+   "statement": "create",
+   "epl": "@public create window MyWindow#keepall as SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "late-consumer-aggregation",
+   "statement": "create"
+  },
+  {
+   "op": "deploy",
+   "case": "late-consumer-aggregation",
+   "statement": "insert",
+   "epl": "insert into MyWindow select * from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "late-consumer-aggregation",
+   "statement": "insert"
+  },
+  {
+   "op": "send",
+   "case": "late-consumer-aggregation",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "late-consumer-aggregation",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "deploy",
+   "case": "late-consumer-aggregation",
+   "statement": "s0",
+   "epl": "@name('s0') select * from MyWindow where (select count(*) from MyWindow) > 0"
+  },
+  {
+   "op": "deployed",
+   "case": "late-consumer-aggregation",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "late-consumer-aggregation",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "late-consumer-aggregation"
+  },
+  {
+   "op": "case",
+   "case": "filter-in-parens"
+  },
+  {
+   "op": "deploy",
+   "case": "filter-in-parens",
+   "statement": "create",
+   "epl": "create window MyWindow#keepall as SupportBean"
+  },
+  {
+   "op": "deploy",
+   "case": "filter-in-parens",
+   "statement": "insert",
+   "epl": "@name('insert') insert into MyWindow select * from SupportBean"
+  },
+  {
+   "op": "deploy",
+   "case": "filter-in-parens",
+   "statement": "s0",
+   "epl": "@name('s0') select exists (select * from MyWindow(theString='E1')) as c0 from SupportBean_S0"
+  },
+  {
+   "op": "deployed",
+   "case": "filter-in-parens",
+   "statement": "create"
+  },
+  {
+   "op": "deployed",
+   "case": "filter-in-parens",
+   "statement": "insert"
+  },
+  {
+   "op": "deployed",
+   "case": "filter-in-parens",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "filter-in-parens",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "filter-in-parens",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "filter-in-parens",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "filter-in-parens",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "filter-in-parens",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "filter-in-parens"
+  }
+ ]
+}

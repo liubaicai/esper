@@ -2585,6 +2585,7 @@
     "internal/app/parity/infra_named_window_on_update.go",
     "internal/app/parity/infra_named_window_on_update_misc.go",
     "internal/app/parity/infra_named_window_retention_views.go",
+    "internal/app/parity/infra_named_window_subquery.go",
     "internal/app/parity/infra_named_window_time_batch_views.go",
     "internal/app/parity/infra_named_window_time_order_accum_views.go",
     "internal/app/parity/infra_named_window_time_views.go",
@@ -2604,6 +2605,7 @@
     "internal/esper/rowrecog.go",
     "internal/esper/runtime.go",
     "internal/esper/state.go",
+    "internal/esper/subquery.go",
     "internal/esper/trigger.go"
    ],
    "phase": 1,
@@ -49285,6 +49287,53 @@
     "java-runtime-caeff76ee56490d832ea"
    ],
    "notes": "InfraNamedWindowOnSelect all 3 executions. 24 records (12 deployed + 9 listener + 3 snapshot), 0 differences."
+  },
+  {
+   "id": "case.infra-named-window-subquery",
+   "javaRuntimeIds": [
+    "java-runtime-901e88676d86ad580af1",
+    "java-runtime-4261803b5e9dcef8a867",
+    "java-runtime-95adfcdb21f327e1cc4e"
+   ],
+   "javaStaticIds": [
+    "java-f8f4ec7164371451341d",
+    "java-ff6a2dd6de98a3f1bb81",
+    "java-557b2408e6489254dd8e"
+   ],
+   "javaNames": [
+    "InfraSubqueryTwoConsumerWindow",
+    "InfraSubqueryLateConsumerAggregation",
+    "InfraSubqueryWithFilterInParens"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowSubquery.java"
+   ],
+   "goTests": [
+    "internal/app/parity/infra_named_window_subquery.go",
+    "internal/app/parity/run_test.go"
+   ],
+   "tags": [
+    "infra",
+    "namedwindow",
+    "subquery",
+    "born-differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-named-window-subquery.evidence.json"
+   ],
+   "difference": "Named-window subqueries: on-window set var=scalar-subquery sees just-inserted row (window updated before consumer dispatch); late-deployed consumer preload unobserved + uncorrelated count(*)>0 where evaluated live; exists-subquery with parens window filter re-evaluated per trigger event. Shared core: preload path passes locked engine ref so subquery eval takes the locked snapshot (deadlock fix).",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-901e88676d86ad580af1",
+    "java-runtime-4261803b5e9dcef8a867",
+    "java-runtime-95adfcdb21f327e1cc4e"
+   ],
+   "notes": "InfraNamedWindowSubquery all 3 executions. 15 records (10 deployed + 4 listener + 1 variable), 0 differences."
   }
  ],
  "mappings": [
@@ -52679,13 +52728,17 @@
   {
    "capabilityId": "infra.namedwindow.views",
    "caseId": "case.infra-named-window-on-select"
+  },
+  {
+   "capabilityId": "infra.namedwindow.views",
+   "caseId": "case.infra-named-window-subquery"
   }
  ],
  "summary": {
-  "inventoriedCases": 762,
-  "implementedCases": 760,
-  "differentialVerifiedCases": 388,
-  "differentialVerifiedRuntimeIds": 1527,
+  "inventoriedCases": 763,
+  "implementedCases": 761,
+  "differentialVerifiedCases": 389,
+  "differentialVerifiedRuntimeIds": 1530,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -52695,13 +52748,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4061,
-  "referencedJavaRuntimeIds": 3631,
+  "runtimeAssociationCount": 4064,
+  "referencedJavaRuntimeIds": 3634,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 505,
+  "unreferencedJavaRuntimeIds": 502,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 762,
+  "totalCases": 763,
   "totalCapabilities": 126
  }
 }

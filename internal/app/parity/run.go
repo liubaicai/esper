@@ -300,6 +300,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWKDScenario(file)
 	} else if *mode == "infra-named-window-on-select" || *mode == "infra-named-window-on-select-diff" {
 		scenario, err = loadInfraNWOSScenario(file)
+	} else if *mode == "infra-named-window-subquery" || *mode == "infra-named-window-subquery-diff" {
+		scenario, err = loadInfraNWSubqueryScenario(file)
 	} else if *mode == "infra-named-window-retention-views" || *mode == "infra-named-window-retention-views-diff" {
 		scenario, err = loadInfraNWRVScenario(file)
 	} else if *mode == "infra-named-window-unique-views" || *mode == "infra-named-window-unique-views-diff" {
@@ -1518,6 +1520,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNWOSJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNWOSJavaSources),
 				splitMetadata(*javaExecutions, infraNWOSJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-named-window-subquery" || *mode == "infra-named-window-subquery-diff" {
+		trace, err := runInfraNWSubqueryScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-named-window-subquery-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNWSubqueryJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNWSubqueryJavaSources),
+				splitMetadata(*javaExecutions, infraNWSubqueryJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

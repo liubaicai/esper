@@ -3788,8 +3788,12 @@ func (e *Engine) seedNamedWindowConsumerLocked(ctx context.Context, statement *S
 			return err
 		}
 		statement.runtime.ctx = ctx
+		// The preload replays window rows through the consumer while the
+		// engine lock is held; subquery evaluation inside the consumer's
+		// predicate/projection must take the locked snapshot path.
+		preloadVariables := variablesWithEngineLockState(cloneValues(statement.runtime.variables), e, true)
 		for _, event := range events {
-			if _, _, err := statement.runtime.process(statement.plan, event, now, statement.runtime.variables, streamFilterVerdict{}); err != nil {
+			if _, _, err := statement.runtime.process(statement.plan, event, now, preloadVariables, streamFilterVerdict{}); err != nil {
 				return err
 			}
 			if trackPrior {

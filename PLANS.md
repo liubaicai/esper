@@ -55,6 +55,38 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly') committed and pushed as 9ac32d036; Git owns identity. Parity review PASS, two P3s fixed.
 
 ## Current work unit
+
+Active: Draft 4.533 ('infra-named-window-subquery').
+
+- Selection: `InfraNamedWindowSubquery.java` all 3 executions, no flags —
+  `InfraSubqueryTwoConsumerWindow` (`java-runtime-901e88676d86ad580af1`),
+- [x] Contract frozen: JavaContract533 (3 executions: ord0 on-window set
+  var=scalar-subquery sees just-inserted row; ord1 late consumer preload
+  unobserved + uncorrelated count(*)>0 where; ord2 exists-subquery with
+  parens window filter) + GoSurface533 (no engine work: SubqueryValue/
+  Count/Exists over FromNamedWindow, .Filter inner, OnRecord+SetVariable,
+  env.RegisterVariable + engine.GetVariable). Assets533 dispatched.
+- [x] Assets533 integrated: `internal/app/parity/infra_named_window_subquery.go` +
+  `testdata/parity/infra-named-window-subquery.json` (3 cases / 36 steps) +
+  oracle + run script + run.go/run_test.go wiring. One build fix
+  (`Greater[int64]` explicit type param).
+- [x] **Engine fix (shared core)**: `seedNamedWindowConsumerLocked` preload
+  replayed window rows with `runtime.variables` lacking the locked engine
+  ref, so a subquery inside the consumer predicate took the unlocked
+  `snapshotFireAndForgetSource` path → reentrant `e.mu.Lock` deadlock.
+  Fixed by passing `variablesWithEngineLockState(cloneValues(...), e, true)`
+  to `process`.
+- [x] Differential replay: Java 15 records; Go 15 records. `-mode
+  infra-named-window-subquery-diff` status `passing` / 0 differences.
+- [x] Manifest: NEW case `case.infra-named-window-subquery` born-DV with
+  the 3 IDs; `infra.namedwindow.views` mapping + goRefs extended.
+  Summary 763 cases / 389 DV / 1530 DV runtime IDs / unreferenced 502.
+- [x] Gates + parity review + commit: `make check` exit 0 (parity 91.2s,
+  internal/esper 117.4s); independent reviewer `ParityReview533` returned
+  PASS (three P3 informational: oracle doc comment reworded, variable
+  record gained `sequence:0`, Go loader case-marker pin matches sibling
+  convention). Committing.
+## Current work unit
 Active: Draft 4.532 ('infra-named-window-on-select').
 
 - Selection: `InfraNamedWindowOnSelect.java` all 3 executions, no flags —
@@ -85,11 +117,10 @@ Active: Draft 4.532 ('infra-named-window-on-select').
 - [x] Manifest: NEW case `case.infra-named-window-on-select` born-DV with
   the 3 IDs; `infra.namedwindow.views` mapping + goRefs extended.
   Summary 762 cases / 388 DV / 1527 DV runtime IDs / unreferenced 505.
-- [x] Gates + parity review + commit: `make check` exit 0 (parity 88.5s,
-  internal/esper 116.6s); independent reviewer `ParityReview532` returned
-  PASS after two fix rounds (P1 static IDs, P3 record count, P2
+- [x] Shipped; Git owns identity. Draft 4.532 committed and pushed as
+  `c17f63733`. Independent reviewer `ParityReview532` returned PASS
+  after two fix rounds (P1 static IDs, P3 record count, P2
   Tags/TagValues + Field→window-row binding, P3 stale error message).
-  Committing.
 
 ## Previous work units (shipped)
 
