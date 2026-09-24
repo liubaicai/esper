@@ -726,7 +726,8 @@
     "internal/esper/expr_define_value_alias_parity_test.go",
     "internal/esper/expr_define_aggregation_parity_test.go",
     "internal/app/parity/epl_other_create_expression.go",
-    "internal/esper/stream.go"
+    "internal/esper/stream.go",
+    "internal/app/parity/expr_define_value_parameter.go"
    ],
    "phase": 1,
    "status": "differential-verified",
@@ -745,7 +746,10 @@
     "java-runtime-e3078c54652f7f72cd73",
     "java-runtime-2e66cbcd61d52f258cb4",
     "java-runtime-c0c5df502bf2651e6acf",
-    "java-runtime-61a0f3f3916ac25443d7"
+    "java-runtime-61a0f3f3916ac25443d7",
+    "java-runtime-d1b67308d74aec6b3092",
+    "java-runtime-65eb95bacf881252faa4",
+    "java-runtime-45b280bc6b857cf5fa3a"
    ]
   },
   {
@@ -26397,6 +26401,66 @@
     "inventoried",
     "implemented",
     "intentionally-different"
+   ]
+  },
+  {
+   "id": "case.expr-define-value-parameter",
+   "javaRuntimeIds": [
+    "java-runtime-d1b67308d74aec6b3092",
+    "java-runtime-65eb95bacf881252faa4",
+    "java-runtime-45b280bc6b857cf5fa3a"
+   ],
+   "javaStaticIds": [
+    "java-2f93b37cf7c6dc83e2dd",
+    "java-c325db71b15aab20ac8e",
+    "java-a816df5a959d4e4aa7a2"
+   ],
+   "javaNames": [
+    "ExprDefineValueParameterEVEVE",
+    "ExprDefineValueParameterCache",
+    "ExprDefineValueParameterSubquery"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/define/ExprDefineValueParameter.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunExprDefineValueParameterDirectReplay",
+    "internal/app/parity/run_test.go:TestRunExprDefineValueParameterDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunExprDefineValueParameterCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunExprDefineValueParameterDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunExprDefineValueParameterRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunExprDefineValueParameterRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "correctness",
+    "epl",
+    "declared-expression",
+    "expression-ref",
+    "value-parameter",
+    "join",
+    "subquery",
+    "variable",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/expr-define-value-parameter.json",
+    "testdata/parity/expr-define-value-parameter.trace.json",
+    "testdata/parity/expr-define-value-parameter.go.trace.json",
+    "testdata/parity/expr-define-value-parameter.evidence.json",
+    "tools/java-oracle/ExprDefineValueParameterScenarioOracle.java",
+    "tools/java-oracle/run-expr-define-value-parameter.sh"
+   ],
+   "notes": "ExprDefineValueParameter ordinals 7/9/11 close the file's unreferenced remainder. EVEVE: @public declared expression cc{(a,v1,b,v2,c) -> a.p00||v1||b.p00||v2||c.p00} shared across two deployments, invoked from three statements over a three-way filtered #lastevent self-join of SupportBean_S0 \u2014 the alias-swap matrix (s0/s1 same call args with e1/e3 swapped, s2 reordered) yields BxCyA/BxAyC/CxByA, proving positional event+value parameter binding under join scoping; Java fires listeners in reverse deployment order (s2,s1,s0). Cache: create-variable object + declared expression calling a service method \u2014 RegisterVariable carries a Go service pointer, Method resolves Calc per event; the observable contract is per-event invocation (calculations size 1 then 2) not memoization; STATICHOOK pinned as metadata. Subquery: statement-local expression cc{(v1,v2)->v1||v2} via Query.WithExpression whose call arguments are scalar subqueries over SupportBean_S0#lastevent; no S0 sent so both subqueries are null and c0=null (null||null propagation). Java/Go 13 records each, 0 differences. Scenario testdata/parity/expr-define-value-parameter.json; Java trace via tools/java-oracle/run-expr-define-value-parameter.sh at commit 9e1b9f1cc9117fea4bf33ab043762c045d73839c.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-d1b67308d74aec6b3092",
+    "java-runtime-65eb95bacf881252faa4",
+    "java-runtime-45b280bc6b857cf5fa3a"
    ]
   },
   {
@@ -53006,13 +53070,17 @@
   {
    "capabilityId": "expr.declared",
    "caseId": "case.epl-other-create-expression-script"
+  },
+  {
+   "capabilityId": "expr.declared",
+   "caseId": "case.expr-define-value-parameter"
   }
  ],
  "summary": {
-  "inventoriedCases": 767,
-  "implementedCases": 765,
-  "differentialVerifiedCases": 392,
-  "differentialVerifiedRuntimeIds": 1547,
+  "inventoriedCases": 768,
+  "implementedCases": 766,
+  "differentialVerifiedCases": 393,
+  "differentialVerifiedRuntimeIds": 1550,
   "intentionallyDifferentCases": 34,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -53022,13 +53090,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4082,
-  "referencedJavaRuntimeIds": 3642,
+  "runtimeAssociationCount": 4085,
+  "referencedJavaRuntimeIds": 3645,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 494,
+  "unreferencedJavaRuntimeIds": 491,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 767,
+  "totalCases": 768,
   "totalCapabilities": 126
  }
 }

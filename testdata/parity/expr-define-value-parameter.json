@@ -1,0 +1,191 @@
+{
+ "version": "esper-parity/v1",
+ "id": "expr-define-value-parameter",
+ "description": "ExprDefineValueParameter slice (ords 7/9/11): eveve deploys @public create expression cc { (a,v1,b,v2,c) -> a.p00 || v1 || b.p00 || v2 || c.p00} on the shared path, then one module deploys s0/s1/s2 over three filtered SupportBean_S0#lastevent streams — s0 asserts c0 String and the third send fires all three joins emitting 'BxCyA'/'BxAyC'/'CxByA'; cache deploys create variable ExprDefineLocalService myService plus create expression doit {v -> myService.calc(v)} feeding select doit(theString) as c0 — each SupportBean('E10',-1) emits c0=10 and the service's calculations list grows 1 then 2 (STATICHOOK is metadata-only); subquery binds statement-local expression cc {(v1,v2) -> v1||v2} over two scalar subqueries on SupportBean_S0#lastevent — one SupportBean_S1(0) send with no S0 events emits c0=null. Deployed markers pin the module fan-out, listener records carry the new-data rows, the types record pins the asserted c0 String type, and iterator-count records pin the service invocation counts (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/define/ExprDefineValueParameter.java).",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/define/ExprDefineValueParameter.java",
+ "javaRuntimes": [
+  "java-runtime-d1b67308d74aec6b3092",
+  "java-runtime-65eb95bacf881252faa4",
+  "java-runtime-45b280bc6b857cf5fa3a"
+ ],
+ "javaNames": [
+  "ExprDefineValueParameterEVEVE",
+  "ExprDefineValueParameterCache",
+  "ExprDefineValueParameterSubquery"
+ ],
+ "javaStaticIds": [
+  "java-2f93b37cf7c6dc83e2dd",
+  "java-c325db71b15aab20ac8e",
+  "java-a816df5a959d4e4aa7a2"
+ ],
+ "javaFlags": [
+  "STATICHOOK"
+ ],
+ "cases": [
+  {
+   "case": "eveve",
+   "ordinal": 7,
+   "runtimeId": "java-runtime-d1b67308d74aec6b3092",
+   "executionName": "ExprDefineValueParameterEVEVE",
+   "observation": "deployed+types+listener; @public create expression cc { (a,v1,b,v2,c) -> a.p00 || v1 || b.p00 || v2 || c.p00} deploys on the shared path, then one module deploys s0/s1/s2 over three filtered SupportBean_S0#lastevent streams; s0 asserts c0 String; S0(1,'A') and S0(3,'C') stay silent while S0(2,'B') completes the join and fires s0='BxCyA', s1='BxAyC', s2='CxByA'",
+   "epl": "@public create expression cc { (a,v1,b,v2,c) -> a.p00 || v1 || b.p00 || v2 || c.p00};\n@name('s0') select cc(e2, 'x', e3, 'y', e1) as c0 from \nSupportBean_S0(id=1)#lastevent as e1, SupportBean_S0(id=2)#lastevent as e2, SupportBean_S0(id=3)#lastevent as e3;\n@name('s1') select cc(e2, 'x', e3, 'y', e1) as c0 from \nSupportBean_S0(id=1)#lastevent as e3, SupportBean_S0(id=2)#lastevent as e2, SupportBean_S0(id=3)#lastevent as e1;\n@name('s2') select cc(e1, 'x', e2, 'y', e3) as c0 from \nSupportBean_S0(id=1)#lastevent as e3, SupportBean_S0(id=2)#lastevent as e2, SupportBean_S0(id=3)#lastevent as e1;\n"
+  },
+  {
+   "case": "cache",
+   "ordinal": 9,
+   "runtimeId": "java-runtime-65eb95bacf881252faa4",
+   "executionName": "ExprDefineValueParameterCache",
+   "observation": "deployed+listener+iterator-count; create variable ExprDefineLocalService myService plus create expression doit {v -> myService.calc(v)} feed select doit(theString) as c0: each SupportBean('E10',-1) emits c0=10 and the service's calculations list grows 1 then 2 (STATICHOOK: the services registry is metadata-only)",
+   "epl": "create variable ExprDefineLocalService myService = new ExprDefineLocalService();\ncreate expression doit {v -> myService.calc(v)};\n@name('s0') select doit(theString) as c0 from SupportBean;\n"
+  },
+  {
+   "case": "subquery",
+   "ordinal": 11,
+   "runtimeId": "java-runtime-45b280bc6b857cf5fa3a",
+   "executionName": "ExprDefineValueParameterSubquery",
+   "observation": "deployed+listener; statement-local expression cc { (v1, v2) -> v1 || v2} receives two scalar subqueries over SupportBean_S0#lastevent projecting p00 and p01; one SupportBean_S1(0) send with no S0 events emits c0=null (null||null)",
+   "epl": "@name('s0') expression cc { (v1, v2) -> v1 || v2} select cc((select p00 from SupportBean_S0#lastevent), (select p01 from SupportBean_S0#lastevent)) as c0 from SupportBean_S1;\n"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "eveve"
+  },
+  {
+   "op": "deploy",
+   "case": "eveve",
+   "statement": "cc",
+   "epl": "@public create expression cc { (a,v1,b,v2,c) -> a.p00 || v1 || b.p00 || v2 || c.p00}"
+  },
+  {
+   "op": "deployed",
+   "case": "eveve",
+   "statement": "cc"
+  },
+  {
+   "op": "deploy",
+   "case": "eveve",
+   "statement": "module",
+   "epl": "@name('s0') select cc(e2, 'x', e3, 'y', e1) as c0 from \nSupportBean_S0(id=1)#lastevent as e1, SupportBean_S0(id=2)#lastevent as e2, SupportBean_S0(id=3)#lastevent as e3;\n@name('s1') select cc(e2, 'x', e3, 'y', e1) as c0 from \nSupportBean_S0(id=1)#lastevent as e3, SupportBean_S0(id=2)#lastevent as e2, SupportBean_S0(id=3)#lastevent as e1;\n@name('s2') select cc(e1, 'x', e2, 'y', e3) as c0 from \nSupportBean_S0(id=1)#lastevent as e3, SupportBean_S0(id=2)#lastevent as e2, SupportBean_S0(id=3)#lastevent as e1;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "eveve",
+   "statement": "module"
+  },
+  {
+   "op": "types",
+   "case": "eveve",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "eveve",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1,
+    "p00": "A"
+   }
+  },
+  {
+   "op": "send",
+   "case": "eveve",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 3,
+    "p00": "C"
+   }
+  },
+  {
+   "op": "send",
+   "case": "eveve",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 2,
+    "p00": "B"
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "eveve"
+  },
+  {
+   "op": "case",
+   "case": "cache"
+  },
+  {
+   "op": "deploy",
+   "case": "cache",
+   "statement": "module",
+   "epl": "create variable ExprDefineLocalService myService = new ExprDefineLocalService();\ncreate expression doit {v -> myService.calc(v)};\n@name('s0') select doit(theString) as c0 from SupportBean;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "cache",
+   "statement": "module"
+  },
+  {
+   "op": "send",
+   "case": "cache",
+   "eventType": "SupportBean",
+   "payload": {
+    "intPrimitive": -1,
+    "theString": "E10"
+   }
+  },
+  {
+   "op": "iterator-count",
+   "case": "cache",
+   "statement": "s0",
+   "count": 1
+  },
+  {
+   "op": "send",
+   "case": "cache",
+   "eventType": "SupportBean",
+   "payload": {
+    "intPrimitive": -1,
+    "theString": "E10"
+   }
+  },
+  {
+   "op": "iterator-count",
+   "case": "cache",
+   "statement": "s0",
+   "count": 2
+  },
+  {
+   "op": "undeploy-all",
+   "case": "cache"
+  },
+  {
+   "op": "case",
+   "case": "subquery"
+  },
+  {
+   "op": "deploy",
+   "case": "subquery",
+   "statement": "s0",
+   "epl": "@name('s0') expression cc { (v1, v2) -> v1 || v2} select cc((select p00 from SupportBean_S0#lastevent), (select p01 from SupportBean_S0#lastevent)) as c0 from SupportBean_S1"
+  },
+  {
+   "op": "deployed",
+   "case": "subquery",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "subquery",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "subquery"
+  }
+ ]
+}

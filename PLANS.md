@@ -56,6 +56,31 @@ activity or a single coverage percentage.
 
 ## Current work unit
 
+Active: Draft 4.537 ('expr-define-value-parameter').
+
+- Selection: `ExprDefineValueParameter.java` remaining 3 unreferenced
+  executions — ord 7 `ExprDefineValueParameterEVEVE`
+  (`java-runtime-d1b67308d74aec6b3092`), ord 9 `ExprDefineValueParameterCache`
+  (`java-runtime-65eb95bacf881252faa4`, STATICHOOK), ord 11
+  `ExprDefineValueParameterSubquery` (`java-runtime-45b280bc6b857cf5fa3a`).
+- [x] Java contract scout (JavaContract537) + Go surface scout
+  (GoSurface537) complete; contract frozen in the Assets537 task batch
+  context. EVEVE: 5-param declared expr (E/V interleaved) over a 3-way
+  filtered #lastevent self-join, alias-swap matrix → BxCyA/BxAyC/CxByA.
+  Cache: object variable + Method call inside declared expr, per-event
+  invocation count observable (STATICHOOK metadata-only). Subquery:
+  statement-local cc via WithExpression, scalar subquery args, null||null.
+- [x] Assets537 dispatched for scenario/oracle/runner/wiring.
+- [x] Assets537 delivered scenario (3 cases), oracle, run.sh, runner,
+  wiring; verified zero-diff on /tmp copies (13 records each side).
+- [x] Java trace + Go trace + evidence generated; `-diff` passing /
+  0 differences; 6-test family green; `make check` exit 0.
+- [x] Manifest: `case.expr-define-value-parameter` (DV, ords 7/9/11)
+  under `expr.declared`; 768 cases / 393 DV / 1550 DV runtime IDs /
+  unreferenced 491. Roadmap + CHANGELOG updated.
+- [ ] Parity review (Review537 running), commit.
+## Current work unit
+
 Active: Draft 4.536 ('epl-other-create-expression').
 
 - Selection: `EPLOtherCreateExpression.java` all 5 unreferenced executions:
