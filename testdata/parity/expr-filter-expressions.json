@@ -1,0 +1,406 @@
+{
+  "version": "esper-parity/v1",
+  "id": "expr-filter-expressions",
+  "description": "ExprFilterExpressions filter-expression sites (pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c): ExprFilterOverInClause (ord 7) deploys pattern[every event1=SupportTradeEvent(userId in ('100','101'),amount>=1000)] s0 then pattern [every event1=SupportTradeEvent(userId in ('100','101'))] s1 — 'every' is cumulative so both statements fire on the second send; ExprFilterStaticFunc (ord 17) runs the runIsInvokedWTestdata matrix over 8 statements mixing SupportStaticMethodLib.isStringEquals, theString || 'x' concat, comma-vs-and conjunctions and reversed equals, sending 'a','b','c' with invoked flags [F,T,F] for s0-s6 and [F,F,F] for the unsatisfiable s7; ExprFilterInstanceMethodWWildcard (ord 27) runs three deploy/send/undeployAll cycles asserting instance-method filters: s0.myInstanceMethodAlwaysTrue() [T,T,T], s0.myInstanceMethodEventBean(s0,'x',1) [F,T,F] and the '*' wildcard argument [F,T,F]. Java milestones are ordering markers with no virtual time; assertEqualsNew/assertListenerInvokedFlag map to listener records on fire and listener-not-invoked count records otherwise (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterExpressions.java).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterExpressions.java",
+  "javaRuntimes": [
+    "java-runtime-e9c9627ad604f3404620",
+    "java-runtime-15341d9e0dc15c4b2fc3",
+    "java-runtime-0a80365acd3e6ab25238"
+  ],
+  "javaNames": [
+    "ExprFilterOverInClause",
+    "ExprFilterStaticFunc",
+    "ExprFilterInstanceMethodWWildcard"
+  ],
+  "javaStaticIds": [
+    "java-9d2f2743881d949bbddc",
+    "java-314bbbdca28d0445fdd0",
+    "java-576e4853b035fd6064f5"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "over-in-clause",
+      "ordinal": 7,
+      "runtimeId": "java-runtime-e9c9627ad604f3404620",
+      "executionName": "ExprFilterOverInClause",
+      "observation": "listener; s0 pattern[every event1=SupportTradeEvent(userId in ('100','101'),amount>=1000)] fires on Trade(1,'100',1001); after s1 pattern [every event1=SupportTradeEvent(userId in ('100','101'))] deploys, Trade(2,'100',1001) fires both s0 and s1 — 'every' keeps s0 cumulative",
+      "epl": "@name('s0') select * from pattern[every event1=SupportTradeEvent(userId in ('100','101'),amount>=1000)]\n@name('s1') select * from pattern [every event1=SupportTradeEvent(userId in ('100','101'))]\n"
+    },
+    {
+      "case": "static-func",
+      "ordinal": 17,
+      "runtimeId": "java-runtime-15341d9e0dc15c4b2fc3",
+      "executionName": "ExprFilterStaticFunc",
+      "observation": "listener+invoked-flags; runIsInvokedWTestdata over 8 statements s0-s7 (isStringEquals UDF, theString || 'x' concat, comma-vs-and, reversed equals, unsatisfiable conjunction): sends 'a','b','c' yield [F,T,F] for s0-s6 and [F,F,F] for s7",
+      "epl": "@name('s0') select * from SupportBean(com.espertech.esper.regressionlib.support.epl.SupportStaticMethodLib.isStringEquals('b', theString))\n@name('s1') select * from SupportBean(com.espertech.esper.regressionlib.support.epl.SupportStaticMethodLib.isStringEquals('bx', theString || 'x'))\n@name('s2') select * from SupportBean('b'=theString,com.espertech.esper.regressionlib.support.epl.SupportStaticMethodLib.isStringEquals('bx', theString || 'x'))\n@name('s3') select * from SupportBean('b'=theString, theString='b', theString != 'a')\n@name('s4') select * from SupportBean(theString != 'a', theString != 'c')\n@name('s5') select * from SupportBean(theString = 'b', theString != 'c')\n@name('s6') select * from SupportBean(theString != 'a' and theString != 'c')\n@name('s7') select * from SupportBean(theString = 'a' and theString = 'c' and com.espertech.esper.regressionlib.support.epl.SupportStaticMethodLib.isStringEquals('bx', theString || 'x'))\n"
+    },
+    {
+      "case": "instance-method-wildcard",
+      "ordinal": 27,
+      "runtimeId": "java-runtime-0a80365acd3e6ab25238",
+      "executionName": "ExprFilterInstanceMethodWWildcard",
+      "observation": "listener+invoked-flags; three deploy/send/undeployAll cycles: s0.myInstanceMethodAlwaysTrue() fires [T,T,T], s0.myInstanceMethodEventBean(s0,'x',1) fires [F,T,F] only for x=1, and the '*' wildcard argument fires identically [F,T,F]",
+      "epl": "@name('s0') select * from SupportInstanceMethodBean(s0.myInstanceMethodAlwaysTrue()) as s0\n@name('s0') select * from SupportInstanceMethodBean(s0.myInstanceMethodEventBean(s0, 'x', 1)) as s0\n@name('s0') select * from SupportInstanceMethodBean(s0.myInstanceMethodEventBean(*, 'x', 1)) as s0\n"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "over-in-clause"
+    },
+    {
+      "op": "deploy",
+      "case": "over-in-clause",
+      "statement": "s0",
+      "epl": "@name('s0') select * from pattern[every event1=SupportTradeEvent(userId in ('100','101'),amount>=1000)]"
+    },
+    {
+      "op": "deployed",
+      "case": "over-in-clause",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "over-in-clause",
+      "eventType": "SupportTradeEvent",
+      "payload": {
+        "id": 1,
+        "userId": "100",
+        "amount": 1001,
+        "expected": {
+          "s0": true
+        }
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "over-in-clause",
+      "statement": "s1",
+      "epl": "@name('s1') select * from pattern [every event1=SupportTradeEvent(userId in ('100','101'))]"
+    },
+    {
+      "op": "deployed",
+      "case": "over-in-clause",
+      "statement": "s1"
+    },
+    {
+      "op": "send",
+      "case": "over-in-clause",
+      "eventType": "SupportTradeEvent",
+      "payload": {
+        "id": 2,
+        "userId": "100",
+        "amount": 1001,
+        "expected": {
+          "s0": true,
+          "s1": true
+        }
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "over-in-clause"
+    },
+    {
+      "op": "case",
+      "case": "static-func"
+    },
+    {
+      "op": "deploy",
+      "case": "static-func",
+      "statement": "s0",
+      "epl": "@name('s0') select * from SupportBean(com.espertech.esper.regressionlib.support.epl.SupportStaticMethodLib.isStringEquals('b', theString))"
+    },
+    {
+      "op": "deployed",
+      "case": "static-func",
+      "statement": "s0"
+    },
+    {
+      "op": "deploy",
+      "case": "static-func",
+      "statement": "s1",
+      "epl": "@name('s1') select * from SupportBean(com.espertech.esper.regressionlib.support.epl.SupportStaticMethodLib.isStringEquals('bx', theString || 'x'))"
+    },
+    {
+      "op": "deployed",
+      "case": "static-func",
+      "statement": "s1"
+    },
+    {
+      "op": "deploy",
+      "case": "static-func",
+      "statement": "s2",
+      "epl": "@name('s2') select * from SupportBean('b'=theString,com.espertech.esper.regressionlib.support.epl.SupportStaticMethodLib.isStringEquals('bx', theString || 'x'))"
+    },
+    {
+      "op": "deployed",
+      "case": "static-func",
+      "statement": "s2"
+    },
+    {
+      "op": "deploy",
+      "case": "static-func",
+      "statement": "s3",
+      "epl": "@name('s3') select * from SupportBean('b'=theString, theString='b', theString != 'a')"
+    },
+    {
+      "op": "deployed",
+      "case": "static-func",
+      "statement": "s3"
+    },
+    {
+      "op": "deploy",
+      "case": "static-func",
+      "statement": "s4",
+      "epl": "@name('s4') select * from SupportBean(theString != 'a', theString != 'c')"
+    },
+    {
+      "op": "deployed",
+      "case": "static-func",
+      "statement": "s4"
+    },
+    {
+      "op": "deploy",
+      "case": "static-func",
+      "statement": "s5",
+      "epl": "@name('s5') select * from SupportBean(theString = 'b', theString != 'c')"
+    },
+    {
+      "op": "deployed",
+      "case": "static-func",
+      "statement": "s5"
+    },
+    {
+      "op": "deploy",
+      "case": "static-func",
+      "statement": "s6",
+      "epl": "@name('s6') select * from SupportBean(theString != 'a' and theString != 'c')"
+    },
+    {
+      "op": "deployed",
+      "case": "static-func",
+      "statement": "s6"
+    },
+    {
+      "op": "deploy",
+      "case": "static-func",
+      "statement": "s7",
+      "epl": "@name('s7') select * from SupportBean(theString = 'a' and theString = 'c' and com.espertech.esper.regressionlib.support.epl.SupportStaticMethodLib.isStringEquals('bx', theString || 'x'))"
+    },
+    {
+      "op": "deployed",
+      "case": "static-func",
+      "statement": "s7"
+    },
+    {
+      "op": "send",
+      "case": "static-func",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "a",
+        "expected": {
+          "s0": false,
+          "s1": false,
+          "s2": false,
+          "s3": false,
+          "s4": false,
+          "s5": false,
+          "s6": false,
+          "s7": false
+        }
+      }
+    },
+    {
+      "op": "send",
+      "case": "static-func",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "b",
+        "expected": {
+          "s0": true,
+          "s1": true,
+          "s2": true,
+          "s3": true,
+          "s4": true,
+          "s5": true,
+          "s6": true,
+          "s7": false
+        }
+      }
+    },
+    {
+      "op": "send",
+      "case": "static-func",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c",
+        "expected": {
+          "s0": false,
+          "s1": false,
+          "s2": false,
+          "s3": false,
+          "s4": false,
+          "s5": false,
+          "s6": false,
+          "s7": false
+        }
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "static-func"
+    },
+    {
+      "op": "case",
+      "case": "instance-method-wildcard"
+    },
+    {
+      "op": "deploy",
+      "case": "instance-method-wildcard",
+      "statement": "s0",
+      "epl": "@name('s0') select * from SupportInstanceMethodBean(s0.myInstanceMethodAlwaysTrue()) as s0"
+    },
+    {
+      "op": "deployed",
+      "case": "instance-method-wildcard",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "instance-method-wildcard",
+      "eventType": "SupportInstanceMethodBean",
+      "payload": {
+        "x": 0,
+        "expected": {
+          "s0": true
+        }
+      }
+    },
+    {
+      "op": "send",
+      "case": "instance-method-wildcard",
+      "eventType": "SupportInstanceMethodBean",
+      "payload": {
+        "x": 1,
+        "expected": {
+          "s0": true
+        }
+      }
+    },
+    {
+      "op": "send",
+      "case": "instance-method-wildcard",
+      "eventType": "SupportInstanceMethodBean",
+      "payload": {
+        "x": 2,
+        "expected": {
+          "s0": true
+        }
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "instance-method-wildcard"
+    },
+    {
+      "op": "deploy",
+      "case": "instance-method-wildcard",
+      "statement": "s0",
+      "epl": "@name('s0') select * from SupportInstanceMethodBean(s0.myInstanceMethodEventBean(s0, 'x', 1)) as s0"
+    },
+    {
+      "op": "deployed",
+      "case": "instance-method-wildcard",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "instance-method-wildcard",
+      "eventType": "SupportInstanceMethodBean",
+      "payload": {
+        "x": 0,
+        "expected": {
+          "s0": false
+        }
+      }
+    },
+    {
+      "op": "send",
+      "case": "instance-method-wildcard",
+      "eventType": "SupportInstanceMethodBean",
+      "payload": {
+        "x": 1,
+        "expected": {
+          "s0": true
+        }
+      }
+    },
+    {
+      "op": "send",
+      "case": "instance-method-wildcard",
+      "eventType": "SupportInstanceMethodBean",
+      "payload": {
+        "x": 2,
+        "expected": {
+          "s0": false
+        }
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "instance-method-wildcard"
+    },
+    {
+      "op": "deploy",
+      "case": "instance-method-wildcard",
+      "statement": "s0",
+      "epl": "@name('s0') select * from SupportInstanceMethodBean(s0.myInstanceMethodEventBean(*, 'x', 1)) as s0"
+    },
+    {
+      "op": "deployed",
+      "case": "instance-method-wildcard",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "instance-method-wildcard",
+      "eventType": "SupportInstanceMethodBean",
+      "payload": {
+        "x": 0,
+        "expected": {
+          "s0": false
+        }
+      }
+    },
+    {
+      "op": "send",
+      "case": "instance-method-wildcard",
+      "eventType": "SupportInstanceMethodBean",
+      "payload": {
+        "x": 1,
+        "expected": {
+          "s0": true
+        }
+      }
+    },
+    {
+      "op": "send",
+      "case": "instance-method-wildcard",
+      "eventType": "SupportInstanceMethodBean",
+      "payload": {
+        "x": 2,
+        "expected": {
+          "s0": false
+        }
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "instance-method-wildcard"
+    }
+  ]
+}

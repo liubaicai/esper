@@ -422,6 +422,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultsetOutputLimitRowLimitVariableScenario(file)
 	} else if *mode == "expr-filter-in-and-between" || *mode == "expr-filter-in-and-between-diff" {
 		scenario, err = loadEfabScenario(file)
+	} else if *mode == "expr-filter-expressions" || *mode == "expr-filter-expressions-diff" {
+		scenario, err = loadEfeScenario(file)
 	} else if *mode == "infra-table-join" || *mode == "infra-table-join-diff" {
 		scenario, err = loadInfraTableJoinScenario(file)
 	} else if *mode == "infra-table-reset" || *mode == "infra-table-reset-diff" {
@@ -5828,6 +5830,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, efabJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, efabSources),
 				splitMetadata(*javaExecutions, efabJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "expr-filter-expressions" || *mode == "expr-filter-expressions-diff" {
+		trace, err := runEfeScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "expr-filter-expressions-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, efeJavaCommit,
+				splitMetadata(*javaRuntimeIDs, efeJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, efeSources),
+				splitMetadata(*javaExecutions, efeJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

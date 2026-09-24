@@ -1,0 +1,2036 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-e9c9627ad604f3404620",
+    "java-runtime-15341d9e0dc15c4b2fc3",
+    "java-runtime-0a80365acd3e6ab25238"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterExpressions.java"
+  ],
+  "javaExecutions": [
+    "ExprFilterOverInClause",
+    "ExprFilterStaticFunc",
+    "ExprFilterInstanceMethodWWildcard"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "expr-filter-expressions",
+    "steps": [
+      {
+        "op": "case",
+        "case": "over-in-clause"
+      },
+      {
+        "op": "deploy",
+        "case": "over-in-clause",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern[every event1=SupportTradeEvent(userId in ('100','101'),amount\u003e=1000)]"
+      },
+      {
+        "op": "deployed",
+        "case": "over-in-clause",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "over-in-clause",
+        "eventType": "SupportTradeEvent",
+        "payload": {
+          "id": 1,
+          "userId": "100",
+          "amount": 1001,
+          "expected": {
+            "s0": true
+          }
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "over-in-clause",
+        "statement": "s1",
+        "epl": "@name('s1') select * from pattern [every event1=SupportTradeEvent(userId in ('100','101'))]"
+      },
+      {
+        "op": "deployed",
+        "case": "over-in-clause",
+        "statement": "s1"
+      },
+      {
+        "op": "send",
+        "case": "over-in-clause",
+        "eventType": "SupportTradeEvent",
+        "payload": {
+          "id": 2,
+          "userId": "100",
+          "amount": 1001,
+          "expected": {
+            "s0": true,
+            "s1": true
+          }
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "over-in-clause"
+      },
+      {
+        "op": "case",
+        "case": "static-func"
+      },
+      {
+        "op": "deploy",
+        "case": "static-func",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportBean(com.espertech.esper.regressionlib.support.epl.SupportStaticMethodLib.isStringEquals('b', theString))"
+      },
+      {
+        "op": "deployed",
+        "case": "static-func",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "static-func",
+        "statement": "s1",
+        "epl": "@name('s1') select * from SupportBean(com.espertech.esper.regressionlib.support.epl.SupportStaticMethodLib.isStringEquals('bx', theString || 'x'))"
+      },
+      {
+        "op": "deployed",
+        "case": "static-func",
+        "statement": "s1"
+      },
+      {
+        "op": "deploy",
+        "case": "static-func",
+        "statement": "s2",
+        "epl": "@name('s2') select * from SupportBean('b'=theString,com.espertech.esper.regressionlib.support.epl.SupportStaticMethodLib.isStringEquals('bx', theString || 'x'))"
+      },
+      {
+        "op": "deployed",
+        "case": "static-func",
+        "statement": "s2"
+      },
+      {
+        "op": "deploy",
+        "case": "static-func",
+        "statement": "s3",
+        "epl": "@name('s3') select * from SupportBean('b'=theString, theString='b', theString != 'a')"
+      },
+      {
+        "op": "deployed",
+        "case": "static-func",
+        "statement": "s3"
+      },
+      {
+        "op": "deploy",
+        "case": "static-func",
+        "statement": "s4",
+        "epl": "@name('s4') select * from SupportBean(theString != 'a', theString != 'c')"
+      },
+      {
+        "op": "deployed",
+        "case": "static-func",
+        "statement": "s4"
+      },
+      {
+        "op": "deploy",
+        "case": "static-func",
+        "statement": "s5",
+        "epl": "@name('s5') select * from SupportBean(theString = 'b', theString != 'c')"
+      },
+      {
+        "op": "deployed",
+        "case": "static-func",
+        "statement": "s5"
+      },
+      {
+        "op": "deploy",
+        "case": "static-func",
+        "statement": "s6",
+        "epl": "@name('s6') select * from SupportBean(theString != 'a' and theString != 'c')"
+      },
+      {
+        "op": "deployed",
+        "case": "static-func",
+        "statement": "s6"
+      },
+      {
+        "op": "deploy",
+        "case": "static-func",
+        "statement": "s7",
+        "epl": "@name('s7') select * from SupportBean(theString = 'a' and theString = 'c' and com.espertech.esper.regressionlib.support.epl.SupportStaticMethodLib.isStringEquals('bx', theString || 'x'))"
+      },
+      {
+        "op": "deployed",
+        "case": "static-func",
+        "statement": "s7"
+      },
+      {
+        "op": "send",
+        "case": "static-func",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "a",
+          "expected": {
+            "s0": false,
+            "s1": false,
+            "s2": false,
+            "s3": false,
+            "s4": false,
+            "s5": false,
+            "s6": false,
+            "s7": false
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "static-func",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "b",
+          "expected": {
+            "s0": true,
+            "s1": true,
+            "s2": true,
+            "s3": true,
+            "s4": true,
+            "s5": true,
+            "s6": true,
+            "s7": false
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "static-func",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "c",
+          "expected": {
+            "s0": false,
+            "s1": false,
+            "s2": false,
+            "s3": false,
+            "s4": false,
+            "s5": false,
+            "s6": false,
+            "s7": false
+          }
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "static-func"
+      },
+      {
+        "op": "case",
+        "case": "instance-method-wildcard"
+      },
+      {
+        "op": "deploy",
+        "case": "instance-method-wildcard",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportInstanceMethodBean(s0.myInstanceMethodAlwaysTrue()) as s0"
+      },
+      {
+        "op": "deployed",
+        "case": "instance-method-wildcard",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "instance-method-wildcard",
+        "eventType": "SupportInstanceMethodBean",
+        "payload": {
+          "x": 0,
+          "expected": {
+            "s0": true
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "instance-method-wildcard",
+        "eventType": "SupportInstanceMethodBean",
+        "payload": {
+          "x": 1,
+          "expected": {
+            "s0": true
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "instance-method-wildcard",
+        "eventType": "SupportInstanceMethodBean",
+        "payload": {
+          "x": 2,
+          "expected": {
+            "s0": true
+          }
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "instance-method-wildcard"
+      },
+      {
+        "op": "deploy",
+        "case": "instance-method-wildcard",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportInstanceMethodBean(s0.myInstanceMethodEventBean(s0, 'x', 1)) as s0"
+      },
+      {
+        "op": "deployed",
+        "case": "instance-method-wildcard",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "instance-method-wildcard",
+        "eventType": "SupportInstanceMethodBean",
+        "payload": {
+          "x": 0,
+          "expected": {
+            "s0": false
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "instance-method-wildcard",
+        "eventType": "SupportInstanceMethodBean",
+        "payload": {
+          "x": 1,
+          "expected": {
+            "s0": true
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "instance-method-wildcard",
+        "eventType": "SupportInstanceMethodBean",
+        "payload": {
+          "x": 2,
+          "expected": {
+            "s0": false
+          }
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "instance-method-wildcard"
+      },
+      {
+        "op": "deploy",
+        "case": "instance-method-wildcard",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportInstanceMethodBean(s0.myInstanceMethodEventBean(*, 'x', 1)) as s0"
+      },
+      {
+        "op": "deployed",
+        "case": "instance-method-wildcard",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "instance-method-wildcard",
+        "eventType": "SupportInstanceMethodBean",
+        "payload": {
+          "x": 0,
+          "expected": {
+            "s0": false
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "instance-method-wildcard",
+        "eventType": "SupportInstanceMethodBean",
+        "payload": {
+          "x": 1,
+          "expected": {
+            "s0": true
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "instance-method-wildcard",
+        "eventType": "SupportInstanceMethodBean",
+        "payload": {
+          "x": 2,
+          "expected": {
+            "s0": false
+          }
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "instance-method-wildcard"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-filter-expressions",
+    "records": [
+      {
+        "case": "over-in-clause",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "over-in-clause",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event1": {
+                "amount": 1001,
+                "ccypair": {
+                  "state": "null"
+                },
+                "direction": {
+                  "state": "null"
+                },
+                "id": 1,
+                "userId": "100"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-in-clause",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "over-in-clause",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event1": {
+                "amount": 1001,
+                "ccypair": {
+                  "state": "null"
+                },
+                "direction": {
+                  "state": "null"
+                },
+                "id": 2,
+                "userId": "100"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-in-clause",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event1": {
+                "amount": 1001,
+                "ccypair": {
+                  "state": "null"
+                },
+                "direction": {
+                  "state": "null"
+                },
+                "id": 2,
+                "userId": "100"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "static-func",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "static-func",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "static-func",
+        "operation": "deployed",
+        "statement": "s2",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "static-func",
+        "operation": "deployed",
+        "statement": "s3",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "static-func",
+        "operation": "deployed",
+        "statement": "s4",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "static-func",
+        "operation": "deployed",
+        "statement": "s5",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "static-func",
+        "operation": "deployed",
+        "statement": "s6",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "static-func",
+        "operation": "deployed",
+        "statement": "s7",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s1",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s2",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s3",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s4",
+        "sequence": 13,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s5",
+        "sequence": 14,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s6",
+        "sequence": 15,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s7",
+        "sequence": 16,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 17,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": -1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "static-func",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 18,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": -1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "static-func",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 19,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": -1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "static-func",
+        "operation": "listener",
+        "statement": "s3",
+        "sequence": 20,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": -1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "static-func",
+        "operation": "listener",
+        "statement": "s4",
+        "sequence": 21,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": -1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "static-func",
+        "operation": "listener",
+        "statement": "s5",
+        "sequence": 22,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": -1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "static-func",
+        "operation": "listener",
+        "statement": "s6",
+        "sequence": 23,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": -1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s7",
+        "sequence": 24,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s0",
+        "sequence": 25,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s1",
+        "sequence": 26,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s2",
+        "sequence": 27,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s3",
+        "sequence": 28,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s4",
+        "sequence": 29,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s5",
+        "sequence": 30,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s6",
+        "sequence": 31,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s7",
+        "sequence": 32,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "instance-method-wildcard",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "instance-method-wildcard",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "x": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "instance-method-wildcard",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "x": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "instance-method-wildcard",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "x": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "instance-method-wildcard",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "instance-method-wildcard",
+        "operation": "count",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "instance-method-wildcard",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "x": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "instance-method-wildcard",
+        "operation": "count",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "instance-method-wildcard",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "instance-method-wildcard",
+        "operation": "count",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "instance-method-wildcard",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "x": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "instance-method-wildcard",
+        "operation": "count",
+        "statement": "s0",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-filter-expressions",
+    "records": [
+      {
+        "case": "over-in-clause",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "over-in-clause",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event1": {
+                "amount": 1001,
+                "ccypair": {
+                  "state": "null"
+                },
+                "direction": {
+                  "state": "null"
+                },
+                "id": 1,
+                "userId": "100"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-in-clause",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "over-in-clause",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event1": {
+                "amount": 1001,
+                "ccypair": {
+                  "state": "null"
+                },
+                "direction": {
+                  "state": "null"
+                },
+                "id": 2,
+                "userId": "100"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-in-clause",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event1": {
+                "amount": 1001,
+                "ccypair": {
+                  "state": "null"
+                },
+                "direction": {
+                  "state": "null"
+                },
+                "id": 2,
+                "userId": "100"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "static-func",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "static-func",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "static-func",
+        "operation": "deployed",
+        "statement": "s2",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "static-func",
+        "operation": "deployed",
+        "statement": "s3",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "static-func",
+        "operation": "deployed",
+        "statement": "s4",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "static-func",
+        "operation": "deployed",
+        "statement": "s5",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "static-func",
+        "operation": "deployed",
+        "statement": "s6",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "static-func",
+        "operation": "deployed",
+        "statement": "s7",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s1",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s2",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s3",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s4",
+        "sequence": 13,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s5",
+        "sequence": 14,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s6",
+        "sequence": 15,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s7",
+        "sequence": 16,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 17,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": -1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "static-func",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 18,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": -1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "static-func",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 19,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": -1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "static-func",
+        "operation": "listener",
+        "statement": "s3",
+        "sequence": 20,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": -1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "static-func",
+        "operation": "listener",
+        "statement": "s4",
+        "sequence": 21,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": -1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "static-func",
+        "operation": "listener",
+        "statement": "s5",
+        "sequence": 22,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": -1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "static-func",
+        "operation": "listener",
+        "statement": "s6",
+        "sequence": 23,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": -1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s7",
+        "sequence": 24,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s0",
+        "sequence": 25,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s1",
+        "sequence": 26,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s2",
+        "sequence": 27,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s3",
+        "sequence": 28,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s4",
+        "sequence": 29,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s5",
+        "sequence": 30,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s6",
+        "sequence": 31,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "static-func",
+        "operation": "count",
+        "statement": "s7",
+        "sequence": 32,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "instance-method-wildcard",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "instance-method-wildcard",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "x": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "instance-method-wildcard",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "x": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "instance-method-wildcard",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "x": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "instance-method-wildcard",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "instance-method-wildcard",
+        "operation": "count",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "instance-method-wildcard",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "x": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "instance-method-wildcard",
+        "operation": "count",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "instance-method-wildcard",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "instance-method-wildcard",
+        "operation": "count",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      },
+      {
+        "case": "instance-method-wildcard",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "x": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "instance-method-wildcard",
+        "operation": "count",
+        "statement": "s0",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-not-invoked",
+        "count": 0
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

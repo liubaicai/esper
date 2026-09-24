@@ -613,6 +613,7 @@
     "internal/app/parity/expr_dt_data_sources.go",
     "internal/app/parity/expr_dt_interval_ops.go",
     "internal/app/parity/expr_dt_resolution.go",
+    "internal/app/parity/expr_filter_expressions.go",
     "internal/app/parity/run_test.go",
     "internal/esper/enum_expr.go",
     "internal/esper/epl_other_unary_minus_parity_test.go",
@@ -49174,6 +49175,52 @@
     "java-runtime-bc85bc8d79bc09bb8500"
    ],
    "notes": "ExprClassClassDependency all 3 executions. 5 records (3 listener + 2 compile-error), 0 differences."
+  },
+  {
+   "id": "case.expr-filter-expressions",
+   "javaRuntimeIds": [
+    "java-runtime-e9c9627ad604f3404620",
+    "java-runtime-15341d9e0dc15c4b2fc3",
+    "java-runtime-0a80365acd3e6ab25238"
+   ],
+   "javaStaticIds": [
+    "java-9d2f2743881d949bbddc",
+    "java-314bbbdca28d0445fdd0",
+    "java-576e4853b035fd6064f5"
+   ],
+   "javaNames": [
+    "ExprFilterOverInClause",
+    "ExprFilterStaticFunc",
+    "ExprFilterInstanceMethodWWildcard"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterExpressions.java"
+   ],
+   "goTests": [
+    "internal/app/parity/expr_filter_expressions.go",
+    "internal/app/parity/run_test.go"
+   ],
+   "tags": [
+    "expr",
+    "filter",
+    "born-differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/expr-filter-expressions.evidence.json"
+   ],
+   "difference": "Filter expressions: in-clause+relational inside pattern atom (every-cumulative), static UDF + equals/and/comma filter sites (8 statements, invoked-flags), instance method in filter with stream alias and '*' wildcard as EventBean. EPL pinned but never replayed.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-e9c9627ad604f3404620",
+    "java-runtime-15341d9e0dc15c4b2fc3",
+    "java-runtime-0a80365acd3e6ab25238"
+   ],
+   "notes": "ExprFilterExpressions ords 7/17/27. 49 records (13 deployed + 15 listener + 21 listener-not-invoked), 0 differences."
   }
  ],
  "mappings": [
@@ -52560,13 +52607,17 @@
   {
    "capabilityId": "expr.core",
    "caseId": "case.expr-class-class-dependency"
+  },
+  {
+   "capabilityId": "expr.core",
+   "caseId": "case.expr-filter-expressions"
   }
  ],
  "summary": {
-  "inventoriedCases": 760,
-  "implementedCases": 758,
-  "differentialVerifiedCases": 386,
-  "differentialVerifiedRuntimeIds": 1517,
+  "inventoriedCases": 761,
+  "implementedCases": 759,
+  "differentialVerifiedCases": 387,
+  "differentialVerifiedRuntimeIds": 1520,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -52576,13 +52627,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4051,
-  "referencedJavaRuntimeIds": 3621,
+  "runtimeAssociationCount": 4054,
+  "referencedJavaRuntimeIds": 3624,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 515,
+  "unreferencedJavaRuntimeIds": 512,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 760,
+  "totalCases": 761,
   "totalCapabilities": 126
  }
 }

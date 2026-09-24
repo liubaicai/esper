@@ -69199,6 +69199,412 @@ func assertEfabTrace(t *testing.T, trace compat.Trace) {
 	}
 }
 
+func TestRunEfeDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", efeID,
+		"-scenario", filepath.Join(root, efeID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertEfeTrace(t, trace)
+}
+
+func TestRunEfeDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), efeID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", efeID + "-diff",
+		"-scenario", filepath.Join(root, efeID+".json"),
+		"-java-trace", filepath.Join(root, efeID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != efeJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, efeJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{efeSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, efeJavaExecutions) {
+		t.Fatalf("evidence metadata = %#v", evidence)
+	}
+}
+
+func TestRunEfeCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, efeID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, efeID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, efeID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if evidence.JavaCommit != efeJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, efeJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{efeSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, efeJavaExecutions) {
+		t.Fatalf("checked-in Java metadata = %#v", evidence)
+	}
+	assertEfeTrace(t, javaTrace)
+	assertEfeTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, efeID+".json")
+	scenarioData, err := os.ReadFile(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rawScenario struct {
+		Version string        `json:"version"`
+		ID      string        `json:"id"`
+		Steps   []compat.Step `json:"steps"`
+	}
+	if err := json.Unmarshal(scenarioData, &rawScenario); err != nil {
+		t.Fatal(err)
+	}
+	scenario := compat.Scenario{Version: rawScenario.Version, ID: rawScenario.ID, Steps: rawScenario.Steps}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatalf("checked-in scenario differs from evidence scenario")
+	}
+}
+
+func TestRunEfeDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "over-tag-id-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "over-in-clause" && rec.Operation == "listener" && len(rec.New) > 0 {
+						rec.New[0].Fields["event1"].(map[string]any)["id"] = json.Number("99")
+						return
+					}
+				}
+				panic("no over-in-clause listener record")
+			},
+		},
+		{
+			name: "static-func-thestring-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "static-func" && rec.Operation == "listener" && len(rec.New) > 0 {
+						rec.New[0].Fields["theString"] = "x"
+						return
+					}
+				}
+				panic("no static-func listener record")
+			},
+		},
+		{
+			name: "static-func-s7-fired",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "static-func" && rec.Operation == "count" && rec.Statement == "s7" {
+						rec.Operation = "listener"
+						rec.Name = ""
+						rec.Count = nil
+						rec.New = []compat.ResultRecord{{Kind: "row", Fields: map[string]any{"theString": "b"}}}
+						return
+					}
+				}
+				panic("no static-func s7 count record")
+			},
+		},
+		{
+			name: "instance-method-x-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "instance-method-wildcard" && rec.Operation == "listener" && len(rec.New) > 0 {
+						rec.New[0].Fields["x"] = json.Number("9")
+						return
+					}
+				}
+				panic("no instance-method-wildcard listener record")
+			},
+		},
+		{
+			name: "count-name-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "instance-method-wildcard" && rec.Operation == "count" {
+						rec.Name = "wrong"
+						return
+					}
+				}
+				panic("no instance-method-wildcard count record")
+			},
+		},
+		{
+			name: "deployed-sequence-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "static-func" && rec.Operation == "deployed" && rec.Statement == "s0" {
+						rec.Sequence = 99
+						return
+					}
+				}
+				panic("no static-func deployed record")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			data, err := os.ReadFile(filepath.Join(root, efeID+".trace.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			trace, err := compat.LoadTrace(strings.NewReader(string(data)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			test.mutate(&trace)
+			mutatedPath := filepath.Join(t.TempDir(), "mutated.trace.json")
+			mutated, err := json.Marshal(trace)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(mutatedPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", efeID + "-diff",
+				"-scenario", filepath.Join(root, efeID+".json"),
+				"-java-trace", mutatedPath,
+				"-evidence", filepath.Join(t.TempDir(), "evidence.json"),
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("mutated trace %q unexpectedly passed", test.name)
+			}
+		})
+	}
+}
+
+func TestRunEfeRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, efeID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "over-in-clause"`), []byte(`"case": "over-in-clause", "extra": 0`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-e9c9627ad604f3404620"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "deploy-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`amount>=1000`), []byte(`amount>=1001`), 1)
+		}},
+		{name: "payload-value-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"amount": 1001`), []byte(`"amount": 1002`), 1)
+		}},
+		{name: "expected-flag-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"s7": false`), []byte(`"s7": true`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportTradeEvent"`), []byte(`"eventType": "WrongEvent"`), 1)
+		}},
+		{name: "statement-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"statement": "s0"`), []byte(`"statement": "s9"`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", efeID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunEfeRuntimeIDMappingMatchesScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, efeID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenario struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &scenario); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenario.JavaRuntimes, efeJavaRuntimeIDs) {
+		t.Fatalf("javaRuntimes = %#v", scenario.JavaRuntimes)
+	}
+	if !reflect.DeepEqual(scenario.JavaNames, efeJavaExecutions) {
+		t.Fatalf("javaNames = %#v", scenario.JavaNames)
+	}
+	for index, definition := range scenario.Cases {
+		if definition.RuntimeID != efeJavaRuntimeIDs[index] {
+			t.Fatalf("case %q runtimeId = %q, want %q", definition.Case, definition.RuntimeID, efeJavaRuntimeIDs[index])
+		}
+	}
+}
+
+func assertEfeTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != efeID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 49 {
+		t.Fatalf("trace records = %d, want 49", len(trace.Records))
+	}
+	counts := map[string]map[string]int{}
+	for _, record := range trace.Records {
+		if counts[record.Case] == nil {
+			counts[record.Case] = map[string]int{}
+		}
+		counts[record.Case][record.Operation]++
+	}
+	want := map[string]map[string]int{
+		"over-in-clause":           {"deployed": 2, "listener": 3},
+		"static-func":              {"deployed": 8, "listener": 7, "count": 17},
+		"instance-method-wildcard": {"deployed": 3, "listener": 5, "count": 4},
+	}
+	if !reflect.DeepEqual(counts, want) {
+		t.Fatalf("record counts = %#v, want %#v", counts, want)
+	}
+	// over-in-clause: s0 fires on both sends ('every' is cumulative), s1 only
+	// on the second; each delivery is one new-only row carrying the event1
+	// tag as a plain property map.
+	var statements, ids []any
+	for _, record := range trace.Records {
+		if record.Case != "over-in-clause" || record.Operation != "listener" {
+			continue
+		}
+		if len(record.New) != 1 || len(record.Old) != 0 || len(record.New[0].Fields) != 1 {
+			t.Fatalf("over-in-clause delivery = %#v", record)
+		}
+		tag, ok := record.New[0].Fields["event1"].(map[string]any)
+		if !ok {
+			t.Fatalf("over-in-clause event1 tag = %#v", record.New[0].Fields["event1"])
+		}
+		statements = append(statements, record.Statement)
+		ids = append(ids, tag["id"])
+	}
+	if !reflect.DeepEqual(statements, []any{"s0", "s0", "s1"}) {
+		t.Fatalf("over-in-clause statements = %v", statements)
+	}
+	if !reflect.DeepEqual(ids, []any{json.Number("1"), json.Number("2"), json.Number("2")}) {
+		t.Fatalf("over-in-clause event1 ids = %v", ids)
+	}
+	// static-func: only the 'b' send fires (s0-s6; s7 is unsatisfiable), so
+	// every listener row carries theString "b" and every count record is a
+	// listener-not-invoked marker.
+	for _, record := range trace.Records {
+		if record.Case != "static-func" {
+			continue
+		}
+		switch record.Operation {
+		case "listener":
+			if record.Statement == "s7" || len(record.New) != 1 ||
+				record.New[0].Fields["theString"] != "b" {
+				t.Fatalf("static-func delivery = %#v", record)
+			}
+		case "count":
+			if record.Name != "listener-not-invoked" || record.Count == nil || *record.Count != 0 {
+				t.Fatalf("static-func count = %#v", record)
+			}
+		}
+	}
+	// instance-method-wildcard: alwaysTrue fires on all three x values; the
+	// s0-alias and '*' wildcard cycles fire only on x=1.
+	var xs []any
+	for _, record := range trace.Records {
+		if record.Case != "instance-method-wildcard" || record.Operation != "listener" {
+			continue
+		}
+		if record.Statement != "s0" || len(record.New) != 1 {
+			t.Fatalf("instance-method-wildcard delivery = %#v", record)
+		}
+		xs = append(xs, record.New[0].Fields["x"])
+	}
+	if !reflect.DeepEqual(xs, []any{
+		json.Number("0"), json.Number("1"), json.Number("2"),
+		json.Number("1"), json.Number("1")}) {
+		t.Fatalf("instance-method-wildcard x values = %v", xs)
+	}
+}
+
 func TestRunInfraNWProcessingOrderDirectReplay(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "testdata", "parity")
 	var stdout, stderr bytes.Buffer

@@ -55,34 +55,41 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly') committed and pushed as 9ac32d036; Git owns identity. Parity review PASS, two P3s fixed.
 
 ## Current work unit
-Active: Draft 4.529 ('expr-class-class-dependency').
+Active: Draft 4.530 ('expr-filter-expressions').
 
-- Selection: `ExprClassClassDependency.java` all 3 executions, no flags —
- `ExprClassClassDependencyAllLocal` (`java-runtime-f53aa2ad87c7997d7c36`),
- `ExprClassClassDependencyInvalid` (`java-runtime-247c1169dd5c24bd21f0`),
- `ExprClassClassDependencyClasspath` (`java-runtime-bc85bc8d79bc09bb8500`).
+- Selection: `ExprFilterExpressions.java` all 3 executions, no flags —
+ `ExprFilterOverInClause` (`java-runtime-e9c9627ad604f3404620`),
+ `ExprFilterStaticFunc` (`java-runtime-15341d9e0dc15c4b2fc3`),
+ `ExprFilterInstanceMethodWWildcard` (`java-runtime-0a80365acd3e6ab25238`).
  Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`.
-- [x] Contract frozen: JavaContract529 (3 executions: AllLocal Func1
- composition c0="|>E1<|", Invalid 2 unrepresentable compile-error probes
- with trailing-space prefix difference, Classpath 2 cycles FQN/import
- c0="'E1'") + GoSurface529 (no engine gaps; Func1/DefineExpression,
- build-error records; closest runner expr_class_for_epl_objects.go).
- Assets529 dispatched.
-- [x] Assets529 integrated: `internal/app/parity/expr_class_class_dependency.go` +
-  `testdata/parity/expr-class-class-dependency.json` (3 cases / 15 steps) +
-  oracle `tools/java-oracle/ExprClassClassDependencyScenarioOracle.java` +
-  `run-expr-class-class-dependency.sh` + run.go/run_test.go wiring. Zero
-  engine changes.
-- [x] Differential replay: Java 5 records; Go 5 records. `-mode
-  expr-class-class-dependency-diff` status `passing` / 0 differences
+- [x] Contract frozen: JavaContract530 (3 executions: OverInClause
+ pattern in+>= filter every-cumulative 2 statements, StaticFunc 8
+ statements UDF+equals/and/comma invoked-flags, InstanceMethodWWildcard
+ 3 EPLs instance-method filter invoked-flags) + GoSurface530 (no engine
+ gaps; PatternFrom+InOf+GreaterOrEqualOf+TagField, Func2+Concat+Equal/
+ NotEqual/And, Method/EventValue; closest runner
+ expr_filter_in_and_between.go). Assets530 dispatched.
+- [x] Assets530 integrated: `internal/app/parity/expr_filter_expressions.go` +
+  `testdata/parity/expr-filter-expressions.json` (3 cases / 48 steps) +
+  oracle `tools/java-oracle/ExprFilterExpressionsScenarioOracle.java` +
+  `run-expr-filter-expressions.sh` + run.go/run_test.go wiring. Zero
+  engine changes. Oracle classpath fix: added common-avro
+  dependency:build-classpath for GenericData$Record.
+- [x] Differential replay: Java 49 records; Go 49 records. `-mode
+  expr-filter-expressions-diff` status `passing` / 0 differences
   (identity normalizer).
-- [x] Manifest: NEW case `case.expr-class-class-dependency` born-DV with
-  the 3 IDs; `expr.core` mapping + goRefs extended. Summary 760 cases /
-  386 DV / 1517 DV runtime IDs / unreferenced 515.
+- [x] Manifest: NEW case `case.expr-filter-expressions` born-DV with
+  the 3 IDs; `expr.core` mapping + goRefs extended. Summary 761 cases /
+  387 DV / 1520 DV runtime IDs / unreferenced 512.
 - [ ] Gates + parity review + commit: pending `make check`, independent
   reviewer, then commit/push.
 
 ## Previous work units (shipped)
+
+- Shipped: Draft 4.529 ('expr-class-class-dependency') committed and pushed
+ as 2bc1a8aea; Git owns identity. Born-DV `case.expr-class-class-dependency`
+ under `expr.core` (all 3 executions, 5 records, 0 differences). Zero
+ engine changes. Parity review PASS, one P3 fixed (javac→Janino).
 
 - Shipped: Draft 4.528 ('expr-class-for-epl-objects') committed and pushed
  as 8deb00b98; Git owns identity. Born-DV `case.expr-class-for-epl-objects`
