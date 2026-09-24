@@ -15,10 +15,11 @@
     "EventObjectArrayEventNested"
    ],
    "goRefs": [
-    "internal/esper/schema.go",
-    "internal/esper/object_array_test.go",
+    "internal/app/parity/event_objectarray_core.go",
+    "internal/app/parity/event_objectarray_nested.go",
     "internal/esper/infra_table_access_dot_method_parity_test.go",
-    "internal/app/parity/event_objectarray_nested.go"
+    "internal/esper/object_array_test.go",
+    "internal/esper/schema.go"
    ],
    "phase": 1,
    "status": "differential-verified",
@@ -32,12 +33,16 @@
     "differential-verified"
    ],
    "differentialVerifiedRuntimeIds": [
-    "java-runtime-1704d5718125f4502592",
     "java-runtime-072c48af61cdd8b27856",
+    "java-runtime-1704d5718125f4502592",
+    "java-runtime-17dd924d2ddc5c9577fe",
+    "java-runtime-4f63efae89e8c0bd4e66",
+    "java-runtime-52d765c3469a8eddd95e",
+    "java-runtime-57d2cf8ae645bedf06e6",
     "java-runtime-5a08e705396c651e2159",
     "java-runtime-7d6eb46f34c9d597b7d1",
-    "java-runtime-957493fa76a9e36a6091",
-    "java-runtime-57d2cf8ae645bedf06e6"
+    "java-runtime-8f3cd3e434650bc6364f",
+    "java-runtime-957493fa76a9e36a6091"
    ]
   },
   {
@@ -48741,6 +48746,53 @@
     "java-runtime-14c459a77aca4647964b"
    ],
    "notes": "Config-registered map types (no create-schema EPL): indexed p0[0], mapped p0('k1'), named-map nested p0.n0/p1[i].n0, and '?' dynamic-marker variants; 8 statements, 8 records, 0 differences."
+  },
+  {
+   "id": "case.event-object-array-core",
+   "javaRuntimeIds": [
+    "java-runtime-17dd924d2ddc5c9577fe",
+    "java-runtime-52d765c3469a8eddd95e",
+    "java-runtime-8f3cd3e434650bc6364f",
+    "java-runtime-4f63efae89e8c0bd4e66"
+   ],
+   "javaStaticIds": [
+    "java-0556d6715c212191e007"
+   ],
+   "javaNames": [
+    "EventObjectArrayMetadata",
+    "EventObjectArrayNestedObjects",
+    "EventObjectArrayNestedEventBeanArray",
+    "EventObjectArrayInvalid"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/objectarray/EventObjectArrayCore.java"
+   ],
+   "goTests": [
+    "internal/app/parity/event_objectarray_core.go",
+    "internal/app/parity/run_test.go"
+   ],
+   "tags": [
+    "event",
+    "objectarray",
+    "born-differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/event-object-array-core.evidence.json"
+   ],
+   "difference": "ord 4 probe (c) `select String.trim(myInt)` is unrepresentable: the Go chain API has no static-method-call expression surface; probes (a) unknown-property and (b) String arithmetic are covered as build-error records. ord 3 schema-module deploy maps to env-level BusEventType registration (no module path surface).",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-17dd924d2ddc5c9577fe",
+    "java-runtime-52d765c3469a8eddd95e",
+    "java-runtime-8f3cd3e434650bc6364f",
+    "java-runtime-4f63efae89e8c0bd4e66"
+   ],
+   "notes": "Ords 0/1/3/4 of EventObjectArrayCore (ord 2 QueryFields stays with case.object-array-query-fields): metadata introspection (OBJECTARR, 3 descriptors, beanA fragment), nested beanA paths over #length(5), NBAL_1/NBAL_2 objectarray schema module with raw-Object[] lvl1s[0] carrier, and two compile-rejection probes. 6 records, 0 differences."
   }
  ],
  "mappings": [
@@ -52095,13 +52147,17 @@
   {
    "capabilityId": "event.map-core",
    "caseId": "case.event-map-properties"
+  },
+  {
+   "capabilityId": "event.object-array",
+   "caseId": "case.event-object-array-core"
   }
  ],
  "summary": {
-  "inventoriedCases": 752,
-  "implementedCases": 750,
-  "differentialVerifiedCases": 378,
-  "differentialVerifiedRuntimeIds": 1485,
+  "inventoriedCases": 753,
+  "implementedCases": 751,
+  "differentialVerifiedCases": 379,
+  "differentialVerifiedRuntimeIds": 1489,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -52111,13 +52167,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4019,
-  "referencedJavaRuntimeIds": 3589,
+  "runtimeAssociationCount": 4023,
+  "referencedJavaRuntimeIds": 3593,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 547,
+  "unreferencedJavaRuntimeIds": 543,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 752,
+  "totalCases": 753,
   "totalCapabilities": 126
  }
 }

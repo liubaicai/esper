@@ -1,0 +1,277 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-17dd924d2ddc5c9577fe",
+    "java-runtime-52d765c3469a8eddd95e",
+    "java-runtime-8f3cd3e434650bc6364f",
+    "java-runtime-4f63efae89e8c0bd4e66"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/objectarray/EventObjectArrayCore.java"
+  ],
+  "javaExecutions": [
+    "EventObjectArrayMetadata",
+    "EventObjectArrayNestedObjects",
+    "EventObjectArrayNestedEventBeanArray",
+    "EventObjectArrayInvalid"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "event-object-array-core",
+    "steps": [
+      {
+        "op": "case",
+        "case": "metadata"
+      },
+      {
+        "op": "deployed",
+        "case": "metadata",
+        "statement": "metadata"
+      },
+      {
+        "op": "case",
+        "case": "nested-objects"
+      },
+      {
+        "op": "deploy",
+        "case": "nested-objects",
+        "statement": "s0",
+        "epl": "@name('s0') select beanA.simpleProperty as simple,beanA.nested.nestedValue as nested,beanA.indexed[1] as indexed,beanA.nested.nestedNested.nestedNestedValue as nestednested from MyObjectArrayEvent#length(5)"
+      },
+      {
+        "op": "send",
+        "case": "nested-objects",
+        "eventType": "MyObjectArrayEvent",
+        "payload": [
+          3,
+          "some string",
+          {
+            "_bean": "SupportBeanComplexProps"
+          }
+        ]
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nested-objects"
+      },
+      {
+        "op": "case",
+        "case": "nested-eventbean-array"
+      },
+      {
+        "op": "deploy",
+        "case": "nested-eventbean-array",
+        "statement": "schemas",
+        "epl": "@buseventtype @public create objectarray schema NBAL_1(val string);\n@buseventtype @public create objectarray schema NBAL_2 (lvl1s NBAL_1[]);\n"
+      },
+      {
+        "op": "deploy",
+        "case": "nested-eventbean-array",
+        "statement": "s0",
+        "epl": "@name('s0') select * from NBAL_1"
+      },
+      {
+        "op": "send",
+        "case": "nested-eventbean-array",
+        "eventType": "NBAL_1",
+        "payload": [
+          "somevalue"
+        ]
+      },
+      {
+        "op": "undeploy",
+        "case": "nested-eventbean-array",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "nested-eventbean-array",
+        "statement": "s0",
+        "epl": "@name('s0') select lvl1s[0] as c0 from NBAL_2"
+      },
+      {
+        "op": "send",
+        "case": "nested-eventbean-array",
+        "eventType": "NBAL_2",
+        "payload": [
+          [
+            [
+              "somevalue"
+            ]
+          ]
+        ]
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nested-eventbean-array"
+      },
+      {
+        "op": "case",
+        "case": "invalid"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "unknown-property",
+        "epl": "select XXX from MyObjectArrayEvent#length(5)"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "string-arithmetic",
+        "epl": "select myString * 2 from MyObjectArrayEvent#length(5)"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "event-object-array-core",
+    "records": [
+      {
+        "case": "metadata",
+        "operation": "deployed",
+        "statement": "metadata",
+        "sequence": 0
+      },
+      {
+        "case": "nested-objects",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "indexed": 2,
+              "nested": "nestedValue",
+              "nestednested": "nestedNestedValue",
+              "simple": "simple"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nested-eventbean-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": "somevalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nested-eventbean-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                "somevalue"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "unknown-property",
+        "sequence": 0
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "string-arithmetic",
+        "sequence": 0
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "event-object-array-core",
+    "records": [
+      {
+        "case": "metadata",
+        "operation": "deployed",
+        "statement": "metadata",
+        "sequence": 0
+      },
+      {
+        "case": "nested-objects",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "indexed": 2,
+              "nested": "nestedValue",
+              "nestednested": "nestedNestedValue",
+              "simple": "simple"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nested-eventbean-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": "somevalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nested-eventbean-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                "somevalue"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "unknown-property",
+        "sequence": 0
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "string-arithmetic",
+        "sequence": 0
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

@@ -55,34 +55,42 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly') committed and pushed as 9ac32d036; Git owns identity. Parity review PASS, two P3s fixed.
 
 ## Current work unit
-Active: Draft 4.520 ('event-map-properties').
+Active: Draft 4.521 ('event-object-array-core').
 
-- Selection: `EventMapProperties.java` all 4 executions, no flags —
-  `EventMapArrayProperty` (`java-runtime-cb09bcf76eee12b3c551`),
-  `EventMapMappedProperty` (`java-runtime-088ce1203ecce0c8be3a`),
-  `EventMapMapNamePropertyNested` (`java-runtime-b8c72b0931684bdc57dc`),
-  `EventMapMapNameProperty` (`java-runtime-14c459a77aca4647964b`).
+- Selection: `EventObjectArrayCore.java` ords 0/1/3/4 (4 of 5 executions; ord
+  2 `EventObjectArrayQueryFields` stays with `case.object-array-query-fields`),
+  no flags —
+  `EventObjectArrayMetadata` (`java-runtime-17dd924d2ddc5c9577fe`),
+  `EventObjectArrayNestedObjects` (`java-runtime-52d765c3469a8eddd95e`),
+  `EventObjectArrayNestedEventBeanArray` (`java-runtime-8f3cd3e434650bc6364f`),
+  `EventObjectArrayInvalid` (`java-runtime-4f63efae89e8c0bd4e66`).
   Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`.
-- [x] Scouts: JavaContract520 (frozen: config-registered map types — no
-  create-schema EPL; 8 statements across 4 executions; byte-exact selects,
-  sends, expected rows; '?' dynamic marker keeps declared type;
-  undeployModuleContaining≈undeployAll boundary) + GoSurface520 (no engine
-  gaps; RegisterMap+WithNestedPropertySchema, SendRecord, path-string
-  Property with [N]/('k')/dotted/? support; closest runner
-  event_map_core.go). Assets520 dispatched.
-- [x] Assets (Assets520): runner `internal/app/parity/event_map_properties.go`,
-  scenario `testdata/parity/event-map-properties.json` (4 cases / 8 statements),
-  oracle `tools/java-oracle/EventMapPropertiesScenarioOracle.java` + run.sh,
-  run.go/run_test.go wiring (5-test family).
-- [x] Traces + diff (primary): Java trace via run.sh (8 records), Go trace via
-  runner, `-mode event-map-properties-diff` -> `passing` / 0 differences.
-- [x] Manifest: `case.event-map-properties` born-DV (4 runtime IDs, 4 static
-  IDs) + `event.map-core` mapping/javaRefs/goRefs/DV IDs. Summary 752 cases /
-  378 DV / 1485 DV runtime IDs / unreferenced 547.
+- [x] Scouts: JavaContract521 (frozen: ord 2 QueryFields already covered by
+  case.object-array-query-fields — unit is ords 0/1/3/4; ord0 metadata
+  introspection only, ord3 raw-Object[] carrier pitfall, ord4 three compile
+  probes with String.trim unrepresentable) + GoSurface521 (no engine gaps;
+  RegisterObjectArray/SendObjectArray/BusEventType, oaRender renderer,
+  closest runner event_objectarray_nested.go). Assets521 dispatched.
+- [x] Assets (Assets521): runner `internal/app/parity/event_objectarray_core.go`,
+  scenario `testdata/parity/event-object-array-core.json` (4 cases / 17 steps),
+  oracle `tools/java-oracle/EventObjectArrayCoreScenarioOracle.java` + run.sh,
+  run.go/run_test.go wiring (5-test family). Primary fix: oracle needed a
+  RegressionPath equivalent (compile path accumulates deployed modules) and
+  run.sh jq deploy count corrected 3->4.
+- [x] Traces + diff (primary): Java trace via run.sh (6 records), Go trace via
+  runner, `-mode event-object-array-core-diff` -> `passing` / 0 differences.
+- [x] Manifest: `case.event-object-array-core` born-DV (4 runtime IDs, 1 static
+  ID) + `event.object-array` mapping/goRefs/DV IDs. Summary 753 cases /
+  379 DV / 1489 DV runtime IDs / unreferenced 543.
 - [ ] Gates + parity review + commit: pending `make check`, independent
   reviewer, then commit/push.
 
 ## Previous work units (shipped)
+
+- Shipped: Draft 4.520 ('event-map-properties') committed and pushed as
+  c3449869a; Git owns identity. Born-DV `case.event-map-properties` under
+  `event.map-core` (4 runtime IDs, 8 records, 0 differences, zero engine
+  changes). Parity review PASS (one P3 comment fix).
 
 - Shipped: Draft 4.519 ('epl-other-pattern-event-properties') committed and
   pushed as 0d93d2984; Git owns identity. Born-DV

@@ -1,0 +1,150 @@
+{
+  "version": "esper-parity/v1",
+  "id": "event-object-array-core",
+  "description": "EventObjectArrayCore object-array event core (pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c): metadata introspects the preconfigured MyObjectArrayEvent (OBJECTARR application type, name, exactly three descriptors — myInt:Integer, myString:String, beanA:SupportBeanComplexProps fragment — order-insensitive) with no events, acknowledged by a deployed marker (ord 0, EventObjectArrayMetadata); nested-objects navigates beanA.simpleProperty, beanA.nested.nestedValue, beanA.indexed[1] and beanA.nested.nestedNested.nestedNestedValue over MyObjectArrayEvent#length(5) (ord 1, EventObjectArrayNestedObjects); nested-eventbean-array deploys a two-statement objectarray schema module (NBAL_1(val string), NBAL_2 (lvl1s NBAL_1[])), selects * from NBAL_1 for one send, undeploys the s0 module while the schema module stays, then selects lvl1s[0] as c0 from NBAL_2 yielding the raw Object[] carrier (ord 3, EventObjectArrayNestedEventBeanArray); invalid covers two of Java's three compile-phase rejections — unknown property XXX and String arithmetic myString * 2 — while the third probe select String.trim(myInt) is unrepresentable (Go has no static-method-call expression surface) (ord 4, EventObjectArrayInvalid). Ord 2 EventObjectArrayQueryFields is covered by case.object-array-query-fields and stays out of scope (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/objectarray/EventObjectArrayCore.java).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/objectarray/EventObjectArrayCore.java",
+  "javaRuntimes": [
+    "java-runtime-17dd924d2ddc5c9577fe",
+    "java-runtime-52d765c3469a8eddd95e",
+    "java-runtime-8f3cd3e434650bc6364f",
+    "java-runtime-4f63efae89e8c0bd4e66"
+  ],
+  "javaNames": [
+    "EventObjectArrayMetadata",
+    "EventObjectArrayNestedObjects",
+    "EventObjectArrayNestedEventBeanArray",
+    "EventObjectArrayInvalid"
+  ],
+  "javaStaticIds": [
+    "java-0556d6715c212191e007",
+    "java-0556d6715c212191e007",
+    "java-0556d6715c212191e007",
+    "java-0556d6715c212191e007"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "metadata",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-17dd924d2ddc5c9577fe",
+      "executionName": "EventObjectArrayMetadata",
+      "observation": "deployed; no EPL and no events — the execution only introspects the preconfigured MyObjectArrayEvent type (OBJECTARR application type, name MyObjectArrayEvent, exactly three property descriptors: myInt Integer, myString String, beanA SupportBeanComplexProps fragment; order-insensitive) so the case emits a single deployed marker",
+      "epl": ""
+    },
+    {
+      "case": "nested-objects",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-52d765c3469a8eddd95e",
+      "executionName": "EventObjectArrayNestedObjects",
+      "observation": "listener; one deploy/send/undeploy-all cycle over MyObjectArrayEvent{myInt:int,myString:string,beanA:SupportBeanComplexProps}: beanA.simpleProperty/beanA.nested.nestedValue/beanA.indexed[1]/beanA.nested.nestedNested.nestedNestedValue yields simple=simple,nested=nestedValue,indexed=2,nestednested=nestedNestedValue",
+      "epl": "@name('s0') select beanA.simpleProperty as simple,beanA.nested.nestedValue as nested,beanA.indexed[1] as indexed,beanA.nested.nestedNested.nestedNestedValue as nestednested from MyObjectArrayEvent#length(5)"
+    },
+    {
+      "case": "nested-eventbean-array",
+      "ordinal": 3,
+      "runtimeId": "java-runtime-8f3cd3e434650bc6364f",
+      "executionName": "EventObjectArrayNestedEventBeanArray",
+      "observation": "listener; schema module deploy then two select cycles: select * from NBAL_1 yields val=somevalue; undeployModuleContaining('s0') retires only the select (the schema module stays deployed); select lvl1s[0] as c0 from NBAL_2 yields c0=[somevalue] as the raw Object[] carrier, not an event",
+      "epl": "@buseventtype @public create objectarray schema NBAL_1(val string);\n@buseventtype @public create objectarray schema NBAL_2 (lvl1s NBAL_1[]);\n@name('s0') select * from NBAL_1\n@name('s0') select lvl1s[0] as c0 from NBAL_2\n"
+    },
+    {
+      "case": "invalid",
+      "ordinal": 4,
+      "runtimeId": "java-runtime-4f63efae89e8c0bd4e66",
+      "executionName": "EventObjectArrayInvalid",
+      "observation": "compile-error; two build-error probes — select XXX (unknown property) and select myString * 2 (String arithmetic) — are rejected at build; the third Java probe select String.trim(myInt) is unrepresentable in the Go fluent API (no static-method-call expression) and is documented here only",
+      "epl": "select XXX from MyObjectArrayEvent#length(5)\nselect myString * 2 from MyObjectArrayEvent#length(5)\n"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "metadata"
+    },
+    {
+      "op": "deployed",
+      "case": "metadata",
+      "statement": "metadata"
+    },
+    {
+      "op": "case",
+      "case": "nested-objects"
+    },
+    {
+      "op": "deploy",
+      "case": "nested-objects",
+      "statement": "s0",
+      "epl": "@name('s0') select beanA.simpleProperty as simple,beanA.nested.nestedValue as nested,beanA.indexed[1] as indexed,beanA.nested.nestedNested.nestedNestedValue as nestednested from MyObjectArrayEvent#length(5)"
+    },
+    {
+      "op": "send",
+      "case": "nested-objects",
+      "eventType": "MyObjectArrayEvent",
+      "payload": [3, "some string", {"_bean": "SupportBeanComplexProps"}]
+    },
+    {
+      "op": "undeploy-all",
+      "case": "nested-objects"
+    },
+    {
+      "op": "case",
+      "case": "nested-eventbean-array"
+    },
+    {
+      "op": "deploy",
+      "case": "nested-eventbean-array",
+      "statement": "schemas",
+      "epl": "@buseventtype @public create objectarray schema NBAL_1(val string);\n@buseventtype @public create objectarray schema NBAL_2 (lvl1s NBAL_1[]);\n"
+    },
+    {
+      "op": "deploy",
+      "case": "nested-eventbean-array",
+      "statement": "s0",
+      "epl": "@name('s0') select * from NBAL_1"
+    },
+    {
+      "op": "send",
+      "case": "nested-eventbean-array",
+      "eventType": "NBAL_1",
+      "payload": ["somevalue"]
+    },
+    {
+      "op": "undeploy",
+      "case": "nested-eventbean-array",
+      "statement": "s0"
+    },
+    {
+      "op": "deploy",
+      "case": "nested-eventbean-array",
+      "statement": "s0",
+      "epl": "@name('s0') select lvl1s[0] as c0 from NBAL_2"
+    },
+    {
+      "op": "send",
+      "case": "nested-eventbean-array",
+      "eventType": "NBAL_2",
+      "payload": [[["somevalue"]]]
+    },
+    {
+      "op": "undeploy-all",
+      "case": "nested-eventbean-array"
+    },
+    {
+      "op": "case",
+      "case": "invalid"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "unknown-property",
+      "epl": "select XXX from MyObjectArrayEvent#length(5)"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "string-arithmetic",
+      "epl": "select myString * 2 from MyObjectArrayEvent#length(5)"
+    }
+  ]
+}

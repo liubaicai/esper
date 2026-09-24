@@ -86,6 +86,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include epl-contained-event-example and epl-contained-event-example-diff")
 		fmt.Fprintln(stderr, "runner modes include epl-other-pattern-event-properties and epl-other-pattern-event-properties-diff")
 		fmt.Fprintln(stderr, "runner modes include event-map-properties and event-map-properties-diff")
+		fmt.Fprintln(stderr, "runner modes include event-object-array-core and event-object-array-core-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
@@ -421,6 +422,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadEPLOtherPatternEventPropertiesScenario(file)
 	} else if *mode == "event-map-properties" || *mode == "event-map-properties-diff" {
 		scenario, err = loadEventMapPropertiesScenario(file)
+	} else if *mode == "event-object-array-core" || *mode == "event-object-array-core-diff" {
+		scenario, err = loadEventObjectArrayCoreScenario(file)
 	} else if *mode == "infra-table-invalid" || *mode == "infra-table-invalid-diff" {
 		scenario, err = loadInfraTableInvalidScenario(file)
 	} else if *mode == "infra-table-count-min-sketch" || *mode == "infra-table-count-min-sketch-diff" {
@@ -5461,6 +5464,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, eventObjectArrayNestedJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, eventObjectArrayNestedJavaSources),
 				splitMetadata(*javaExecutions, eventObjectArrayNestedJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "event-object-array-core" || *mode == "event-object-array-core-diff" {
+		trace, err := runEventObjectArrayCoreScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "event-object-array-core-diff" {
+			return runDifferentialModeWithNormalizer(stdout, stderr, *javaTracePath, *evidencePath, eventObjectArrayCoreJavaCommit,
+				splitMetadata(*javaRuntimeIDs, eventObjectArrayCoreJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, eventObjectArrayCoreSources),
+				splitMetadata(*javaExecutions, eventObjectArrayCoreJavaExecutions), scenario, trace, normalizeEventObjectArrayCoreTrace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
