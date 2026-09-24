@@ -1,0 +1,247 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-c92db51ca175df9b4a5c",
+    "java-runtime-8015ac40d3460b710377",
+    "java-runtime-6daa4310cb2a1762a0dd",
+    "java-runtime-d6258e053355ac85022b"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/clazz/ExprClassTypeUse.java"
+  ],
+  "javaExecutions": [
+    "ExprClassTypeUseEnum",
+    "ExprClassTypeConst",
+    "ExprClassTypeInnerClass",
+    "ExprClassTypeNewKeyword"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "expr-class-type-use",
+    "steps": [
+      {
+        "op": "case",
+        "case": "enum"
+      },
+      {
+        "op": "deploy",
+        "case": "enum",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "enum",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "enum"
+      },
+      {
+        "op": "case",
+        "case": "const"
+      },
+      {
+        "op": "deploy",
+        "case": "const",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "const",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "const"
+      },
+      {
+        "op": "case",
+        "case": "inner-class"
+      },
+      {
+        "op": "deploy",
+        "case": "inner-class",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "inner-class",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "inner-class"
+      },
+      {
+        "op": "case",
+        "case": "new-keyword"
+      },
+      {
+        "op": "deploy",
+        "case": "new-keyword",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "new-keyword",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "new-keyword"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-class-type-use",
+    "records": [
+      {
+        "case": "enum",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "const",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "test"
+            }
+          }
+        ]
+      },
+      {
+        "case": "inner-class",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "abc"
+            }
+          }
+        ]
+      },
+      {
+        "case": "new-keyword",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-class-type-use",
+    "records": [
+      {
+        "case": "enum",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "const",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "test"
+            }
+          }
+        ]
+      },
+      {
+        "case": "inner-class",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "abc"
+            }
+          }
+        ]
+      },
+      {
+        "case": "new-keyword",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

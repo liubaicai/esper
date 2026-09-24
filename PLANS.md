@@ -55,42 +55,41 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly') committed and pushed as 9ac32d036; Git owns identity. Parity review PASS, two P3s fixed.
 
 ## Current work unit
-Active: Draft 4.526 ('expr-dt-data-sources').
+Active: Draft 4.527 ('expr-class-type-use').
 
-- Selection: `ExprDTDataSources.java` all 4 executions, no flags —
- `ExprDTDataSourcesStartEndTS` (`java-runtime-ab467628bb158bf8ce6c`),
- `ExprDTDataSourcesFieldWValue` (`java-runtime-0ee5536b7a3d3d75f2eb`),
- `ExprDTDataSourcesAllCombinations` (`java-runtime-e1d8bce93d3743e9137f`),
- `ExprDTDataSourcesMinMax` (`java-runtime-fb5317848fcedbabf016`).
+- Selection: `ExprClassTypeUse.java` all 4 executions, no flags —
+ `ExprClassTypeUseEnum` (`java-runtime-c92db51ca175df9b4a5c`),
+ `ExprClassTypeConst` (`java-runtime-8015ac40d3460b710377`),
+ `ExprClassTypeInnerClass` (`java-runtime-6daa4310cb2a1762a0dd`),
+ `ExprClassTypeNewKeyword` (`java-runtime-d6258e053355ac85022b`).
  Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`.
-- [x] Contract frozen: JavaContract526 (4 executions: MinMax windowed+row
-  min/max as interval endpoints, AllCombinations 5-field x 11-getter
-  fan-out with java8 asymmetries, FieldWValue 16-col current_timestamp+
-  field getters, StartEndTS compile-only schema inheritance + 3 invalid
-  probes) + GoSurface526 (small delta: 3 DateTimeGet arms day_of_year/
-  era/weekyear + joinSourceEvent single-stream fallback; MinMax uses
-  existing Interval+BeforeThreshold+MinOf; no new API).
-- [x] Parallel lanes dispatched: SharedCore526 (expr_dt_resolution.go
-  DateTimeGet arms + joinSourceEvent fallback + tests) + Assets526
-  (runner/scenario/oracle/wiring only). Frozen API names in batch context.
-- [x] SharedCore526 integrated: `internal/esper/expr_dt_resolution.go`
-  DateTimeGet arms (day_of_year/era/weekyear + week/millis_of_second
-  aliases) + joinSourceEvent single-stream fallback + tests.
-- [x] Assets526 integrated: `internal/app/parity/expr_dt_data_sources.go` +
-  `testdata/parity/expr-dt-data-sources.json` (4 cases / 49 steps) +
-  oracle `tools/java-oracle/ExprDTDataSourcesScenarioOracle.java` +
-  `run-expr-dt-data-sources.sh` + run.go/run_test.go wiring. Worker
-  verified zero-diff end-to-end before handoff.
-- [x] Differential replay: Java 16 records; Go 16 records. `-mode
-  expr-dt-data-sources-diff` status `passing` / 0 differences (identity
+- [x] Contract frozen: JavaContract527 (4 executions: enum const method,
+  static const field, inner-class const, new keyword + getId; inlined_class
+  triple-quote EPL; Janino-compiled default-package classes) + GoSurface527
+  (no engine gaps; Enum→Literal+Method, Const→Func0, InnerClass→Func0,
+  NewKeyword→Construct+Method; closest runner expr_class_static_method.go).
+  Assets527 dispatched.
+- [x] Assets527 integrated: `internal/app/parity/expr_class_type_use.go` +
+  `testdata/parity/expr-class-type-use.json` (4 cases / 16 steps) +
+  oracle `tools/java-oracle/ExprClassTypeUseScenarioOracle.java` +
+  `run-expr-class-type-use.sh` + run.go/run_test.go wiring. Worker
+  verified zero-diff end-to-end before handoff. Zero engine changes.
+- [x] Differential replay: Java 4 records; Go 4 records. `-mode
+  expr-class-type-use-diff` status `passing` / 0 differences (identity
   normalizer).
-- [x] Manifest: NEW case `case.expr-dt-data-sources` born-DV with the 4
-  IDs; `expr.core` mapping + goRefs extended. Summary 757 cases / 383 DV /
-  1506 DV runtime IDs / unreferenced 526.
+- [x] Manifest: NEW case `case.expr-class-type-use` born-DV with the 4
+  IDs; `expr.core` mapping + goRefs extended. Summary 758 cases / 384 DV /
+  1510 DV runtime IDs / unreferenced 522.
 - [ ] Gates + parity review + commit: pending `make check`, independent
   reviewer, then commit/push.
 
 ## Previous work units (shipped)
+
+- Shipped: Draft 4.526 ('expr-dt-data-sources') committed and pushed as
+ 97baec688; Git owns identity. Born-DV `case.expr-dt-data-sources` under
+ `expr.core` (all 4 executions, 16 records, 0 differences). Shared core:
+ DateTimeGet day_of_year/era/weekyear arms + joinSourceEvent
+ single-stream fallback. Parity review PASS (two P3s fixed).
 
 - Shipped: Draft 4.525 ('expr-dt-resolution') committed and pushed as
  7bff4591a; Git owns identity. Born-DV `case.expr-dt-resolution` under

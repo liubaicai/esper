@@ -78218,3 +78218,257 @@ func TestRunHelpIncludesExprEnumSelectFrom(t *testing.T) {
 		}
 	}
 }
+
+func TestRunExprClassTypeUseDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "expr-class-type-use.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "expr-class-type-use.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "expr-class-type-use.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "expr-class-type-use-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if len(evidence.JavaRuntimeIDs) != 4 {
+		t.Fatalf("runtime ids = %d, want 4", len(evidence.JavaRuntimeIDs))
+	}
+	if len(evidence.JavaTrace.Records) != 4 ||
+		evidence.JavaTrace.Records[0].Case != "enum" ||
+		evidence.JavaTrace.Records[1].Case != "const" ||
+		evidence.JavaTrace.Records[2].Case != "inner-class" ||
+		evidence.JavaTrace.Records[3].Case != "new-keyword" {
+		t.Fatalf("record layout = %#v", evidence.JavaTrace.Records)
+	}
+}
+
+func TestRunExprClassTypeUseDiffRejectsTraceMutations(t *testing.T) {
+	// mutateField rewrites field on the leading new-data row of the first
+	// listener record for (caseName, sequence). Scanning by content keeps
+	// the mutations robust against the canonical record order the evidence
+	// stores; a miss leaves the trace unmutated so the diff passes and the
+	// "unexpectedly passed" check reports the bad field.
+	mutateField := func(caseName string, sequence uint64, field string, value any) func(*compat.Trace) {
+		return func(trace *compat.Trace) {
+			for i := range trace.Records {
+				rec := &trace.Records[i]
+				if rec.Case != caseName || rec.Sequence != sequence || len(rec.New) == 0 {
+					continue
+				}
+				if _, ok := rec.New[0].Fields[field]; ok {
+					rec.New[0].Fields[field] = value
+					return
+				}
+			}
+		}
+	}
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			// c0 is MyLevel.MEDIUM.getLevelCode(); drifting it means the
+			// enum-constant accessor binding broke.
+			name:   "enum-levelcode-drift",
+			mutate: mutateField("enum", 1, "c0", 3),
+		},
+		{
+			// c0 is MyConstants.VALUE; drifting it means the static-field
+			// binding broke.
+			name:   "const-value-drift",
+			mutate: mutateField("const", 1, "c0", "wrong"),
+		},
+		{
+			// c0 is MyConstants$MyInnerClass.VALUE; drifting it means the
+			// nested-class static-field binding broke.
+			name:   "inner-class-value-drift",
+			mutate: mutateField("inner-class", 1, "c0", "wrong"),
+		},
+		{
+			// c0 renders new MyResult(theString) through getId(); drifting
+			// it means the constructed instance or its getter broke.
+			name:   "new-keyword-id-drift",
+			mutate: mutateField("new-keyword", 1, "c0", "wrong"),
+		},
+		{
+			name: "sequence-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].Sequence = 9
+			},
+		},
+		{
+			name: "dropped-record",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[1:]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "expr-class-type-use.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "expr-class-type-use.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "expr-class-type-use.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "expr-class-type-use-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, output)
+			}
+		})
+	}
+}
+
+func TestRunExprClassTypeUseRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "expr-class-type-use.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "expr-class-type-use"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "expr-class-type-use"`)...), 1)
+		}},
+		{name: "case-ordinal-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 1`), []byte(`"ordinal": 9`), 1)
+		}},
+		{name: "runtime-id-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"java-runtime-c92db51ca175df9b4a5c"`), []byte(`"java-runtime-bogus"`), 1)
+		}},
+		{name: "epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`select MyLevel.MEDIUM.getLevelCode() as c0`), []byte(`select MyLevel.LOW.getLevelCode() as c0`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1",
+    "intPrimitive": 0`), []byte(`"theString": "E1",
+    "intPrimitive": 0,
+    "extra": 0`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 0`), []byte(`"intPrimitive": 0,
+    "intPrimitive": 2`), 1)
+		}},
+		{name: "payload-value-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1"`), []byte(`"theString": "E9"`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportBean"`), []byte(`"eventType": "bogus"`), 1)
+		}},
+		{name: "step-field-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "case",`), []byte(`"op": "case", "extra": 0,`), 1)
+		}},
+		{name: "step-op-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "send"`), []byte(`"op": "bogus"`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", "expr-class-type-use",
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunExprClassTypeUseRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "expr-class-type-use.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, exprClassTypeUseJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, exprClassTypeUseJavaExecutions) {
+		t.Fatalf("scenario metadata runtimes=%v names=%v", document.JavaRuntimes, document.JavaNames)
+	}
+	wantCaseRuntimeIDs := map[string]string{
+		"enum":        "java-runtime-c92db51ca175df9b4a5c",
+		"const":       "java-runtime-8015ac40d3460b710377",
+		"inner-class": "java-runtime-6daa4310cb2a1762a0dd",
+		"new-keyword": "java-runtime-d6258e053355ac85022b",
+	}
+	for _, entry := range document.Cases {
+		if wantCaseRuntimeIDs[entry.Case] != entry.RuntimeID {
+			t.Fatalf("case %q runtimeId = %q, want %q", entry.Case, entry.RuntimeID, wantCaseRuntimeIDs[entry.Case])
+		}
+	}
+}
+
+func TestRunHelpIncludesExprClassTypeUse(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-h"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("help exit code = %d, stderr = %q", code, stderr.String())
+	}
+	for _, mode := range []string{
+		"expr-class-type-use",
+		"expr-class-type-use-diff",
+	} {
+		if !strings.Contains(stderr.String(), mode) {
+			t.Fatalf("help output omits %q: %s", mode, stderr.String())
+		}
+	}
+}

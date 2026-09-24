@@ -92,6 +92,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include expr-dt-resolution and expr-dt-resolution-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-dt-data-sources and expr-dt-data-sources-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-enum-select-from and expr-enum-select-from-diff")
+		fmt.Fprintln(stderr, "runner modes include expr-class-type-use and expr-class-type-use-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
@@ -147,6 +148,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadExprEnumSumOfRemainderScenario(file)
 	} else if *mode == "expr-enum-select-from" || *mode == "expr-enum-select-from-diff" {
 		scenario, err = loadExprEnumSelectFromScenario(file)
+	} else if *mode == "expr-class-type-use" || *mode == "expr-class-type-use-diff" {
+		scenario, err = loadExprClassTypeUseScenario(file)
 	} else if *mode == "epl-variable-output-rate" || *mode == "epl-variable-output-rate-diff" {
 		scenario, err = loadEplVariableOutputRateScenario(file)
 	} else if *mode == "epl-subselect-within-filter-having" || *mode == "epl-subselect-within-filter-having-diff" {
@@ -5704,6 +5707,23 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, ecsmJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, ecsmJavaSources),
 				splitMetadata(*javaExecutions, ecsmJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "expr-class-type-use" || *mode == "expr-class-type-use-diff" {
+		trace, err := runExprClassTypeUseScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "expr-class-type-use-diff" {
+			return runDifferentialModeWithNormalizer(stdout, stderr, *javaTracePath, *evidencePath, exprClassTypeUseJavaCommit,
+				splitMetadata(*javaRuntimeIDs, exprClassTypeUseJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, exprClassTypeUseJavaSources),
+				splitMetadata(*javaExecutions, exprClassTypeUseJavaExecutions), scenario, trace,
+				normalizeExprClassTypeUseTrace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

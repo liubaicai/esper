@@ -606,6 +606,7 @@
     "TestExprCaseNode"
    ],
    "goRefs": [
+    "internal/app/parity/expr_class_type_use.go",
     "internal/app/parity/expr_dt_between.go",
     "internal/app/parity/expr_dt_data_sources.go",
     "internal/app/parity/expr_dt_interval_ops.go",
@@ -49025,6 +49026,57 @@
     "java-runtime-ab467628bb158bf8ce6c"
    ],
    "notes": "ExprDTDataSources all 4 executions. 16 records (8 listener, 3 types, 2 unrepresentable, 3 compile-error), 0 differences."
+  },
+  {
+   "id": "case.expr-class-type-use",
+   "javaRuntimeIds": [
+    "java-runtime-c92db51ca175df9b4a5c",
+    "java-runtime-8015ac40d3460b710377",
+    "java-runtime-6daa4310cb2a1762a0dd",
+    "java-runtime-d6258e053355ac85022b"
+   ],
+   "javaStaticIds": [
+    "java-5d5ce4aa6c78b6bf048d",
+    "java-f9f7cebbd7aac634448e",
+    "java-a6911da1ff68fc3f399c",
+    "java-13f14291ee7d14670c89"
+   ],
+   "javaNames": [
+    "ExprClassTypeUseEnum",
+    "ExprClassTypeConst",
+    "ExprClassTypeInnerClass",
+    "ExprClassTypeNewKeyword"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/clazz/ExprClassTypeUse.java"
+   ],
+   "goTests": [
+    "internal/app/parity/expr_class_type_use.go",
+    "internal/app/parity/run_test.go"
+   ],
+   "tags": [
+    "expr",
+    "class",
+    "inlined-class",
+    "born-differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/expr-class-type-use.evidence.json"
+   ],
+   "difference": "Java inlined_class (Janino-compiled default-package classes) has no Go counterpart \u2014 EPL text pinned but never replayed. Go mirrors observable results: enum const method \u2192 Literal+Method, static const \u2192 Func0, inner-class const \u2192 Func0, new keyword \u2192 Construct+Method. Class-reference resolution (enum const, static field, $-binary-name, new) is compile-time Java semantics with no Go equivalent.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-c92db51ca175df9b4a5c",
+    "java-runtime-8015ac40d3460b710377",
+    "java-runtime-6daa4310cb2a1762a0dd",
+    "java-runtime-d6258e053355ac85022b"
+   ],
+   "notes": "ExprClassTypeUse all 4 executions: enum const method (c0=2), static const (c0=test), inner-class const (c0=abc), new keyword + getId (c0=E1). 4 records, 0 differences."
   }
  ],
  "mappings": [
@@ -52399,13 +52451,17 @@
   {
    "capabilityId": "expr.core",
    "caseId": "case.expr-dt-data-sources"
+  },
+  {
+   "capabilityId": "expr.core",
+   "caseId": "case.expr-class-type-use"
   }
  ],
  "summary": {
-  "inventoriedCases": 757,
-  "implementedCases": 755,
-  "differentialVerifiedCases": 383,
-  "differentialVerifiedRuntimeIds": 1506,
+  "inventoriedCases": 758,
+  "implementedCases": 756,
+  "differentialVerifiedCases": 384,
+  "differentialVerifiedRuntimeIds": 1510,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -52415,13 +52471,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4040,
-  "referencedJavaRuntimeIds": 3610,
+  "runtimeAssociationCount": 4044,
+  "referencedJavaRuntimeIds": 3614,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 526,
+  "unreferencedJavaRuntimeIds": 522,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 757,
+  "totalCases": 758,
   "totalCapabilities": 126
  }
 }
