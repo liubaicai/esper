@@ -2,26 +2,87 @@
   "version": "esper-differential/v1",
   "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
   "javaRuntimeIds": [
+    "java-runtime-9277aaf4733e12e28d28",
     "java-runtime-67e9ea0d239585623711",
+    "java-runtime-cdb6409058fe3e44770f",
+    "java-runtime-f33922181fbbb9c2e19b",
     "java-runtime-cc45d135a75bb01736f0",
     "java-runtime-469a37a746e59d25a115",
     "java-runtime-a59b12bbe5788257c37b",
-    "java-runtime-827ea8daeea9baec40cf"
+    "java-runtime-827ea8daeea9baec40cf",
+    "java-runtime-027a02a57250c1d497cb"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherStreamExpr.java"
   ],
   "javaExecutions": [
+    "EPLOtherChainedParameterized",
     "EPLOtherStreamFunction",
+    "EPLOtherInstanceMethodOuterJoin",
+    "EPLOtherInstanceMethodStatic",
     "EPLOtherStreamInstanceMethodAliased",
     "EPLOtherStreamInstanceMethodNoAlias",
     "EPLOtherJoinStreamSelectNoWildcard",
-    "EPLOtherPatternStreamSelectNoWildcard"
+    "EPLOtherPatternStreamSelectNoWildcard",
+    "EPLOtherInvalidSelect"
   ],
   "scenario": {
     "version": "esper-parity/v1",
     "id": "epl-other-stream-expr",
     "steps": [
+      {
+        "op": "case",
+        "case": "chained-parameterized"
+      },
+      {
+        "op": "deploy",
+        "case": "chained-parameterized",
+        "statement": "s0",
+        "epl": "@name('s0') select top.getChildOne(\"abc\",10).getChildTwo(\"append\") from SupportChainTop as top"
+      },
+      {
+        "op": "send",
+        "case": "chained-parameterized",
+        "eventType": "SupportChainTop",
+        "payload": {}
+      },
+      {
+        "op": "undeploy-all",
+        "case": "chained-parameterized"
+      },
+      {
+        "op": "deploy",
+        "case": "chained-parameterized",
+        "statement": "s0-soda",
+        "epl": "@name('s0') select top.getChildOne(\"abc\",10).getChildTwo(\"append\") from SupportChainTop as top",
+        "mode": "soda"
+      },
+      {
+        "op": "send",
+        "case": "chained-parameterized",
+        "eventType": "SupportChainTop",
+        "payload": {}
+      },
+      {
+        "op": "undeploy-all",
+        "case": "chained-parameterized"
+      },
+      {
+        "op": "deploy",
+        "case": "chained-parameterized",
+        "statement": "s0-static",
+        "epl": "@name('s0') select inside.getMyString() as val,inside.insideTwo.getMyOtherString() as val2 from SupportBeanStaticOuter"
+      },
+      {
+        "op": "send",
+        "case": "chained-parameterized",
+        "eventType": "SupportBeanStaticOuter",
+        "payload": {}
+      },
+      {
+        "op": "undeploy-all",
+        "case": "chained-parameterized"
+      },
       {
         "op": "case",
         "case": "stream-function"
@@ -75,6 +136,64 @@
       {
         "op": "undeploy-all",
         "case": "stream-function"
+      },
+      {
+        "op": "case",
+        "case": "instance-method-outer-join"
+      },
+      {
+        "op": "deploy",
+        "case": "instance-method-outer-join",
+        "statement": "s0",
+        "epl": "@name('s0') select symbol, s1.getTheString() as theString from SupportMarketDataBean#keepall as s0 left outer join SupportBean#keepall as s1 on s0.symbol=s1.theString"
+      },
+      {
+        "op": "send",
+        "case": "instance-method-outer-join",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "ACME",
+          "price": 0,
+          "volume": 0,
+          "feed": null
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "instance-method-outer-join"
+      },
+      {
+        "op": "case",
+        "case": "instance-method-static"
+      },
+      {
+        "op": "deploy",
+        "case": "instance-method-static",
+        "statement": "s0",
+        "epl": "@name('s0') select symbol, s1.getSimpleProperty() as simpleprop, s1.makeDefaultBean() as def from SupportMarketDataBean#keepall as s0 left outer join SupportBeanComplexProps#keepall as s1 on s0.symbol=s1.simpleProperty"
+      },
+      {
+        "op": "send",
+        "case": "instance-method-static",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "ACME",
+          "price": 0,
+          "volume": 0,
+          "feed": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "instance-method-static",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "simpleProperty": "ACME"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "instance-method-static"
       },
       {
         "op": "case",
@@ -219,6 +338,34 @@
       {
         "op": "undeploy-all",
         "case": "pattern-stream-select"
+      },
+      {
+        "op": "case",
+        "case": "invalid-select"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-select",
+        "statement": "getstring-args",
+        "epl": "select s0.getString(1,2,3) from SupportBean as s0"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-select",
+        "statement": "abc-method",
+        "expectError": "Failed to validate select-clause expression 's0.abc()': Failed to solve 'abc' to either an date-time or enumeration method, an event property or a method on the event underlying object: Failed to resolve method 'abc': Could not find enumeration method, date-time method, instance method or property named 'abc' in class 'com.espertech.esper.common.internal.support.SupportBean' taking no parameters [",
+        "epl": "select s0.abc() from SupportBean as s0"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-select",
+        "statement": "pattern-indexed",
+        "expectError": "Failed to validate select-clause expression 's.theString': Failed to resolve property 's.theString' (property 's' is an indexed property and requires an index or enumeration method to access values)",
+        "epl": "select s.theString from pattern [every [2] s=SupportBean] ee"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "invalid-select"
       }
     ]
   },
@@ -227,6 +374,56 @@
     "id": "epl-other-stream-expr",
     "records": [
       {
+        "case": "chained-parameterized",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "top.getChildOne(\"abc\",10).getChildTwo(\"append\")": {
+                "text": "abcappend"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "chained-parameterized",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "top.getChildOne(\"abc\",10).getChildTwo(\"append\")": {
+                "text": "abcappend"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "chained-parameterized",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": "hello",
+              "val2": "hello2"
+            }
+          }
+        ]
+      },
+      {
         "case": "stream-function",
         "operation": "listener",
         "statement": "s0",
@@ -302,6 +499,64 @@
               "price": 0,
               "symbol": "ACME",
               "volume": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "instance-method-outer-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "ACME",
+              "theString": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "instance-method-static",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "def": {
+                "state": "null"
+              },
+              "simpleprop": {
+                "state": "null"
+              },
+              "symbol": "ACME"
+            }
+          }
+        ]
+      },
+      {
+        "case": "instance-method-static",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "def": {
+                "simpleProperty": "simple"
+              },
+              "simpleprop": "ACME",
+              "symbol": "ACME"
             }
           }
         ]
@@ -454,6 +709,26 @@
             }
           }
         ]
+      },
+      {
+        "case": "invalid-select",
+        "operation": "compile-error",
+        "statement": "getstring-args",
+        "sequence": 0
+      },
+      {
+        "case": "invalid-select",
+        "operation": "compile-error",
+        "statement": "abc-method",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 's0.abc()': Failed to solve 'abc' to either an date-time or enumeration method, an event property or a method on the event underlying object: Failed to resolve method 'abc': Could not find enumeration method, date-time method, instance method or property named 'abc' in class 'com.espertech.esper.common.internal.support.SupportBean' taking no parameters ["
+      },
+      {
+        "case": "invalid-select",
+        "operation": "compile-error",
+        "statement": "pattern-indexed",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 's.theString': Failed to resolve property 's.theString' (property 's' is an indexed property and requires an index or enumeration method to access values)"
       }
     ]
   },
@@ -462,6 +737,56 @@
     "id": "epl-other-stream-expr",
     "records": [
       {
+        "case": "chained-parameterized",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "top.getChildOne(\"abc\",10).getChildTwo(\"append\")": {
+                "text": "abcappend"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "chained-parameterized",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "top.getChildOne(\"abc\",10).getChildTwo(\"append\")": {
+                "text": "abcappend"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "chained-parameterized",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": "hello",
+              "val2": "hello2"
+            }
+          }
+        ]
+      },
+      {
         "case": "stream-function",
         "operation": "listener",
         "statement": "s0",
@@ -537,6 +862,64 @@
               "price": 0,
               "symbol": "ACME",
               "volume": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "instance-method-outer-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "ACME",
+              "theString": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "instance-method-static",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "def": {
+                "state": "null"
+              },
+              "simpleprop": {
+                "state": "null"
+              },
+              "symbol": "ACME"
+            }
+          }
+        ]
+      },
+      {
+        "case": "instance-method-static",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "def": {
+                "simpleProperty": "simple"
+              },
+              "simpleprop": "ACME",
+              "symbol": "ACME"
             }
           }
         ]
@@ -689,6 +1072,26 @@
             }
           }
         ]
+      },
+      {
+        "case": "invalid-select",
+        "operation": "compile-error",
+        "statement": "getstring-args",
+        "sequence": 0
+      },
+      {
+        "case": "invalid-select",
+        "operation": "compile-error",
+        "statement": "abc-method",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 's0.abc()': Failed to solve 'abc' to either an date-time or enumeration method, an event property or a method on the event underlying object: Failed to resolve method 'abc': Could not find enumeration method, date-time method, instance method or property named 'abc' in class 'com.espertech.esper.common.internal.support.SupportBean' taking no parameters ["
+      },
+      {
+        "case": "invalid-select",
+        "operation": "compile-error",
+        "statement": "pattern-indexed",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 's.theString': Failed to resolve property 's.theString' (property 's' is an indexed property and requires an index or enumeration method to access values)"
       }
     ]
   },

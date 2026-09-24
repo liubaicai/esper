@@ -44566,35 +44566,53 @@ func TestRunEplOtherStreamExprDiffRejectsTraceMutations(t *testing.T) {
 		mutate func(*compat.Trace)
 	}{
 		{
+			name: "chained-text-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields[`top.getChildOne("abc",10).getChildTwo("append")`] = map[string]any{"text": "drift"}
+			},
+		},
+		{
 			name: "sf-volume-drift",
 			mutate: func(trace *compat.Trace) {
-				trace.Records[0].New[0].Fields["volume"] = json.Number("1")
+				trace.Records[3].New[0].Fields["volume"] = json.Number("1")
 			},
 		},
 		{
 			name: "outer-join-null-to-value",
 			mutate: func(trace *compat.Trace) {
-				trace.Records[4].New[0].Fields["theString"] = "ACME"
+				trace.Records[7].New[0].Fields["theString"] = "ACME"
+			},
+		},
+		{
+			name: "static-join-def-null-to-row",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[8].New[0].Fields["def"] = map[string]any{"simpleProperty": "simple"}
 			},
 		},
 		{
 			name: "aliased-pvf-drift",
 			mutate: func(trace *compat.Trace) {
-				trace.Records[5].New[0].Fields["pvf"] = json.Number("999")
+				trace.Records[10].New[0].Fields["pvf"] = json.Number("999")
 			},
 		},
 		{
 			name: "no-alias-c0-drift",
 			mutate: func(trace *compat.Trace) {
-				trace.Records[6].New[0].Fields["c0"] = json.Number("99")
+				trace.Records[12].New[0].Fields["c0"] = json.Number("99")
 			},
 		},
 		{
 			name: "join-s1stream-theString-drift",
 			mutate: func(trace *compat.Trace) {
-				trace.Records[7].New[0].Fields["s1stream"] = map[string]any{
+				trace.Records[13].New[0].Fields["s1stream"] = map[string]any{
 					"kind": "row", "fields": map[string]any{"intPrimitive": json.Number("0"), "theString": "X"},
 				}
+			},
+		},
+		{
+			name: "compile-error-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[17].Value = "Failed to validate something else"
 			},
 		},
 		{
@@ -44606,7 +44624,7 @@ func TestRunEplOtherStreamExprDiffRejectsTraceMutations(t *testing.T) {
 		{
 			name: "record-count-short",
 			mutate: func(trace *compat.Trace) {
-				trace.Records = trace.Records[:9]
+				trace.Records = trace.Records[:18]
 			},
 		},
 	}
@@ -44816,10 +44834,20 @@ func TestRunEplOtherStreamExprRuntimeIDMappingMatchesScenario(t *testing.T) {
 			entry.Ordinal != eplOtherStreamExprOrdinals[index] ||
 			entry.RuntimeID != eplOtherStreamExprJavaRuntimeIDs[index] ||
 			entry.ExecutionName != eplOtherStreamExprJavaExecutions[index] ||
-			entry.Observation != "listener" || entry.IteratorSnapshots != 0 {
+			entry.Observation != expectedEplOtherStreamExprObservation(index) || entry.IteratorSnapshots != 0 {
 			t.Fatalf("scenario case %d metadata = %#v", index, entry)
 		}
 	}
+}
+
+// expectedEplOtherStreamExprObservation pins the per-case observation kind:
+// the invalid-select execution records compile-error probes; every other
+// execution observes listener output.
+func expectedEplOtherStreamExprObservation(index int) string {
+	if index == len(eplOtherStreamExprCases)-1 {
+		return "compile-error"
+	}
+	return "listener"
 }
 
 func assertEplOtherStreamExprTrace(t *testing.T, trace compat.Trace) {
@@ -44827,8 +44855,8 @@ func assertEplOtherStreamExprTrace(t *testing.T, trace compat.Trace) {
 	if trace.Version != compat.ScenarioVersion || trace.ID != eplOtherStreamExprID {
 		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
 	}
-	if len(trace.Records) != 10 {
-		t.Fatalf("trace records = %d, want 10", len(trace.Records))
+	if len(trace.Records) != 19 {
+		t.Fatalf("trace records = %d, want 19", len(trace.Records))
 	}
 	mdRow := func(volume int) map[string]any {
 		return map[string]any{"feed": map[string]any{"state": "null"}, "price": json.Number("0"), "symbol": "ACME", "volume": json.Number(fmt.Sprint(volume))}
@@ -44845,11 +44873,18 @@ func assertEplOtherStreamExprTrace(t *testing.T, trace compat.Trace) {
 		fields   map[string]any
 	}
 	nullState := map[string]any{"state": "null"}
+	chainedRow := map[string]any{`top.getChildOne("abc",10).getChildTwo("append")`: map[string]any{"text": "abcappend"}}
 	expects := []expect{
+		{"chained-parameterized", 1, chainedRow},
+		{"chained-parameterized", 2, chainedRow},
+		{"chained-parameterized", 3, map[string]any{"val": "hello", "val2": "hello2"}},
 		{"stream-function", 1, map[string]any{"feed": nullState, "price": json.Number("0"), "symbol": "ACME", "volume": json.Number("100")}},
 		{"stream-function", 2, map[string]any{"feed": nullState, "price": json.Number("0"), "symbol": "ACME", "volume": json.Number("100")}},
 		{"stream-function", 3, map[string]any{"feed": nullState, "price": json.Number("0"), "symbol": "ACME", "volume": json.Number("100")}},
 		{"stream-function", 4, map[string]any{"feed": nullState, "price": json.Number("0"), "symbol": "ACME", "volume": json.Number("100")}},
+		{"instance-method-outer-join", 1, map[string]any{"symbol": "ACME", "theString": nullState}},
+		{"instance-method-static", 1, map[string]any{"def": nullState, "simpleprop": nullState, "symbol": "ACME"}},
+		{"instance-method-static", 2, map[string]any{"def": map[string]any{"simpleProperty": "simple"}, "simpleprop": "ACME", "symbol": "ACME"}},
 		{"stream-instance-method-aliased", 1, map[string]any{"pvf": json.Number("792"), "symbol": "ACME", "volume": json.Number("99")}},
 		{"stream-instance-method-no-alias", 1, map[string]any{"s0.getPriceTimesVolume(3)": json.Number("24"), "s0.getVolume()": json.Number("2")}},
 		{"stream-instance-method-no-alias", 2, map[string]any{"c0": json.Number("10"), "c1": json.Number("10")}},
@@ -44871,6 +44906,25 @@ func assertEplOtherStreamExprTrace(t *testing.T, trace compat.Trace) {
 		}
 		if len(record.Old) != 0 {
 			t.Fatalf("record %d unexpected old = %#v", index, record.Old)
+		}
+	}
+	compileErrors := []struct {
+		statement string
+		value     any
+	}{
+		{"getstring-args", nil},
+		{"abc-method", eplOtherStreamExprProbeAbcError},
+		{"pattern-indexed", eplOtherStreamExprProbePatternError},
+	}
+	for index, want := range compileErrors {
+		record := trace.Records[len(expects)+index]
+		if record.Case != "invalid-select" || record.Operation != "compile-error" ||
+			record.Statement != want.statement || record.Sequence != 0 ||
+			len(record.New) != 0 || len(record.Old) != 0 {
+			t.Fatalf("compile-error record %d = %#v", index, record)
+		}
+		if !reflect.DeepEqual(record.Value, want.value) {
+			t.Fatalf("compile-error record %d value = %#v, want %#v", index, record.Value, want.value)
 		}
 	}
 }

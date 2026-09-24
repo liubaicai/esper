@@ -1,32 +1,53 @@
 {
   "version": "esper-parity/v1",
   "id": "epl-other-stream-expr",
-  "description": "EPLOtherStreamExpr stream method expressions: static-method where filters with stream-name, wildcard, and EventBean arguments, aliased and verbatim no-alias expression-text output names with Long/Double/String value rendering, stream-as-object join columns, and a followed-by pattern with a static UDF filter referencing the prior tag (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherStreamExpr.java; chained parameterized, outer-join instance-method, static-method instance, and invalid-select executions are deferred with rationale in the capability manifest).",
+  "description": "EPLOtherStreamExpr stream method expressions: chained parameterized event-method calls with verbatim expression-text output names plus a SODA eplToModel round trip, static methods resolved through instance-property navigation, static-method where filters with stream-name, wildcard, and EventBean arguments, instance-method projections over left outer joins returning null on the absent join side, static-method-via-alias join columns, aliased and verbatim no-alias expression-text output names with Long/Double/String value rendering, stream-as-object join columns, a followed-by pattern with a static UDF filter referencing the prior tag, and invalid-select compile probes (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherStreamExpr.java).",
   "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
   "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherStreamExpr.java",
   "javaRuntimes": [
+    "java-runtime-9277aaf4733e12e28d28",
     "java-runtime-67e9ea0d239585623711",
+    "java-runtime-cdb6409058fe3e44770f",
+    "java-runtime-f33922181fbbb9c2e19b",
     "java-runtime-cc45d135a75bb01736f0",
     "java-runtime-469a37a746e59d25a115",
     "java-runtime-a59b12bbe5788257c37b",
-    "java-runtime-827ea8daeea9baec40cf"
+    "java-runtime-827ea8daeea9baec40cf",
+    "java-runtime-027a02a57250c1d497cb"
   ],
   "javaNames": [
+    "EPLOtherChainedParameterized",
     "EPLOtherStreamFunction",
+    "EPLOtherInstanceMethodOuterJoin",
+    "EPLOtherInstanceMethodStatic",
     "EPLOtherStreamInstanceMethodAliased",
     "EPLOtherStreamInstanceMethodNoAlias",
     "EPLOtherJoinStreamSelectNoWildcard",
-    "EPLOtherPatternStreamSelectNoWildcard"
+    "EPLOtherPatternStreamSelectNoWildcard",
+    "EPLOtherInvalidSelect"
   ],
   "javaStaticIds": [
+    "java-6828e4919d88389a5b0c",
     "java-e571ee83c24576b8aba7",
+    "java-bd1bca1463bae6798d0a",
+    "java-ae28c394fd146baf994e",
     "java-b448cd11a74aaf56dbab",
     "java-572869619d74ba3c95be",
     "java-534aeb16b8d33707670a",
-    "java-dfb3493bb3eb08a778db"
+    "java-dfb3493bb3eb08a778db",
+    "java-f1f45018481fb57e3382"
   ],
   "javaFlags": [],
   "cases": [
+    {
+      "case": "chained-parameterized",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-9277aaf4733e12e28d28",
+      "executionName": "EPLOtherChainedParameterized",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select top.getChildOne(\"abc\",10).getChildTwo(\"append\") from SupportChainTop as top"
+    },
     {
       "case": "stream-function",
       "ordinal": 1,
@@ -35,6 +56,24 @@
       "observation": "listener",
       "iteratorSnapshots": 0,
       "epl": "@name('s0') select * from SupportMarketDataBean as s0 where com.espertech.esper.regressionlib.support.epl.SupportStaticMethodLib.volumeGreaterZero(s0)"
+    },
+    {
+      "case": "instance-method-outer-join",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-cdb6409058fe3e44770f",
+      "executionName": "EPLOtherInstanceMethodOuterJoin",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select symbol, s1.getTheString() as theString from SupportMarketDataBean#keepall as s0 left outer join SupportBean#keepall as s1 on s0.symbol=s1.theString"
+    },
+    {
+      "case": "instance-method-static",
+      "ordinal": 3,
+      "runtimeId": "java-runtime-f33922181fbbb9c2e19b",
+      "executionName": "EPLOtherInstanceMethodStatic",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select symbol, s1.getSimpleProperty() as simpleprop, s1.makeDefaultBean() as def from SupportMarketDataBean#keepall as s0 left outer join SupportBeanComplexProps#keepall as s1 on s0.symbol=s1.simpleProperty"
     },
     {
       "case": "stream-instance-method-aliased",
@@ -71,9 +110,71 @@
       "observation": "listener",
       "iteratorSnapshots": 0,
       "epl": "@name('s0') select * from pattern [every e1=SupportMarketDataBean -> e2=SupportBean(com.espertech.esper.regressionlib.support.epl.SupportStaticMethodLib.compareEvents(e1, e2))]"
+    },
+    {
+      "case": "invalid-select",
+      "ordinal": 8,
+      "runtimeId": "java-runtime-027a02a57250c1d497cb",
+      "executionName": "EPLOtherInvalidSelect",
+      "observation": "compile-error",
+      "iteratorSnapshots": 0,
+      "epl": "select s0.getString(1,2,3) from SupportBean as s0\nselect s0.abc() from SupportBean as s0\nselect s.theString from pattern [every [2] s=SupportBean] ee\n"
     }
   ],
   "steps": [
+    {
+      "op": "case",
+      "case": "chained-parameterized"
+    },
+    {
+      "op": "deploy",
+      "case": "chained-parameterized",
+      "statement": "s0",
+      "epl": "@name('s0') select top.getChildOne(\"abc\",10).getChildTwo(\"append\") from SupportChainTop as top"
+    },
+    {
+      "op": "send",
+      "case": "chained-parameterized",
+      "eventType": "SupportChainTop",
+      "payload": {}
+    },
+    {
+      "op": "undeploy-all",
+      "case": "chained-parameterized"
+    },
+    {
+      "op": "deploy",
+      "case": "chained-parameterized",
+      "statement": "s0-soda",
+      "epl": "@name('s0') select top.getChildOne(\"abc\",10).getChildTwo(\"append\") from SupportChainTop as top",
+      "mode": "soda"
+    },
+    {
+      "op": "send",
+      "case": "chained-parameterized",
+      "eventType": "SupportChainTop",
+      "payload": {}
+    },
+    {
+      "op": "undeploy-all",
+      "case": "chained-parameterized"
+    },
+    {
+      "op": "deploy",
+      "case": "chained-parameterized",
+      "statement": "s0-static",
+      "epl": "@name('s0') select inside.getMyString() as val,inside.insideTwo.getMyOtherString() as val2 from SupportBeanStaticOuter"
+    },
+    {
+      "op": "send",
+      "case": "chained-parameterized",
+      "eventType": "SupportBeanStaticOuter",
+      "payload": {}
+    },
+    {
+      "op": "undeploy-all",
+      "case": "chained-parameterized"
+    },
     {
       "op": "case",
       "case": "stream-function"
@@ -127,6 +228,64 @@
     {
       "op": "undeploy-all",
       "case": "stream-function"
+    },
+    {
+      "op": "case",
+      "case": "instance-method-outer-join"
+    },
+    {
+      "op": "deploy",
+      "case": "instance-method-outer-join",
+      "statement": "s0",
+      "epl": "@name('s0') select symbol, s1.getTheString() as theString from SupportMarketDataBean#keepall as s0 left outer join SupportBean#keepall as s1 on s0.symbol=s1.theString"
+    },
+    {
+      "op": "send",
+      "case": "instance-method-outer-join",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "ACME",
+        "price": 0,
+        "volume": 0,
+        "feed": null
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "instance-method-outer-join"
+    },
+    {
+      "op": "case",
+      "case": "instance-method-static"
+    },
+    {
+      "op": "deploy",
+      "case": "instance-method-static",
+      "statement": "s0",
+      "epl": "@name('s0') select symbol, s1.getSimpleProperty() as simpleprop, s1.makeDefaultBean() as def from SupportMarketDataBean#keepall as s0 left outer join SupportBeanComplexProps#keepall as s1 on s0.symbol=s1.simpleProperty"
+    },
+    {
+      "op": "send",
+      "case": "instance-method-static",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "ACME",
+        "price": 0,
+        "volume": 0,
+        "feed": null
+      }
+    },
+    {
+      "op": "send",
+      "case": "instance-method-static",
+      "eventType": "SupportBeanComplexProps",
+      "payload": {
+        "simpleProperty": "ACME"
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "instance-method-static"
     },
     {
       "op": "case",
@@ -271,6 +430,34 @@
     {
       "op": "undeploy-all",
       "case": "pattern-stream-select"
+    },
+    {
+      "op": "case",
+      "case": "invalid-select"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid-select",
+      "statement": "getstring-args",
+      "epl": "select s0.getString(1,2,3) from SupportBean as s0"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid-select",
+      "statement": "abc-method",
+      "epl": "select s0.abc() from SupportBean as s0",
+      "expectError": "Failed to validate select-clause expression 's0.abc()': Failed to solve 'abc' to either an date-time or enumeration method, an event property or a method on the event underlying object: Failed to resolve method 'abc': Could not find enumeration method, date-time method, instance method or property named 'abc' in class 'com.espertech.esper.common.internal.support.SupportBean' taking no parameters ["
+    },
+    {
+      "op": "build-error",
+      "case": "invalid-select",
+      "statement": "pattern-indexed",
+      "epl": "select s.theString from pattern [every [2] s=SupportBean] ee",
+      "expectError": "Failed to validate select-clause expression 's.theString': Failed to resolve property 's.theString' (property 's' is an indexed property and requires an index or enumeration method to access values)"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "invalid-select"
     }
   ]
 }

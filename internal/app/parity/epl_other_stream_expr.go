@@ -13,7 +13,7 @@ import (
 
 const (
 	eplOtherStreamExprID          = "epl-other-stream-expr"
-	eplOtherStreamExprDescription = "EPLOtherStreamExpr stream method expressions: static-method where filters with stream-name, wildcard, and EventBean arguments, aliased and verbatim no-alias expression-text output names with Long/Double/String value rendering, stream-as-object join columns, and a followed-by pattern with a static UDF filter referencing the prior tag (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherStreamExpr.java; chained parameterized, outer-join instance-method, static-method instance, and invalid-select executions are deferred with rationale in the capability manifest)."
+	eplOtherStreamExprDescription = "EPLOtherStreamExpr stream method expressions: chained parameterized event-method calls with verbatim expression-text output names plus a SODA eplToModel round trip, static methods resolved through instance-property navigation, static-method where filters with stream-name, wildcard, and EventBean arguments, instance-method projections over left outer joins returning null on the absent join side, static-method-via-alias join columns, aliased and verbatim no-alias expression-text output names with Long/Double/String value rendering, stream-as-object join columns, a followed-by pattern with a static UDF filter referencing the prior tag, and invalid-select compile probes (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherStreamExpr.java)."
 	eplOtherStreamExprJavaCommit  = "9e1b9f1cc9117fea4bf33ab043762c045d73839c"
 	eplOtherStreamExprSource      = "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherStreamExpr.java"
 
@@ -31,6 +31,27 @@ const (
 	eplOtherStreamExprJoinAliased  = "@name('s0') select s0 as s0stream, s1 as s1stream from SupportMarketDataBean#keepall as s0, SupportBean#keepall as s1"
 	eplOtherStreamExprJoinPlain    = "@name('s0') select s0, s1 from SupportMarketDataBean#keepall as s0, SupportBean#keepall as s1"
 	eplOtherStreamExprPatternEPL   = "@name('s0') select * from pattern [every e1=SupportMarketDataBean -> e2=SupportBean(com.espertech.esper.regressionlib.support.epl.SupportStaticMethodLib.compareEvents(e1, e2))]"
+
+	// eplOtherStreamExprStaticOuterEPL is the ord-0 third leg: static methods
+	// resolved through instance-property navigation (no space after "val,"
+	// in the Java source concatenation).
+	eplOtherStreamExprStaticOuterEPL = "@name('s0') select inside.getMyString() as val,inside.insideTwo.getMyOtherString() as val2 from SupportBeanStaticOuter"
+
+	// Invalid-select probe EPLs (ord 8 tryInvalidCompile calls, in order).
+	eplOtherStreamExprProbeGetStringEPL = "select s0.getString(1,2,3) from SupportBean as s0"
+	eplOtherStreamExprProbeAbcEPL       = "select s0.abc() from SupportBean as s0"
+	eplOtherStreamExprProbePatternEPL   = "select s.theString from pattern [every [2] s=SupportBean] ee"
+
+	// eplOtherStreamExprInvalidEPL pins the invalid-select case metadata: the
+	// three probe EPLs newline-joined with a trailing newline (the
+	// event-object-array-core convention).
+	eplOtherStreamExprInvalidEPL = eplOtherStreamExprProbeGetStringEPL + "\n" +
+		eplOtherStreamExprProbeAbcEPL + "\n" + eplOtherStreamExprProbePatternEPL + "\n"
+
+	// Pinned Java message prefixes for the two probes whose tryInvalidCompile
+	// expectation is a startsWith prefix (the first probe pins "skip").
+	eplOtherStreamExprProbeAbcError     = "Failed to validate select-clause expression 's0.abc()': Failed to solve 'abc' to either an date-time or enumeration method, an event property or a method on the event underlying object: Failed to resolve method 'abc': Could not find enumeration method, date-time method, instance method or property named 'abc' in class 'com.espertech.esper.common.internal.support.SupportBean' taking no parameters ["
+	eplOtherStreamExprProbePatternError = "Failed to validate select-clause expression 's.theString': Failed to resolve property 's.theString' (property 's' is an indexed property and requires an index or enumeration method to access values)"
 )
 
 var (
@@ -38,46 +59,75 @@ var (
 		eplOtherStreamExprSource,
 	}
 	eplOtherStreamExprJavaRuntimeIDs = []string{
+		"java-runtime-9277aaf4733e12e28d28",
 		"java-runtime-67e9ea0d239585623711",
+		"java-runtime-cdb6409058fe3e44770f",
+		"java-runtime-f33922181fbbb9c2e19b",
 		"java-runtime-cc45d135a75bb01736f0",
 		"java-runtime-469a37a746e59d25a115",
 		"java-runtime-a59b12bbe5788257c37b",
 		"java-runtime-827ea8daeea9baec40cf",
+		"java-runtime-027a02a57250c1d497cb",
 	}
 	eplOtherStreamExprJavaExecutions = []string{
+		"EPLOtherChainedParameterized",
 		"EPLOtherStreamFunction",
+		"EPLOtherInstanceMethodOuterJoin",
+		"EPLOtherInstanceMethodStatic",
 		"EPLOtherStreamInstanceMethodAliased",
 		"EPLOtherStreamInstanceMethodNoAlias",
 		"EPLOtherJoinStreamSelectNoWildcard",
 		"EPLOtherPatternStreamSelectNoWildcard",
+		"EPLOtherInvalidSelect",
 	}
 	eplOtherStreamExprJavaStaticIDs = []string{
+		"java-6828e4919d88389a5b0c",
 		"java-e571ee83c24576b8aba7",
+		"java-bd1bca1463bae6798d0a",
+		"java-ae28c394fd146baf994e",
 		"java-b448cd11a74aaf56dbab",
 		"java-572869619d74ba3c95be",
 		"java-534aeb16b8d33707670a",
 		"java-dfb3493bb3eb08a778db",
+		"java-f1f45018481fb57e3382",
 	}
 	eplOtherStreamExprCases = []string{
+		"chained-parameterized",
 		"stream-function",
+		"instance-method-outer-join",
+		"instance-method-static",
 		"stream-instance-method-aliased",
 		"stream-instance-method-no-alias",
 		"join-stream-select",
 		"pattern-stream-select",
+		"invalid-select",
 	}
-	eplOtherStreamExprOrdinals = []int{1, 4, 5, 6, 7}
+	eplOtherStreamExprOrdinals = []int{0, 1, 2, 3, 4, 5, 6, 7, 8}
+
+	// eplOtherStreamExprProbeEPLs pins the byte-exact EPL each invalid-select
+	// build-error step carries; eplOtherStreamExprProbeErrors pins the Java
+	// message prefix (empty for the "skip"-pinned getString probe).
+	eplOtherStreamExprProbeEPLs = map[string]string{
+		"getstring-args":  eplOtherStreamExprProbeGetStringEPL,
+		"abc-method":      eplOtherStreamExprProbeAbcEPL,
+		"pattern-indexed": eplOtherStreamExprProbePatternEPL,
+	}
+	eplOtherStreamExprProbeErrors = map[string]string{
+		"getstring-args":  "",
+		"abc-method":      eplOtherStreamExprProbeAbcError,
+		"pattern-indexed": eplOtherStreamExprProbePatternError,
+	}
 )
 
 // Harness-local mirrors of the Java event types, with the Go methods the
 // stream method expressions invoke.
 type eplOtherStreamExprChainTop struct{}
-
 type eplOtherStreamExprChainChild struct {
-	Text string `esper:"text"`
+	Text string `esper:"text" json:"text"`
 }
 
 type eplOtherStreamExprChainChildTwo struct {
-	Text string `esper:"text"`
+	Text string `esper:"text" json:"text"`
 }
 
 func (eplOtherStreamExprChainTop) GetChildOne(text string, value int) eplOtherStreamExprChainChild {
@@ -122,6 +172,15 @@ type eplOtherStreamExprBean struct {
 	IntPrimitive int     `esper:"intPrimitive"`
 }
 
+func (b eplOtherStreamExprBean) GetTheString() string {
+	if b.TheString == nil {
+		return ""
+	}
+	return *b.TheString
+}
+
+func (b eplOtherStreamExprBean) GetIntPrimitive() int { return b.IntPrimitive }
+
 type eplOtherStreamExprStaticInnerTwo struct{}
 
 func (eplOtherStreamExprStaticInnerTwo) GetMyOtherString() string { return "hello2" }
@@ -137,7 +196,7 @@ type eplOtherStreamExprStaticOuter struct {
 }
 
 type eplOtherStreamExprComplexProps struct {
-	SimpleProperty string `esper:"simpleProperty"`
+	SimpleProperty string `esper:"simpleProperty" json:"simpleProperty"`
 }
 
 func (c eplOtherStreamExprComplexProps) GetSimpleProperty() string { return c.SimpleProperty }
@@ -212,7 +271,7 @@ func loadEplOtherStreamExprScenario(reader io.Reader) (compat.Scenario, error) {
 
 	var rawCases []json.RawMessage
 	if err := json.Unmarshal(root["cases"], &rawCases); err != nil || len(rawCases) != len(eplOtherStreamExprCases) {
-		return compat.Scenario{}, fmt.Errorf("%s scenario must contain exactly eight cases", eplOtherStreamExprID)
+		return compat.Scenario{}, fmt.Errorf("%s scenario must contain exactly nine cases", eplOtherStreamExprID)
 	}
 	observedEPL := map[string]string{
 		"chained-parameterized":           eplOtherStreamExprChainedEPL,
@@ -223,6 +282,10 @@ func loadEplOtherStreamExprScenario(reader io.Reader) (compat.Scenario, error) {
 		"stream-instance-method-no-alias": eplOtherStreamExprNoAliasEPL,
 		"join-stream-select":              eplOtherStreamExprJoinAliased,
 		"pattern-stream-select":           eplOtherStreamExprPatternEPL,
+		"invalid-select":                  eplOtherStreamExprInvalidEPL,
+	}
+	observation := map[string]string{
+		"invalid-select": "compile-error",
 	}
 	for index, rawCase := range rawCases {
 		var object map[string]json.RawMessage
@@ -245,11 +308,15 @@ func loadEplOtherStreamExprScenario(reader io.Reader) (compat.Scenario, error) {
 		if err := json.Unmarshal(rawCase, &definition); err != nil {
 			return compat.Scenario{}, fmt.Errorf("scenario case %d: %w", index, err)
 		}
+		wantObservation := observation[definition.Case]
+		if wantObservation == "" {
+			wantObservation = "listener"
+		}
 		if definition.Case != eplOtherStreamExprCases[index] ||
 			definition.Ordinal != eplOtherStreamExprOrdinals[index] ||
 			definition.RuntimeID != eplOtherStreamExprJavaRuntimeIDs[index] ||
 			definition.ExecutionName != eplOtherStreamExprJavaExecutions[index] ||
-			definition.Observation != "listener" || definition.IteratorSnapshots != 0 ||
+			definition.Observation != wantObservation || definition.IteratorSnapshots != 0 ||
 			definition.EPL != observedEPL[definition.Case] {
 			return compat.Scenario{}, fmt.Errorf("%s scenario case %d metadata is not pinned", eplOtherStreamExprID, index)
 		}
@@ -275,7 +342,11 @@ func loadEplOtherStreamExprScenario(reader io.Reader) (compat.Scenario, error) {
 				return compat.Scenario{}, fmt.Errorf("scenario step %d: %w", index, err)
 			}
 		case "deploy":
-			if err := requireEplOtherStreamExprFields(object, "op", "case", "statement", "epl"); err != nil {
+			if _, hasMode := object["mode"]; hasMode {
+				if err := requireEplOtherStreamExprFields(object, "op", "case", "statement", "epl", "mode"); err != nil {
+					return compat.Scenario{}, fmt.Errorf("scenario step %d: %w", index, err)
+				}
+			} else if err := requireEplOtherStreamExprFields(object, "op", "case", "statement", "epl"); err != nil {
 				return compat.Scenario{}, fmt.Errorf("scenario step %d: %w", index, err)
 			}
 		case "send":
@@ -287,6 +358,14 @@ func loadEplOtherStreamExprScenario(reader io.Reader) (compat.Scenario, error) {
 				return compat.Scenario{}, fmt.Errorf("scenario step %d: %w", index, err)
 			}
 			if _, err := decodeEplOtherStreamExprPayload(payload); err != nil {
+				return compat.Scenario{}, fmt.Errorf("scenario step %d: %w", index, err)
+			}
+		case "build-error":
+			if _, hasExpect := object["expectError"]; hasExpect {
+				if err := requireEplOtherStreamExprFields(object, "op", "case", "statement", "epl", "expectError"); err != nil {
+					return compat.Scenario{}, fmt.Errorf("scenario step %d: %w", index, err)
+				}
+			} else if err := requireEplOtherStreamExprFields(object, "op", "case", "statement", "epl"); err != nil {
 				return compat.Scenario{}, fmt.Errorf("scenario step %d: %w", index, err)
 			}
 		case "undeploy-all":
@@ -307,28 +386,6 @@ func loadEplOtherStreamExprScenario(reader io.Reader) (compat.Scenario, error) {
 	return scenario, nil
 }
 
-// eplOtherStreamExprDeployEPLs pins the exact deploy EPLs per case, in order.
-func eplOtherStreamExprDeployEPLs(caseName string) []string {
-	switch caseName {
-	case "chained-parameterized":
-		return []string{eplOtherStreamExprChainedEPL}
-	case "stream-function":
-		return []string{eplOtherStreamExprFunctionA, eplOtherStreamExprFunctionB, eplOtherStreamExprFunctionC, eplOtherStreamExprFunctionD}
-	case "instance-method-outer-join":
-		return []string{eplOtherStreamExprOuterJoin}
-	case "instance-method-static":
-		return []string{eplOtherStreamExprStaticJoin}
-	case "stream-instance-method-aliased":
-		return []string{eplOtherStreamExprAliasedEPL}
-	case "stream-instance-method-no-alias":
-		return []string{eplOtherStreamExprNoAliasEPL, eplOtherStreamExprMyTestSchema, eplOtherStreamExprMyTestEPL}
-	case "join-stream-select":
-		return []string{eplOtherStreamExprJoinAliased, eplOtherStreamExprJoinPlain}
-	default:
-		return []string{eplOtherStreamExprPatternEPL}
-	}
-}
-
 func validateEplOtherStreamExprScenario(scenario compat.Scenario) error {
 	if err := scenario.Validate(); err != nil {
 		return err
@@ -343,36 +400,29 @@ func validateEplOtherStreamExprScenario(scenario compat.Scenario) error {
 	beanACME := compat.Step{EventType: "SupportBean", Payload: json.RawMessage(`{"theString": "ACME", "intPrimitive": 1}`)}
 	beanNull := compat.Step{EventType: "SupportBean", Payload: json.RawMessage(`{"theString": null, "intPrimitive": 0}`)}
 	chainTop := compat.Step{EventType: "SupportChainTop", Payload: json.RawMessage(`{}`)}
+	staticOuter := compat.Step{EventType: "SupportBeanStaticOuter", Payload: json.RawMessage(`{}`)}
 	complexACME := compat.Step{EventType: "SupportBeanComplexProps", Payload: json.RawMessage(`{"simpleProperty": "ACME"}`)}
 	myTest10 := compat.Step{EventType: "MyTestEvent", Payload: json.RawMessage(`{"id": 10}`)}
-	s1Kickoff := compat.Step{EventType: "SupportBean_S1", Payload: json.RawMessage(`{"id": 0}`)}
-	_ = s1Kickoff
 	// Per-case explicit step tables (deploy label -> EPL; sends in order).
 	type want struct {
-		op        string
-		statement string
-		epl       string
-		send      compat.Step
+		op          string
+		statement   string
+		epl         string
+		mode        string
+		expectError string
+		send        compat.Step
 	}
-	mk := func(caseName string, deploys []string, sends []compat.Step) []want {
-		var out []want
-		out = append(out, want{op: "case"})
-		for i, epl := range deploys {
-			out = append(out, want{op: "deploy", statement: epl2Label(deploys, i), epl: epl})
-		}
-		for _, send := range sends {
-			out = append(out, want{op: "send", send: send})
-		}
-		out = append(out, want{op: "undeploy-all"})
-		return out
-	}
-	_ = mk
-	_ = s1Kickoff
 	tables := map[string][]want{
 		"chained-parameterized": {
 			{op: "case"},
 			{op: "deploy", statement: "s0", epl: eplOtherStreamExprChainedEPL},
 			{op: "send", send: chainTop},
+			{op: "undeploy-all"},
+			{op: "deploy", statement: "s0-soda", epl: eplOtherStreamExprChainedEPL, mode: "soda"},
+			{op: "send", send: chainTop},
+			{op: "undeploy-all"},
+			{op: "deploy", statement: "s0-static", epl: eplOtherStreamExprStaticOuterEPL},
+			{op: "send", send: staticOuter},
 			{op: "undeploy-all"},
 		},
 		"stream-function": {
@@ -428,6 +478,13 @@ func validateEplOtherStreamExprScenario(scenario compat.Scenario) error {
 			{op: "send", send: beanACME},
 			{op: "undeploy-all"},
 		},
+		"invalid-select": {
+			{op: "case"},
+			{op: "build-error", statement: "getstring-args", epl: eplOtherStreamExprProbeGetStringEPL},
+			{op: "build-error", statement: "abc-method", epl: eplOtherStreamExprProbeAbcEPL, expectError: eplOtherStreamExprProbeAbcError},
+			{op: "build-error", statement: "pattern-indexed", epl: eplOtherStreamExprProbePatternEPL, expectError: eplOtherStreamExprProbePatternError},
+			{op: "undeploy-all"},
+		},
 	}
 	offset := 0
 	for _, caseName := range eplOtherStreamExprCases {
@@ -444,8 +501,12 @@ func validateEplOtherStreamExprScenario(scenario compat.Scenario) error {
 			}
 			switch want.op {
 			case "deploy":
-				if step.Statement != want.statement || step.Epl != want.epl {
+				if step.Statement != want.statement || step.Epl != want.epl || step.Mode != want.mode {
 					return fmt.Errorf("%s case %q step %d deploy %q is not pinned", eplOtherStreamExprID, caseName, index, want.statement)
+				}
+			case "build-error":
+				if step.Statement != want.statement || step.Epl != want.epl || step.ExpectError != want.expectError {
+					return fmt.Errorf("%s case %q step %d build-error %q is not pinned", eplOtherStreamExprID, caseName, index, want.statement)
 				}
 			case "send":
 				if step.EventType != want.send.EventType {
@@ -511,15 +572,9 @@ func eplOtherStreamExprPinPayload(caseName string, index int, step compat.Step, 
 			return fmt.Errorf("%s step %d MyTestEvent payload is not pinned", eplOtherStreamExprID, index)
 		}
 	case eplOtherStreamExprChainTop:
+	case eplOtherStreamExprStaticOuter:
 	}
 	return nil
-}
-
-func epl2Label(deploys []string, i int) string {
-	if len(deploys) == 1 {
-		return "s0"
-	}
-	return fmt.Sprintf("s0%c", 'a'+rune(i))
 }
 
 func runEplOtherStreamExprScenario(ctx context.Context, scenario compat.Scenario) (compat.Trace, error) {
@@ -529,9 +584,10 @@ func runEplOtherStreamExprScenario(ctx context.Context, scenario compat.Scenario
 	trace := compat.Trace{Version: scenario.Version, ID: scenario.ID}
 	offset := 0
 	spans := map[string]int{
-		"chained-parameterized": 4, "stream-function": 8, "instance-method-outer-join": 4,
+		"chained-parameterized": 10, "stream-function": 8, "instance-method-outer-join": 4,
 		"instance-method-static": 5, "stream-instance-method-aliased": 4,
 		"stream-instance-method-no-alias": 7, "join-stream-select": 6, "pattern-stream-select": 5,
+		"invalid-select": 5,
 	}
 	for caseIndex, caseName := range eplOtherStreamExprCases {
 		caseSteps := scenario.Steps[offset : offset+spans[caseName]]
@@ -550,7 +606,13 @@ func runEplOtherStreamExprCase(ctx context.Context, steps []compat.Step, caseNam
 	register := func() error {
 		switch caseName {
 		case "chained-parameterized":
-			_, err := esper.RegisterStruct[eplOtherStreamExprChainTop](env, "SupportChainTop")
+			if _, err := esper.RegisterStruct[eplOtherStreamExprChainTop](env, "SupportChainTop"); err != nil {
+				return err
+			}
+			_, err := esper.RegisterStruct[eplOtherStreamExprStaticOuter](env, "SupportBeanStaticOuter")
+			return err
+		case "invalid-select":
+			_, err := esper.RegisterStruct[eplOtherStreamExprBean](env, "SupportBean")
 			return err
 		case "instance-method-outer-join", "join-stream-select", "pattern-stream-select":
 			if _, err := esper.RegisterStruct[eplOtherStreamExprMD](env, "SupportMarketDataBean"); err != nil {
@@ -600,21 +662,40 @@ func runEplOtherStreamExprCase(ctx context.Context, steps []compat.Step, caseNam
 		})
 	}
 
+	var deployments []*esper.Deployment
+
 	buildAndDeploy := func(label string, epl string) error {
 		var plan esper.Plan
 		var err error
 		switch caseName + "/" + label {
-		case "chained-parameterized/s0":
+		case "chained-parameterized/s0", "chained-parameterized/s0-soda":
 			// Chained parameterized event methods; the no-alias output name
-			// is the verbatim chain text.
+			// is the verbatim chain text. The soda leg replays the identical
+			// plan (the Go plan is already the compiled form).
 			plan, err = env.Build(esper.Select(
 				esper.From[eplOtherStreamExprChainTop](env, "SupportChainTop"),
 				esper.Alias(`top.getChildOne("abc",10).getChildTwo("append")`,
-					esper.Method[string](
+					esper.Method[eplOtherStreamExprChainChildTwo](
 						esper.Method[eplOtherStreamExprChainChild](
 							esper.EventValue[eplOtherStreamExprChainTop](),
 							"GetChildOne", esper.Literal("abc"), esper.Literal(10)),
 						"GetChildTwo", esper.Literal("append"))),
+			).Query(esper.StatementName("s0")))
+		case "chained-parameterized/s0-static":
+			// Static methods resolved through instance-property navigation:
+			// inside.getMyString() and inside.insideTwo.getMyOtherString().
+			plan, err = env.Build(esper.Select(
+				esper.From[eplOtherStreamExprStaticOuter](env, "SupportBeanStaticOuter"),
+				esper.Alias("val", esper.Method[string](
+					esper.Property[eplOtherStreamExprStaticInner](
+						esper.EventValue[eplOtherStreamExprStaticOuter](), "inside"),
+					"GetMyString")),
+				esper.Alias("val2", esper.Method[string](
+					esper.Property[eplOtherStreamExprStaticInnerTwo](
+						esper.Property[eplOtherStreamExprStaticInner](
+							esper.EventValue[eplOtherStreamExprStaticOuter](), "inside"),
+						"insideTwo"),
+					"GetMyOtherString")),
 			).Query(esper.StatementName("s0")))
 		case "stream-function/s0a", "stream-function/s0b", "stream-function/s0c", "stream-function/s0d":
 			// Static-method where filters; the four Java argument forms
@@ -640,7 +721,7 @@ func runEplOtherStreamExprCase(ctx context.Context, steps []compat.Step, caseNam
 			).LeftOuter().Select(
 				esper.SelectFrom(0, "symbol", esper.Field[eplOtherStreamExprMD, string]("symbol")),
 				esper.SelectFrom(1, "theString", esper.Method[string](
-					esper.EventValue[eplOtherStreamExprBean](), "GetTheString")),
+					esper.JoinEventValue[eplOtherStreamExprBean](1), "GetTheString")),
 			).Query(esper.StatementName("s0")))
 		case "instance-method-static/s0":
 			plan, err = env.Build(esper.Join(
@@ -652,9 +733,9 @@ func runEplOtherStreamExprCase(ctx context.Context, steps []compat.Step, caseNam
 			).LeftOuter().Select(
 				esper.SelectFrom(0, "symbol", esper.Field[eplOtherStreamExprMD, string]("symbol")),
 				esper.SelectFrom(1, "simpleprop", esper.Method[string](
-					esper.EventValue[eplOtherStreamExprComplexProps](), "GetSimpleProperty")),
+					esper.JoinEventValue[eplOtherStreamExprComplexProps](1), "GetSimpleProperty")),
 				esper.SelectFrom(1, "def", esper.Method[eplOtherStreamExprComplexProps](
-					esper.EventValue[eplOtherStreamExprComplexProps](), "MakeDefaultBean")),
+					esper.JoinEventValue[eplOtherStreamExprComplexProps](1), "MakeDefaultBean")),
 			).Query(esper.StatementName("s0")))
 		case "stream-instance-method-aliased/s0":
 			plan, err = env.Build(esper.Select(
@@ -733,6 +814,7 @@ func runEplOtherStreamExprCase(ctx context.Context, steps []compat.Step, caseNam
 		if err != nil {
 			return fmt.Errorf("deploy %q: %w", label, err)
 		}
+		deployments = append(deployments, deployment)
 		for _, statement := range deployment.Statements() {
 			// Subscribe to the s0 consumer statements (s0a/s0b in the
 			// join-stream-select case where two statements share a case).
@@ -748,12 +830,26 @@ func runEplOtherStreamExprCase(ctx context.Context, steps []compat.Step, caseNam
 		return nil
 	}
 
+	undeployAll := func() error {
+		for _, deployment := range deployments {
+			if err := deployment.Undeploy(ctx); err != nil {
+				return err
+			}
+		}
+		deployments = nil
+		return nil
+	}
+
 	for _, step := range steps {
 		switch step.Op {
 		case "case":
 		case "deploy":
 			if err := buildAndDeploy(step.Statement, step.Epl); err != nil {
 				return compat.Trace{}, fmt.Errorf("deploy %q: %w", step.Statement, err)
+			}
+		case "build-error":
+			if err := eplOtherStreamExprBuildError(&trace, caseName, step); err != nil {
+				return compat.Trace{}, err
 			}
 		case "send":
 			payload, err := decodeEplOtherStreamExprPayload(step)
@@ -764,9 +860,40 @@ func runEplOtherStreamExprCase(ctx context.Context, steps []compat.Step, caseNam
 				return compat.Trace{}, err
 			}
 		case "undeploy-all":
+			if err := undeployAll(); err != nil {
+				return compat.Trace{}, err
+			}
 		}
 	}
 	return trace, nil
+}
+
+// eplOtherStreamExprBuildError emits the pinned compile-error record for one
+// invalid-select probe. All three probes are unrepresentable on the typed Go
+// surface — method existence/arity and indexed pattern-tag property access
+// resolve at evaluation time, not at Build — so no Go rejection is claimed
+// and the record carries the pinned Java prefix (empty for the "skip" probe).
+func eplOtherStreamExprBuildError(trace *compat.Trace, caseName string, step compat.Step) error {
+	pinnedEPL, ok := eplOtherStreamExprProbeEPLs[step.Statement]
+	if !ok || step.Epl != pinnedEPL {
+		return fmt.Errorf("%s: build-error probe %q carries an unpinned EPL %q", eplOtherStreamExprID, step.Statement, step.Epl)
+	}
+	pinnedError, ok := eplOtherStreamExprProbeErrors[step.Statement]
+	if !ok || step.ExpectError != pinnedError {
+		return fmt.Errorf("%s: build-error probe %q carries an unpinned expectError", eplOtherStreamExprID, step.Statement)
+	}
+	record := compat.TraceRecord{
+		Case:      caseName,
+		Operation: "compile-error",
+		Statement: step.Statement,
+	}
+	// Java omits the value field for "skip"-pinned probes; an empty string
+	// would serialize as a present-but-empty value and diff against absent.
+	if step.ExpectError != "" {
+		record.Value = step.ExpectError
+	}
+	trace.Records = append(trace.Records, record)
+	return nil
 }
 
 func decodeEplOtherStreamExprPayload(step compat.Step) (any, error) {
@@ -798,6 +925,11 @@ func decodeEplOtherStreamExprPayload(step compat.Step) (any, error) {
 			return nil, err
 		}
 		return eplOtherStreamExprChainTop{}, nil
+	case "SupportBeanStaticOuter":
+		if err := requireEplOtherStreamExprFields(fields); err != nil {
+			return nil, err
+		}
+		return eplOtherStreamExprStaticOuter{}, nil
 	case "SupportBeanComplexProps":
 		if err := requireEplOtherStreamExprFields(fields, "simpleProperty"); err != nil {
 			return nil, err

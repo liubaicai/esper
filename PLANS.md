@@ -55,36 +55,41 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly') committed and pushed as 9ac32d036; Git owns identity. Parity review PASS, two P3s fixed.
 
 ## Current work unit
-Active: Draft 4.530 ('expr-filter-expressions').
+Active: Draft 4.531 ('epl-other-stream-expr').
 
-- Selection: `ExprFilterExpressions.java` all 3 executions, no flags —
- `ExprFilterOverInClause` (`java-runtime-e9c9627ad604f3404620`),
- `ExprFilterStaticFunc` (`java-runtime-15341d9e0dc15c4b2fc3`),
- `ExprFilterInstanceMethodWWildcard` (`java-runtime-0a80365acd3e6ab25238`).
+- Selection: `EPLOtherStreamExpr.java` all 4 executions, no flags —
+ `EPLOtherChainedParameterized` (`java-runtime-9277aaf4733e12e28d28`),
+ `EPLOtherInstanceMethodOuterJoin` (`java-runtime-cdb6409058fe3e44770f`),
+ `EPLOtherInstanceMethodStatic` (`java-runtime-f33922181fbbb9c2e19b`),
+ `EPLOtherInvalidSelect` (`java-runtime-027a02a57250c1d497cb`).
  Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`.
-- [x] Contract frozen: JavaContract530 (3 executions: OverInClause
- pattern in+>= filter every-cumulative 2 statements, StaticFunc 8
- statements UDF+equals/and/comma invoked-flags, InstanceMethodWWildcard
- 3 EPLs instance-method filter invoked-flags) + GoSurface530 (no engine
- gaps; PatternFrom+InOf+GreaterOrEqualOf+TagField, Func2+Concat+Equal/
- NotEqual/And, Method/EventValue; closest runner
- expr_filter_in_and_between.go). Assets530 dispatched.
-- [x] Assets530 integrated: `internal/app/parity/expr_filter_expressions.go` +
-  `testdata/parity/expr-filter-expressions.json` (3 cases / 48 steps) +
-  oracle `tools/java-oracle/ExprFilterExpressionsScenarioOracle.java` +
-  `run-expr-filter-expressions.sh` + run.go/run_test.go wiring. Zero
-  engine changes. Oracle classpath fix: added common-avro
-  dependency:build-classpath for GenericData$Record.
-- [x] Differential replay: Java 49 records; Go 49 records. `-mode
-  expr-filter-expressions-diff` status `passing` / 0 differences
+- [x] Contract frozen: JavaContract531 (4 executions ords 0/2/3/8:
+  ChainedParameterized 3 steps incl. SODA round trip + static-via-instance,
+  InstanceMethodOuterJoin left-outer null method, InstanceMethodStatic
+  static-via-alias null→bean, InvalidSelect 3 compile-error probes) +
+  GoSurface531 (no engine gaps; Method chains, Join+LeftOuter+SelectFrom,
+  build-error records; extends existing epl_other_stream_expr.go which
+  covers ords 1/4/5/6/7). Assets531 dispatched.
+- [x] Assets531 integrated: extended `internal/app/parity/epl_other_stream_expr.go` +
+  `testdata/parity/epl-other-stream-expr.json` (9 cases / 54 steps) +
+  oracle `tools/java-oracle/EPLOtherStreamExprScenarioOracle.java` +
+  `run-epl-other-stream-expr.sh` + run_test.go wiring. Zero engine
+  changes. Existing 5 cases preserved byte-for-byte.
+- [x] Differential replay: Java 19 records; Go 19 records. `-mode
+  epl-other-stream-expr-diff` status `passing` / 0 differences
   (identity normalizer).
-- [x] Manifest: NEW case `case.expr-filter-expressions` born-DV with
-  the 3 IDs; `expr.core` mapping + goRefs extended. Summary 761 cases /
-  387 DV / 1520 DV runtime IDs / unreferenced 512.
+- [x] Manifest: `case-epl-other-stream-expr` extended from 5 to 9 DV
+  runtime IDs (all ords now covered). Summary 761 cases / 387 DV /
+  1524 DV runtime IDs / unreferenced 508.
 - [ ] Gates + parity review + commit: pending `make check`, independent
   reviewer, then commit/push.
 
 ## Previous work units (shipped)
+
+- Shipped: Draft 4.530 ('expr-filter-expressions') committed and pushed
+ as fb897d06d; Git owns identity. Born-DV `case.expr-filter-expressions`
+ under `expr.core` (3 executions, 49 records, 0 differences). Zero
+ engine changes. Parity review PASS, one P3 fixed (step count).
 
 - Shipped: Draft 4.529 ('expr-class-class-dependency') committed and pushed
  as 2bc1a8aea; Git owns identity. Born-DV `case.expr-class-class-dependency`

@@ -43372,25 +43372,37 @@
   {
    "id": "case-epl-other-stream-expr",
    "javaRuntimeIds": [
-    "java-runtime-67e9ea0d239585623711",
-    "java-runtime-cc45d135a75bb01736f0",
+    "java-runtime-027a02a57250c1d497cb",
     "java-runtime-469a37a746e59d25a115",
+    "java-runtime-67e9ea0d239585623711",
+    "java-runtime-827ea8daeea9baec40cf",
+    "java-runtime-9277aaf4733e12e28d28",
     "java-runtime-a59b12bbe5788257c37b",
-    "java-runtime-827ea8daeea9baec40cf"
+    "java-runtime-cc45d135a75bb01736f0",
+    "java-runtime-cdb6409058fe3e44770f",
+    "java-runtime-f33922181fbbb9c2e19b"
    ],
    "javaStaticIds": [
-    "java-e571ee83c24576b8aba7",
-    "java-b448cd11a74aaf56dbab",
-    "java-572869619d74ba3c95be",
     "java-534aeb16b8d33707670a",
-    "java-dfb3493bb3eb08a778db"
+    "java-572869619d74ba3c95be",
+    "java-6828e4919d88389a5b0c",
+    "java-ae28c394fd146baf994e",
+    "java-b448cd11a74aaf56dbab",
+    "java-bd1bca1463bae6798d0a",
+    "java-dfb3493bb3eb08a778db",
+    "java-e571ee83c24576b8aba7",
+    "java-f1f45018481fb57e3382"
    ],
    "javaNames": [
+    "EPLOtherChainedParameterized",
+    "EPLOtherInstanceMethodOuterJoin",
+    "EPLOtherInstanceMethodStatic",
+    "EPLOtherInvalidSelect",
+    "EPLOtherJoinStreamSelectNoWildcard",
+    "EPLOtherPatternStreamSelectNoWildcard",
     "EPLOtherStreamFunction",
     "EPLOtherStreamInstanceMethodAliased",
-    "EPLOtherStreamInstanceMethodNoAlias",
-    "EPLOtherJoinStreamSelectNoWildcard",
-    "EPLOtherPatternStreamSelectNoWildcard"
+    "EPLOtherStreamInstanceMethodNoAlias"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherStreamExpr.java"
@@ -43429,15 +43441,17 @@
     "differential-verified"
    ],
    "differentialVerifiedRuntimeIds": [
-    "java-runtime-67e9ea0d239585623711",
-    "java-runtime-cc45d135a75bb01736f0",
+    "java-runtime-027a02a57250c1d497cb",
     "java-runtime-469a37a746e59d25a115",
+    "java-runtime-67e9ea0d239585623711",
+    "java-runtime-827ea8daeea9baec40cf",
+    "java-runtime-9277aaf4733e12e28d28",
     "java-runtime-a59b12bbe5788257c37b",
-    "java-runtime-827ea8daeea9baec40cf"
+    "java-runtime-cc45d135a75bb01736f0",
+    "java-runtime-cdb6409058fe3e44770f",
+    "java-runtime-f33922181fbbb9c2e19b"
    ],
-   "notes": [
-    "EPLOtherStreamExpr pins stream method expressions across 5 of 9 executions (ordinals 1/4/5/6/7): static-method where filters on a plain stream with stream-name, wildcard, and EventBean argument forms (volumeGreaterZero / volumeGreaterZeroEventBean); aliased and no-alias instance-method projections with verbatim expression-text output names (s0.getVolume(), s0.getPriceTimesVolume(3)) and Double/Long value rendering; stream-as-object join columns (s0stream/s1stream and s0/s1) over keepall inner joins; and a followed-by pattern with a static UDF filter comparing prior-tag properties. Method expressions compose via Method[T](EventValue[T](), ...) for event-receiver calls and Property[T](PatternEvent(tag), name) for pattern-tag navigation. Deferred executions: ord 0 (chained parameterized \u2014 chained Method resolution returns missing in Go, needs engine work), ord 2/3 (instance methods on absent join sides return missing instead of null \u2014 needs Method null-propagation alignment), ord 8 (invalid compiles \u2014 no Go rejection surface). All four deferred items are approved differences / engine-work items."
-   ]
+   "notes": "EPLOtherStreamExpr all 9 executions (ords 0-8). 19 records (16 listener + 3 compile-error), 0 differences."
   },
   {
    "id": "case-epl-other-select-expr-stream-selector",
@@ -52617,7 +52631,7 @@
   "inventoriedCases": 761,
   "implementedCases": 759,
   "differentialVerifiedCases": 387,
-  "differentialVerifiedRuntimeIds": 1520,
+  "differentialVerifiedRuntimeIds": 1524,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -52627,10 +52641,10 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4054,
-  "referencedJavaRuntimeIds": 3624,
+  "runtimeAssociationCount": 4058,
+  "referencedJavaRuntimeIds": 3628,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 512,
+  "unreferencedJavaRuntimeIds": 508,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
   "totalCases": 761,
