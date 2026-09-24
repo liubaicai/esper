@@ -248,6 +248,26 @@ func (c *VirtualClock) Advance(at time.Time) error {
 	return nil
 }
 
+// TimeUnit selects the resolution of long-valued date-time expressions and
+// the engine clock exposed to expressions. It ports Esper's TimeAbacus
+// setting (engine-timestamp-resolution): Milliseconds is the default and
+// matches every existing behavior; Microseconds interprets int64 date-time
+// values and current_timestamp() as epoch microseconds while calendar
+// operations keep millisecond precision and re-add the sub-millisecond
+// remainder (TimeAbacusMicroseconds.calendarSet/calendarGet).
+type TimeUnit int
+
+const (
+	// Milliseconds is the default resolution: int64 date-time values are
+	// epoch milliseconds and current_timestamp() returns UnixNano/1e6.
+	Milliseconds TimeUnit = iota
+	// Microseconds interprets int64 date-time values as epoch microseconds
+	// and makes current_timestamp() return UnixNano/1e3. Calendar-backed
+	// operations (set/withDate/withTime/get/toCalendar/toDate) operate on
+	// the millisecond part; long results re-add the microsecond remainder.
+	Microseconds
+)
+
 type engineConfig struct {
 	clock                            *VirtualClock
 	matchRecognize                   MatchRecognizeRuntimeConfig
@@ -263,6 +283,7 @@ type engineConfig struct {
 	outboundPool                     asyncPoolConfig
 	routePool                        asyncPoolConfig
 	timerPool                        asyncPoolConfig
+	timeUnit                         TimeUnit
 }
 
 type EngineOption func(*engineConfig)
@@ -305,12 +326,23 @@ func WithLockActivityTracing() EngineOption {
 	return func(cfg *engineConfig) { cfg.lockActivity = true }
 }
 
+// WithTimeUnit selects the date-time resolution for long-valued expressions
+// and the engine clock exposed to expressions (Esper's
+// engine-timestamp-resolution / TimeAbacus setting). The default is
+// Milliseconds; Microseconds interprets int64 date-time values and
+// current_timestamp() as epoch microseconds. See TimeUnit for the exact
+// calendar-operation semantics.
+func WithTimeUnit(unit TimeUnit) EngineOption {
+	return func(cfg *engineConfig) { cfg.timeUnit = unit }
+}
+
 // Engine owns deployed statements and the explicit processing clock.
 type Engine struct {
 	mu                                 runtimeMutex
 	env                                *Environment
 	clock                              *VirtualClock
 	runtimeURI                         string
+	timeUnit                           TimeUnit
 	services                           map[string]any
 	lockActivity                       *lockActivityRecorder
 	matchRecognizeStatePool            *rowRecogStatePool
@@ -422,6 +454,7 @@ func NewEngine(env *Environment, options ...EngineOption) *Engine {
 		env:                              env,
 		clock:                            cfg.clock,
 		runtimeURI:                       cfg.runtimeURI,
+		timeUnit:                         cfg.timeUnit,
 		services:                         make(map[string]any, len(cfg.services)),
 		matchRecognizeStatePool:          newRowRecogStatePool(cfg.matchRecognize),
 		patternSubexpressionMax:          cfg.patternSubexpressionMax,
@@ -14237,7 +14270,7 @@ func (r *statementRuntime) snapshotJoinBatch(plan Plan, now time.Time) ResultBat
 		state = redriven
 	}
 	tuples := joinTuples(plan.query.join, state, now, r)
-	tuples = filterJoinTuples(tuples, plan.query, now, r.variables)
+	tuples = filterJoinTuples(tuples, plan.query, now, r.variables, r.engine)
 	result.New = orderJoinResults(
 		projectJoinTuples(tuples, plan.query, plan.resultSchema, now, r.variables, false, r.evaluationContext()),
 		tuples, plan.query.orderBy, now, r.variables, false,
@@ -16243,13 +16276,13 @@ func (r *statementRuntime) joinMatches(condition JoinCondition, events []Event, 
 	if r == nil {
 		return false
 	}
-	return joinConditionMatches(condition, events, now, r.variables)
+	return joinConditionMatches(condition, events, now, r.variables, r.engine)
 }
 
-func joinConditionMatches(condition JoinCondition, events []Event, now time.Time, variables map[string]Value) bool {
+func joinConditionMatches(condition JoinCondition, events []Event, now time.Time, variables map[string]Value, engine *Engine) bool {
 	if len(condition.all) > 0 {
 		for _, child := range condition.all {
-			if !joinConditionMatches(child, events, now, variables) {
+			if !joinConditionMatches(child, events, now, variables, engine) {
 				return false
 			}
 		}
@@ -16257,7 +16290,7 @@ func joinConditionMatches(condition JoinCondition, events []Event, now time.Time
 	}
 	if len(condition.any) > 0 {
 		for _, child := range condition.any {
-			if joinConditionMatches(child, events, now, variables) {
+			if joinConditionMatches(child, events, now, variables, engine) {
 				return true
 			}
 		}
@@ -16267,8 +16300,8 @@ func joinConditionMatches(condition JoinCondition, events []Event, now time.Time
 	if condition.Left == nil || condition.Right == nil || leftSource < 0 || rightSource < 0 || leftSource >= len(events) || rightSource >= len(events) {
 		return false
 	}
-	leftValue := condition.Left.eval(EvalContext{Event: events[leftSource], JoinEvents: events, OuterEvent: events[leftSource], Now: now, Variables: variables})
-	rightValue := condition.Right.eval(EvalContext{Event: events[rightSource], JoinEvents: events, OuterEvent: events[rightSource], Now: now, Variables: variables})
+	leftValue := condition.Left.eval(EvalContext{Event: events[leftSource], JoinEvents: events, OuterEvent: events[leftSource], Now: now, Variables: variables, Engine: engine})
+	rightValue := condition.Right.eval(EvalContext{Event: events[rightSource], JoinEvents: events, OuterEvent: events[rightSource], Now: now, Variables: variables, Engine: engine})
 	switch condition.Comparison {
 	case JoinEqual:
 		matched, ok := boolValue(EqualValues(leftValue, rightValue))
@@ -17014,7 +17047,7 @@ func joinConditionsMatch(conditions []JoinCondition, events []Event, now time.Ti
 	if runtime == nil {
 		return false
 	}
-	return joinConditionsMatchWithVariables(conditions, events, now, runtime.variables)
+	return joinConditionsMatchWithVariables(conditions, events, now, runtime.variables, runtime.engine)
 }
 
 // containedJoinSameParent reports whether two tuple events are contained
@@ -17050,9 +17083,9 @@ func containedJoinTupleSameParent(events []Event) bool {
 	return true
 }
 
-func joinConditionsMatchWithVariables(conditions []JoinCondition, events []Event, now time.Time, variables map[string]Value) bool {
+func joinConditionsMatchWithVariables(conditions []JoinCondition, events []Event, now time.Time, variables map[string]Value, engine *Engine) bool {
 	for _, condition := range conditions {
-		if !joinConditionMatches(condition, events, now, variables) {
+		if !joinConditionMatches(condition, events, now, variables, engine) {
 			return false
 		}
 	}
@@ -24201,14 +24234,14 @@ func (r *statementRuntime) joinBatch(delta joinDelta, plan Plan, now time.Time) 
 		oldFiltered = filterTuplesByHaving(oldFiltered, plan.query.joinHaving, now, r.variables)
 	}
 	if plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream {
-		filtered := filterJoinTuples(newFiltered, plan.query, now, r.variables)
+		filtered := filterJoinTuples(newFiltered, plan.query, now, r.variables, r.engine)
 		batch.New = orderJoinResults(
 			projectJoinTuples(filtered, plan.query, plan.resultSchema, now, r.variables, false, r.evaluationContext()),
 			filtered, plan.query.orderBy, now, r.variables, false,
 		)
 	}
 	if plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream {
-		filtered := filterJoinTuples(oldFiltered, plan.query, now, r.variables)
+		filtered := filterJoinTuples(oldFiltered, plan.query, now, r.variables, r.engine)
 		batch.Old = orderJoinResults(
 			projectJoinTuples(filtered, plan.query, plan.resultSchema, now, r.variables, true, r.evaluationContext()),
 			filtered, plan.query.orderBy, now, r.variables, true,
@@ -24227,7 +24260,7 @@ func (r *statementRuntime) joinBatch(delta joinDelta, plan Plan, now time.Time) 
 	return batch
 }
 
-func filterJoinTuples(tuples [][]Event, query Query, now time.Time, variables map[string]Value) [][]Event {
+func filterJoinTuples(tuples [][]Event, query Query, now time.Time, variables map[string]Value, engine *Engine) [][]Event {
 	if query.joinWhere == nil || len(tuples) == 0 {
 		return tuples
 	}
@@ -24243,6 +24276,7 @@ func filterJoinTuples(tuples [][]Event, query Query, now time.Time, variables ma
 			OuterEvent: event,
 			Now:        now,
 			Variables:  variables,
+			Engine:     engine,
 		})
 		matched, ok := boolValue(value)
 		if ok && matched {

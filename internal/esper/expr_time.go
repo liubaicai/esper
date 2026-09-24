@@ -2,11 +2,17 @@ package esper
 
 import "time"
 
-// CurrentTimestamp returns the current statement time as epoch milliseconds.
-// It follows Esper's current_timestamp() result type and uses EvalContext.Now
-// so virtual-clock and fire-and-forget evaluation remain deterministic.
+// CurrentTimestamp returns the current statement time in engine units:
+// epoch milliseconds under the default Milliseconds resolution and epoch
+// microseconds under WithTimeUnit(Microseconds), matching Esper's
+// current_timestamp() result type under the configured TimeAbacus. It uses
+// EvalContext.Now so virtual-clock and fire-and-forget evaluation remain
+// deterministic.
 func CurrentTimestamp() Expression[int64] {
 	return makeExpr[int64]("current-timestamp", "current_timestamp()", nil, func(ctx EvalContext) Value {
+		if ctx.timeUnit() == Microseconds {
+			return Present(ctx.Now.UnixNano() / int64(time.Microsecond))
+		}
 		return Present(ctx.Now.UnixNano() / int64(time.Millisecond))
 	})
 }

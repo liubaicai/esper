@@ -608,6 +608,7 @@
    "goRefs": [
     "internal/app/parity/expr_dt_between.go",
     "internal/app/parity/expr_dt_interval_ops.go",
+    "internal/app/parity/expr_dt_resolution.go",
     "internal/app/parity/run_test.go",
     "internal/esper/enum_expr.go",
     "internal/esper/epl_other_unary_minus_parity_test.go",
@@ -636,6 +637,8 @@
     "internal/esper/expr_dt_between_test.go",
     "internal/esper/expr_dt_calops.go",
     "internal/esper/expr_dt_calops_test.go",
+    "internal/esper/expr_dt_resolution.go",
+    "internal/esper/expr_dt_resolution_test.go",
     "internal/esper/expr_duck_test.go",
     "internal/esper/expr_equals.go",
     "internal/esper/expr_equals_test.go",
@@ -48918,6 +48921,57 @@
     "java-runtime-754f50455eb82b9e64a7"
    ],
    "notes": "selectFrom lambdas (v)/(v,i)/(v,i,s) over event and scalar collections incl. new{v0,v1} multi-column, index/size params, extractNum SRF, null vs empty collection semantics. 12 records, 0 differences."
+  },
+  {
+   "id": "case.expr-dt-resolution",
+   "javaRuntimeIds": [
+    "java-runtime-28a96cc89bb103f3750a",
+    "java-runtime-deee6eb6aef5c6bfa2a7",
+    "java-runtime-35ef58e0d7badc88b6a8",
+    "java-runtime-81d2223362062b76b0a5"
+   ],
+   "javaStaticIds": [
+    "java-f30ce9b974beba2c58e8",
+    "java-55fcf32b326f5e318713"
+   ],
+   "javaNames": [
+    "ExprDTResolutionEventTime",
+    "ExprDTResolutionEventTime",
+    "ExprDTLongProperty",
+    "ExprDTLongProperty"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTResolution.java"
+   ],
+   "goTests": [
+    "internal/app/parity/expr_dt_resolution.go",
+    "internal/app/parity/run_test.go",
+    "internal/esper/expr_dt_resolution_test.go"
+   ],
+   "tags": [
+    "expr",
+    "datetime",
+    "resolution",
+    "microsecond",
+    "born-differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/expr-dt-resolution.evidence.json"
+   ],
+   "difference": "Microsecond time unit (WithTimeUnit(Microseconds)) is a new Go engine option mirroring Java's getTimeSource().setTimeUnit(MICROSECONDS). Event-ref-as-datetime (a.withDate(...).before(b)) maps to EventIntervalBounds+WithDateBounds+IntervalBefore over schema-flagged StartTimestamp/EndTimestamp fields. toCalendar/toDate collapse to DateTimeToTime (Go time.Time is the single calendar representation).",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-28a96cc89bb103f3750a",
+    "java-runtime-deee6eb6aef5c6bfa2a7",
+    "java-runtime-35ef58e0d7badc88b6a8",
+    "java-runtime-81d2223362062b76b0a5"
+   ],
+   "notes": "ExprDTResolution.executions(isMicrosecond) x2 configs: EventTime (object-array MyEvent(id,sts,ets) start/end timestamp, unidirectional #lastevent join, strict before at 1-engine-unit boundary) + LongProperty (withTime/set/get/getMinuteOfHour/toDate/toCalendar/minus over long + current_timestamp, \u00b5s remainder preservation). 8 records, 0 differences."
   }
  ],
  "mappings": [
@@ -52284,13 +52338,17 @@
   {
    "capabilityId": "expr.enum",
    "caseId": "case.expr-enum-select-from"
+  },
+  {
+   "capabilityId": "expr.core",
+   "caseId": "case.expr-dt-resolution"
   }
  ],
  "summary": {
-  "inventoriedCases": 755,
-  "implementedCases": 753,
-  "differentialVerifiedCases": 381,
-  "differentialVerifiedRuntimeIds": 1498,
+  "inventoriedCases": 756,
+  "implementedCases": 754,
+  "differentialVerifiedCases": 382,
+  "differentialVerifiedRuntimeIds": 1502,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -52300,13 +52358,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4032,
-  "referencedJavaRuntimeIds": 3602,
+  "runtimeAssociationCount": 4036,
+  "referencedJavaRuntimeIds": 3606,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 534,
+  "unreferencedJavaRuntimeIds": 530,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 755,
+  "totalCases": 756,
   "totalCapabilities": 126
  }
 }

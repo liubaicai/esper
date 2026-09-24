@@ -1,0 +1,222 @@
+{
+  "version": "esper-parity/v1",
+  "id": "expr-dt-resolution",
+  "description": "ExprDTResolution executions(isMicrosecond) under both engine time resolutions: event-time-ms/us replay ExprDTResolutionEventTime (object-array MyEvent(id,sts,ets) with sts/ets timestamp properties; a.withDate(2002,4,30).before(b) fires iff the shifted end is strictly before b's start — the boundary is one engine unit, 1 ms vs 1 µs), long-property-ms/us replay ExprDTLongProperty (c0..c7 over longdate and current_timestamp: µs long ops preserve the sub-ms remainder, toCalendar/toDate truncate to ms, minus(1) is one millisecond in both modes).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTResolution.java",
+  "javaRuntimes": [
+    "java-runtime-28a96cc89bb103f3750a",
+    "java-runtime-deee6eb6aef5c6bfa2a7",
+    "java-runtime-35ef58e0d7badc88b6a8",
+    "java-runtime-81d2223362062b76b0a5"
+  ],
+  "javaNames": [
+    "ExprDTResolutionEventTime",
+    "ExprDTResolutionEventTime",
+    "ExprDTLongProperty",
+    "ExprDTLongProperty"
+  ],
+  "javaStaticIds": [
+    "java-f30ce9b974beba2c58e8",
+    "java-f30ce9b974beba2c58e8",
+    "java-55fcf32b326f5e318713",
+    "java-55fcf32b326f5e318713"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "event-time-ms",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-28a96cc89bb103f3750a",
+      "executionName": "ExprDTResolutionEventTime",
+      "observation": "listener+count; advanceTime(0), B@t seeds #lastevent without evaluating (unidirectional), A@flip-1 fires the join row (a,b fragments), A@flip does not — the strict before boundary is 1 ms",
+      "epl": "@name('s0') select * from MyEvent(id='A') as a unidirectional, MyEvent(id='B')#lastevent as b where a.withDate(2002, 4, 30).before(b)"
+    },
+    {
+      "case": "event-time-us",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-deee6eb6aef5c6bfa2a7",
+      "executionName": "ExprDTResolutionEventTime",
+      "observation": "listener+count; identical shape under the microsecond time source with all timestamps x1000: A@flip-1µs fires, A@flip does not — the strict before boundary is 1 µs",
+      "epl": "@name('s0') select * from MyEvent(id='A') as a unidirectional, MyEvent(id='B')#lastevent as b where a.withDate(2002, 4, 30).before(b)"
+    },
+    {
+      "case": "long-property-ms",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-35ef58e0d7badc88b6a8",
+      "executionName": "ExprDTLongProperty",
+      "observation": "listener; advanceTime(t) then one SupportDateTime(longdate=t) send emits c0..c7 = [calModMillis, calMod, 4, 4, 5, calTime, calTime, t-1]",
+      "epl": "@name('s0') select longdate.withTime(1, 2, 3, 4) as c0,longdate.set('hour', 1).set('minute', 2).set('second', 3).set('millisecond', 4).toCalendar() as c1,longdate.get('month') as c2,current_timestamp.get('month') as c3,current_timestamp.getMinuteOfHour() as c4,current_timestamp.toDate() as c5,current_timestamp.toCalendar() as c6,current_timestamp.minus(1) as c7 from SupportDateTime"
+    },
+    {
+      "case": "long-property-us",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-81d2223362062b76b0a5",
+      "executionName": "ExprDTLongProperty",
+      "observation": "listener; advanceTime(t*1000) then SupportDateTime(longdate=t*1000+123) emits c0=calModMillis*1000+123 (µs remainder preserved), c1/c5/c6 truncated to the same ms values as the ms run, c7=t*1000-1000 (minus(1) is one millisecond)",
+      "epl": "@name('s0') select longdate.withTime(1, 2, 3, 4) as c0,longdate.set('hour', 1).set('minute', 2).set('second', 3).set('millisecond', 4).toCalendar() as c1,longdate.get('month') as c2,current_timestamp.get('month') as c3,current_timestamp.getMinuteOfHour() as c4,current_timestamp.toDate() as c5,current_timestamp.toCalendar() as c6,current_timestamp.minus(1) as c7 from SupportDateTime"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "event-time-ms"
+    },
+    {
+      "op": "advance-time",
+      "case": "event-time-ms",
+      "at": "1970-01-01T00:00:00Z"
+    },
+    {
+      "op": "deploy",
+      "case": "event-time-ms",
+      "statement": "s0",
+      "epl": "@name('s0') select * from MyEvent(id='A') as a unidirectional, MyEvent(id='B')#lastevent as b where a.withDate(2002, 4, 30).before(b)"
+    },
+    {
+      "op": "send",
+      "case": "event-time-ms",
+      "eventType": "MyEvent",
+      "payload": {
+        "id": "B",
+        "sts": 1022749200000,
+        "ets": 1022749200000,
+        "expected": false
+      }
+    },
+    {
+      "op": "send",
+      "case": "event-time-ms",
+      "eventType": "MyEvent",
+      "payload": {
+        "id": "A",
+        "sts": 1022749199999,
+        "ets": 1022749199999,
+        "expected": true
+      }
+    },
+    {
+      "op": "send",
+      "case": "event-time-ms",
+      "eventType": "MyEvent",
+      "payload": {
+        "id": "A",
+        "sts": 1022749200000,
+        "ets": 1022749200000,
+        "expected": false
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "event-time-ms"
+    },
+    {
+      "op": "case",
+      "case": "event-time-us"
+    },
+    {
+      "op": "advance-time",
+      "case": "event-time-us",
+      "at": "1970-01-01T00:00:00Z"
+    },
+    {
+      "op": "deploy",
+      "case": "event-time-us",
+      "statement": "s0",
+      "epl": "@name('s0') select * from MyEvent(id='A') as a unidirectional, MyEvent(id='B')#lastevent as b where a.withDate(2002, 4, 30).before(b)"
+    },
+    {
+      "op": "send",
+      "case": "event-time-us",
+      "eventType": "MyEvent",
+      "payload": {
+        "id": "B",
+        "sts": 1022749200000000,
+        "ets": 1022749200000000,
+        "expected": false
+      }
+    },
+    {
+      "op": "send",
+      "case": "event-time-us",
+      "eventType": "MyEvent",
+      "payload": {
+        "id": "A",
+        "sts": 1022749199999999,
+        "ets": 1022749199999999,
+        "expected": true
+      }
+    },
+    {
+      "op": "send",
+      "case": "event-time-us",
+      "eventType": "MyEvent",
+      "payload": {
+        "id": "A",
+        "sts": 1022749200000000,
+        "ets": 1022749200000000,
+        "expected": false
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "event-time-us"
+    },
+    {
+      "op": "case",
+      "case": "long-property-ms"
+    },
+    {
+      "op": "advance-time",
+      "case": "long-property-ms",
+      "at": "2002-05-30T09:05:06.007Z"
+    },
+    {
+      "op": "deploy",
+      "case": "long-property-ms",
+      "statement": "s0",
+      "epl": "@name('s0') select longdate.withTime(1, 2, 3, 4) as c0,longdate.set('hour', 1).set('minute', 2).set('second', 3).set('millisecond', 4).toCalendar() as c1,longdate.get('month') as c2,current_timestamp.get('month') as c3,current_timestamp.getMinuteOfHour() as c4,current_timestamp.toDate() as c5,current_timestamp.toCalendar() as c6,current_timestamp.minus(1) as c7 from SupportDateTime"
+    },
+    {
+      "op": "send",
+      "case": "long-property-ms",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "longdate": 1022749506007,
+        "expected": true
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "long-property-ms"
+    },
+    {
+      "op": "case",
+      "case": "long-property-us"
+    },
+    {
+      "op": "advance-time",
+      "case": "long-property-us",
+      "at": "2002-05-30T09:05:06.007Z"
+    },
+    {
+      "op": "deploy",
+      "case": "long-property-us",
+      "statement": "s0",
+      "epl": "@name('s0') select longdate.withTime(1, 2, 3, 4) as c0,longdate.set('hour', 1).set('minute', 2).set('second', 3).set('millisecond', 4).toCalendar() as c1,longdate.get('month') as c2,current_timestamp.get('month') as c3,current_timestamp.getMinuteOfHour() as c4,current_timestamp.toDate() as c5,current_timestamp.toCalendar() as c6,current_timestamp.minus(1) as c7 from SupportDateTime"
+    },
+    {
+      "op": "send",
+      "case": "long-property-us",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "longdate": 1022749506007123,
+        "expected": true
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "long-property-us"
+    }
+  ]
+}

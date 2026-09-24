@@ -325,8 +325,13 @@ type EvalContext struct {
 	Tags              map[string]Event
 	TagValues         map[string][]Event
 	Now               time.Time
-	Variables         map[string]Value
-	Parameters        map[string]Value
+	// TimeUnit is the date-time resolution visible to expressions. Deployed
+	// statement evaluation resolves it from Engine (WithTimeUnit); direct
+	// expression evaluation may set it explicitly. The zero value is
+	// Milliseconds.
+	TimeUnit   TimeUnit
+	Variables  map[string]Value
+	Parameters map[string]Value
 	// Metadata is the statement-level evaluation context exposed by
 	// CurrentEvaluationContext. It is set only by statement projection paths;
 	// direct expression evaluation keeps the zero value and the expression
@@ -409,6 +414,7 @@ func (ctx EvalContext) groupEventContext(event Event, index int) EvalContext {
 		decimalMathContext:    ctx.decimalMathContext,
 		decimalMathContextSet: ctx.decimalMathContextSet,
 		Now:                   ctx.Now,
+		TimeUnit:              ctx.timeUnit(),
 		Variables:             ctx.Variables,
 		Parameters:            ctx.Parameters,
 	}
@@ -465,7 +471,7 @@ func Leaving(predicate ...Expression[bool]) Expression[bool] {
 			return Present(ctx.IsLeaving)
 		}
 		for _, event := range ctx.LeavingEvents {
-			value := predicate[0].eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+			value := predicate[0].eval(EvalContext{Event: event, Now: ctx.Now, TimeUnit: ctx.timeUnit(), Variables: ctx.Variables, Parameters: ctx.Parameters})
 			matched, ok := boolValue(value)
 			if ok && matched {
 				return Present(true)
@@ -3570,7 +3576,7 @@ func FilterAggregate[T any](aggregate AggregateExpression[T], predicate Expressi
 		filterEvents := func(events []Event) []Event {
 			filtered := make([]Event, 0, len(events))
 			for _, event := range events {
-				predicateContext := EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}
+				predicateContext := EvalContext{Event: event, Now: ctx.Now, TimeUnit: ctx.timeUnit(), Variables: ctx.Variables, Parameters: ctx.Parameters}
 				value := predicate.eval(predicateContext)
 				ok, isBool := boolValue(value)
 				if isBool && ok {
@@ -3636,7 +3642,7 @@ func distinctAggregateEvents(events []Event, input Expr, ctx EvalContext) []Even
 	for _, event := range events {
 		key := eventIdentity(event)
 		if input != nil {
-			value := input.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+			value := input.eval(EvalContext{Event: event, Now: ctx.Now, TimeUnit: ctx.timeUnit(), Variables: ctx.Variables, Parameters: ctx.Parameters})
 			key = encodeKey([]any{value})
 		}
 		if _, exists := seen[key]; exists {
@@ -3751,7 +3757,7 @@ func localGroupKeysEqual(keys []Expr, target []Value, event Event, ctx EvalConte
 }
 
 func localGroupContext(ctx EvalContext, event Event) EvalContext {
-	return EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}
+	return EvalContext{Event: event, Now: ctx.Now, TimeUnit: ctx.timeUnit(), Variables: ctx.Variables, Parameters: ctx.Parameters}
 }
 
 func localGroupValueEqual(left, right Value) bool {
@@ -4787,7 +4793,7 @@ func aggregateEverExtreme[T Ordered](kind string, expression Expression[T], mini
 	return makeAggregateExpr[T](kind, kind+"("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
 		var result Value
 		for _, event := range ctx.EverGroup {
-			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, TimeUnit: ctx.timeUnit(), Variables: ctx.Variables, Parameters: ctx.Parameters})
 			if !value.IsPresent() {
 				continue
 			}
@@ -4814,7 +4820,7 @@ func aggregateEverPosition[T any](kind string, expression Expression[T], last bo
 	return makeAggregateExpr[T](kind, kind+"("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
 		var result Value
 		for _, event := range ctx.EverGroup {
-			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, TimeUnit: ctx.timeUnit(), Variables: ctx.Variables, Parameters: ctx.Parameters})
 			if !value.IsPresent() {
 				continue
 			}
@@ -4853,7 +4859,7 @@ func CountEver(expressions ...Expr) AggregateExpression[int64] {
 		}
 		var count int64
 		for _, event := range ctx.EverGroup {
-			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, TimeUnit: ctx.timeUnit(), Variables: ctx.Variables, Parameters: ctx.Parameters})
 			if value.IsPresent() {
 				count++
 			}
@@ -4891,7 +4897,7 @@ func aggregatePosition[T any](kind string, expression Expression[T], index int, 
 		}
 		values := make([]Value, 0, len(group))
 		for _, event := range group {
-			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, TimeUnit: ctx.timeUnit(), Variables: ctx.Variables, Parameters: ctx.Parameters})
 			if value.IsPresent() {
 				values = append(values, value)
 			}
@@ -5792,7 +5798,7 @@ func ratePredicateMatches(predicate []Expression[bool], event Event, ctx EvalCon
 	if len(predicate) == 0 {
 		return true
 	}
-	value := predicate[0].eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+	value := predicate[0].eval(EvalContext{Event: event, Now: ctx.Now, TimeUnit: ctx.timeUnit(), Variables: ctx.Variables, Parameters: ctx.Parameters})
 	matched, ok := boolValue(value)
 	return ok && matched
 }
@@ -5861,12 +5867,12 @@ func rateByTimestampAggregate(kind string, timestamp, quantity Expr, predicate E
 			if predicate == nil {
 				return true
 			}
-			value := predicate.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+			value := predicate.eval(EvalContext{Event: event, Now: ctx.Now, TimeUnit: ctx.timeUnit(), Variables: ctx.Variables, Parameters: ctx.Parameters})
 			matched, ok := boolValue(value)
 			return ok && matched
 		}
 		numericTimestamp := func(event Event) (int64, bool) {
-			value, ok := numericValue(timestamp.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}))
+			value, ok := numericValue(timestamp.eval(EvalContext{Event: event, Now: ctx.Now, TimeUnit: ctx.timeUnit(), Variables: ctx.Variables, Parameters: ctx.Parameters}))
 			return int64(value), ok
 		}
 		var latest int64
@@ -6048,7 +6054,7 @@ func aggregateBySource[V any, K Ordered](kind string, value Expression[V], key E
 			events = ctx.EverGroup
 		}
 		for _, event := range events {
-			evalContext := EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}
+			evalContext := EvalContext{Event: event, Now: ctx.Now, TimeUnit: ctx.timeUnit(), Variables: ctx.Variables, Parameters: ctx.Parameters}
 			candidate := value.eval(evalContext)
 			candidateKey := key.eval(evalContext)
 			if !candidate.IsPresent() || !candidateKey.IsPresent() {
@@ -6128,8 +6134,8 @@ func SortedEvents(keys ...SortKey) AggregateExpression[[]Event] {
 					continue
 				}
 				comparison, ok := compareOrderValues(
-					key.Expr.eval(EvalContext{Event: events[left], Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}),
-					key.Expr.eval(EvalContext{Event: events[right], Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}),
+					key.Expr.eval(EvalContext{Event: events[left], Now: ctx.Now, TimeUnit: ctx.timeUnit(), Variables: ctx.Variables, Parameters: ctx.Parameters}),
+					key.Expr.eval(EvalContext{Event: events[right], Now: ctx.Now, TimeUnit: ctx.timeUnit(), Variables: ctx.Variables, Parameters: ctx.Parameters}),
 				)
 				if !ok || comparison == 0 {
 					continue

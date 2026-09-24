@@ -89,6 +89,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include event-object-array-core and event-object-array-core-diff")
 		fmt.Fprintln(stderr, "runner modes include epl-other-istream-rstream-keywords and epl-other-istream-rstream-keywords-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-dt-interval-ops and expr-dt-interval-ops-diff")
+		fmt.Fprintln(stderr, "runner modes include expr-dt-resolution and expr-dt-resolution-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-enum-select-from and expr-enum-select-from-diff")
 		flags.PrintDefaults()
 	}
@@ -209,6 +210,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadContextKeySegmentedInvalidScenario(file)
 	} else if *mode == "expr-dt-interval-ops" || *mode == "expr-dt-interval-ops-diff" {
 		scenario, err = loadExprDTIntervalOpsScenario(file)
+	} else if *mode == "expr-dt-resolution" || *mode == "expr-dt-resolution-diff" {
+		scenario, err = loadExprDTResolutionScenario(file)
 	} else if *mode == "context-key-segmented-infra-prioritized" || *mode == "context-key-segmented-infra-prioritized-diff" {
 		scenario, err = loadContextKeySegmentedInfraPrioritizedScenario(file)
 	} else if *mode == "context-key-segmented-named-window" || *mode == "context-key-segmented-named-window-diff" {
@@ -1820,6 +1823,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaSourceFiles, exprDTIntervalOpsJavaSources),
 				splitMetadata(*javaExecutions, exprDTIntervalOpsJavaExecutions), scenario, trace,
 				func(trace compat.Trace) compat.Trace { return trace })
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "expr-dt-resolution" || *mode == "expr-dt-resolution-diff" {
+		trace, err := runExprDTResolutionScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "expr-dt-resolution-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, exprDTResolutionJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, exprDTResolutionJavaSources),
+				splitMetadata(*javaExecutions, exprDTResolutionJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

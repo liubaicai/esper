@@ -1256,9 +1256,12 @@ func CurrentTime() Expression[time.Time] {
 	return internalengine.CurrentTime()
 }
 
-// CurrentTimestamp returns the current statement time as epoch milliseconds.
-// It follows Esper's current_timestamp() result type and uses EvalContext.Now
-// so virtual-clock and fire-and-forget evaluation remain deterministic.
+// CurrentTimestamp returns the current statement time in engine units:
+// epoch milliseconds under the default Milliseconds resolution and epoch
+// microseconds under WithTimeUnit(Microseconds), matching Esper's
+// current_timestamp() result type under the configured TimeAbacus. It uses
+// EvalContext.Now so virtual-clock and fire-and-forget evaluation remain
+// deterministic.
 func CurrentTimestamp() Expression[int64] {
 	return internalengine.CurrentTimestamp()
 }
@@ -1656,6 +1659,17 @@ func DateTimeBetweenWithEndpoints(value, lower, upper Expr, lowerInclusive, uppe
 	return internalengine.DateTimeBetweenWithEndpoints(value, lower, upper, lowerInclusive, upperInclusive)
 }
 
+// DateTimeGet applies Esper's get(field) calendar-field extraction to a
+// date-time expression: get('month') returns the 0-based Calendar.MONTH,
+// getMinuteOfHour() maps to field "minute_of_hour" (Calendar.MINUTE).
+// int64 inputs are engine units; under Microseconds the field is read from
+// the millisecond part and the sub-millisecond remainder is ignored.
+// time.Time inputs resolve fields in the value's own zone. An unknown field
+// is a build-time configuration error; null or missing input produces Null.
+func DateTimeGet[V int64 | time.Time](value Expression[V], field string) Expression[int64] {
+	return internalengine.DateTimeGet[V](value, field)
+}
+
 const DateTimeInputAny = internalengine.DateTimeInputAny
 
 const DateTimeInputEpochMillis = internalengine.DateTimeInputEpochMillis
@@ -1674,6 +1688,17 @@ type DateTimeMethodFootprint = internalengine.DateTimeMethodFootprint
 // plugins do not use enumeration lambdas; each argument is evaluated once for
 // the receiver value.
 type DateTimeMethodParameter = internalengine.DateTimeMethodParameter
+
+// DateTimeMinus applies Esper's minus(ms) date-time operation: the argument
+// is always a count of MILLISECONDS regardless of resolution, so under
+// Microseconds an int64 result shifts by ms*1000 engine units
+// (CalendarPlusMinusForgeOp on the millisecond part, remainder re-added).
+// The input representation is preserved: int64 stays int64 engine units,
+// time.Time stays time.Time shifted by ms milliseconds. Null or missing
+// input produces Null.
+func DateTimeMinus[V int64 | time.Time](value Expression[V], ms int64) Expression[V] {
+	return internalengine.DateTimeMinus[V](value, ms)
+}
 
 const DateTimeParameterAny = internalengine.DateTimeParameterAny
 
@@ -1733,6 +1758,12 @@ func DateTimePluginRef[R any](env *Environment, name string, input Expr, argumen
 	return internalengine.DateTimePluginRef[R](env, name, input, arguments...)
 }
 
+// DateTimePlus applies Esper's plus(ms) date-time operation, the additive
+// counterpart of DateTimeMinus with identical resolution semantics.
+func DateTimePlus[V int64 | time.Time](value Expression[V], ms int64) Expression[V] {
+	return internalengine.DateTimePlus[V](value, ms)
+}
+
 // DateTimeRoundCeiling advances a date-time expression to the next unit
 // boundary (Commons MODIFY_CEILING adds one target unit unconditionally, so
 // an on-boundary input advances). The input representation is preserved:
@@ -1769,6 +1800,15 @@ func DateTimeRoundHalf[T int64 | time.Time](value Expression[T], unit string) Ex
 // produces Null.
 func DateTimeSet[V int64 | time.Time](value Expression[V], field string, n int) Expression[V] {
 	return internalengine.DateTimeSet[V](value, field, n)
+}
+
+// DateTimeToTime applies Esper's toDate()/toCalendar() conversion: engine
+// units become a time.Time truncated to millisecond precision (under
+// Microseconds, ts/1000). time.Time inputs pass through unchanged, matching
+// Java's Date/Calendar representations which are already millisecond-based.
+// Null or missing input produces Null.
+func DateTimeToTime[V int64 | time.Time](value Expression[V]) Expression[time.Time] {
+	return internalengine.DateTimeToTime[V](value)
 }
 
 // DateTimeWithDate applies Esper's withDate(year,month,day) calendar
@@ -2614,6 +2654,19 @@ func EventIdentityEquals(left, right Expr) Expression[bool] {
 	return internalengine.EventIdentityEquals(left, right)
 }
 
+// EventIntervalBounds derives the interval bounds of one join source from
+// its event schema: the field flagged StartTimestamp supplies Start and the
+// field flagged EndTimestamp supplies End (Esper's starttimestamp/
+// endtimestamp event-type configuration, used by the ExprDTResolution
+// EventTime execution's object-array MyEvent(id,sts,ets)). Bound values are
+// coerced to engine units through dateTimeEngineUnits, so the result feeds
+// WithDateBounds/WithTimeBounds/SetBounds/PointBounds and Interval directly.
+// A source without the flagged fields, an out-of-range source index, or a
+// non-coercible bound value produces Missing/Null at evaluation time.
+func EventIntervalBounds(source int) IntervalBounds {
+	return internalengine.EventIntervalBounds(source)
+}
+
 // EventPrecedence attaches an integer-valued expression to an insert-into
 // route. Higher precedence values are processed before lower values; events
 // with equal precedence maintain FIFO order within the same route cycle.
@@ -3351,6 +3404,14 @@ func Interval(computer IntervalComputer, left, right IntervalBounds) Expression[
 	return internalengine.Interval(computer, left, right)
 }
 
+// IntervalBefore reports whether the left interval ends strictly before the
+// right interval starts (leftEnd < rightStart) in engine units. It is the
+// descriptive single-computer form of Interval(Before, left, right), used by
+// the ExprDTResolution EventTime execution's a.withDate(...).before(b).
+func IntervalBefore(left, right IntervalBounds) Expression[bool] {
+	return internalengine.IntervalBefore(left, right)
+}
+
 // IntervalBounds identifies one side of an interval comparison: a start and
 // an end epoch-millisecond expression evaluated against the same stream row.
 // Building blocks are plain field expressions (Field[T,"startField"]) so the
@@ -3901,6 +3962,16 @@ type MethodProviderFunc = internalengine.MethodProviderFunc
 // fire-and-forget snapshot. Variables and Parameters are immutable snapshots
 // for the current evaluation.
 type MethodRequest = internalengine.MethodRequest
+
+// Microseconds interprets int64 date-time values as epoch microseconds
+// and makes current_timestamp() return UnixNano/1e3. Calendar-backed
+// operations (set/withDate/withTime/get/toCalendar/toDate) operate on
+// the millisecond part; long results re-add the microsecond remainder.
+const Microseconds = internalengine.Microseconds
+
+// Milliseconds is the default resolution: int64 date-time values are
+// epoch milliseconds and current_timestamp() returns UnixNano/1e6.
+const Milliseconds = internalengine.Milliseconds
 
 func Min[T Ordered](expression Expression[T]) AggregateExpression[T] {
 	return internalengine.Min[T](expression)
@@ -7510,6 +7581,15 @@ type TimeToLiveAtWindowSpec = internalengine.TimeToLiveAtWindowSpec
 
 type TimeToLiveWindowSpec = internalengine.TimeToLiveWindowSpec
 
+// TimeUnit selects the resolution of long-valued date-time expressions and
+// the engine clock exposed to expressions. It ports Esper's TimeAbacus
+// setting (engine-timestamp-resolution): Milliseconds is the default and
+// matches every existing behavior; Microseconds interprets int64 date-time
+// values and current_timestamp() as epoch microseconds while calendar
+// operations keep millisecond precision and re-add the sub-millisecond
+// remainder (TimeAbacusMicroseconds.calendarSet/calendarGet).
+type TimeUnit = internalengine.TimeUnit
+
 func TimeWindow(duration time.Duration) TimeWindowSpec {
 	return internalengine.TimeWindow(duration)
 }
@@ -8505,6 +8585,16 @@ func WithTableColumnNestedSchema(nested Schema) TableColumnOption {
 // bound, preserving duration exactly like WithDateBounds.
 func WithTimeBounds(bounds IntervalBounds, hour, minute, second, millis int) IntervalBounds {
 	return internalengine.WithTimeBounds(bounds, hour, minute, second, millis)
+}
+
+// WithTimeUnit selects the date-time resolution for long-valued expressions
+// and the engine clock exposed to expressions (Esper's
+// engine-timestamp-resolution / TimeAbacus setting). The default is
+// Milliseconds; Microseconds interprets int64 date-time values and
+// current_timestamp() as epoch microseconds. See TimeUnit for the exact
+// calendar-operation semantics.
+func WithTimeUnit(unit TimeUnit) EngineOption {
+	return internalengine.WithTimeUnit(unit)
 }
 
 // WithTimerWorkers enables AdvanceTimeAsync.

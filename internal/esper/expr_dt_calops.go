@@ -184,15 +184,11 @@ func dateTimeCalOpExpression[V int64 | time.Time](kind string, value Expression[
 			return Null()
 		}
 		current := value.eval(ctx)
-		millis, ok := dateTimeEpochMillis(current)
+		instant, ok := dateTimeCalOpSplit(ctx, current)
 		if !ok {
 			return Null()
 		}
-		location := time.UTC
-		if located, ok2 := dateTimeCalOpLocation(current); ok2 {
-			location = located
-		}
-		return dateTimeCalOpResult(current, apply(millis, location))
+		return dateTimeCalOpResult(current, dateTimeCalOpJoin(instant, apply(instant.millis, instant.location)))
 	}}
 }
 
@@ -257,11 +253,11 @@ func DateTimeBefore(value, threshold Expr) Expression[bool] {
 		if value == nil || threshold == nil {
 			return Null()
 		}
-		left, ok := dateTimeEpochMillis(value.eval(ctx))
+		left, ok := dateTimeEngineUnits(value.eval(ctx))
 		if !ok {
 			return Null()
 		}
-		right, ok := dateTimeEpochMillis(threshold.eval(ctx))
+		right, ok := dateTimeEngineUnits(threshold.eval(ctx))
 		if !ok {
 			return Null()
 		}
@@ -364,26 +360,21 @@ func dateTimeCalOpBoundsExpr(kind string, start, end Expr, apply dateTimeCalOpAp
 		if start == nil || apply == nil {
 			return Null()
 		}
-		startValue := start.eval(ctx)
-		startMillis, ok := dateTimeEpochMillis(startValue)
+		startInstant, ok := dateTimeCalOpSplit(ctx, start.eval(ctx))
 		if !ok {
 			return Null()
 		}
-		location := time.UTC
-		if located, ok2 := dateTimeCalOpLocation(startValue); ok2 {
-			location = located
-		}
-		newStart := apply(startMillis, location)
+		newStart := dateTimeCalOpJoin(startInstant, apply(startInstant.millis, startInstant.location))
 		if !isEnd {
 			return Present(newStart)
 		}
 		if end == nil {
 			return Null()
 		}
-		endMillis, ok := dateTimeEpochMillis(end.eval(ctx))
+		endInstant, ok := dateTimeCalOpSplit(ctx, end.eval(ctx))
 		if !ok {
 			return Null()
 		}
-		return Present(newStart + (endMillis - startMillis))
+		return Present(newStart + (endInstant.units - startInstant.units))
 	}}
 }

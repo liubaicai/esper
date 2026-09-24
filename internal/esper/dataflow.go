@@ -5474,9 +5474,9 @@ func (d *DataflowInstance) processDataflowSelectJoin(operator DataflowOperator, 
 	now := d.engine.Now()
 	variables := d.engine.Variables()
 	state.mu.Lock()
-	before := state.joinCurrentTuples(now, variables)
+	before := state.joinCurrentTuples(now, variables, d.engine)
 	state.addJoinEvent(input, event, now)
-	after := state.joinCurrentTuples(now, variables)
+	after := state.joinCurrentTuples(now, variables, d.engine)
 	delta := diffJoinTuples(before, after)
 	rows := make([]any, 0, len(delta.newTuples))
 	for _, tuple := range delta.newTuples {
@@ -5537,7 +5537,7 @@ func (s *dataflowSelectState) joinInputEvents(input int) []Event {
 	return []Event{*s.joinLatest[input]}
 }
 
-func (s *dataflowSelectState) joinCurrentTuples(now time.Time, variables map[string]Value) [][]Event {
+func (s *dataflowSelectState) joinCurrentTuples(now time.Time, variables map[string]Value, engine *Engine) [][]Event {
 	if s == nil || s.join.Inputs < 2 {
 		return nil
 	}
@@ -5545,7 +5545,7 @@ func (s *dataflowSelectState) joinCurrentTuples(now time.Time, variables map[str
 	for input := range sides {
 		sides[input] = s.joinInputEvents(input)
 	}
-	return dataflowJoinCurrentTuples(s.join, sides, now, variables)
+	return dataflowJoinCurrentTuples(s.join, sides, now, variables, engine)
 }
 
 func (s *dataflowSelectState) expireJoinAt(at time.Time) bool {
@@ -5592,7 +5592,7 @@ func (s *dataflowSelectState) nextJoinExpiry() (time.Time, bool) {
 	return next, !next.IsZero()
 }
 
-func dataflowJoinCurrentTuples(join DataflowJoinOptions, sides [][]Event, now time.Time, variables map[string]Value) [][]Event {
+func dataflowJoinCurrentTuples(join DataflowJoinOptions, sides [][]Event, now time.Time, variables map[string]Value, engine *Engine) [][]Event {
 	if len(sides) < 2 {
 		return nil
 	}
@@ -5603,7 +5603,7 @@ func dataflowJoinCurrentTuples(join DataflowJoinOptions, sides [][]Event, now ti
 			matched := false
 			for rightIndex, right := range sides[1] {
 				tuple := []Event{left, right}
-				if joinConditionsMatchWithVariables(join.Conditions, tuple, now, variables) {
+				if joinConditionsMatchWithVariables(join.Conditions, tuple, now, variables, engine) {
 					matched = true
 					matchedRight[rightIndex] = true
 					result = append(result, tuple)
@@ -5640,7 +5640,7 @@ func dataflowJoinCurrentTuples(join DataflowJoinOptions, sides [][]Event, now ti
 	visit = func(input int) {
 		if input == len(sides) {
 			tuple := append([]Event(nil), current...)
-			if !joinConditionsMatchWithVariables(join.Conditions, tuple, now, variables) {
+			if !joinConditionsMatchWithVariables(join.Conditions, tuple, now, variables, engine) {
 				return
 			}
 			result = append(result, tuple)
@@ -5785,11 +5785,11 @@ func (d *DataflowInstance) advanceDataflowSelect(operator DataflowOperator, at t
 			if !ok || expiresAt.After(at) {
 				break
 			}
-			before := state.joinCurrentTuples(expiresAt, joinVariables)
+			before := state.joinCurrentTuples(expiresAt, joinVariables, d.engine)
 			if !state.expireJoinAt(expiresAt) {
 				break
 			}
-			after := state.joinCurrentTuples(expiresAt, joinVariables)
+			after := state.joinCurrentTuples(expiresAt, joinVariables, d.engine)
 			delta := diffJoinTuples(before, after)
 			for _, tuple := range delta.newTuples {
 				joinEvent := newJoinTupleEvent(tuple, expiresAt)

@@ -52,11 +52,11 @@ func DateTimeAfter(value, bound Expr) Expression[bool] {
 		if value == nil || bound == nil {
 			return Null()
 		}
-		left, ok := dateTimeEpochMillis(value.eval(ctx))
+		left, ok := dateTimeEngineUnits(value.eval(ctx))
 		if !ok {
 			return Null()
 		}
-		right, ok := dateTimeEpochMillis(bound.eval(ctx))
+		right, ok := dateTimeEngineUnits(bound.eval(ctx))
 		if !ok {
 			return Null()
 		}
@@ -119,15 +119,15 @@ func dateTimeBetweenExpression(kind string, value, lower, upper Expr, lowerInclu
 		if value == nil || lower == nil || upper == nil || lowerInclusive == nil || upperInclusive == nil {
 			return Null()
 		}
-		current, ok := dateTimeEpochMillis(value.eval(ctx))
+		current, ok := dateTimeEngineUnits(value.eval(ctx))
 		if !ok {
 			return Null()
 		}
-		low, ok := dateTimeEpochMillis(lower.eval(ctx))
+		low, ok := dateTimeEngineUnits(lower.eval(ctx))
 		if !ok {
 			return Null()
 		}
-		high, ok := dateTimeEpochMillis(upper.eval(ctx))
+		high, ok := dateTimeEngineUnits(upper.eval(ctx))
 		if !ok {
 			return Null()
 		}
@@ -225,7 +225,7 @@ func isLiteralDateTime(expression Expr) bool {
 	if expression == nil || expression.node() == nil || expression.node().kind != "literal" {
 		return false
 	}
-	_, ok := dateTimeEpochMillis(Present(expression.node().literalValue))
+	_, ok := dateTimeEngineUnits(Present(expression.node().literalValue))
 	return ok
 }
 
