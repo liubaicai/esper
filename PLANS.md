@@ -55,36 +55,48 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly') committed and pushed as 9ac32d036; Git owns identity. Parity review PASS, two P3s fixed.
 
 ## Current work unit
-Active: Draft 4.531 ('epl-other-stream-expr').
+Active: Draft 4.532 ('infra-named-window-on-select').
 
-- Selection: `EPLOtherStreamExpr.java` all 4 executions, no flags —
- `EPLOtherChainedParameterized` (`java-runtime-9277aaf4733e12e28d28`),
- `EPLOtherInstanceMethodOuterJoin` (`java-runtime-cdb6409058fe3e44770f`),
- `EPLOtherInstanceMethodStatic` (`java-runtime-f33922181fbbb9c2e19b`),
- `EPLOtherInvalidSelect` (`java-runtime-027a02a57250c1d497cb`).
+- Selection: `InfraNamedWindowOnSelect.java` all 3 executions, no flags —
+ `InfraNamedWindowOnSelectSimple` (`java-runtime-8a348801e82d24a6c755`),
+ `InfraNamedWindowOnSelectSceneTwo` (`java-runtime-1bbd8705a7bbea1db0cd`),
+ `InfraNamedWindowOnSelectWPattern` (`java-runtime-caeff76ee56490d832ea`).
  Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`.
-- [x] Contract frozen: JavaContract531 (4 executions ords 0/2/3/8:
-  ChainedParameterized 3 steps incl. SODA round trip + static-via-instance,
-  InstanceMethodOuterJoin left-outer null method, InstanceMethodStatic
-  static-via-alias null→bean, InvalidSelect 3 compile-error probes) +
-  GoSurface531 (no engine gaps; Method chains, Join+LeftOuter+SelectFrom,
-  build-error records; extends existing epl_other_stream_expr.go which
-  covers ords 1/4/5/6/7). Assets531 dispatched.
-- [x] Assets531 integrated: extended `internal/app/parity/epl_other_stream_expr.go` +
-  `testdata/parity/epl-other-stream-expr.json` (9 cases / 54 steps) +
-  oracle `tools/java-oracle/EPLOtherStreamExprScenarioOracle.java` +
-  `run-epl-other-stream-expr.sh` + run_test.go wiring. Zero engine
-  changes. Existing 5 cases preserved byte-for-byte.
-- [x] Differential replay: Java 19 records; Go 19 records. `-mode
-  epl-other-stream-expr-diff` status `passing` / 0 differences
+- [x] Contract frozen: JavaContract532 (3 executions: Simple=on-delete
+  old-stream row, SceneTwo=on-insert RouteTo+OrderBy 2-row batch,
+  WPattern=on-pattern-select correlation) + GoSurface532 (Simple+SceneTwo
+  no gaps; WPattern needs shared-core fix — trigger.go pattern-trigger
+  validation rejects named-window select). Assets532 dispatched for
+  assets; primary agent handles engine gap.
+- [x] Engine fix (shared core): `namedWindowTrigger` propagates
+  `s.pattern`; pattern-sourced named-window select routes to
+  `validateNamedWindowTrigger`; no-selection result schema is the join
+  schema `{stream_0, stream_1}` and `executeSelectNamedWindowAction`
+  receives tags and emits join rows; `validatePatternNodeScope` allows
+  untagged filter atoms and `capturePatternEvent` skips empty tags.
+- [x] Assets532 integrated: `internal/app/parity/infra_named_window_on_select.go` +
+  `testdata/parity/infra-named-window-on-select.json` (3 cases / 45 steps) +
+  oracle `tools/java-oracle/InfraNamedWindowOnSelectScenarioOracle.java` +
+  `run-infra-named-window-on-select.sh` + run.go/run_test.go wiring.
+  wpattern join-shape fix applied (stream_0/stream_1 Java toString).
+- [x] Differential replay: Java 24 records; Go 24 records. `-mode
+  infra-named-window-on-select-diff` status `passing` / 0 differences
   (identity normalizer).
-- [x] Manifest: `case-epl-other-stream-expr` extended from 5 to 9 DV
-  runtime IDs (all ords now covered). Summary 761 cases / 387 DV /
-  1524 DV runtime IDs / unreferenced 508.
-- [ ] Gates + parity review + commit: pending `make check`, independent
-  reviewer, then commit/push.
+- [x] Manifest: NEW case `case.infra-named-window-on-select` born-DV with
+  the 3 IDs; `infra.namedwindow.views` mapping + goRefs extended.
+  Summary 762 cases / 388 DV / 1527 DV runtime IDs / unreferenced 505.
+- [x] Gates + parity review + commit: `make check` exit 0 (parity 88.5s,
+  internal/esper 116.6s); independent reviewer `ParityReview532` returned
+  PASS after two fix rounds (P1 static IDs, P3 record count, P2
+  Tags/TagValues + Field→window-row binding, P3 stale error message).
+  Committing.
 
 ## Previous work units (shipped)
+
+- Shipped: Draft 4.531 ('epl-other-stream-expr') committed and pushed
+ as d78964987; Git owns identity. Extended `case-epl-other-stream-expr`
+ from 5 to 9 DV runtime IDs (all ords). 19 records, 0 differences.
+ Zero engine changes. Parity review PASS, three P3s fixed.
 
 - Shipped: Draft 4.530 ('expr-filter-expressions') committed and pushed
  as fb897d06d; Git owns identity. Born-DV `case.expr-filter-expressions`

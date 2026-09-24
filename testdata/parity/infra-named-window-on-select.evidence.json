@@ -1,0 +1,1934 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-8a348801e82d24a6c755",
+    "java-runtime-1bbd8705a7bbea1db0cd",
+    "java-runtime-caeff76ee56490d832ea"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowOnSelect.java"
+  ],
+  "javaExecutions": [
+    "InfraNamedWindowOnSelectSimple",
+    "InfraNamedWindowOnSelectSceneTwo",
+    "InfraNamedWindowOnSelectWPattern"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-on-select",
+    "steps": [
+      {
+        "op": "case",
+        "case": "simple"
+      },
+      {
+        "op": "deploy",
+        "case": "simple",
+        "statement": "create",
+        "epl": "@Name('create') @public create window MyWindow.win:keepall() as SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "simple",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "simple",
+        "statement": "insert",
+        "epl": "@Name('insert') insert into MyWindow select * from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "simple",
+        "statement": "insert"
+      },
+      {
+        "op": "deploy",
+        "case": "simple",
+        "statement": "delete",
+        "epl": "@Name('delete') on SupportBean_S0 delete from MyWindow where intPrimitive = id"
+      },
+      {
+        "op": "deployed",
+        "case": "simple",
+        "statement": "delete"
+      },
+      {
+        "op": "send",
+        "case": "simple",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "simple",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "simple"
+      },
+      {
+        "op": "case",
+        "case": "scene-two"
+      },
+      {
+        "op": "deploy",
+        "case": "scene-two",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyWindow#keepall as select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "scene-two",
+        "statement": "insert",
+        "epl": "insert into MyWindow select * from SupportBean(theString like 'E%')"
+      },
+      {
+        "op": "deploy",
+        "case": "scene-two",
+        "statement": "select",
+        "epl": "@name('select') on SupportBean_A insert into MyStream select mywin.* from MyWindow as mywin order by theString asc"
+      },
+      {
+        "op": "deploy",
+        "case": "scene-two",
+        "statement": "consumer",
+        "epl": "@name('consumer') select * from MyStream"
+      },
+      {
+        "op": "deploy",
+        "case": "scene-two",
+        "statement": "insert-i",
+        "epl": "insert into MyStream select * from SupportBean(theString like 'I%')"
+      },
+      {
+        "op": "deployed",
+        "case": "scene-two",
+        "statement": "create"
+      },
+      {
+        "op": "deployed",
+        "case": "scene-two",
+        "statement": "insert"
+      },
+      {
+        "op": "deployed",
+        "case": "scene-two",
+        "statement": "select"
+      },
+      {
+        "op": "deployed",
+        "case": "scene-two",
+        "statement": "consumer"
+      },
+      {
+        "op": "deployed",
+        "case": "scene-two",
+        "statement": "insert-i"
+      },
+      {
+        "op": "send",
+        "case": "scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "scene-two",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "I2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "scene-two",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A2"
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "scene-two",
+        "statement": "delete",
+        "epl": "@name('delete') on SupportBean_B delete from MyWindow"
+      },
+      {
+        "op": "deployed",
+        "case": "scene-two",
+        "statement": "delete"
+      },
+      {
+        "op": "send",
+        "case": "scene-two",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "B1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "scene-two",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A3"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "scene-two"
+      },
+      {
+        "op": "case",
+        "case": "wpattern"
+      },
+      {
+        "op": "deploy",
+        "case": "wpattern",
+        "statement": "create",
+        "epl": "@public create window MyWindow.win:keepall() as SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "wpattern",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "wpattern",
+        "statement": "insert",
+        "epl": "insert into MyWindow select * from SupportBean(theString = 'Z')"
+      },
+      {
+        "op": "deployed",
+        "case": "wpattern",
+        "statement": "insert"
+      },
+      {
+        "op": "send",
+        "case": "wpattern",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "Z",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "wpattern",
+        "statement": "s0",
+        "epl": "@Name('s0') on pattern[every e = SupportBean(theString = 'A') -\u003e SupportBean(intPrimitive = e.intPrimitive)] select * from MyWindow"
+      },
+      {
+        "op": "deployed",
+        "case": "wpattern",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "wpattern",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "wpattern",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "wpattern"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-on-select",
+    "records": [
+      {
+        "case": "simple",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "simple",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "simple",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "simple",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-two",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-two",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-two",
+        "operation": "deployed",
+        "statement": "consumer",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-two",
+        "operation": "deployed",
+        "statement": "insert-i",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "consumer",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "consumer",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "I2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 3,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 3,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "consumer",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "consumer",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 3,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "wpattern",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "wpattern",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "wpattern",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "wpattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "stream_0": "SupportBean(Z, 0)",
+              "stream_1": "{e=BeanEventBean eventType=BeanEventType name=SupportBean clazz=com.espertech.esper.common.internal.support.SupportBean bean=SupportBean(A, 1)}"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-on-select",
+    "records": [
+      {
+        "case": "simple",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "simple",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "simple",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "simple",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-two",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-two",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-two",
+        "operation": "deployed",
+        "statement": "consumer",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-two",
+        "operation": "deployed",
+        "statement": "insert-i",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "consumer",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "consumer",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "I2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 3,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 3,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "consumer",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "consumer",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 3,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "wpattern",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "wpattern",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "wpattern",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "wpattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "stream_0": "SupportBean(Z, 0)",
+              "stream_1": "{e=BeanEventBean eventType=BeanEventType name=SupportBean clazz=com.espertech.esper.common.internal.support.SupportBean bean=SupportBean(A, 1)}"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

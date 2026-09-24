@@ -50271,6 +50271,457 @@ func infraNWKDCheckScenarioMetadata(version, id, description, javaCommit, javaSo
 	return nil
 }
 
+func TestRunInfraNamedWindowOnSelectDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraNWOSID,
+		"-scenario", filepath.Join(root, infraNWOSID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertInfraNWOSTrace(t, trace)
+}
+
+func TestRunInfraNamedWindowOnSelectDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), infraNWOSID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraNWOSID + "-diff",
+		"-scenario", filepath.Join(root, infraNWOSID+".json"),
+		"-java-trace", filepath.Join(root, infraNWOSID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if err := infraNWOSCheckJavaMetadata(evidence.JavaCommit, evidence.JavaRuntimeIDs,
+		evidence.JavaSourceFiles, evidence.JavaExecutions); err != nil {
+		t.Fatalf("Java metadata: %v", err)
+	}
+	assertInfraNWOSTrace(t, evidence.JavaTrace)
+	assertInfraNWOSTrace(t, evidence.GoTrace)
+}
+
+func TestRunInfraNamedWindowOnSelectDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "listener-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].New[0].Fields["intPrimitive"] = json.Number("2")
+			},
+		},
+		{
+			name: "old-row-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[4].Old[0].Fields["theString"] = "E2"
+			},
+		},
+		{
+			name: "snapshot-row-loss",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[15].New = trace.Records[15].New[:1]
+			},
+		},
+		{
+			name: "ordered-batch-swap",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[16].New[0], trace.Records[16].New[1] =
+					trace.Records[16].New[1], trace.Records[16].New[0]
+			},
+		},
+		{
+			name: "statement-swap",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[7].Statement = "consumer"
+			},
+		},
+		{
+			name: "listener-order-swap",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[6], trace.Records[7] = trace.Records[7], trace.Records[6]
+			},
+		},
+		{
+			name: "sequence-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[9].Sequence = 9
+			},
+		},
+		{
+			name: "extra-delete-record",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = append(trace.Records[:20],
+					append([]compat.TraceRecord{{
+						Case: "scene-two", Operation: "listener", Statement: "select", Sequence: 3,
+						New: []compat.ResultRecord{{Kind: "row", Fields: map[string]any{"theString": "E4", "intPrimitive": json.Number("4")}}},
+					}}, trace.Records[20:]...)...)
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:23]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join(root, infraNWOSID+".evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), infraNWOSID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", infraNWOSID + "-diff",
+				"-scenario", filepath.Join(root, infraNWOSID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunInfraNamedWindowOnSelectCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, infraNWOSID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, infraNWOSID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, infraNWOSID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if err := infraNWOSCheckJavaMetadata(evidence.JavaCommit, evidence.JavaRuntimeIDs,
+		evidence.JavaSourceFiles, evidence.JavaExecutions); err != nil {
+		t.Fatalf("checked-in Java metadata: %v", err)
+	}
+	assertInfraNWOSTrace(t, javaTrace)
+	assertInfraNWOSTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, infraNWOSID+".json")
+	scenarioData, err := os.ReadFile(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rawScenario struct {
+		Version string        `json:"version"`
+		ID      string        `json:"id"`
+		Steps   []compat.Step `json:"steps"`
+	}
+	if err := json.Unmarshal(scenarioData, &rawScenario); err != nil {
+		t.Fatal(err)
+	}
+	scenario := compat.Scenario{Version: rawScenario.Version, ID: rawScenario.ID, Steps: rawScenario.Steps}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		infraNWOSJavaCommit,
+		infraNWOSJavaRuntimeIDs,
+		[]string{infraNWOSSource},
+		infraNWOSJavaExecutions,
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraNWOSID,
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, replayed); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertInfraNWOSTrace(t, replayed)
+}
+
+func TestRunInfraNamedWindowOnSelectRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, infraNWOSID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "flags-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"javaFlags": []`), []byte(`"javaFlags": ["EVENTSENDER"]`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-1bbd8705a7bbea1db0cd"`),
+				[]byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "case-ordinal-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 2`), []byte(`"ordinal": 3`), 1)
+		}},
+		{name: "delete-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`where intPrimitive = id`),
+				[]byte(`where intPrimitive = id2`), 1)
+		}},
+		{name: "order-by-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`order by theString asc`),
+				[]byte(`order by theString desc`), 1)
+		}},
+		{name: "snapshot-mode-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"mode": "ordered"`), []byte(`"mode": "any"`), 1)
+		}},
+		{name: "deploy-statement-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"statement": "insert-i"`), []byte(`"statement": "insert-j"`), 1)
+		}},
+		{name: "unknown-op", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "undeploy-all"`), []byte(`"op": "close-all"`), 1)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), infraNWOSID+".json")
+			if err := os.WriteFile(path, test.mutate(data), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{"-mode", infraNWOSID, "-scenario", path}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q was accepted", test.name)
+			}
+		})
+	}
+}
+
+func TestRunInfraNamedWindowOnSelectRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", infraNWOSID+".json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Version      string   `json:"version"`
+		ID           string   `json:"id"`
+		Description  string   `json:"description"`
+		JavaCommit   string   `json:"javaCommit"`
+		JavaSource   string   `json:"javaSource"`
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		JavaFlags    []string `json:"javaFlags"`
+		Cases        []struct {
+			Case          string `json:"case"`
+			Ordinal       int    `json:"ordinal"`
+			RuntimeID     string `json:"runtimeId"`
+			ExecutionName string `json:"executionName"`
+			Observation   string `json:"observation"`
+			EPL           string `json:"epl"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if err := infraNWOSCheckScenarioMetadata(document.Version, document.ID, document.Description,
+		document.JavaCommit, document.JavaSource, document.JavaRuntimes, document.JavaNames, document.JavaFlags); err != nil {
+		t.Fatalf("scenario metadata: %v", err)
+	}
+	if len(document.Cases) != len(infraNWOSCases) {
+		t.Fatalf("scenario cases = %d, want %d", len(document.Cases), len(infraNWOSCases))
+	}
+	for index, entry := range document.Cases {
+		spec := infraNWOSCaseSpecs[index]
+		if entry.Case != spec.name || entry.Ordinal != spec.ordinal ||
+			entry.RuntimeID != spec.runtimeID || entry.ExecutionName != spec.execution ||
+			entry.Observation != spec.observation || entry.EPL != spec.epl {
+			t.Fatalf("scenario case %d metadata = %#v", index, entry)
+		}
+	}
+}
+
+// infraNWOSRenderRows renders trace rows as theString:intPrimitive pairs for
+// the pinned layout comparison; the full SupportBean row carries twenty
+// fields but the Java assertions read only these two. The wpattern s0
+// join-shaped row renders as stream_0|stream_1 (the Java toString strings).
+func infraNWOSRenderRows(rows []compat.ResultRecord) string {
+	if len(rows) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(rows))
+	for _, row := range rows {
+		if stream0, ok := row.Fields["stream_0"]; ok {
+			stream1, _ := row.Fields["stream_1"]
+			parts = append(parts, fmt.Sprintf("%v|%v", stream0, stream1))
+			continue
+		}
+		theString, _ := row.Fields["theString"].(string)
+		intPrimitive := "null"
+		if raw, ok := row.Fields["intPrimitive"]; ok {
+			rendered := fmt.Sprintf("%v", raw)
+			if state, ok := raw.(map[string]any); !ok || state["state"] != "null" {
+				intPrimitive = rendered
+			}
+		}
+		parts = append(parts, theString+":"+intPrimitive)
+	}
+	return strings.Join(parts, ",")
+}
+
+func assertInfraNWOSTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != infraNWOSID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	type line struct {
+		caseName  string
+		operation string
+		statement string
+		sequence  uint64
+		newRows   string
+		oldRows   string
+	}
+	expected := []line{
+		{"simple", "deployed", "create", 1, "", ""},
+		{"simple", "deployed", "insert", 1, "", ""},
+		{"simple", "deployed", "delete", 1, "", ""},
+		{"simple", "listener", "create", 1, "E1:1", ""},
+		{"simple", "listener", "create", 2, "", "E1:1"},
+		{"scene-two", "deployed", "create", 1, "", ""},
+		{"scene-two", "deployed", "insert", 1, "", ""},
+		{"scene-two", "deployed", "select", 1, "", ""},
+		{"scene-two", "deployed", "consumer", 1, "", ""},
+		{"scene-two", "deployed", "insert-i", 1, "", ""},
+		{"scene-two", "snapshot", "create", 0, "E1:1", ""},
+		{"scene-two", "listener", "select", 1, "E1:1", ""},
+		{"scene-two", "listener", "consumer", 1, "E1:1", ""},
+		{"scene-two", "listener", "consumer", 2, "I2:2", ""},
+		{"scene-two", "snapshot", "create", 0, "E1:1", ""},
+		{"scene-two", "snapshot", "create", 0, "E1:1,E3:3", ""},
+		{"scene-two", "listener", "select", 2, "E1:1,E3:3", ""},
+		{"scene-two", "listener", "consumer", 3, "E1:1", ""},
+		{"scene-two", "listener", "consumer", 4, "E3:3", ""},
+		{"scene-two", "deployed", "delete", 1, "", ""},
+		{"wpattern", "deployed", "create", 1, "", ""},
+		{"wpattern", "deployed", "insert", 1, "", ""},
+		{"wpattern", "deployed", "s0", 1, "", ""},
+		{"wpattern", "listener", "s0", 1, "SupportBean(Z, 0)|{e=BeanEventBean eventType=BeanEventType name=SupportBean clazz=com.espertech.esper.common.internal.support.SupportBean bean=SupportBean(A, 1)}", ""},
+	}
+	if len(trace.Records) != len(expected) {
+		t.Fatalf("trace records = %d, want %d", len(trace.Records), len(expected))
+	}
+	for index, want := range expected {
+		got := trace.Records[index]
+		gotNew := infraNWOSRenderRows(got.New)
+		gotOld := infraNWOSRenderRows(got.Old)
+		if got.Case != want.caseName || got.Operation != want.operation ||
+			got.Statement != want.statement || got.Sequence != want.sequence ||
+			gotNew != want.newRows || gotOld != want.oldRows {
+			t.Fatalf("record %d = %s|%s|%s|%d|%s|%s, want %s|%s|%s|%d|%s|%s", index,
+				got.Case, got.Operation, got.Statement, got.Sequence, gotNew, gotOld,
+				want.caseName, want.operation, want.statement, want.sequence, want.newRows, want.oldRows)
+		}
+	}
+}
+
+// infraNWOSCheckJavaMetadata verifies differential evidence carries the pinned
+// Java commit, runtime IDs, source files and executions.
+func infraNWOSCheckJavaMetadata(javaCommit string, runtimeIDs, sourceFiles, executions []string) error {
+	if javaCommit != infraNWOSJavaCommit {
+		return fmt.Errorf("Java commit = %q, want %q", javaCommit, infraNWOSJavaCommit)
+	}
+	if !reflect.DeepEqual(runtimeIDs, infraNWOSJavaRuntimeIDs) {
+		return fmt.Errorf("Java runtime IDs = %v, want %v", runtimeIDs, infraNWOSJavaRuntimeIDs)
+	}
+	if !reflect.DeepEqual(sourceFiles, []string{infraNWOSSource}) {
+		return fmt.Errorf("Java source files = %v, want %v", sourceFiles, []string{infraNWOSSource})
+	}
+	if !reflect.DeepEqual(executions, infraNWOSJavaExecutions) {
+		return fmt.Errorf("Java executions = %v, want %v", executions, infraNWOSJavaExecutions)
+	}
+	return nil
+}
+
+// infraNWOSCheckScenarioMetadata verifies the scenario document carries the
+// pinned slice identity and no Java flags.
+func infraNWOSCheckScenarioMetadata(version, id, description, javaCommit, javaSource string, runtimes, names, flags []string) error {
+	if version != compat.ScenarioVersion || id != infraNWOSID || description != infraNWOSDescription ||
+		javaCommit != infraNWOSJavaCommit || javaSource != infraNWOSSource {
+		return fmt.Errorf("scenario identity = %q/%q/%q/%q/%q", version, id, description, javaCommit, javaSource)
+	}
+	if !reflect.DeepEqual(runtimes, infraNWOSJavaRuntimeIDs) {
+		return fmt.Errorf("scenario javaRuntimes = %v, want %v", runtimes, infraNWOSJavaRuntimeIDs)
+	}
+	if !reflect.DeepEqual(names, infraNWOSJavaExecutions) {
+		return fmt.Errorf("scenario javaNames = %v, want %v", names, infraNWOSJavaExecutions)
+	}
+	if len(flags) != 0 {
+		return fmt.Errorf("scenario javaFlags = %v, want none", flags)
+	}
+	return nil
+}
+
 func TestRunInfraNamedWindowRetentionViewsDirectReplay(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "testdata", "parity")
 	var stdout, stderr bytes.Buffer

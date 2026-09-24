@@ -298,6 +298,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNamedWindowInsertFromScenario(file)
 	} else if *mode == "infra-named-window-keepall-delete" || *mode == "infra-named-window-keepall-delete-diff" {
 		scenario, err = loadInfraNWKDScenario(file)
+	} else if *mode == "infra-named-window-on-select" || *mode == "infra-named-window-on-select-diff" {
+		scenario, err = loadInfraNWOSScenario(file)
 	} else if *mode == "infra-named-window-retention-views" || *mode == "infra-named-window-retention-views-diff" {
 		scenario, err = loadInfraNWRVScenario(file)
 	} else if *mode == "infra-named-window-unique-views" || *mode == "infra-named-window-unique-views-diff" {
@@ -1500,6 +1502,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNWKDJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNWKDJavaSources),
 				splitMetadata(*javaExecutions, infraNWKDJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-named-window-on-select" || *mode == "infra-named-window-on-select-diff" {
+		trace, err := runInfraNWOSScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-named-window-on-select-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNWOSJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNWOSJavaSources),
+				splitMetadata(*javaExecutions, infraNWOSJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

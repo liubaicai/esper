@@ -2570,38 +2570,41 @@
     "InfraNWTableSubqCorrelCoerce"
    ],
    "goRefs": [
+    "internal/app/parity/infra_named_window_bean_views.go",
+    "internal/app/parity/infra_named_window_consumer_views.go",
+    "internal/app/parity/infra_named_window_ext_time_views.go",
+    "internal/app/parity/infra_named_window_final_views.go",
+    "internal/app/parity/infra_named_window_groupwin_views.go",
+    "internal/app/parity/infra_named_window_insert_from.go",
+    "internal/app/parity/infra_named_window_insert_shape.go",
     "internal/app/parity/infra_named_window_join.go",
+    "internal/app/parity/infra_named_window_keepall_delete.go",
+    "internal/app/parity/infra_named_window_length_views.go",
+    "internal/app/parity/infra_named_window_lengthbatch_sort_views.go",
+    "internal/app/parity/infra_named_window_on_select.go",
+    "internal/app/parity/infra_named_window_on_update.go",
+    "internal/app/parity/infra_named_window_on_update_misc.go",
+    "internal/app/parity/infra_named_window_retention_views.go",
+    "internal/app/parity/infra_named_window_time_batch_views.go",
+    "internal/app/parity/infra_named_window_time_order_accum_views.go",
+    "internal/app/parity/infra_named_window_time_views.go",
+    "internal/app/parity/infra_named_window_unique_views.go",
+    "internal/app/parity/infra_nwtable_context.go",
+    "internal/app/parity/infra_nwtable_subq_at_eventbean.go",
+    "internal/app/parity/infra_nwtable_subq_correl_coerce.go",
+    "internal/app/parity/infra_nwtable_subq_correl_join.go",
+    "internal/app/parity/infra_nwtable_subq_filtered_correl.go",
+    "internal/app/parity/infra_nwtable_subq_uncorrel.go",
     "internal/app/parity/run_test.go",
     "internal/esper/infra_named_window_types_parity_test.go",
     "internal/esper/infra_namedwindow_views_parity_test.go",
+    "internal/esper/namedwindow_statement_order_test.go",
+    "internal/esper/pattern.go",
+    "internal/esper/plan.go",
     "internal/esper/rowrecog.go",
     "internal/esper/runtime.go",
     "internal/esper/state.go",
-    "internal/esper/trigger.go",
-    "internal/app/parity/infra_nwtable_subq_uncorrel.go",
-    "internal/app/parity/infra_nwtable_subq_at_eventbean.go",
-    "internal/app/parity/infra_nwtable_subq_correl_join.go",
-    "internal/app/parity/infra_nwtable_subq_filtered_correl.go",
-    "internal/app/parity/infra_named_window_on_update.go",
-    "internal/app/parity/infra_named_window_on_update_misc.go",
-    "internal/app/parity/infra_named_window_insert_from.go",
-    "internal/app/parity/infra_nwtable_subq_correl_coerce.go",
-    "internal/app/parity/infra_named_window_keepall_delete.go",
-    "internal/esper/namedwindow_statement_order_test.go",
-    "internal/app/parity/infra_named_window_retention_views.go",
-    "internal/app/parity/infra_named_window_unique_views.go",
-    "internal/app/parity/infra_named_window_length_views.go",
-    "internal/app/parity/infra_named_window_lengthbatch_sort_views.go",
-    "internal/app/parity/infra_named_window_time_views.go",
-    "internal/app/parity/infra_named_window_ext_time_views.go",
-    "internal/app/parity/infra_named_window_time_order_accum_views.go",
-    "internal/app/parity/infra_named_window_time_batch_views.go",
-    "internal/app/parity/infra_named_window_groupwin_views.go",
-    "internal/app/parity/infra_named_window_consumer_views.go",
-    "internal/app/parity/infra_named_window_bean_views.go",
-    "internal/app/parity/infra_named_window_insert_shape.go",
-    "internal/app/parity/infra_named_window_final_views.go",
-    "internal/app/parity/infra_nwtable_context.go"
+    "internal/esper/trigger.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -49235,6 +49238,53 @@
     "java-runtime-0a80365acd3e6ab25238"
    ],
    "notes": "ExprFilterExpressions ords 7/17/27. 49 records (13 deployed + 15 listener + 21 listener-not-invoked), 0 differences."
+  },
+  {
+   "id": "case.infra-named-window-on-select",
+   "javaRuntimeIds": [
+    "java-runtime-8a348801e82d24a6c755",
+    "java-runtime-1bbd8705a7bbea1db0cd",
+    "java-runtime-caeff76ee56490d832ea"
+   ],
+   "javaStaticIds": [
+    "java-763e7086c0fdad5f4c49",
+    "java-0f1cbcf0f43473325b2b",
+    "java-4201486cef18d7d66843"
+   ],
+   "javaNames": [
+    "InfraNamedWindowOnSelectSimple",
+    "InfraNamedWindowOnSelectSceneTwo",
+    "InfraNamedWindowOnSelectWPattern"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowOnSelect.java"
+   ],
+   "goTests": [
+    "internal/app/parity/infra_named_window_on_select.go",
+    "internal/app/parity/run_test.go"
+   ],
+   "tags": [
+    "infra",
+    "namedwindow",
+    "on-select",
+    "born-differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-named-window-on-select.evidence.json"
+   ],
+   "difference": "Named-window on-trigger selects: on-delete (old-stream row), on-insert RouteTo+OrderBy (2-row ordered batch + per-row consumer), on-pattern select (join row stream_0=window event, stream_1=pattern match map). Shared core: pattern-sourced named-window select validation + join-row emission + untagged pattern atoms.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-8a348801e82d24a6c755",
+    "java-runtime-1bbd8705a7bbea1db0cd",
+    "java-runtime-caeff76ee56490d832ea"
+   ],
+   "notes": "InfraNamedWindowOnSelect all 3 executions. 24 records (12 deployed + 9 listener + 3 snapshot), 0 differences."
   }
  ],
  "mappings": [
@@ -52625,13 +52675,17 @@
   {
    "capabilityId": "expr.core",
    "caseId": "case.expr-filter-expressions"
+  },
+  {
+   "capabilityId": "infra.namedwindow.views",
+   "caseId": "case.infra-named-window-on-select"
   }
  ],
  "summary": {
-  "inventoriedCases": 761,
-  "implementedCases": 759,
-  "differentialVerifiedCases": 387,
-  "differentialVerifiedRuntimeIds": 1524,
+  "inventoriedCases": 762,
+  "implementedCases": 760,
+  "differentialVerifiedCases": 388,
+  "differentialVerifiedRuntimeIds": 1527,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -52641,13 +52695,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4058,
-  "referencedJavaRuntimeIds": 3628,
+  "runtimeAssociationCount": 4061,
+  "referencedJavaRuntimeIds": 3631,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 508,
+  "unreferencedJavaRuntimeIds": 505,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 761,
+  "totalCases": 762,
   "totalCapabilities": 126
  }
 }

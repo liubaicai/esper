@@ -1,0 +1,328 @@
+{
+ "version": "esper-parity/v1",
+ "id": "infra-named-window-on-select",
+ "description": "InfraNamedWindowOnSelect named-window on-trigger select slice (ords 0-2): an on-S0 delete observed through the keepall window statement's new/old rows (simple, ord 0), an on-A insert-into that routes the ordered window rows into MyStream for a select-* consumer plus an I% direct insert and an on-B delete-all (scene-two, ord 1), and an on-pattern select that emits a join-shaped row (stream_0 the retained Z bean, stream_1 the pattern match) when the every-A -> B pattern fires (wpattern, ord 2). Deployed markers pin the module fan-out; listener records carry the full SupportBean row and ordered iterator snapshots pin the window contents (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowOnSelect.java).",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowOnSelect.java",
+ "javaRuntimes": [
+  "java-runtime-8a348801e82d24a6c755",
+  "java-runtime-1bbd8705a7bbea1db0cd",
+  "java-runtime-caeff76ee56490d832ea"
+ ],
+ "javaNames": [
+  "InfraNamedWindowOnSelectSimple",
+  "InfraNamedWindowOnSelectSceneTwo",
+  "InfraNamedWindowOnSelectWPattern"
+ ],
+ "javaStaticIds": [
+  "java-763e7086c0fdad5f4c49",
+  "java-0f1cbcf0f43473325b2b",
+  "java-4201486cef18d7d66843"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "simple",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-8a348801e82d24a6c755",
+   "executionName": "InfraNamedWindowOnSelectSimple",
+   "observation": "listener+deployed; three separately deployed statements (public keepall window, wildcard insert, on-S0 delete where intPrimitive = id): the E1 insert arrives as the window statement's new row and the S0(1) trigger removes it as the window statement's old row",
+   "epl": "@Name('create') @public create window MyWindow.win:keepall() as SupportBean;\n@Name('insert') insert into MyWindow select * from SupportBean;\n@Name('delete') on SupportBean_S0 delete from MyWindow where intPrimitive = id;\n"
+  },
+  {
+   "case": "scene-two",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-1bbd8705a7bbea1db0cd",
+   "executionName": "InfraNamedWindowOnSelectSceneTwo",
+   "observation": "listener+snapshot+deployed; one five-statement module (keepall window, E% insert, on-A insert-into MyStream selecting mywin.* ordered by theString asc, select-* consumer, I% insert into MyStream) plus a second module's on-B delete-all: A1 fires one select row and one consumer row for E1, I2 reaches the consumer only, A2 fires the two-row ordered batch [E1,E3] on select and two separate consumer events, and B1 empties the window so A3 fires nothing",
+   "epl": "@name('create') @public create window MyWindow#keepall as select * from SupportBean;\ninsert into MyWindow select * from SupportBean(theString like 'E%');\n@name('select') on SupportBean_A insert into MyStream select mywin.* from MyWindow as mywin order by theString asc;\n@name('consumer') select * from MyStream;\ninsert into MyStream select * from SupportBean(theString like 'I%');\n@name('delete') on SupportBean_B delete from MyWindow;\n"
+  },
+  {
+   "case": "wpattern",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-caeff76ee56490d832ea",
+   "executionName": "InfraNamedWindowOnSelectWPattern",
+   "observation": "listener+deployed; a keepall window pre-populated by the Z-filtered insert feeds an on-pattern select: the A(1) event arms every e = SupportBean(theString = 'A'), the B(1) event matches intPrimitive = e.intPrimitive, and s0 emits one join-shaped row whose stream_0 column is the retained Z bean and stream_1 the pattern match",
+   "epl": "@public create window MyWindow.win:keepall() as SupportBean;\ninsert into MyWindow select * from SupportBean(theString = 'Z');\n@Name('s0') on pattern[every e = SupportBean(theString = 'A') -> SupportBean(intPrimitive = e.intPrimitive)] select * from MyWindow;\n"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "simple"
+  },
+  {
+   "op": "deploy",
+   "case": "simple",
+   "statement": "create",
+   "epl": "@Name('create') @public create window MyWindow.win:keepall() as SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "simple",
+   "statement": "create"
+  },
+  {
+   "op": "deploy",
+   "case": "simple",
+   "statement": "insert",
+   "epl": "@Name('insert') insert into MyWindow select * from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "simple",
+   "statement": "insert"
+  },
+  {
+   "op": "deploy",
+   "case": "simple",
+   "statement": "delete",
+   "epl": "@Name('delete') on SupportBean_S0 delete from MyWindow where intPrimitive = id"
+  },
+  {
+   "op": "deployed",
+   "case": "simple",
+   "statement": "delete"
+  },
+  {
+   "op": "send",
+   "case": "simple",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "simple",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "simple"
+  },
+  {
+   "op": "case",
+   "case": "scene-two"
+  },
+  {
+   "op": "deploy",
+   "case": "scene-two",
+   "statement": "create",
+   "epl": "@name('create') @public create window MyWindow#keepall as select * from SupportBean"
+  },
+  {
+   "op": "deploy",
+   "case": "scene-two",
+   "statement": "insert",
+   "epl": "insert into MyWindow select * from SupportBean(theString like 'E%')"
+  },
+  {
+   "op": "deploy",
+   "case": "scene-two",
+   "statement": "select",
+   "epl": "@name('select') on SupportBean_A insert into MyStream select mywin.* from MyWindow as mywin order by theString asc"
+  },
+  {
+   "op": "deploy",
+   "case": "scene-two",
+   "statement": "consumer",
+   "epl": "@name('consumer') select * from MyStream"
+  },
+  {
+   "op": "deploy",
+   "case": "scene-two",
+   "statement": "insert-i",
+   "epl": "insert into MyStream select * from SupportBean(theString like 'I%')"
+  },
+  {
+   "op": "deployed",
+   "case": "scene-two",
+   "statement": "create"
+  },
+  {
+   "op": "deployed",
+   "case": "scene-two",
+   "statement": "insert"
+  },
+  {
+   "op": "deployed",
+   "case": "scene-two",
+   "statement": "select"
+  },
+  {
+   "op": "deployed",
+   "case": "scene-two",
+   "statement": "consumer"
+  },
+  {
+   "op": "deployed",
+   "case": "scene-two",
+   "statement": "insert-i"
+  },
+  {
+   "op": "send",
+   "case": "scene-two",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "scene-two",
+   "statement": "create",
+   "mode": "ordered"
+  },
+  {
+   "op": "send",
+   "case": "scene-two",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "scene-two",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "I2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "scene-two",
+   "statement": "create",
+   "mode": "ordered"
+  },
+  {
+   "op": "send",
+   "case": "scene-two",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "scene-two",
+   "statement": "create",
+   "mode": "ordered"
+  },
+  {
+   "op": "send",
+   "case": "scene-two",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A2"
+   }
+  },
+  {
+   "op": "deploy",
+   "case": "scene-two",
+   "statement": "delete",
+   "epl": "@name('delete') on SupportBean_B delete from MyWindow"
+  },
+  {
+   "op": "deployed",
+   "case": "scene-two",
+   "statement": "delete"
+  },
+  {
+   "op": "send",
+   "case": "scene-two",
+   "eventType": "SupportBean_B",
+   "payload": {
+    "id": "B1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "scene-two",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A3"
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "scene-two"
+  },
+  {
+   "op": "case",
+   "case": "wpattern"
+  },
+  {
+   "op": "deploy",
+   "case": "wpattern",
+   "statement": "create",
+   "epl": "@public create window MyWindow.win:keepall() as SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "wpattern",
+   "statement": "create"
+  },
+  {
+   "op": "deploy",
+   "case": "wpattern",
+   "statement": "insert",
+   "epl": "insert into MyWindow select * from SupportBean(theString = 'Z')"
+  },
+  {
+   "op": "deployed",
+   "case": "wpattern",
+   "statement": "insert"
+  },
+  {
+   "op": "send",
+   "case": "wpattern",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "Z",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "deploy",
+   "case": "wpattern",
+   "statement": "s0",
+   "epl": "@Name('s0') on pattern[every e = SupportBean(theString = 'A') -> SupportBean(intPrimitive = e.intPrimitive)] select * from MyWindow"
+  },
+  {
+   "op": "deployed",
+   "case": "wpattern",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "wpattern",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "wpattern",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "B",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "wpattern"
+  }
+ ]
+}

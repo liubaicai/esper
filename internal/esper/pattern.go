@@ -1510,8 +1510,8 @@ func validatePatternNodeScope(node *patternNode, seen map[string]struct{}, allow
 	}
 	switch node.kind {
 	case patternEventNode:
-		if strings.TrimSpace(node.tag) == "" || node.predicate == nil {
-			return NewError(ErrorInvalidRule, "pattern event requires a tag and predicate")
+		if node.predicate == nil {
+			return NewError(ErrorInvalidRule, "pattern event requires a predicate")
 		}
 		if node.source != nil {
 			if base, err := sourceNode(node.source); err == nil && base != nil && base.kind == streamTable {
@@ -1520,6 +1520,12 @@ func validatePatternNodeScope(node *patternNode, seen map[string]struct{}, allow
 		}
 		if node.consumeLevelSet && node.consumeLevel < 0 {
 			return NewError(ErrorInvalidRule, "pattern consume level cannot be negative")
+		}
+		// Esper permits untagged filter atoms (`-> SupportBean(f)`): they
+		// participate in the NFA but bind no tag and are exempt from the
+		// duplicate-tag check.
+		if strings.TrimSpace(node.tag) == "" {
+			return nil
 		}
 		if _, exists := seen[node.tag]; exists && !allowDuplicate {
 			return NewError(ErrorInvalidRule, fmt.Sprintf("pattern duplicates tag %q", node.tag))

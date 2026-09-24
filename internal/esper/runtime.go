@@ -20485,6 +20485,11 @@ func patternPredicateMatches(node *patternNode, progress *patternProgress, event
 func capturePatternEvent(progress *patternProgress, event Event) {
 	progress.started = true
 	progress.done = true
+	// Untagged atoms (`-> SupportBean(f)`) fire the NFA but bind no tag —
+	// Esper's MatchingEvent map only carries named atoms.
+	if progress.node.tag == "" {
+		return
+	}
 	if progress.tags == nil {
 		progress.tags = make(map[string]Event)
 	}

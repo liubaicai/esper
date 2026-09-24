@@ -3768,6 +3768,35 @@ func (e *Environment) validateTriggerTargetExpression(input *streamNode, targetS
 	return nil
 }
 
+// validatePatternTriggerTargetExpression validates a where/selection
+// expression on a pattern-sourced named-window trigger. Plain fields resolve
+// against the named-window schema (the queried side), tag fields against the
+// pattern's declared tags, and targetKind fields against the target schema.
+func (e *Environment) validatePatternTriggerTargetExpression(definition *triggerDefinition, targetSchema Schema, expression Expr, targetKind string) error {
+	if expression == nil {
+		return NewError(ErrorInvalidRule, "trigger expression is nil")
+	}
+	windowNode := &streamNode{kind: streamNamedWindow, sourceName: definition.table, moduleName: definition.moduleName}
+	if err := e.validatePatternExpressionFields(windowNode, expression, patternTagSources(definition.pattern), true); err != nil {
+		return err
+	}
+	var fields []string
+	expression.node().referencedTargetFields(targetKind, &fields)
+	for _, name := range fields {
+		field, exists := targetSchema.Field(name)
+		if !exists {
+			return fmt.Errorf("expression references unknown target field %q on schema %q", name, targetSchema.Name())
+		}
+		expressionType := expressionTargetFieldType(expression.node(), targetKind, name)
+		if expressionType != nil && field.Type != nil && field.Type != typeOf[any]() {
+			if !fieldExpressionTypesCompatible(field.Type, expressionType) {
+				return fmt.Errorf("target field %q has type %s, expression expects %s", name, field.Type, expressionType)
+			}
+		}
+	}
+	return nil
+}
+
 func (e *Environment) sourceSchema(source *streamNode) (Schema, error) {
 	if source == nil {
 		return Schema{}, NewError(ErrorDependency, "nil source")
@@ -4741,6 +4770,18 @@ func (e *Environment) resultSchema(query Query) (Schema, error) {
 			return Schema{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger references unknown named window %q", query.trigger.table))
 		}
 		if len(query.selections) == 0 {
+			if query.trigger.pattern != nil {
+				// `on pattern[...] select * from MyWindow` joins the window
+				// stream with the pattern match: stream_0 is the window
+				// event, stream_1 the tag→event match map.
+				joinSchema, joinErr := NewSchema("result:"+query.name,
+					FieldSpec{Name: "stream_0", Type: typeOf[any]()},
+					FieldSpec{Name: "stream_1", Type: typeOf[map[string]any]()})
+				if joinErr != nil {
+					return Schema{}, joinErr
+				}
+				return joinSchema, nil
+			}
 			return window.schema, nil
 		}
 		fields := make([]FieldSpec, 0, len(query.selections))

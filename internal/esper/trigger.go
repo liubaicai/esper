@@ -740,6 +740,7 @@ func (s TriggerStream[T]) namedWindowTrigger(window string, action triggerAction
 		env: s.env,
 		definition: &triggerDefinition{
 			input:       s.node,
+			pattern:     s.pattern,
 			table:       strings.TrimSpace(window),
 			target:      triggerTargetNamedWindow,
 			action:      action,
@@ -996,11 +997,15 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 		// Java's `select T.c.m() from pattern[...]` reads a table from a
 		// pattern-sourced select; the fluent surface maps it to a
 		// pattern-triggered table read. Variable assignments remain the only
-		// other pattern-trigger action.
+		// other pattern-trigger action. Named-window selects are also valid
+		// (`on pattern[...] select * from MyWindow`).
 		if definition.action != triggerSetVariables && definition.action != triggerSelectTable {
-			return NewError(ErrorInvalidRule, "pattern triggers support variable assignments only")
+			return NewError(ErrorInvalidRule, "pattern triggers support variable assignments and select actions")
 		}
 		if definition.action == triggerSelectTable {
+			if definition.target == triggerTargetNamedWindow {
+				return e.validateNamedWindowTrigger(definition)
+			}
 			return e.validatePatternTableRead(definition)
 		}
 		return e.validateVariableTriggerAssignments(definition)
@@ -1443,7 +1448,11 @@ func (e *Environment) validateNamedWindowTrigger(definition *triggerDefinition) 
 		if isAggregateExpression(definition.where) {
 			return NewError(ErrorInvalidRule, "an aggregate function may not appear in a WHERE clause (use the HAVING clause)")
 		}
-		if err := e.validateTriggerTargetExpression(definition.input, targetSchema, definition.where, "named-window-field"); err != nil {
+		if definition.pattern != nil {
+			if err := e.validatePatternTriggerTargetExpression(definition, targetSchema, definition.where, "named-window-field"); err != nil {
+				return fmt.Errorf("named-window predicate: %w", err)
+			}
+		} else if err := e.validateTriggerTargetExpression(definition.input, targetSchema, definition.where, "named-window-field"); err != nil {
 			return fmt.Errorf("named-window predicate: %w", err)
 		}
 	}
@@ -1603,7 +1612,11 @@ func (e *Environment) validateNamedWindowTrigger(definition *triggerDefinition) 
 			if len(definition.groupByKeys) == 0 {
 				// Grouped on-select validates projections against the window
 				// schema in the dedicated group-key block below.
-				if err := e.validateTriggerTargetExpression(definition.input, targetSchema, selection.Expr, "named-window-field"); err != nil {
+				if definition.pattern != nil {
+					if err := e.validatePatternTriggerTargetExpression(definition, targetSchema, selection.Expr, "named-window-field"); err != nil {
+						return fmt.Errorf("named-window select projection %q: %w", selection.Name, err)
+					}
+				} else if err := e.validateTriggerTargetExpression(definition.input, targetSchema, selection.Expr, "named-window-field"); err != nil {
 					return fmt.Errorf("named-window select projection %q: %w", selection.Name, err)
 				}
 			}
@@ -1948,7 +1961,7 @@ func (s *Statement) processTriggerRuntime(ctx context.Context, runtime *statemen
 			var batch ResultBatch
 			var selectErr error
 			if definition.target == triggerTargetNamedWindow {
-				batch, selectErr = executeSelectNamedWindowAction(ctx, s.engine, definition, candidate, now, variables, s.plan.resultSchema)
+				batch, selectErr = executeSelectNamedWindowAction(ctx, s.engine, definition, candidate, now, variables, s.plan.resultSchema, tags, tagValues)
 			} else {
 				batch, selectErr = executeSelectTableAction(ctx, s.engine, definition, candidate, now, variables, s.plan.resultSchema)
 			}
@@ -2275,7 +2288,7 @@ func executeSelectTableAction(ctx context.Context, engine *Engine, definition *t
 	return ResultBatch{Time: now, New: []Result{resultRow(newRow(resultSchema, projected))}}, nil
 }
 
-func executeSelectNamedWindowAction(ctx context.Context, engine *Engine, definition *triggerDefinition, event Event, now time.Time, variables map[string]Value, resultSchema Schema) (ResultBatch, error) {
+func executeSelectNamedWindowAction(ctx context.Context, engine *Engine, definition *triggerDefinition, event Event, now time.Time, variables map[string]Value, resultSchema Schema, tags map[string]Event, tagValues map[string][]Event) (ResultBatch, error) {
 	if engine == nil || definition == nil {
 		return ResultBatch{}, NewError(ErrorDependency, "nil named-window select trigger")
 	}
@@ -2297,7 +2310,12 @@ func executeSelectNamedWindowAction(ctx context.Context, engine *Engine, definit
 		if err := contextErr(ctx); err != nil {
 			return ResultBatch{}, err
 		}
-		evaluation := EvalContext{Engine: engine, Event: event, Group: []Event{candidate}, Now: now, Variables: variables}
+		evaluation := EvalContext{Engine: engine, Event: event, Group: []Event{candidate}, Now: now, Variables: variables, Tags: tags, TagValues: tagValues}
+		if definition.pattern != nil {
+			// Pattern-sourced select: Field resolves against the window row
+			// (the queried side), not the trigger event.
+			evaluation.Event = candidate
+		}
 		if definition.where != nil {
 			matched, isBool := boolValue(definition.where.eval(evaluation))
 			if !isBool || !matched {
@@ -2307,15 +2325,29 @@ func executeSelectNamedWindowAction(ctx context.Context, engine *Engine, definit
 		matched = append(matched, candidate)
 	}
 	if len(definition.groupByKeys) > 0 {
-		return groupedSelectNamedWindowResult(definition, engine, event, now, variables, matched, resultSchema, result), nil
+		return groupedSelectNamedWindowResult(definition, engine, event, now, variables, matched, resultSchema, result, tags, tagValues), nil
 	}
 	for _, candidate := range matched {
 		if len(definition.selections) == 0 {
+			if definition.pattern != nil {
+				// `on pattern[...] select * from MyWindow`: stream_0 is the
+				// window event, stream_1 the tag→event match map.
+				matchMap := make(map[string]any, len(tags))
+				for name, tagged := range tags {
+					matchMap[name] = tagged
+				}
+				result.New = append(result.New, resultRow(newRow(resultSchema,
+					[]Value{Present(candidate), Present(matchMap)})))
+				continue
+			}
 			result.New = append(result.New, resultEvent(candidate))
 			continue
 		}
 		values := make([]Value, 0, len(definition.selections))
-		evaluation := EvalContext{Engine: engine, Event: event, Group: []Event{candidate}, Now: now, Variables: variables}
+		evaluation := EvalContext{Engine: engine, Event: event, Group: []Event{candidate}, Now: now, Variables: variables, Tags: tags, TagValues: tagValues}
+		if definition.pattern != nil {
+			evaluation.Event = candidate
+		}
 		for _, selection := range definition.selections {
 			values = append(values, selection.Expr.eval(evaluation))
 		}
@@ -2332,7 +2364,7 @@ func executeSelectNamedWindowAction(ctx context.Context, engine *Engine, definit
 // so plain Field projections read the group's key value at present levels and
 // null at coarser levels — the same contract the live aggregate pipeline
 // implements via aggregateGroupContext.
-func groupedSelectNamedWindowResult(definition *triggerDefinition, engine *Engine, trigger Event, now time.Time, variables map[string]Value, matched []Event, resultSchema Schema, result ResultBatch) ResultBatch {
+func groupedSelectNamedWindowResult(definition *triggerDefinition, engine *Engine, trigger Event, now time.Time, variables map[string]Value, matched []Event, resultSchema Schema, result ResultBatch, tags map[string]Event, tagValues map[string][]Event) ResultBatch {
 	keys := definition.groupByKeys
 	levels := rollupKeyLevels(len(keys))
 	if !definition.groupByRollup {
@@ -2357,7 +2389,7 @@ func groupedSelectNamedWindowResult(definition *triggerDefinition, engine *Engin
 		var order []*group
 		index := make(map[string]*group)
 		for _, candidate := range matched {
-			evaluation := EvalContext{Engine: engine, Event: candidate, Group: []Event{candidate}, Now: now, Variables: variables}
+			evaluation := EvalContext{Engine: engine, Event: candidate, Group: []Event{candidate}, Now: now, Variables: variables, Tags: tags, TagValues: tagValues}
 			keyValues := make([]any, 0, len(level))
 			for _, keyIndex := range level {
 				keyValues = append(keyValues, keys[keyIndex].eval(evaluation).Any())
@@ -2380,7 +2412,7 @@ func groupedSelectNamedWindowResult(definition *triggerDefinition, engine *Engin
 			// zero-key LocalGroupBy aggregates statement-wide (Java's
 			// group_by:() over all taken rows) while ordinary aggregates stay
 			// bound to the current group through Group.
-			evaluation := EvalContext{Engine: engine, Event: grp.events[0], Group: grp.events, AllGroup: append([]Event(nil), matched...), Now: now, Variables: variables, aggregateEvaluation: true}
+			evaluation := EvalContext{Engine: engine, Event: grp.events[0], Group: grp.events, AllGroup: append([]Event(nil), matched...), Now: now, Variables: variables, aggregateEvaluation: true, Tags: tags, TagValues: tagValues}
 			evaluation.groupingValues = make(map[string]Value, len(keys))
 			evaluation.groupingPresent = make(map[string]bool, len(keys))
 			for keyIndex, keyExpr := range keys {
