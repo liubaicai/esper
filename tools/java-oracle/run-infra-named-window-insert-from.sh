@@ -91,49 +91,63 @@ if ! jq -e '
     .id == "infra-named-window-insert-from" and
     .javaCommit == "9e1b9f1cc9117fea4bf33ab043762c045d73839c" and
     .javaSource == "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowInsertFrom.java" and
-    (.javaRuntimes | type == "array" and length == 4) and
+    (.javaRuntimes | type == "array" and length == 7) and
     ([.javaRuntimes[] | startswith("java-runtime-")] | all) and
-    (.javaNames | type == "array" and length == 4) and
+    (.javaNames | type == "array" and length == 7) and
     ([.javaNames[] | startswith("Infra")] | all) and
-    (.javaStaticIds | type == "array" and length == 4) and
+    (.javaStaticIds | type == "array" and length == 7) and
     ([.javaStaticIds[] | startswith("java-")] | all) and
     (.javaFlags == []) and
-    (.cases | type == "array" and length == 4) and
-    ([.cases[].case] == ["create-after-named", "insert-where-type-filter", "lenient-map", "lenient-objectarray"]) and
-    ([.cases[].ordinal] == [0, 1, 5, 6]) and
-    ([.cases[].runtimeId] == ["java-runtime-b3f6cb7b36c5211c8822", "java-runtime-e601b3cc7f827d578185", "java-runtime-46011542d6e9d34a87f5", "java-runtime-8138dd777290d00417d1"]) and
-    ([.cases[].executionName] == ["InfraCreateNamedAfterNamed", "InfraInsertWhereTypeAndFilter", "InfraNamedWindowInsertLenientPropCount{rep=MAP}", "InfraNamedWindowInsertLenientPropCount{rep=OBJECTARRAY}"]) and
+    (.cases | type == "array" and length == 7) and
+    ([.cases[].case] == ["create-after-named", "insert-where-type-filter", "insert-where-om-staggered", "infra-invalid", "variant-stream", "lenient-map", "lenient-objectarray"]) and
+    ([.cases[].ordinal] == [0, 1, 2, 3, 4, 5, 6]) and
+    ([.cases[].runtimeId] == ["java-runtime-b3f6cb7b36c5211c8822", "java-runtime-e601b3cc7f827d578185", "java-runtime-f0f0e5e651a8a513377e", "java-runtime-75dcb72bef59bc4cc772", "java-runtime-b6e5b14130feae458c23", "java-runtime-46011542d6e9d34a87f5", "java-runtime-8138dd777290d00417d1"]) and
+    ([.cases[].executionName] == ["InfraCreateNamedAfterNamed", "InfraInsertWhereTypeAndFilter", "InfraInsertWhereOMStaggered", "InfraInvalid", "InfraVariantStream", "InfraNamedWindowInsertLenientPropCount{rep=MAP}", "InfraNamedWindowInsertLenientPropCount{rep=OBJECTARRAY}"]) and
     ([.cases[] | select(.observation == "listener")] | length == 4) and
-    ([.cases[].iteratorSnapshots] == [0, 3, 1, 1]) and
-    # per-case step counts: the insert-where-type-filter enumeration is
-    # 1 case + 9 deploys + 9 sends + 3 snapshots + 1 undeploy = 23 steps
-    # (7 + 23 + 10 + 10 = 50 total).
+    ([.cases[].iteratorSnapshots] == [0, 3, 2, 0, 1, 1, 1]) and
+    # per-case step counts: insert-where-type-filter is 1 case + 9 deploys +
+    # 9 sends + 3 snapshots + 1 undeploy = 23; om-staggered is 1 + 4 deploys +
+    # 3 sends + 1 unrepresentable + 2 snapshots + 1 undeploy = 12;
+    # infra-invalid is 1 + 1 deploy + 5 build-error + 1 undeploy = 8;
+    # variant-stream is 1 + 5 deploys + 2 sends + 1 snapshot + 1 undeploy =
+    # 10 (7 + 23 + 12 + 8 + 10 + 10 + 10 = 80 total).
     ([.steps[] | select(.case == "create-after-named")] | length == 7) and
     ([.steps[] | select(.case == "insert-where-type-filter")] | length == 23) and
+    ([.steps[] | select(.case == "insert-where-om-staggered")] | length == 12) and
+    ([.steps[] | select(.case == "infra-invalid")] | length == 8) and
+    ([.steps[] | select(.case == "variant-stream")] | length == 10) and
     ([.steps[] | select(.case == "lenient-map")] | length == 10) and
     ([.steps[] | select(.case == "lenient-objectarray")] | length == 10) and
-    ([.steps[] | select(.op == "case")] | length == 4) and
+    ([.steps[] | select(.op == "case")] | length == 7) and
     ([.steps[] | select(.op == "deploy" and .case == "create-after-named")] | length == 4) and
     ([.steps[] | select(.op == "deploy" and .case == "insert-where-type-filter")] | length == 9) and
+    ([.steps[] | select(.op == "deploy" and .case == "insert-where-om-staggered")] | length == 4) and
+    ([.steps[] | select(.op == "deploy" and .case == "infra-invalid")] | length == 1) and
+    ([.steps[] | select(.op == "deploy" and .case == "variant-stream")] | length == 5) and
     ([.steps[] | select(.op == "deploy" and .case == "lenient-map")] | length == 4) and
     ([.steps[] | select(.op == "deploy" and .case == "lenient-objectarray")] | length == 4) and
     ([.steps[] | select(.op == "send" and .eventType == "SupportBean")] | length == 12) and
     ([.steps[] | select(.op == "send" and .eventType == "SupportBean_S0")] | length == 2) and
-    ([.steps[] | select(.op == "snapshot")] | length == 7) and
-    ([.steps[] | select(.op == "snapshot" and .statement == "windowTwo" and .mode == "ordered")] | length == 1) and
-    ([.steps[] | select(.op == "snapshot" and .statement == "windowThree" and .mode == "ordered")] | length == 1) and
+    ([.steps[] | select(.op == "send" and .eventType == "MyMapAB")] | length == 3) and
+    ([.steps[] | select(.op == "send" and .eventType == "SupportBean_A")] | length == 1) and
+    ([.steps[] | select(.op == "send" and .eventType == "SupportBean_B")] | length == 1) and
+    ([.steps[] | select(.op == "snapshot")] | length == 10) and
+    ([.steps[] | select(.op == "snapshot" and .statement == "windowTwo" and .mode == "ordered")] | length == 2) and
+    ([.steps[] | select(.op == "snapshot" and .statement == "windowThree" and .mode == "ordered")] | length == 2) and
     # windowFour is the single mode-any pin: the Java assert is any-order.
     ([.steps[] | select(.op == "snapshot" and .statement == "windowFour" and .mode == "any")] | length == 1) and
-    ([.steps[] | select(.op == "snapshot" and .statement == "window" and .mode == "ordered")] | length == 4) and
-    ([.steps[] | select(.op == "undeploy-all")] | length == 4) and
-    (.steps | type == "array" and length == 50)
+    ([.steps[] | select(.op == "snapshot" and .statement == "window" and .mode == "ordered")] | length == 5) and
+    ([.steps[] | select(.op == "build-error")] | length == 5) and
+    ([.steps[] | select(.op == "unrepresentable")] | length == 1) and
+    ([.steps[] | select(.op == "undeploy-all")] | length == 7) and
+    (.steps | type == "array" and length == 80)
 ' "$scenario" >/dev/null 2>&1; then
     echo "scenario is not a valid infra-named-window-insert-from replay: $scenario" >&2
     exit 1
 fi
 
 if [ "$skip_build" -eq 0 ]; then
-    "$mvn_bin" -f "$esper_root/pom.xml" -pl compiler,runtime -am test-compile \
+    "$mvn_bin" -f "$esper_root/pom.xml" -pl compiler,runtime,regression-lib -am test-compile \
         -DskipTests=true -Dcheckstyle.skip=true -Dgpg.skip=true \
         -Dfile.encoding=UTF-8 -Dproject.build.sourceEncoding=UTF-8 \
         -Dproject.reporting.outputEncoding=UTF-8 -Duser.timezone=UTC
@@ -176,6 +190,7 @@ classpath="$classpath$cp_sep$(native_path "$esper_root/compiler/target/classes")
 classpath="$classpath$cp_sep$(native_path "$esper_root/runtime/target/classes")"
 classpath="$classpath$cp_sep$(native_path "$esper_root/common-avro/target/classes")"
 classpath="$classpath$cp_sep$(native_path "$esper_root/common-xmlxsd/target/classes")"
+classpath="$classpath$cp_sep$(native_path "$esper_root/regression-lib/target/classes")"
 classpath="$classpath$cp_sep$compiler_cp$cp_sep$runtime_cp"
 
 "$javac_bin" -encoding UTF-8 -cp "$classpath" -d "$(native_path "$classes")" \
@@ -185,43 +200,55 @@ mkdir -p "$(dirname "$output")"
 "$java_bin" -Dfile.encoding=UTF-8 -Duser.timezone=UTC -Duser.language=en \
     -Duser.country=US -Duser.variant= -cp "$classpath" \
     InfraNamedWindowInsertFromScenarioOracle "$scenario" > "$output"
-
 if ! jq -e '
     def nul: {"state": "null"};
     def rowb($i; $t): {"kind": "row", "fields": {"intPrimitive": $i, "theString": $t}};
     def rows1($t): {"kind": "row", "fields": {"theString": $t}};
+    def rowab($a; $b): {"kind": "row", "fields": {"a": $a, "b": $b}};
+    def rowa($a): {"kind": "row", "fields": {"a": $a}};
+    def rowid($v): {"kind": "row", "fields": {"id?": $v}};
     def row2($a; $b): {"kind": "row", "fields": {"c0": $a, "c1": $b}};
     def lis($c; $q; $st; $new): {"case": $c, "operation": "listener", "statement": $st, "sequence": $q, "time": "1970-01-01T00:00:00Z", "new": $new};
     # snap($c; $st; $rows) checks a snapshot record; pass .records[N].new as
     # $rows for the mode-any snapshot so the engine iteration order is not
     # pinned (the ordered snapshots pin the engine iterator order instead).
     def snap($c; $st; $rows): {"case": $c, "operation": "snapshot", "statement": $st, "sequence": 0, "time": "1970-01-01T00:00:00Z", "new": $rows};
+    def cerr($c; $st; $v): {"case": $c, "operation": "compile-error", "statement": $st, "sequence": 0, "value": $v};
+    def unrep($c; $st; $v): {"case": $c, "operation": "unrepresentable", "statement": $st, "sequence": 0, "value": $v};
     .version == "esper-parity/v1" and
     .id == "infra-named-window-insert-from" and
     .javaCommit == "9e1b9f1cc9117fea4bf33ab043762c045d73839c" and
-    (.records | type == "array" and length == 18) and
+    (.records | type == "array" and length == 30) and
     ([.records[].case] == ["create-after-named", "create-after-named",
         "insert-where-type-filter", "insert-where-type-filter", "insert-where-type-filter",
         "insert-where-type-filter", "insert-where-type-filter", "insert-where-type-filter",
         "insert-where-type-filter", "insert-where-type-filter", "insert-where-type-filter",
         "insert-where-type-filter", "insert-where-type-filter", "insert-where-type-filter",
+        "insert-where-om-staggered", "insert-where-om-staggered", "insert-where-om-staggered",
+        "insert-where-om-staggered", "insert-where-om-staggered", "insert-where-om-staggered",
+        "infra-invalid", "infra-invalid", "infra-invalid", "infra-invalid", "infra-invalid",
+        "variant-stream",
         "lenient-map", "lenient-map", "lenient-objectarray", "lenient-objectarray"]) and
     ([.records[].operation] == ["listener", "listener",
         "listener", "listener", "listener", "listener", "listener",
         "snapshot", "snapshot", "snapshot",
         "listener", "listener", "listener", "listener",
+        "listener", "listener", "listener", "unrepresentable", "snapshot", "snapshot",
+        "compile-error", "compile-error", "compile-error", "compile-error", "compile-error",
+        "snapshot",
         "snapshot", "snapshot", "snapshot", "snapshot"]) and
-    ([.records[].time] | all(. == "1970-01-01T00:00:00Z")) and
-    ([.records[] | select(.operation == "listener") | .statement] == ["windowOne", "selectOne", "window", "window", "window", "window", "window", "windowTwo", "window", "windowThree", "windowFour"]) and
-    ([.records[] | select(.operation == "listener") | .sequence] == [1, 1, 1, 2, 3, 4, 5, 1, 6, 1, 1]) and
-    ([.records[] | select(.operation == "snapshot") | .statement] == ["windowTwo", "windowThree", "windowFour", "window", "window", "window", "window"]) and
-    ([.records[] | select(.operation == "snapshot") | .sequence] == [0, 0, 0, 0, 0, 0, 0]) and
-    ([.records[] | has("new")] | all) and
-    ([.records[] | select(.operation == "listener" and (.statement == "windowOne" or .statement == "window" or .statement == "windowTwo" or .statement == "windowThree" or .statement == "windowFour")) | .new[]
+    ([.records[] | select(has("time")) | .time] | all(. == "1970-01-01T00:00:00Z")) and
+    ([.records[] | select(.operation == "listener") | .statement] == ["windowOne", "selectOne", "window", "window", "window", "window", "window", "windowTwo", "window", "windowThree", "windowFour", "window", "window", "window"]) and
+    ([.records[] | select(.operation == "listener") | .sequence] == [1, 1, 1, 2, 3, 4, 5, 1, 6, 1, 1, 1, 2, 3]) and
+    ([.records[] | select(.operation == "snapshot") | .statement] == ["windowTwo", "windowThree", "windowFour", "windowTwo", "windowThree", "window", "window", "window", "window", "window"]) and
+    ([.records[] | select(.operation == "snapshot") | .sequence] == [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]) and
+    ([.records[] | select(.operation == "listener" and (.statement == "windowOne" or .statement == "windowTwo" or .statement == "windowThree" or .statement == "windowFour") or (.operation == "listener" and .statement == "window" and .case == "insert-where-type-filter")) | .new[]
         | .kind == "row" and ((.fields | keys) == ["intPrimitive", "theString"])] | all) and
     ([.records[] | select(.operation == "listener" and .statement == "selectOne") | .new[]
         | .kind == "row" and ((.fields | keys) == ["theString"])] | all) and
-    ([.records[] | select(.operation == "snapshot" and (.statement == "windowTwo" or .statement == "windowThree" or .statement == "windowFour")) | .new[]
+    ([.records[] | select(.operation == "listener" and .case == "insert-where-om-staggered") | .new[]
+        | .kind == "row" and ((.fields | keys) == ["a", "b"])] | all) and
+    ([.records[] | select(.operation == "snapshot" and .case == "insert-where-type-filter") | .new[]
         | .kind == "row" and ((.fields | keys) == ["theString"])] | all) and
     ([.records[] | select(.case == "lenient-map" or .case == "lenient-objectarray") | .new[]
         | .kind == "row" and ((.fields | keys) == ["c0", "c1"])] | all) and
@@ -253,12 +280,32 @@ if ! jq -e '
     (.records[11] == lis("insert-where-type-filter"; 6; "window"; [rowb(-8; "A8")])) and
     (.records[12] == lis("insert-where-type-filter"; 1; "windowThree"; [rowb(-7; "C7")])) and
     (.records[13] == lis("insert-where-type-filter"; 1; "windowFour"; [rowb(-6; "D6")])) and
+    # om-staggered (rep=MAP narrowing): the three map sends each deliver one
+    # {a,b} row to the window listener, the unrepresentable marker pins the
+    # object-model round-trip, and the b=10 / a=E2 seeds yield the pinned
+    # iterator rows (lines 266 and 270).
+    (.records[14] == lis("insert-where-om-staggered"; 1; "window"; [rowab("E1"; 2)])) and
+    (.records[15] == lis("insert-where-om-staggered"; 2; "window"; [rowab("E2"; 10)])) and
+    (.records[16] == lis("insert-where-om-staggered"; 3; "window"; [rowab("E3"; 10)])) and
+    (.records[17] == unrep("insert-where-om-staggered"; "om-roundtrip"; .records[17].value)) and
+    (.records[18] == snap("insert-where-om-staggered"; "windowTwo"; [rowab("E2"; 10), rowab("E3"; 10)])) and
+    (.records[19] == snap("insert-where-om-staggered"; "windowThree"; [rowa("E2")])) and
+    # infra-invalid: the five compile-error records carry the pinned Java
+    # message prefixes (lines 303-312).
+    (.records[20] == cerr("infra-invalid"; "missing-window-insert"; "A named window by name '"'"'SupportBean'"'"' could not be located, the insert-keyword requires an existing named window")) and
+    (.records[21] == cerr("infra-invalid"; "missing-window-insert-where"; "A named window by name '"'"'SupportBean'"'"' could not be located, the insert-keyword requires an existing named window")) and
+    (.records[22] == cerr("infra-invalid"; "insert-where-subselect"; "Create window where-clause may not have a subselect")) and
+    (.records[23] == cerr("infra-invalid"; "insert-where-aggregation"; "Create window where-clause may not have an aggregation function")) and
+    (.records[24] == cerr("infra-invalid"; "insert-where-prev"; "Create window where-clause may not have a function that requires view resources (prior, prev)")) and
+    # variant-stream: A1 then B1 land in MyWindowVSTwo in insertion order and
+    # the iterator projects the dynamic id? property (line 291).
+    (.records[25] == snap("variant-stream"; "window"; [rowid("A1"), rowid("B1")])) and
     # lenient: the partial-column inserts leave the unassigned column null,
     # mirroring assertPropsPerRowIterator at lines 70 and 75.
-    (.records[14] == snap("lenient-map"; "window"; [row2("E1"; nul)])) and
-    (.records[15] == snap("lenient-map"; "window"; [row2("E1"; nul), row2(nul; 10)])) and
-    (.records[16] == snap("lenient-objectarray"; "window"; [row2("E1"; nul)])) and
-    (.records[17] == snap("lenient-objectarray"; "window"; [row2("E1"; nul), row2(nul; 10)]))
+    (.records[26] == snap("lenient-map"; "window"; [row2("E1"; nul)])) and
+    (.records[27] == snap("lenient-map"; "window"; [row2("E1"; nul), row2(nul; 10)])) and
+    (.records[28] == snap("lenient-objectarray"; "window"; [row2("E1"; nul)])) and
+    (.records[29] == snap("lenient-objectarray"; "window"; [row2("E1"; nul), row2(nul; 10)]))
 ' "$output" >/dev/null 2>&1; then
     echo "Java oracle produced an invalid infra-named-window-insert-from trace: $output" >&2
     exit 1

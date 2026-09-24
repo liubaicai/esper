@@ -1,24 +1,33 @@
 {
   "version": "esper-parity/v1",
   "id": "infra-named-window-insert-from",
-  "description": "InfraNamedWindowInsertFrom insert-from-window semantics: type-by-window creation after an existing named window with shared insert delivery, seeded keep-all and filtered and unique-index create-window-insert with deploy-time row copying that never reaches create-statement listeners, filtered routing inserts into each window, and lenient partial-column inserts over map and object-array schemas, captured from window listeners and ordered or canonical mode-any snapshots projected to the Java-asserted fields (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowInsertFrom.java).",
+  "description": "InfraNamedWindowInsertFrom insert-from-window semantics: type-by-window creation after an existing named window with shared insert delivery, seeded keep-all and filtered and unique-index create-window-insert with deploy-time row copying that never reaches create-statement listeners, filtered routing inserts into each window, the staggered map-representation insert-where create chain (ord 2 narrowed to rep=MAP; the object-model toEPL round-trip is unrepresentable), the invalid create-window-insert compile probes, the variant-stream window fed by insert-into routing, and lenient partial-column inserts over map and object-array schemas, captured from window listeners and ordered or canonical mode-any snapshots projected to the Java-asserted fields (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowInsertFrom.java).",
   "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
   "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowInsertFrom.java",
   "javaRuntimes": [
     "java-runtime-b3f6cb7b36c5211c8822",
     "java-runtime-e601b3cc7f827d578185",
+    "java-runtime-f0f0e5e651a8a513377e",
+    "java-runtime-75dcb72bef59bc4cc772",
+    "java-runtime-b6e5b14130feae458c23",
     "java-runtime-46011542d6e9d34a87f5",
     "java-runtime-8138dd777290d00417d1"
   ],
   "javaNames": [
     "InfraCreateNamedAfterNamed",
     "InfraInsertWhereTypeAndFilter",
+    "InfraInsertWhereOMStaggered",
+    "InfraInvalid",
+    "InfraVariantStream",
     "InfraNamedWindowInsertLenientPropCount{rep=MAP}",
     "InfraNamedWindowInsertLenientPropCount{rep=OBJECTARRAY}"
   ],
   "javaStaticIds": [
     "java-b0917219c462cba9d770",
     "java-cff4a3193da2b063a351",
+    "java-03b8de29f9f76bb86748",
+    "java-10fd9729c661bf429fe4",
+    "java-1e55dc9c7e5d907881c5",
     "java-282d7b64878866ea4709",
     "java-282d7b64878866ea4709"
   ],
@@ -41,6 +50,33 @@
       "observation": "listener",
       "iteratorSnapshots": 3,
       "epl": "@name('window') @public create window MyWindowIWT#keepall as SupportBean"
+    },
+    {
+      "case": "insert-where-om-staggered",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-f0f0e5e651a8a513377e",
+      "executionName": "InfraInsertWhereOMStaggered",
+      "observation": "listener+snapshot+unrepresentable; Java loops all EventRepresentationChoice values while the replay covers rep=MAP only (the rep-matrix narrowing): the keepall window over MyMapAB{a,b} receives three map sends through the shared insert, then the b=10-filtered create-window-insert seeds MyWindowIWOMTwo ({E2,10},{E3,10}) and the chained a='E2' create seeds MyWindowIWOMThree ({E2}); the object-model toEPL round-trip assertion is unrepresentable on the Go surface and pins a marker",
+      "iteratorSnapshots": 2,
+      "epl": "@EventRepresentation('map') @name('window') @public create window MyWindowIWOM#keepall as select a, b from MyMapAB"
+    },
+    {
+      "case": "infra-invalid",
+      "ordinal": 3,
+      "runtimeId": "java-runtime-75dcb72bef59bc4cc772",
+      "executionName": "InfraInvalid",
+      "observation": "compile-error; after deploying MyWindowINV five probes pin the Java message prefixes: the two insert-keyword probes against the SupportBean event type compile without the runtime path, while the subselect, aggregation and prev() insert-where probes compile with the path and are unrepresentable on the Go surface (no create-window-where boundary)",
+      "iteratorSnapshots": 0,
+      "epl": "@public create window MyWindowINV#keepall as SupportBean"
+    },
+    {
+      "case": "variant-stream",
+      "ordinal": 4,
+      "runtimeId": "java-runtime-b6e5b14130feae458c23",
+      "executionName": "InfraVariantStream",
+      "observation": "snapshot; the variant-schema window pair is fed by insert-into routing from SupportBean_A/SupportBean_B through VarStream (the Java create-window-as-select types MyWindowVS from VarStream; MyWindowVSTwo is fed by insert-into routing); A1 then B1 land in MyWindowVSTwo in insertion order and the iterator projects the dynamic id? property",
+      "iteratorSnapshots": 1,
+      "epl": "@public create window MyWindowVS#keepall as select * from VarStream"
     },
     {
       "case": "lenient-map",
@@ -93,6 +129,39 @@
     {"op": "send", "case": "insert-where-type-filter", "eventType": "SupportBean", "payload": {"theString": "C7", "intPrimitive": -7}},
     {"op": "send", "case": "insert-where-type-filter", "eventType": "SupportBean", "payload": {"theString": "D6", "intPrimitive": -6}},
     {"op": "undeploy-all", "case": "insert-where-type-filter"},
+
+    {"op": "case", "case": "insert-where-om-staggered"},
+    {"op": "deploy", "case": "insert-where-om-staggered", "statement": "window", "epl": "@EventRepresentation('map') @name('window') @public create window MyWindowIWOM#keepall as select a, b from MyMapAB"},
+    {"op": "deploy", "case": "insert-where-om-staggered", "statement": "insert", "epl": "@public insert into MyWindowIWOM select a, b from MyMapAB"},
+    {"op": "send", "case": "insert-where-om-staggered", "eventType": "MyMapAB", "payload": {"a": "E1", "b": 2}},
+    {"op": "send", "case": "insert-where-om-staggered", "eventType": "MyMapAB", "payload": {"a": "E2", "b": 10}},
+    {"op": "send", "case": "insert-where-om-staggered", "eventType": "MyMapAB", "payload": {"a": "E3", "b": 10}},
+    {"op": "unrepresentable", "case": "insert-where-om-staggered", "statement": "om-roundtrip", "expectError": "object-model round-trip: the programmatic create-window insert-where model and eplToModel both render '@public create window MyWindowIWOMTwo#keepall as select * from MyWindowIWOM insert where b=10'; no Go statement-object-model surface"},
+    {"op": "deploy", "case": "insert-where-om-staggered", "statement": "windowTwo", "epl": "@name('windowTwo') @public create window MyWindowIWOMTwo#keepall as select * from MyWindowIWOM insert where b=10"},
+    {"op": "snapshot", "case": "insert-where-om-staggered", "statement": "windowTwo", "mode": "ordered"},
+    {"op": "deploy", "case": "insert-where-om-staggered", "statement": "windowThree", "epl": "@EventRepresentation('map') @name('windowThree') create window MyWindowIWOMThree#keepall as select a from MyWindowIWOMTwo insert where a = 'E2'"},
+    {"op": "snapshot", "case": "insert-where-om-staggered", "statement": "windowThree", "mode": "ordered"},
+    {"op": "undeploy-all", "case": "insert-where-om-staggered"},
+
+    {"op": "case", "case": "infra-invalid"},
+    {"op": "deploy", "case": "infra-invalid", "statement": "window", "epl": "@public create window MyWindowINV#keepall as SupportBean"},
+    {"op": "build-error", "case": "infra-invalid", "statement": "missing-window-insert", "epl": "create window testWindow3#keepall as SupportBean insert", "expectError": "A named window by name 'SupportBean' could not be located, the insert-keyword requires an existing named window"},
+    {"op": "build-error", "case": "infra-invalid", "statement": "missing-window-insert-where", "epl": "create window testWindow3#keepall as select * from SupportBean insert where (intPrimitive = 10)", "expectError": "A named window by name 'SupportBean' could not be located, the insert-keyword requires an existing named window"},
+    {"op": "build-error", "case": "infra-invalid", "statement": "insert-where-subselect", "epl": "create window MyWindowTwo#keepall as MyWindowINV insert where (select intPrimitive from SupportBean#lastevent)", "expectError": "Create window where-clause may not have a subselect"},
+    {"op": "build-error", "case": "infra-invalid", "statement": "insert-where-aggregation", "epl": "create window MyWindowTwo#keepall as MyWindowINV insert where sum(intPrimitive) > 2", "expectError": "Create window where-clause may not have an aggregation function"},
+    {"op": "build-error", "case": "infra-invalid", "statement": "insert-where-prev", "epl": "create window MyWindowTwo#keepall as MyWindowINV insert where prev(1, intPrimitive) = 1", "expectError": "Create window where-clause may not have a function that requires view resources (prior, prev)"},
+    {"op": "undeploy-all", "case": "infra-invalid"},
+
+    {"op": "case", "case": "variant-stream"},
+    {"op": "deploy", "case": "variant-stream", "statement": "windowVS", "epl": "@public create window MyWindowVS#keepall as select * from VarStream"},
+    {"op": "deploy", "case": "variant-stream", "statement": "window", "epl": "@name('window') @public create window MyWindowVSTwo#keepall as MyWindowVS"},
+    {"op": "deploy", "case": "variant-stream", "statement": "insertA", "epl": "insert into VarStream select * from SupportBean_A"},
+    {"op": "deploy", "case": "variant-stream", "statement": "insertB", "epl": "insert into VarStream select * from SupportBean_B"},
+    {"op": "deploy", "case": "variant-stream", "statement": "insertVS", "epl": "insert into MyWindowVSTwo select * from VarStream"},
+    {"op": "send", "case": "variant-stream", "eventType": "SupportBean_A", "payload": {"id": "A1"}},
+    {"op": "send", "case": "variant-stream", "eventType": "SupportBean_B", "payload": {"id": "B1"}},
+    {"op": "snapshot", "case": "variant-stream", "statement": "window", "mode": "ordered"},
+    {"op": "undeploy-all", "case": "variant-stream"},
 
     {"op": "case", "case": "lenient-map"},
     {"op": "deploy", "case": "lenient-map", "statement": "schema", "epl": "@public create MAP schema MyTwoColEvent(c0 string, c1 int)"},

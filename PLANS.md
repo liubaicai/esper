@@ -56,6 +56,38 @@ activity or a single coverage percentage.
 
 ## Current work unit
 
+Active: Draft 4.538 ('infra-namedwindow-insert-from').
+
+- Selection: `InfraNamedWindowInsertFrom.java` all 3 unreferenced
+  executions — ord 2 `InfraInsertWhereOMStaggered`
+  (`java-runtime-f0f0e5e651a8a513377e`), ord 3 `InfraInvalid`
+  (`java-runtime-75dcb72bef59bc4cc772`), ord 4 `InfraVariantStream`
+  (`java-runtime-b6e5b14130feae458c23`).
+- [x] Java contract scout (JavaContract538) + Go surface scout
+  (GoSurface538) complete; contract frozen in the Assets538 batch
+  context. OMStaggered: create-window insert-where snapshot-copy via
+  seedFrom bridge (no Go create-window-where surface; OM toEPL
+  unrepresentable). Invalid: 5 compile-error probes (2 nearest-Go
+  UnknownName + 3 unrepresentable prefix pins). VariantStream: verified
+  representable by primary probe — RegisterVariant + CreateNamedWindow +
+  InsertInto chain preserves member identity (A1/B1, id? readable).
+- [x] Assets538 dispatched for scenario/oracle/runner/wiring.
+- [x] Assets538 extended the existing runner/scenario/oracle to all 7
+  executions; verified zero-diff on /tmp copies (30 records each side).
+- [x] Java trace + Go trace + evidence regenerated; `-diff` passing /
+  0 differences; 6-test family green; `make check` exit 0.
+- [x] Manifest: `case.infra-named-window-insert-from` extended with the
+  3 new runtime IDs; infra.namedwindow.views DV list updated; 768 cases /
+  393 DV / 1553 DV runtime IDs / unreferenced 488. Roadmap + CHANGELOG
+  updated.
+- [x] Parity review (Review538): OVERALL PASS; two P3s fixed —
+  scenario observation reworded (create-window-as-select is
+  type-derivation, not a continuous feed) and beanPrefixKeep restored to
+  loud failure on unexpected underlying types.
+- [ ] Commit.
+
+## Current work unit
+
 Active: Draft 4.537 ('expr-define-value-parameter').
 
 - Selection: `ExprDefineValueParameter.java` remaining 3 unreferenced
@@ -78,7 +110,9 @@ Active: Draft 4.537 ('expr-define-value-parameter').
 - [x] Manifest: `case.expr-define-value-parameter` (DV, ords 7/9/11)
   under `expr.declared`; 768 cases / 393 DV / 1550 DV runtime IDs /
   unreferenced 491. Roadmap + CHANGELOG updated.
-- [ ] Parity review (Review537 running), commit.
+- [x] Parity review (Review537): OVERALL PASS, all areas verified.
+- [x] Shipped; Git owns identity. Draft 4.537 committed and pushed as
+  `63bf55bce`.
 ## Current work unit
 
 Active: Draft 4.536 ('epl-other-create-expression').

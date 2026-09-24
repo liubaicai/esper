@@ -4,6 +4,9 @@
   "javaRuntimeIds": [
     "java-runtime-b3f6cb7b36c5211c8822",
     "java-runtime-e601b3cc7f827d578185",
+    "java-runtime-f0f0e5e651a8a513377e",
+    "java-runtime-75dcb72bef59bc4cc772",
+    "java-runtime-b6e5b14130feae458c23",
     "java-runtime-46011542d6e9d34a87f5",
     "java-runtime-8138dd777290d00417d1"
   ],
@@ -13,6 +16,9 @@
   "javaExecutions": [
     "InfraCreateNamedAfterNamed",
     "InfraInsertWhereTypeAndFilter",
+    "InfraInsertWhereOMStaggered",
+    "InfraInvalid",
+    "InfraVariantStream",
     "InfraNamedWindowInsertLenientPropCount{rep=MAP}",
     "InfraNamedWindowInsertLenientPropCount{rep=OBJECTARRAY}"
   ],
@@ -221,6 +227,192 @@
       {
         "op": "undeploy-all",
         "case": "insert-where-type-filter"
+      },
+      {
+        "op": "case",
+        "case": "insert-where-om-staggered"
+      },
+      {
+        "op": "deploy",
+        "case": "insert-where-om-staggered",
+        "statement": "window",
+        "epl": "@EventRepresentation('map') @name('window') @public create window MyWindowIWOM#keepall as select a, b from MyMapAB"
+      },
+      {
+        "op": "deploy",
+        "case": "insert-where-om-staggered",
+        "statement": "insert",
+        "epl": "@public insert into MyWindowIWOM select a, b from MyMapAB"
+      },
+      {
+        "op": "send",
+        "case": "insert-where-om-staggered",
+        "eventType": "MyMapAB",
+        "payload": {
+          "a": "E1",
+          "b": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "insert-where-om-staggered",
+        "eventType": "MyMapAB",
+        "payload": {
+          "a": "E2",
+          "b": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "insert-where-om-staggered",
+        "eventType": "MyMapAB",
+        "payload": {
+          "a": "E3",
+          "b": 10
+        }
+      },
+      {
+        "op": "unrepresentable",
+        "case": "insert-where-om-staggered",
+        "statement": "om-roundtrip",
+        "expectError": "object-model round-trip: the programmatic create-window insert-where model and eplToModel both render '@public create window MyWindowIWOMTwo#keepall as select * from MyWindowIWOM insert where b=10'; no Go statement-object-model surface"
+      },
+      {
+        "op": "deploy",
+        "case": "insert-where-om-staggered",
+        "statement": "windowTwo",
+        "epl": "@name('windowTwo') @public create window MyWindowIWOMTwo#keepall as select * from MyWindowIWOM insert where b=10"
+      },
+      {
+        "op": "snapshot",
+        "case": "insert-where-om-staggered",
+        "statement": "windowTwo",
+        "mode": "ordered"
+      },
+      {
+        "op": "deploy",
+        "case": "insert-where-om-staggered",
+        "statement": "windowThree",
+        "epl": "@EventRepresentation('map') @name('windowThree') create window MyWindowIWOMThree#keepall as select a from MyWindowIWOMTwo insert where a = 'E2'"
+      },
+      {
+        "op": "snapshot",
+        "case": "insert-where-om-staggered",
+        "statement": "windowThree",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insert-where-om-staggered"
+      },
+      {
+        "op": "case",
+        "case": "infra-invalid"
+      },
+      {
+        "op": "deploy",
+        "case": "infra-invalid",
+        "statement": "window",
+        "epl": "@public create window MyWindowINV#keepall as SupportBean"
+      },
+      {
+        "op": "build-error",
+        "case": "infra-invalid",
+        "statement": "missing-window-insert",
+        "expectError": "A named window by name 'SupportBean' could not be located, the insert-keyword requires an existing named window",
+        "epl": "create window testWindow3#keepall as SupportBean insert"
+      },
+      {
+        "op": "build-error",
+        "case": "infra-invalid",
+        "statement": "missing-window-insert-where",
+        "expectError": "A named window by name 'SupportBean' could not be located, the insert-keyword requires an existing named window",
+        "epl": "create window testWindow3#keepall as select * from SupportBean insert where (intPrimitive = 10)"
+      },
+      {
+        "op": "build-error",
+        "case": "infra-invalid",
+        "statement": "insert-where-subselect",
+        "expectError": "Create window where-clause may not have a subselect",
+        "epl": "create window MyWindowTwo#keepall as MyWindowINV insert where (select intPrimitive from SupportBean#lastevent)"
+      },
+      {
+        "op": "build-error",
+        "case": "infra-invalid",
+        "statement": "insert-where-aggregation",
+        "expectError": "Create window where-clause may not have an aggregation function",
+        "epl": "create window MyWindowTwo#keepall as MyWindowINV insert where sum(intPrimitive) \u003e 2"
+      },
+      {
+        "op": "build-error",
+        "case": "infra-invalid",
+        "statement": "insert-where-prev",
+        "expectError": "Create window where-clause may not have a function that requires view resources (prior, prev)",
+        "epl": "create window MyWindowTwo#keepall as MyWindowINV insert where prev(1, intPrimitive) = 1"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "infra-invalid"
+      },
+      {
+        "op": "case",
+        "case": "variant-stream"
+      },
+      {
+        "op": "deploy",
+        "case": "variant-stream",
+        "statement": "windowVS",
+        "epl": "@public create window MyWindowVS#keepall as select * from VarStream"
+      },
+      {
+        "op": "deploy",
+        "case": "variant-stream",
+        "statement": "window",
+        "epl": "@name('window') @public create window MyWindowVSTwo#keepall as MyWindowVS"
+      },
+      {
+        "op": "deploy",
+        "case": "variant-stream",
+        "statement": "insertA",
+        "epl": "insert into VarStream select * from SupportBean_A"
+      },
+      {
+        "op": "deploy",
+        "case": "variant-stream",
+        "statement": "insertB",
+        "epl": "insert into VarStream select * from SupportBean_B"
+      },
+      {
+        "op": "deploy",
+        "case": "variant-stream",
+        "statement": "insertVS",
+        "epl": "insert into MyWindowVSTwo select * from VarStream"
+      },
+      {
+        "op": "send",
+        "case": "variant-stream",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "variant-stream",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "B1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "variant-stream",
+        "statement": "window",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "variant-stream"
       },
       {
         "op": "case",
@@ -607,6 +799,155 @@
         ]
       },
       {
+        "case": "insert-where-om-staggered",
+        "operation": "listener",
+        "statement": "window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-om-staggered",
+        "operation": "listener",
+        "statement": "window",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "b": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-om-staggered",
+        "operation": "listener",
+        "statement": "window",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-om-staggered",
+        "operation": "unrepresentable",
+        "statement": "om-roundtrip",
+        "sequence": 0,
+        "value": "object-model round-trip: the programmatic create-window insert-where model and eplToModel both render '@public create window MyWindowIWOMTwo#keepall as select * from MyWindowIWOM insert where b=10'; no Go statement-object-model surface"
+      },
+      {
+        "case": "insert-where-om-staggered",
+        "operation": "snapshot",
+        "statement": "windowTwo",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "b": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-om-staggered",
+        "operation": "snapshot",
+        "statement": "windowThree",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "infra-invalid",
+        "operation": "compile-error",
+        "statement": "missing-window-insert",
+        "sequence": 0,
+        "value": "A named window by name 'SupportBean' could not be located, the insert-keyword requires an existing named window"
+      },
+      {
+        "case": "infra-invalid",
+        "operation": "compile-error",
+        "statement": "missing-window-insert-where",
+        "sequence": 0,
+        "value": "A named window by name 'SupportBean' could not be located, the insert-keyword requires an existing named window"
+      },
+      {
+        "case": "infra-invalid",
+        "operation": "compile-error",
+        "statement": "insert-where-subselect",
+        "sequence": 0,
+        "value": "Create window where-clause may not have a subselect"
+      },
+      {
+        "case": "infra-invalid",
+        "operation": "compile-error",
+        "statement": "insert-where-aggregation",
+        "sequence": 0,
+        "value": "Create window where-clause may not have an aggregation function"
+      },
+      {
+        "case": "infra-invalid",
+        "operation": "compile-error",
+        "statement": "insert-where-prev",
+        "sequence": 0,
+        "value": "Create window where-clause may not have a function that requires view resources (prior, prev)"
+      },
+      {
+        "case": "variant-stream",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id?": "A1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id?": "B1"
+            }
+          }
+        ]
+      },
+      {
         "case": "lenient-map",
         "operation": "snapshot",
         "statement": "window",
@@ -954,6 +1295,155 @@
             "fields": {
               "intPrimitive": -6,
               "theString": "D6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-om-staggered",
+        "operation": "listener",
+        "statement": "window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-om-staggered",
+        "operation": "listener",
+        "statement": "window",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "b": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-om-staggered",
+        "operation": "listener",
+        "statement": "window",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-om-staggered",
+        "operation": "unrepresentable",
+        "statement": "om-roundtrip",
+        "sequence": 0,
+        "value": "object-model round-trip: the programmatic create-window insert-where model and eplToModel both render '@public create window MyWindowIWOMTwo#keepall as select * from MyWindowIWOM insert where b=10'; no Go statement-object-model surface"
+      },
+      {
+        "case": "insert-where-om-staggered",
+        "operation": "snapshot",
+        "statement": "windowTwo",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "b": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-om-staggered",
+        "operation": "snapshot",
+        "statement": "windowThree",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "infra-invalid",
+        "operation": "compile-error",
+        "statement": "missing-window-insert",
+        "sequence": 0,
+        "value": "A named window by name 'SupportBean' could not be located, the insert-keyword requires an existing named window"
+      },
+      {
+        "case": "infra-invalid",
+        "operation": "compile-error",
+        "statement": "missing-window-insert-where",
+        "sequence": 0,
+        "value": "A named window by name 'SupportBean' could not be located, the insert-keyword requires an existing named window"
+      },
+      {
+        "case": "infra-invalid",
+        "operation": "compile-error",
+        "statement": "insert-where-subselect",
+        "sequence": 0,
+        "value": "Create window where-clause may not have a subselect"
+      },
+      {
+        "case": "infra-invalid",
+        "operation": "compile-error",
+        "statement": "insert-where-aggregation",
+        "sequence": 0,
+        "value": "Create window where-clause may not have an aggregation function"
+      },
+      {
+        "case": "infra-invalid",
+        "operation": "compile-error",
+        "statement": "insert-where-prev",
+        "sequence": 0,
+        "value": "Create window where-clause may not have a function that requires view resources (prior, prev)"
+      },
+      {
+        "case": "variant-stream",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id?": "A1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id?": "B1"
             }
           }
         ]

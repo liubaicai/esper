@@ -43161,7 +43161,7 @@ func TestRunInfraNamedWindowInsertFromRuntimeIDMappingMatchesScenario(t *testing
 			entry.Ordinal != infraNamedWindowInsertFromOrdinals[index] ||
 			entry.RuntimeID != infraNamedWindowInsertFromJavaRuntimeIDs[index] ||
 			entry.ExecutionName != infraNamedWindowInsertFromJavaExecutions[index] ||
-			entry.Observation != "listener" || entry.IteratorSnapshots != infraNamedWindowInsertFromIterSnaps[index] {
+			entry.Observation != infraNamedWindowInsertFromObservations[index] || entry.IteratorSnapshots != infraNamedWindowInsertFromIterSnaps[index] {
 			t.Fatalf("scenario case %d metadata = %#v", index, entry)
 		}
 	}
@@ -43172,8 +43172,8 @@ func assertInfraNamedWindowInsertFromTrace(t *testing.T, trace compat.Trace) {
 	if trace.Version != compat.ScenarioVersion || trace.ID != infraNamedWindowInsertFromID {
 		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
 	}
-	if len(trace.Records) != 18 {
-		t.Fatalf("trace records = %d, want 18", len(trace.Records))
+	if len(trace.Records) != 30 {
+		t.Fatalf("trace records = %d, want 30", len(trace.Records))
 	}
 	row := func(fields map[string]any) compat.ResultRecord {
 		return compat.ResultRecord{Kind: "row", Fields: fields}
@@ -43186,6 +43186,17 @@ func assertInfraNamedWindowInsertFromTrace(t *testing.T, trace compat.Trace) {
 		sequence  uint64
 		newRows   []compat.ResultRecord
 		anyOrder  bool
+	}
+	// values pins the expected record.Value for the compile-error and
+	// unrepresentable records (which carry no rows and no time), keyed by
+	// record index.
+	values := map[int]string{
+		17: infraNamedWindowInsertFromOMNote,
+		20: infraNamedWindowInsertFromProbeErrors["missing-window-insert"],
+		21: infraNamedWindowInsertFromProbeErrors["missing-window-insert-where"],
+		22: infraNamedWindowInsertFromProbeErrors["insert-where-subselect"],
+		23: infraNamedWindowInsertFromProbeErrors["insert-where-aggregation"],
+		24: infraNamedWindowInsertFromProbeErrors["insert-where-prev"],
 	}
 	steps := []step{
 		{"create-after-named", "listener", "windowOne", 1,
@@ -43228,6 +43239,36 @@ func assertInfraNamedWindowInsertFromTrace(t *testing.T, trace compat.Trace) {
 			[]compat.ResultRecord{row(map[string]any{"intPrimitive": json.Number("-7"), "theString": "C7"})}, false},
 		{"insert-where-type-filter", "listener", "windowFour", 1,
 			[]compat.ResultRecord{row(map[string]any{"intPrimitive": json.Number("-6"), "theString": "D6"})}, false},
+		{"insert-where-om-staggered", "listener", "window", 1,
+			[]compat.ResultRecord{row(map[string]any{"a": "E1", "b": json.Number("2")})}, false},
+		{"insert-where-om-staggered", "listener", "window", 2,
+			[]compat.ResultRecord{row(map[string]any{"a": "E2", "b": json.Number("10")})}, false},
+		{"insert-where-om-staggered", "listener", "window", 3,
+			[]compat.ResultRecord{row(map[string]any{"a": "E3", "b": json.Number("10")})}, false},
+		{"insert-where-om-staggered", "unrepresentable", "om-roundtrip", 0,
+			nil, false},
+		{"insert-where-om-staggered", "snapshot", "windowTwo", 0,
+			[]compat.ResultRecord{
+				row(map[string]any{"a": "E2", "b": json.Number("10")}),
+				row(map[string]any{"a": "E3", "b": json.Number("10")}),
+			}, false},
+		{"insert-where-om-staggered", "snapshot", "windowThree", 0,
+			[]compat.ResultRecord{row(map[string]any{"a": "E2"})}, false},
+		{"infra-invalid", "compile-error", "missing-window-insert", 0,
+			nil, false},
+		{"infra-invalid", "compile-error", "missing-window-insert-where", 0,
+			nil, false},
+		{"infra-invalid", "compile-error", "insert-where-subselect", 0,
+			nil, false},
+		{"infra-invalid", "compile-error", "insert-where-aggregation", 0,
+			nil, false},
+		{"infra-invalid", "compile-error", "insert-where-prev", 0,
+			nil, false},
+		{"variant-stream", "snapshot", "window", 0,
+			[]compat.ResultRecord{
+				row(map[string]any{"id?": "A1"}),
+				row(map[string]any{"id?": "B1"}),
+			}, false},
 		{"lenient-map", "snapshot", "window", 0,
 			[]compat.ResultRecord{row(map[string]any{"c0": "E1", "c1": nullState})}, false},
 		{"lenient-map", "snapshot", "window", 0,
@@ -43246,8 +43287,17 @@ func assertInfraNamedWindowInsertFromTrace(t *testing.T, trace compat.Trace) {
 	for index, want := range steps {
 		record := trace.Records[index]
 		if record.Case != want.caseName || record.Operation != want.operation || record.Statement != want.statement ||
-			record.Sequence != want.sequence || record.Time != "1970-01-01T00:00:00Z" {
+			record.Sequence != want.sequence {
 			t.Fatalf("record %d metadata = %#v", index, record)
+		}
+		if expected, ok := values[index]; ok {
+			if record.Value != expected || len(record.New) != 0 || record.Time != "" {
+				t.Fatalf("record %d value = %#v", index, record)
+			}
+			continue
+		}
+		if record.Time != "1970-01-01T00:00:00Z" {
+			t.Fatalf("record %d time = %q", index, record.Time)
 		}
 		if len(record.New) != len(want.newRows) {
 			t.Fatalf("%s %s seq %d new rows = %d, want %d", want.caseName, want.statement, want.sequence, len(record.New), len(want.newRows))

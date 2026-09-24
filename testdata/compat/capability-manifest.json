@@ -2705,7 +2705,10 @@
     "java-runtime-9740441818d84a3ee94d",
     "java-runtime-71402af94b27b4255ab8",
     "java-runtime-476271957d6ffdb3a878",
-    "java-runtime-3c2f3a2696127c04b2a6"
+    "java-runtime-3c2f3a2696127c04b2a6",
+    "java-runtime-f0f0e5e651a8a513377e",
+    "java-runtime-75dcb72bef59bc4cc772",
+    "java-runtime-b6e5b14130feae458c23"
    ]
   },
   {
@@ -43377,19 +43380,28 @@
     "java-runtime-b3f6cb7b36c5211c8822",
     "java-runtime-e601b3cc7f827d578185",
     "java-runtime-46011542d6e9d34a87f5",
-    "java-runtime-8138dd777290d00417d1"
+    "java-runtime-8138dd777290d00417d1",
+    "java-runtime-f0f0e5e651a8a513377e",
+    "java-runtime-75dcb72bef59bc4cc772",
+    "java-runtime-b6e5b14130feae458c23"
    ],
    "javaStaticIds": [
     "java-b0917219c462cba9d770",
     "java-cff4a3193da2b063a351",
     "java-282d7b64878866ea4709",
-    "java-282d7b64878866ea4709"
+    "java-282d7b64878866ea4709",
+    "java-03b8de29f9f76bb86748",
+    "java-10fd9729c661bf429fe4",
+    "java-1e55dc9c7e5d907881c5"
    ],
    "javaNames": [
     "InfraCreateNamedAfterNamed",
     "InfraInsertWhereTypeAndFilter",
     "InfraNamedWindowInsertLenientPropCount{rep=MAP}",
-    "InfraNamedWindowInsertLenientPropCount{rep=OBJECTARRAY}"
+    "InfraNamedWindowInsertLenientPropCount{rep=OBJECTARRAY}",
+    "InfraInsertWhereOMStaggered",
+    "InfraInvalid",
+    "InfraVariantStream"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowInsertFrom.java"
@@ -43432,11 +43444,12 @@
     "java-runtime-b3f6cb7b36c5211c8822",
     "java-runtime-e601b3cc7f827d578185",
     "java-runtime-46011542d6e9d34a87f5",
-    "java-runtime-8138dd777290d00417d1"
+    "java-runtime-8138dd777290d00417d1",
+    "java-runtime-f0f0e5e651a8a513377e",
+    "java-runtime-75dcb72bef59bc4cc772",
+    "java-runtime-b6e5b14130feae458c23"
    ],
-   "notes": [
-    "InfraNamedWindowInsertFrom pins insert-from-window semantics for 4 of 7 executions (ordinals 0/1/5/6): type-by-window creation after an existing named window with shared insert delivery (windowOne full-row record plus a selectOne record projected to theString only); the insert-from heart \u2014 create-window-insert seeds (plain keepall, where-filtered keepall, unique(intPrimitive) last-per-id dedup-at-seed) whose deploy-time row copies never reach the attach-after-deploy create-statement listeners, verified through ordered and mode-any snapshots (A1..C5, A1/A4, C3/C5) and four per-window filtered routing inserts delivering exactly one listener record each (B9 into Two, A8 into IWT, C7 into Three, D6 into Four, confirming the seed is a one-time copy and ongoing flow requires explicit insert-into); and lenient partial-column inserts (one of two columns per insert, the other null-filled) over MAP and OBJECTARRAY schemas snapshotted as ordered c0/c1 pairs. Typed Go seeds the new windows at the create deploy step through a harness mapping \u2014 the source statement Snapshot + Underlying + engine.InsertNamedWindow (retention dedup natural; the where seed filter is a theString first-character check, exact for this scenario's payload set) \u2014 while the seeded create statements deploy as plain FromNamedWindow(...).Query(...) consumers so seed rows never reach their attach-after-deploy listeners; ongoing flow uses OnEvent(...).Filter(Like).InsertIntoNamedWindow(CopyMatchingFields) routes, and lenient schemas register with NewMapSchema/NewObjectArraySchema using pointer c1 fields for null-exact rendering. Snapshot rows project to the Java-asserted fields; mode-any snapshots use the differential canonical row order. StatementProperty/assertSame/count-check assertions and the OM toEPL round-trip matrix (ord 2), invalid compiles (ord 3, no Go rejection surface), and variant streams (ord 4, unproven surface) are approved differences/deferrals recorded here."
-   ]
+   "notes": "InfraNamedWindowInsertFrom now covers all 7 executions (ordinals 0-6). Ordinals 0/1/5/6 (prior unit): type-by-window creation, insert-from seeds (plain/where-filtered keepall, unique dedup-at-seed) and filtered routing inserts. Ordinal 2 (4.538): create-window insert-where snapshot-copy \u2014 the b=10 seed into MyWindowIWOMTwo keeps {E2,10},{E3,10} and the chained a='E2' seed into MyWindowIWOMThree keeps {E2}; deploy-time copies never fire create-statement listeners; rep loop narrowed to MAP (pinned in the case observation); the OM toEPL/eplToModel round-trip is unrepresentable (pinned marker). Ordinal 3: five compile-error probes \u2014 the two insert-keyword probes reject via the nearest Go surface (FromNamedWindow(SupportBean).CreateNamedWindowQuery \u2192 UnknownName, pinned Java prefix 'A named window by name ''SupportBean'' could not be located, the insert-keyword requires an existing named window'); the three insert-where probes (subselect/aggregation/prev) have no Go surface and pin their Java prefixes as unrepresentable. Ordinal 4: variant stream \u2014 RegisterVariant over SupportBean_A/B, keepall window pair fed by InsertInto routing through VarStream preserving member identity; iterator projects the dynamic id? property {A1,B1} in insertion order. Java/Go 30 records each, 0 differences."
   },
   {
    "id": "case.resultset-aggregate-filter-named-parameter-linear-join",
@@ -53080,7 +53093,7 @@
   "inventoriedCases": 768,
   "implementedCases": 766,
   "differentialVerifiedCases": 393,
-  "differentialVerifiedRuntimeIds": 1550,
+  "differentialVerifiedRuntimeIds": 1553,
   "intentionallyDifferentCases": 34,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -53090,10 +53103,10 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4085,
-  "referencedJavaRuntimeIds": 3645,
+  "runtimeAssociationCount": 4088,
+  "referencedJavaRuntimeIds": 3648,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 491,
+  "unreferencedJavaRuntimeIds": 488,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
   "totalCases": 768,
