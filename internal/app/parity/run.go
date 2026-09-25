@@ -89,6 +89,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include event-object-array-core and event-object-array-core-diff")
 		fmt.Fprintln(stderr, "runner modes include event-infra-getter-dynamic and event-infra-getter-dynamic-diff")
 		fmt.Fprintln(stderr, "runner modes include event-infra-getter-nested and event-infra-getter-nested-diff")
+		fmt.Fprintln(stderr, "runner modes include event-infra-property-dynamic and event-infra-property-dynamic-diff")
 		fmt.Fprintln(stderr, "runner modes include epl-other-istream-rstream-keywords and epl-other-istream-rstream-keywords-diff")
 		fmt.Fprintln(stderr, "runner modes include epl-other-create-expression and epl-other-create-expression-diff")
 		fmt.Fprintln(stderr, "runner modes include epl-other-invalid and epl-other-invalid-diff")
@@ -476,6 +477,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadEventInfraGetterDynamicScenario(file)
 	} else if *mode == "event-infra-getter-nested" || *mode == "event-infra-getter-nested-diff" {
 		scenario, err = loadEventInfraGetterNestedScenario(file)
+	} else if *mode == "event-infra-property-dynamic" || *mode == "event-infra-property-dynamic-diff" {
+		scenario, err = loadEventInfraPropertyDynamicScenario(file)
 	} else if *mode == "epl-other-istream-rstream-keywords" || *mode == "epl-other-istream-rstream-keywords-diff" {
 		scenario, err = loadEplOtherIStreamRStreamKeywordsScenario(file)
 	} else if *mode == "infra-table-invalid" || *mode == "infra-table-invalid-diff" {
@@ -4846,6 +4849,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, eventInfraGetterNestedJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, eventInfraGetterNestedJavaSources),
 				splitMetadata(*javaExecutions, eventInfraGetterNestedJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "event-infra-property-dynamic" || *mode == "event-infra-property-dynamic-diff" {
+		trace, err := runEventInfraPropertyDynamicScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "event-infra-property-dynamic-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, eventInfraPropertyDynamicJavaCommit,
+				splitMetadata(*javaRuntimeIDs, eventInfraPropertyDynamicJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, eventInfraPropertyDynamicJavaSources),
+				splitMetadata(*javaExecutions, eventInfraPropertyDynamicJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

@@ -40,15 +40,17 @@ activity or a single coverage percentage.
 
 Active: Draft 4.543 ('event-infra-property-dynamic') — assets dispatched.
 
-- Selection: `EventInfraPropertyDynamic*` cluster — 5 executions across
-  5 sibling files, all ord 0; only Nested has no EXCLUDEWHENINSTRUMENTED flag:
+- Selection: `EventInfraPropertyDynamic*` cluster — all 6 executions across
+  6 sibling files, all ord 0; only Nested has no EXCLUDEWHENINSTRUMENTED flag:
   `EventInfraPropertyDynamicSimple` (`java-runtime-9f5b65c0125c70ea8760`),
   `EventInfraPropertyDynamicNested` (`java-runtime-f686347226e7681f0325`),
   `EventInfraPropertyDynamicNestedDeep` (`java-runtime-0285612baa5f5321fae2`),
   `EventInfraPropertyDynamicNestedRootedNonSimple`
   (`java-runtime-a1c916427bb1c85757f8`),
   `EventInfraPropertyDynamicNestedRootedSimple`
-  (`java-runtime-4cd646a570fcd69e826a`).
+  (`java-runtime-4cd646a570fcd69e826a`),
+  `EventInfraPropertyDynamicNonSimple`
+  (`java-runtime-d6c08cf3d40f13126684`).
 - [x] Java contract scout (JavaContract543) + Go surface scout
   (GoSurface543) complete; contract frozen in the Assets543 batch
   context. All 5 mostly representable: dynamic-VALUE properties
@@ -60,7 +62,39 @@ Active: Draft 4.543 ('event-infra-property-dynamic') — assets dispatched.
   cluster).
 - [x] Assets543 dispatched for scenario/oracle/runner/wiring. Worker
   reported research complete, writing files (runner first).
-- [ ] Java trace, Go replay, diff, manifest, gates, review, commit.
+- [x] Java trace 879 records via run-event-infra-property-dynamic.sh;
+  Go replay 879 records; `-diff` passing / 0 differences; evidence +
+  both traces checked into testdata/parity/ (flat path). Manifest
+  case.event-infra-property-dynamic born-DV (6 runtime IDs) + mapping
+  + cap dvRuntimeIds/goRefs/javaRefs; summary recomputed (774 cases /
+  397 DV / 1575 DV IDs / 463 unreferenced). Roadmap + CHANGELOG
+  entries prepended. `make check` GREEN (parity 96s, esper 118s).
+- [x] ParityRev543 dispatched (read-only, same reviewer family).
+- [x] ParityRev543: initial FAIL (P1 sixth execution
+  EventInfraPropertyDynamicNonSimple orphaned — now covered as 6th
+  case 'nonsimple', 879 records each side, 0 differences; P3 stale
+  AllowDynamicFields claim removed) -> confirmation PASS; 2 residual
+  P3s fixed (dead eipdAvroNestedName deleted; emulation caveat
+  documented). `make check` re-verified green on 6-case state.
+  Committing + pushing.
+
+Next: Draft 4.544 ('event-infra-property-static') — prefetch only.
+
+- Selection: `EventInfraProperty*` non-dynamic cluster — 7 executions,
+  all ord 0, no flags: IndexedKeyExpr (`java-runtime-f5d82c0cf0cf2516d0ef`),
+  IndexedRuntimeIndex (`java-runtime-10ce593e8d5ae6a9dd89`),
+  MappedIndexed (`java-runtime-b25d2dc5c7eb2c968105`),
+  MappedRuntimeKey (`java-runtime-c4f7fe6163eff7d35461`),
+  NestedIndexed (`java-runtime-594a57ed26499f1ccd30`),
+  NestedNestedEscaped (`java-runtime-0b17042e1ee4d75b7007`),
+  NestedSimple (`java-runtime-848063976a9d6485ec20`).
+- Scouts dispatched: JavaContract544 (Java oracle) + GoSurface544 (Go
+  surface); contract frozen (all 7 representable, harness suffices;
+  see agent://JavaContract544 + agent://GoSurface544). Runner file
+  name: event_infra_property_non_dynamic.go; scenario
+  event-infra-property-non-dynamic.json. Scout noted an EPL
+  discrepancy to verify during implementation (IndexedKeyExpr schema
+  declares intarray/mapped but one probe references 'indexed'/'dummy').
 
 ## Previous work units (shipped)
 

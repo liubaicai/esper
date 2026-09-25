@@ -1,0 +1,5539 @@
+{
+  "cases": [
+    {
+      "case": "dynamic-simple",
+      "epl": "@name('s0') select id? as myid, exists(id?) as exists_myid from SupportMarkerInterface",
+      "executionName": "EventInfraPropertyDynamicSimple",
+      "flags": [
+        "EXCLUDEWHENINSTRUMENTED"
+      ],
+      "observation": "listener only; six underlyings replay id? with exists/exists(null)/notExists tri-state; objectarray id column is the declared second cell; XML has no id element for the empty fragment; Avro sends declared-union records",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-9f5b65c0125c70ea8760"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0')  select item.id? as myid, exists(item.id?) as exists_myid from SupportBeanDynRoot;\n@name('s1') select * from SupportBeanDynRoot;\n",
+      "executionName": "EventInfraPropertyDynamicNested",
+      "flags": [],
+      "observation": "two statements per iteration (s0 projection + s1 select *) under five output representations; getter probe item.id? on the last s1 event per send; XML skipped for avro/json reps; json-provided instantiates item.id as null",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-f686347226e7681f0325"
+    },
+    {
+      "case": "nested-deep",
+      "epl": "@name('s0') select  item.nested?.nestedValue as n1,  exists(item.nested?.nestedValue) as exists_n1,  item.nested?.nestedValue? as n2,  exists(item.nested?.nestedValue?) as exists_n2,  item.nested?.nestedNested.nestedNestedValue as n3,  exists(item.nested?.nestedNested.nestedNestedValue) as exists_n3,  item.nested?.nestedNested?.nestedNestedValue as n4,  exists(item.nested?.nestedNested?.nestedNestedValue) as exists_n4,  item.nested?.nestedNested.nestedNestedValue? as n5,  exists(item.nested?.nestedNested.nestedNestedValue?) as exists_n5,  item.nested?.nestedNested?.nestedNestedValue? as n6,  exists(item.nested?.nestedNested?.nestedNestedValue?) as exists_n6  from SupportBeanDynRoot",
+      "executionName": "EventInfraPropertyDynamicNestedDeep",
+      "flags": [
+        "EXCLUDEWHENINSTRUMENTED"
+      ],
+      "observation": "six ? placements n1..n6 across item.nested?.nestedValue/nestedNestedValue chains then undeploy + select-* redeploy + one replay send; json-provided {}-nested yields exists(null) on n1/n2 only",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-0285612baa5f5321fae2"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "epl": "@name('s0') select item?.indexed[0] as indexed1, exists(item?.indexed[0]) as exists_indexed1, item?.indexed[1]? as indexed2, exists(item?.indexed[1]?) as exists_indexed2, item?.arrayProperty[1]? as array, exists(item?.arrayProperty[1]?) as exists_array, item?.mapped('keyOne') as mapped1, exists(item?.mapped('keyOne')) as exists_mapped1, item?.mapped('keyTwo')? as mapped2,  exists(item?.mapped('keyTwo')?) as exists_mapped2,  item?.mapProperty('xOne')? as map, exists(item?.mapProperty('xOne')?) as exists_map  from SupportBeanDynRoot",
+      "executionName": "EventInfraPropertyDynamicNestedRootedNonSimple",
+      "flags": [
+        "EXCLUDEWHENINSTRUMENTED"
+      ],
+      "observation": "rooted accessor mix item?.indexed[i]/mapped('k')/arrayProperty[1]/mapProperty('xOne') with leaf-? exists differences; map/xml/json-provided null-declared members exercise exists(null)",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-a1c916427bb1c85757f8"
+    },
+    {
+      "case": "rooted-simple",
+      "epl": "@name('s0') select simpleProperty? as simple, exists(simpleProperty?) as exists_simple, nested?.nestedValue as nested, exists(nested?.nestedValue) as exists_nested, nested?.nestedNested.nestedNestedValue as nestedNested, exists(nested?.nestedNested.nestedNestedValue) as exists_nestedNested from SupportMarkerInterface",
+      "executionName": "EventInfraPropertyDynamicNestedRootedSimple",
+      "flags": [
+        "EXCLUDEWHENINSTRUMENTED"
+      ],
+      "observation": "simpleProperty?/nested?.nestedValue/nested?.nestedNested.nestedNestedValue over seven underlyings; objectarray uses nested OA types for the chain; Avro sends two all-null records then a full one",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-4cd646a570fcd69e826a"
+    },
+    {
+      "case": "nonsimple",
+      "epl": "@name('s0') select indexed[0]? as indexed1, exists(indexed[0]?) as exists_indexed1, indexed[1]? as indexed2, exists(indexed[1]?) as exists_indexed2, mapped('keyOne')? as mapped1, exists(mapped('keyOne')?) as exists_mapped1, mapped('keyTwo')? as mapped2,  exists(mapped('keyTwo')?) as exists_mapped2  from SupportBeanComplexProps",
+      "executionName": "EventInfraPropertyDynamicNonSimple",
+      "flags": [
+        "EXCLUDEWHENINSTRUMENTED"
+      ],
+      "observation": "leaf-? accessor pairs indexed[i]?/mapped('k')? over bean/map/objectarray/xml/avro/json/json-provided; bean uses SupportBeanComplexProps directly; json-provided indexed coerces string elements via int[]",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-d6c08cf3d40f13126684"
+    }
+  ],
+  "description": "EventInfraPropertyDynamic* dynamic-VALUE property slice (all ord 0): prop? resolves on the runtime value's type and exists(prop?) reports resolution, x?.y keeps a dynamic root with a static tail and leaf-? marks the leaf dynamic. dynamic-simple replays id? over bean/map/objectarray/xml/avro/json with exists/exists(null)/notExists tri-state; dynamic-nested replays item.id? plus a select-* statement under five Java output representations (objectarray/map/avro/default/json) probing the raw item.id? getter on the select-* event; nested-deep replays six ? placements n1..n6 then a select-* consistency pass; rooted-nonsimple replays item?.indexed[i]/mapped('k')/arrayProperty/mapProperty accessor mixes; rooted-simple replays simpleProperty?/nested?.nestedValue/nested?.nestedNested.nestedNestedValue; nonsimple replays leaf-? indexed[i]?/mapped('k')? accessor pairs over declared properties on the runtime value's type. Provided-class JSON instantiates fields as null (exists-on-null vs dynamic-schema notExists); XML sends pin the Java fragment and the Go myevent-wrapped document. Java sources are the six sibling files under suite/event/infra (pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c).",
+  "id": "event-infra-property-dynamic",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaFlags": [
+    "EXCLUDEWHENINSTRUMENTED"
+  ],
+  "javaNames": [
+    "EventInfraPropertyDynamicSimple",
+    "EventInfraPropertyDynamicNested",
+    "EventInfraPropertyDynamicNestedDeep",
+    "EventInfraPropertyDynamicNestedRootedNonSimple",
+    "EventInfraPropertyDynamicNestedRootedSimple",
+    "EventInfraPropertyDynamicNonSimple"
+  ],
+  "javaRuntimes": [
+    "java-runtime-9f5b65c0125c70ea8760",
+    "java-runtime-f686347226e7681f0325",
+    "java-runtime-0285612baa5f5321fae2",
+    "java-runtime-a1c916427bb1c85757f8",
+    "java-runtime-4cd646a570fcd69e826a",
+    "java-runtime-d6c08cf3d40f13126684"
+  ],
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra",
+  "javaStaticIds": [
+    "java-1582f18f3ce77af9f4ff",
+    "java-bba8d0912642e3573aeb",
+    "java-90c1583c627d7e5f6219",
+    "java-b13358549c04fc9cedfb",
+    "java-48d6c20971992821958e",
+    "java-a58ae9e754fe80b6b8da"
+  ],
+  "steps": [
+    {
+      "case": "dynamic-simple",
+      "op": "case"
+    },
+    {
+      "case": "dynamic-simple",
+      "epl": "",
+      "eventType": "SupportMarkerInterface",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-simple",
+      "epl": "@name('s0') select id? as myid, exists(id?) as exists_myid from SupportMarkerInterface",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-simple",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-simple",
+      "eventType": "SupportMarkerInterface",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "impl-a"
+      }
+    },
+    {
+      "case": "dynamic-simple",
+      "eventType": "SupportMarkerInterface",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "impl-b"
+      }
+    },
+    {
+      "case": "dynamic-simple",
+      "eventType": "SupportMarkerInterface",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "impl-c"
+      }
+    },
+    {
+      "case": "dynamic-simple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-simple",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicSimpleMap",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-simple",
+      "epl": "@name('s0') select id? as myid, exists(id?) as exists_myid from EventInfraPropertyDynamicSimpleMap",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-simple",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-simple",
+      "eventType": "EventInfraPropertyDynamicSimpleMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "somekey": "10"
+      }
+    },
+    {
+      "case": "dynamic-simple",
+      "eventType": "EventInfraPropertyDynamicSimpleMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "id": "abc"
+      }
+    },
+    {
+      "case": "dynamic-simple",
+      "eventType": "EventInfraPropertyDynamicSimpleMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "id": 10
+      }
+    },
+    {
+      "case": "dynamic-simple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-simple",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicSimpleOA",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-simple",
+      "epl": "@name('s0') select id? as myid, exists(id?) as exists_myid from EventInfraPropertyDynamicSimpleOA",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-simple",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-simple",
+      "eventType": "EventInfraPropertyDynamicSimpleOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          1,
+          null
+        ]
+      }
+    },
+    {
+      "case": "dynamic-simple",
+      "eventType": "EventInfraPropertyDynamicSimpleOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          2,
+          "abc"
+        ]
+      }
+    },
+    {
+      "case": "dynamic-simple",
+      "eventType": "EventInfraPropertyDynamicSimpleOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          3,
+          10
+        ]
+      }
+    },
+    {
+      "case": "dynamic-simple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-simple",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicSimpleXML",
+      "mode": "xml",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-simple",
+      "epl": "@name('s0') select id? as myid, exists(id?) as exists_myid from EventInfraPropertyDynamicSimpleXML",
+      "mode": "xml",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-simple",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Node"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-simple",
+      "eventType": "EventInfraPropertyDynamicSimpleXML",
+      "mode": "xml",
+      "op": "send",
+      "payload": {
+        "xml": "",
+        "goXml": "<myevent/>"
+      }
+    },
+    {
+      "case": "dynamic-simple",
+      "eventType": "EventInfraPropertyDynamicSimpleXML",
+      "mode": "xml",
+      "op": "send",
+      "payload": {
+        "xml": "<id>10</id>",
+        "goXml": "<myevent><id>10</id></myevent>"
+      }
+    },
+    {
+      "case": "dynamic-simple",
+      "eventType": "EventInfraPropertyDynamicSimpleXML",
+      "mode": "xml",
+      "op": "send",
+      "payload": {
+        "xml": "<id>abc</id>",
+        "goXml": "<myevent><id>abc</id></myevent>"
+      }
+    },
+    {
+      "case": "dynamic-simple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-simple",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicSimpleAvro",
+      "mode": "avro",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-simple",
+      "epl": "@name('s0') select id? as myid, exists(id?) as exists_myid from EventInfraPropertyDynamicSimpleAvro",
+      "mode": "avro",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-simple",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-simple",
+      "eventType": "EventInfraPropertyDynamicSimpleAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "id": null
+      }
+    },
+    {
+      "case": "dynamic-simple",
+      "eventType": "EventInfraPropertyDynamicSimpleAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "id": 101
+      }
+    },
+    {
+      "case": "dynamic-simple",
+      "eventType": "EventInfraPropertyDynamicSimpleAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "id": null
+      }
+    },
+    {
+      "case": "dynamic-simple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-simple",
+      "epl": "@JsonSchema(dynamic=true) @public @buseventtype create json schema EventInfraPropertyDynamicSimpleJson()",
+      "eventType": "EventInfraPropertyDynamicSimpleJson",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-simple",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-simple",
+      "epl": "@name('s0') select id? as myid, exists(id?) as exists_myid from EventInfraPropertyDynamicSimpleJson",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-simple",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-simple",
+      "eventType": "EventInfraPropertyDynamicSimpleJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "dynamic-simple",
+      "eventType": "EventInfraPropertyDynamicSimpleJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "id": 10
+      }
+    },
+    {
+      "case": "dynamic-simple",
+      "eventType": "EventInfraPropertyDynamicSimpleJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "id": "abc"
+      }
+    },
+    {
+      "case": "dynamic-simple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "case"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "name": "objectarray",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('objectarray') select item.id? as myid, exists(item.id?) as exists_myid from SupportBeanDynRoot;\n@name('s1') select * from SupportBeanDynRoot;\n",
+      "mode": "bean",
+      "name": "objectarray",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "s0-101"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "str-abc"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "a-e1"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "b-e2"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "s1-102"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedMap",
+      "mode": "map",
+      "name": "objectarray",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('objectarray') select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedMap;\n@name('s1') select * from EventInfraPropertyDynamicNestedMap;\n",
+      "mode": "map",
+      "name": "objectarray",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": 101
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "item": {}
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedOA",
+      "mode": "objectarray",
+      "name": "objectarray",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('objectarray') select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedOA;\n@name('s1') select * from EventInfraPropertyDynamicNestedOA;\n",
+      "mode": "objectarray",
+      "name": "objectarray",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          null
+        ]
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "variant": "oa-s0-101"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          "abc"
+        ]
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedXML",
+      "mode": "xml",
+      "name": "objectarray",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('objectarray') select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedXML;\n@name('s1') select * from EventInfraPropertyDynamicNestedXML;\n",
+      "mode": "xml",
+      "name": "objectarray",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Node"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedXML",
+      "mode": "xml",
+      "op": "send",
+      "payload": {
+        "xml": "<item id=\"101\"/>",
+        "goXml": "<myevent><item id=\"101\"/></myevent>"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedXML",
+      "mode": "xml",
+      "op": "send",
+      "payload": {
+        "xml": "<item/>",
+        "goXml": "<myevent><item/></myevent>"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedAvro",
+      "mode": "avro",
+      "name": "objectarray",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('objectarray') select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedAvro;\n@name('s1') select * from EventInfraPropertyDynamicNestedAvro;\n",
+      "mode": "avro",
+      "name": "objectarray",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": null
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": 101
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": "abc"
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@JsonSchema(dynamic=true) create json schema Undefined();\n@public @buseventtype @name('schema') create json schema EventInfraPropertyDynamicNestedJson(item Undefined)",
+      "eventType": "EventInfraPropertyDynamicNestedJson",
+      "mode": "json",
+      "name": "objectarray",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('objectarray') select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedJson;\n@name('s1') select * from EventInfraPropertyDynamicNestedJson;\n",
+      "mode": "json",
+      "name": "objectarray",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": 101
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": "abc"
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyDynamicNested$MyLocalJsonProvidedItem') @public @buseventtype @name('schema') create json schema Item();\n@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyDynamicNested$MyLocalJsonProvided') @public @buseventtype @name('schema') create json schema EventInfraPropertyDynamicNestedJsonProvided(item Item)",
+      "eventType": "EventInfraPropertyDynamicNestedJsonProvided",
+      "mode": "json-provided",
+      "name": "objectarray",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('objectarray') select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedJsonProvided;\n@name('s1') select * from EventInfraPropertyDynamicNestedJsonProvided;\n",
+      "mode": "json-provided",
+      "name": "objectarray",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": 101
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": "abc"
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "name": "map",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('map') select item.id? as myid, exists(item.id?) as exists_myid from SupportBeanDynRoot;\n@name('s1') select * from SupportBeanDynRoot;\n",
+      "mode": "bean",
+      "name": "map",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "s0-101"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "str-abc"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "a-e1"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "b-e2"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "s1-102"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedMap",
+      "mode": "map",
+      "name": "map",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('map') select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedMap;\n@name('s1') select * from EventInfraPropertyDynamicNestedMap;\n",
+      "mode": "map",
+      "name": "map",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": 101
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "item": {}
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedOA",
+      "mode": "objectarray",
+      "name": "map",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('map') select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedOA;\n@name('s1') select * from EventInfraPropertyDynamicNestedOA;\n",
+      "mode": "objectarray",
+      "name": "map",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          null
+        ]
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "variant": "oa-s0-101"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          "abc"
+        ]
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedXML",
+      "mode": "xml",
+      "name": "map",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('map') select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedXML;\n@name('s1') select * from EventInfraPropertyDynamicNestedXML;\n",
+      "mode": "xml",
+      "name": "map",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Node"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedXML",
+      "mode": "xml",
+      "op": "send",
+      "payload": {
+        "xml": "<item id=\"101\"/>",
+        "goXml": "<myevent><item id=\"101\"/></myevent>"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedXML",
+      "mode": "xml",
+      "op": "send",
+      "payload": {
+        "xml": "<item/>",
+        "goXml": "<myevent><item/></myevent>"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedAvro",
+      "mode": "avro",
+      "name": "map",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('map') select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedAvro;\n@name('s1') select * from EventInfraPropertyDynamicNestedAvro;\n",
+      "mode": "avro",
+      "name": "map",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": null
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": 101
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": "abc"
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@JsonSchema(dynamic=true) create json schema Undefined();\n@public @buseventtype @name('schema') create json schema EventInfraPropertyDynamicNestedJson(item Undefined)",
+      "eventType": "EventInfraPropertyDynamicNestedJson",
+      "mode": "json",
+      "name": "map",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('map') select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedJson;\n@name('s1') select * from EventInfraPropertyDynamicNestedJson;\n",
+      "mode": "json",
+      "name": "map",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": 101
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": "abc"
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyDynamicNested$MyLocalJsonProvidedItem') @public @buseventtype @name('schema') create json schema Item();\n@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyDynamicNested$MyLocalJsonProvided') @public @buseventtype @name('schema') create json schema EventInfraPropertyDynamicNestedJsonProvided(item Item)",
+      "eventType": "EventInfraPropertyDynamicNestedJsonProvided",
+      "mode": "json-provided",
+      "name": "map",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('map') select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedJsonProvided;\n@name('s1') select * from EventInfraPropertyDynamicNestedJsonProvided;\n",
+      "mode": "json-provided",
+      "name": "map",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": 101
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": "abc"
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "name": "avro",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('avro')@AvroSchemaField(name='myid',schema='[\"int\",{\"type\":\"string\",\"avro.java.string\":\"String\"},\"null\"]') select item.id? as myid, exists(item.id?) as exists_myid from SupportBeanDynRoot;\n@name('s1') select * from SupportBeanDynRoot;\n",
+      "mode": "bean",
+      "name": "avro",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "s0-101"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "str-abc"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "a-e1"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "b-e2"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "s1-102"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedMap",
+      "mode": "map",
+      "name": "avro",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('avro')@AvroSchemaField(name='myid',schema='[\"int\",{\"type\":\"string\",\"avro.java.string\":\"String\"},\"null\"]') select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedMap;\n@name('s1') select * from EventInfraPropertyDynamicNestedMap;\n",
+      "mode": "map",
+      "name": "avro",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": 101
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "item": {}
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedOA",
+      "mode": "objectarray",
+      "name": "avro",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('avro')@AvroSchemaField(name='myid',schema='[\"int\",{\"type\":\"string\",\"avro.java.string\":\"String\"},\"null\"]') select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedOA;\n@name('s1') select * from EventInfraPropertyDynamicNestedOA;\n",
+      "mode": "objectarray",
+      "name": "avro",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          null
+        ]
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "variant": "oa-s0-101"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          "abc"
+        ]
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedAvro",
+      "mode": "avro",
+      "name": "avro",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('avro')@AvroSchemaField(name='myid',schema='[\"int\",{\"type\":\"string\",\"avro.java.string\":\"String\"},\"null\"]') select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedAvro;\n@name('s1') select * from EventInfraPropertyDynamicNestedAvro;\n",
+      "mode": "avro",
+      "name": "avro",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": null
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": 101
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": "abc"
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@JsonSchema(dynamic=true) create json schema Undefined();\n@public @buseventtype @name('schema') create json schema EventInfraPropertyDynamicNestedJson(item Undefined)",
+      "eventType": "EventInfraPropertyDynamicNestedJson",
+      "mode": "json",
+      "name": "avro",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('avro')@AvroSchemaField(name='myid',schema='[\"int\",{\"type\":\"string\",\"avro.java.string\":\"String\"},\"null\"]') select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedJson;\n@name('s1') select * from EventInfraPropertyDynamicNestedJson;\n",
+      "mode": "json",
+      "name": "avro",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": 101
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": "abc"
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyDynamicNested$MyLocalJsonProvidedItem') @public @buseventtype @name('schema') create json schema Item();\n@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyDynamicNested$MyLocalJsonProvided') @public @buseventtype @name('schema') create json schema EventInfraPropertyDynamicNestedJsonProvided(item Item)",
+      "eventType": "EventInfraPropertyDynamicNestedJsonProvided",
+      "mode": "json-provided",
+      "name": "avro",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('avro')@AvroSchemaField(name='myid',schema='[\"int\",{\"type\":\"string\",\"avro.java.string\":\"String\"},\"null\"]') select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedJsonProvided;\n@name('s1') select * from EventInfraPropertyDynamicNestedJsonProvided;\n",
+      "mode": "json-provided",
+      "name": "avro",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": 101
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": "abc"
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "name": "default",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0')  select item.id? as myid, exists(item.id?) as exists_myid from SupportBeanDynRoot;\n@name('s1') select * from SupportBeanDynRoot;\n",
+      "mode": "bean",
+      "name": "default",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "s0-101"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "str-abc"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "a-e1"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "b-e2"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "s1-102"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedMap",
+      "mode": "map",
+      "name": "default",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0')  select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedMap;\n@name('s1') select * from EventInfraPropertyDynamicNestedMap;\n",
+      "mode": "map",
+      "name": "default",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": 101
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "item": {}
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedOA",
+      "mode": "objectarray",
+      "name": "default",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0')  select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedOA;\n@name('s1') select * from EventInfraPropertyDynamicNestedOA;\n",
+      "mode": "objectarray",
+      "name": "default",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          null
+        ]
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "variant": "oa-s0-101"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          "abc"
+        ]
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedXML",
+      "mode": "xml",
+      "name": "default",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0')  select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedXML;\n@name('s1') select * from EventInfraPropertyDynamicNestedXML;\n",
+      "mode": "xml",
+      "name": "default",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Node"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedXML",
+      "mode": "xml",
+      "op": "send",
+      "payload": {
+        "xml": "<item id=\"101\"/>",
+        "goXml": "<myevent><item id=\"101\"/></myevent>"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedXML",
+      "mode": "xml",
+      "op": "send",
+      "payload": {
+        "xml": "<item/>",
+        "goXml": "<myevent><item/></myevent>"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedAvro",
+      "mode": "avro",
+      "name": "default",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0')  select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedAvro;\n@name('s1') select * from EventInfraPropertyDynamicNestedAvro;\n",
+      "mode": "avro",
+      "name": "default",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": null
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": 101
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": "abc"
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@JsonSchema(dynamic=true) create json schema Undefined();\n@public @buseventtype @name('schema') create json schema EventInfraPropertyDynamicNestedJson(item Undefined)",
+      "eventType": "EventInfraPropertyDynamicNestedJson",
+      "mode": "json",
+      "name": "default",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0')  select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedJson;\n@name('s1') select * from EventInfraPropertyDynamicNestedJson;\n",
+      "mode": "json",
+      "name": "default",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": 101
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": "abc"
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyDynamicNested$MyLocalJsonProvidedItem') @public @buseventtype @name('schema') create json schema Item();\n@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyDynamicNested$MyLocalJsonProvided') @public @buseventtype @name('schema') create json schema EventInfraPropertyDynamicNestedJsonProvided(item Item)",
+      "eventType": "EventInfraPropertyDynamicNestedJsonProvided",
+      "mode": "json-provided",
+      "name": "default",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0')  select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedJsonProvided;\n@name('s1') select * from EventInfraPropertyDynamicNestedJsonProvided;\n",
+      "mode": "json-provided",
+      "name": "default",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": 101
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": "abc"
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "name": "json",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('json') select item.id? as myid, exists(item.id?) as exists_myid from SupportBeanDynRoot;\n@name('s1') select * from SupportBeanDynRoot;\n",
+      "mode": "bean",
+      "name": "json",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "s0-101"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "str-abc"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "a-e1"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "b-e2"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "s1-102"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedMap",
+      "mode": "map",
+      "name": "json",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('json') select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedMap;\n@name('s1') select * from EventInfraPropertyDynamicNestedMap;\n",
+      "mode": "map",
+      "name": "json",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": 101
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "item": {}
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedOA",
+      "mode": "objectarray",
+      "name": "json",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('json') select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedOA;\n@name('s1') select * from EventInfraPropertyDynamicNestedOA;\n",
+      "mode": "objectarray",
+      "name": "json",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          null
+        ]
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "variant": "oa-s0-101"
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          "abc"
+        ]
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedAvro",
+      "mode": "avro",
+      "name": "json",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('json') select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedAvro;\n@name('s1') select * from EventInfraPropertyDynamicNestedAvro;\n",
+      "mode": "avro",
+      "name": "json",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": null
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": 101
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": "abc"
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@JsonSchema(dynamic=true) create json schema Undefined();\n@public @buseventtype @name('schema') create json schema EventInfraPropertyDynamicNestedJson(item Undefined)",
+      "eventType": "EventInfraPropertyDynamicNestedJson",
+      "mode": "json",
+      "name": "json",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('json') select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedJson;\n@name('s1') select * from EventInfraPropertyDynamicNestedJson;\n",
+      "mode": "json",
+      "name": "json",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": 101
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": "abc"
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyDynamicNested$MyLocalJsonProvidedItem') @public @buseventtype @name('schema') create json schema Item();\n@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyDynamicNested$MyLocalJsonProvided') @public @buseventtype @name('schema') create json schema EventInfraPropertyDynamicNestedJsonProvided(item Item)",
+      "eventType": "EventInfraPropertyDynamicNestedJsonProvided",
+      "mode": "json-provided",
+      "name": "json",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "dynamic-nested",
+      "epl": "@name('s0') @EventRepresentation('json') select item.id? as myid, exists(item.id?) as exists_myid from EventInfraPropertyDynamicNestedJsonProvided;\n@name('s1') select * from EventInfraPropertyDynamicNestedJsonProvided;\n",
+      "mode": "json-provided",
+      "name": "json",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "deployed",
+      "statement": "s1"
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "types",
+      "propertyOrder": [
+        "myid",
+        "exists_myid"
+      ],
+      "propertyTypes": {
+        "exists_myid": "Boolean",
+        "myid": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": 101
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "eventType": "EventInfraPropertyDynamicNestedJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "item": {
+          "id": "abc"
+        }
+      }
+    },
+    {
+      "case": "dynamic-nested",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "nested-deep",
+      "op": "case"
+    },
+    {
+      "case": "nested-deep",
+      "epl": "",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-deep",
+      "epl": "@name('s0') select  item.nested?.nestedValue as n1,  exists(item.nested?.nestedValue) as exists_n1,  item.nested?.nestedValue? as n2,  exists(item.nested?.nestedValue?) as exists_n2,  item.nested?.nestedNested.nestedNestedValue as n3,  exists(item.nested?.nestedNested.nestedNestedValue) as exists_n3,  item.nested?.nestedNested?.nestedNestedValue as n4,  exists(item.nested?.nestedNested?.nestedNestedValue) as exists_n4,  item.nested?.nestedNested.nestedNestedValue? as n5,  exists(item.nested?.nestedNested.nestedNestedValue?) as exists_n5,  item.nested?.nestedNested?.nestedNestedValue? as n6,  exists(item.nested?.nestedNested?.nestedNestedValue?) as exists_n6  from SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "op": "types",
+      "propertyOrder": [
+        "n1",
+        "exists_n1",
+        "n2",
+        "exists_n2",
+        "n3",
+        "exists_n3",
+        "n4",
+        "exists_n4",
+        "n5",
+        "exists_n5",
+        "n6",
+        "exists_n6"
+      ],
+      "propertyTypes": {
+        "exists_n1": "Boolean",
+        "exists_n2": "Boolean",
+        "exists_n3": "Boolean",
+        "exists_n4": "Boolean",
+        "exists_n5": "Boolean",
+        "exists_n6": "Boolean",
+        "n1": "Object",
+        "n2": "Object",
+        "n3": "Object",
+        "n4": "Object",
+        "n5": "Object",
+        "n6": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "complex-default"
+      }
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "complex-mutated"
+      }
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "str-abc"
+      }
+    },
+    {
+      "case": "nested-deep",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "epl": "@name('s0') select * from SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "complex-default"
+      }
+    },
+    {
+      "case": "nested-deep",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "nested-deep",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedDeepMap",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-deep",
+      "epl": "@name('s0') select  item.nested?.nestedValue as n1,  exists(item.nested?.nestedValue) as exists_n1,  item.nested?.nestedValue? as n2,  exists(item.nested?.nestedValue?) as exists_n2,  item.nested?.nestedNested.nestedNestedValue as n3,  exists(item.nested?.nestedNested.nestedNestedValue) as exists_n3,  item.nested?.nestedNested?.nestedNestedValue as n4,  exists(item.nested?.nestedNested?.nestedNestedValue) as exists_n4,  item.nested?.nestedNested.nestedNestedValue? as n5,  exists(item.nested?.nestedNested.nestedNestedValue?) as exists_n5,  item.nested?.nestedNested?.nestedNestedValue? as n6,  exists(item.nested?.nestedNested?.nestedNestedValue?) as exists_n6  from EventInfraPropertyDynamicNestedDeepMap",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "op": "types",
+      "propertyOrder": [
+        "n1",
+        "exists_n1",
+        "n2",
+        "exists_n2",
+        "n3",
+        "exists_n3",
+        "n4",
+        "exists_n4",
+        "n5",
+        "exists_n5",
+        "n6",
+        "exists_n6"
+      ],
+      "propertyTypes": {
+        "exists_n1": "Boolean",
+        "exists_n2": "Boolean",
+        "exists_n3": "Boolean",
+        "exists_n4": "Boolean",
+        "exists_n5": "Boolean",
+        "exists_n6": "Boolean",
+        "n1": "Object",
+        "n2": "Object",
+        "n3": "Object",
+        "n4": "Object",
+        "n5": "Object",
+        "n6": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "EventInfraPropertyDynamicNestedDeepMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "item": {
+          "nested": {
+            "nestedValue": 100,
+            "nestedNested": {
+              "nestedNestedValue": 101
+            }
+          }
+        }
+      }
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "EventInfraPropertyDynamicNestedDeepMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "nested-deep",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "epl": "@name('s0') select * from EventInfraPropertyDynamicNestedDeepMap",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "EventInfraPropertyDynamicNestedDeepMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "item": {
+          "nested": {
+            "nestedValue": 100,
+            "nestedNested": {
+              "nestedNestedValue": 101
+            }
+          }
+        }
+      }
+    },
+    {
+      "case": "nested-deep",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "nested-deep",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedDeepOA",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-deep",
+      "epl": "@name('s0') select  item.nested?.nestedValue as n1,  exists(item.nested?.nestedValue) as exists_n1,  item.nested?.nestedValue? as n2,  exists(item.nested?.nestedValue?) as exists_n2,  item.nested?.nestedNested.nestedNestedValue as n3,  exists(item.nested?.nestedNested.nestedNestedValue) as exists_n3,  item.nested?.nestedNested?.nestedNestedValue as n4,  exists(item.nested?.nestedNested?.nestedNestedValue) as exists_n4,  item.nested?.nestedNested.nestedNestedValue? as n5,  exists(item.nested?.nestedNested.nestedNestedValue?) as exists_n5,  item.nested?.nestedNested?.nestedNestedValue? as n6,  exists(item.nested?.nestedNested?.nestedNestedValue?) as exists_n6  from EventInfraPropertyDynamicNestedDeepOA",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "op": "types",
+      "propertyOrder": [
+        "n1",
+        "exists_n1",
+        "n2",
+        "exists_n2",
+        "n3",
+        "exists_n3",
+        "n4",
+        "exists_n4",
+        "n5",
+        "exists_n5",
+        "n6",
+        "exists_n6"
+      ],
+      "propertyTypes": {
+        "exists_n1": "Boolean",
+        "exists_n2": "Boolean",
+        "exists_n3": "Boolean",
+        "exists_n4": "Boolean",
+        "exists_n5": "Boolean",
+        "exists_n6": "Boolean",
+        "n1": "Object",
+        "n2": "Object",
+        "n3": "Object",
+        "n4": "Object",
+        "n5": "Object",
+        "n6": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "EventInfraPropertyDynamicNestedDeepOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          [
+            [
+              [
+                101
+              ],
+              100
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "EventInfraPropertyDynamicNestedDeepOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          null
+        ]
+      }
+    },
+    {
+      "case": "nested-deep",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "epl": "@name('s0') select * from EventInfraPropertyDynamicNestedDeepOA",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "EventInfraPropertyDynamicNestedDeepOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          [
+            [
+              [
+                101
+              ],
+              100
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "case": "nested-deep",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "nested-deep",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedDeepXML",
+      "mode": "xml",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-deep",
+      "epl": "@name('s0') select  item.nested?.nestedValue as n1,  exists(item.nested?.nestedValue) as exists_n1,  item.nested?.nestedValue? as n2,  exists(item.nested?.nestedValue?) as exists_n2,  item.nested?.nestedNested.nestedNestedValue as n3,  exists(item.nested?.nestedNested.nestedNestedValue) as exists_n3,  item.nested?.nestedNested?.nestedNestedValue as n4,  exists(item.nested?.nestedNested?.nestedNestedValue) as exists_n4,  item.nested?.nestedNested.nestedNestedValue? as n5,  exists(item.nested?.nestedNested.nestedNestedValue?) as exists_n5,  item.nested?.nestedNested?.nestedNestedValue? as n6,  exists(item.nested?.nestedNested?.nestedNestedValue?) as exists_n6  from EventInfraPropertyDynamicNestedDeepXML",
+      "mode": "xml",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "op": "types",
+      "propertyOrder": [
+        "n1",
+        "exists_n1",
+        "n2",
+        "exists_n2",
+        "n3",
+        "exists_n3",
+        "n4",
+        "exists_n4",
+        "n5",
+        "exists_n5",
+        "n6",
+        "exists_n6"
+      ],
+      "propertyTypes": {
+        "exists_n1": "Boolean",
+        "exists_n2": "Boolean",
+        "exists_n3": "Boolean",
+        "exists_n4": "Boolean",
+        "exists_n5": "Boolean",
+        "exists_n6": "Boolean",
+        "n1": "Node",
+        "n2": "Node",
+        "n3": "Node",
+        "n4": "Node",
+        "n5": "Node",
+        "n6": "Node"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "EventInfraPropertyDynamicNestedDeepXML",
+      "mode": "xml",
+      "op": "send",
+      "payload": {
+        "xml": "<item>\n\t<nested nestedValue=\"100\">\n\t\t<nestedNested nestedNestedValue=\"101\">\n\t\t</nestedNested>\n\t</nested>\n</item>\n",
+        "goXml": "<myevent><item><nested nestedValue=\"100\"><nestedNested nestedNestedValue=\"101\"/></nested></item></myevent>"
+      }
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "EventInfraPropertyDynamicNestedDeepXML",
+      "mode": "xml",
+      "op": "send",
+      "payload": {
+        "xml": "<item/>",
+        "goXml": "<myevent><item/></myevent>"
+      }
+    },
+    {
+      "case": "nested-deep",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "epl": "@name('s0') select * from EventInfraPropertyDynamicNestedDeepXML",
+      "mode": "xml",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "EventInfraPropertyDynamicNestedDeepXML",
+      "mode": "xml",
+      "op": "send",
+      "payload": {
+        "xml": "<item>\n\t<nested nestedValue=\"100\">\n\t\t<nestedNested nestedNestedValue=\"101\">\n\t\t</nestedNested>\n\t</nested>\n</item>\n",
+        "goXml": "<myevent><item><nested nestedValue=\"100\"><nestedNested nestedNestedValue=\"101\"/></nested></item></myevent>"
+      }
+    },
+    {
+      "case": "nested-deep",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "nested-deep",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedDeepAvro",
+      "mode": "avro",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-deep",
+      "epl": "@name('s0') select  item.nested?.nestedValue as n1,  exists(item.nested?.nestedValue) as exists_n1,  item.nested?.nestedValue? as n2,  exists(item.nested?.nestedValue?) as exists_n2,  item.nested?.nestedNested.nestedNestedValue as n3,  exists(item.nested?.nestedNested.nestedNestedValue) as exists_n3,  item.nested?.nestedNested?.nestedNestedValue as n4,  exists(item.nested?.nestedNested?.nestedNestedValue) as exists_n4,  item.nested?.nestedNested.nestedNestedValue? as n5,  exists(item.nested?.nestedNested.nestedNestedValue?) as exists_n5,  item.nested?.nestedNested?.nestedNestedValue? as n6,  exists(item.nested?.nestedNested?.nestedNestedValue?) as exists_n6  from EventInfraPropertyDynamicNestedDeepAvro",
+      "mode": "avro",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "op": "types",
+      "propertyOrder": [
+        "n1",
+        "exists_n1",
+        "n2",
+        "exists_n2",
+        "n3",
+        "exists_n3",
+        "n4",
+        "exists_n4",
+        "n5",
+        "exists_n5",
+        "n6",
+        "exists_n6"
+      ],
+      "propertyTypes": {
+        "exists_n1": "Boolean",
+        "exists_n2": "Boolean",
+        "exists_n3": "Boolean",
+        "exists_n4": "Boolean",
+        "exists_n5": "Boolean",
+        "exists_n6": "Boolean",
+        "n1": "Object",
+        "n2": "Object",
+        "n3": "Object",
+        "n4": "Object",
+        "n5": "Object",
+        "n6": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "EventInfraPropertyDynamicNestedDeepAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "item": {
+          "nested": {
+            "nestedValue": 100,
+            "nestedNested": {
+              "nestedNestedValue": 101
+            }
+          }
+        }
+      }
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "EventInfraPropertyDynamicNestedDeepAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "item": null
+      }
+    },
+    {
+      "case": "nested-deep",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "epl": "@name('s0') select * from EventInfraPropertyDynamicNestedDeepAvro",
+      "mode": "avro",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "EventInfraPropertyDynamicNestedDeepAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "item": {
+          "nested": {
+            "nestedValue": 100,
+            "nestedNested": {
+              "nestedNestedValue": 101
+            }
+          }
+        }
+      }
+    },
+    {
+      "case": "nested-deep",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "nested-deep",
+      "epl": "@JsonSchema(dynamic=true) create json schema Item();\n@public @buseventtype @name('schema') create json schema EventInfraPropertyDynamicNestedDeepJson(item Item)",
+      "eventType": "EventInfraPropertyDynamicNestedDeepJson",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-deep",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-deep",
+      "epl": "@name('s0') select  item.nested?.nestedValue as n1,  exists(item.nested?.nestedValue) as exists_n1,  item.nested?.nestedValue? as n2,  exists(item.nested?.nestedValue?) as exists_n2,  item.nested?.nestedNested.nestedNestedValue as n3,  exists(item.nested?.nestedNested.nestedNestedValue) as exists_n3,  item.nested?.nestedNested?.nestedNestedValue as n4,  exists(item.nested?.nestedNested?.nestedNestedValue) as exists_n4,  item.nested?.nestedNested.nestedNestedValue? as n5,  exists(item.nested?.nestedNested.nestedNestedValue?) as exists_n5,  item.nested?.nestedNested?.nestedNestedValue? as n6,  exists(item.nested?.nestedNested?.nestedNestedValue?) as exists_n6  from EventInfraPropertyDynamicNestedDeepJson",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "op": "types",
+      "propertyOrder": [
+        "n1",
+        "exists_n1",
+        "n2",
+        "exists_n2",
+        "n3",
+        "exists_n3",
+        "n4",
+        "exists_n4",
+        "n5",
+        "exists_n5",
+        "n6",
+        "exists_n6"
+      ],
+      "propertyTypes": {
+        "exists_n1": "Boolean",
+        "exists_n2": "Boolean",
+        "exists_n3": "Boolean",
+        "exists_n4": "Boolean",
+        "exists_n5": "Boolean",
+        "exists_n6": "Boolean",
+        "n1": "Object",
+        "n2": "Object",
+        "n3": "Object",
+        "n4": "Object",
+        "n5": "Object",
+        "n6": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "EventInfraPropertyDynamicNestedDeepJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "item": {
+          "nested": {
+            "nestedValue": 100,
+            "nestedNested": {
+              "nestedNestedValue": 101
+            }
+          }
+        }
+      }
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "EventInfraPropertyDynamicNestedDeepJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "item": {
+          "nested": {}
+        }
+      }
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "EventInfraPropertyDynamicNestedDeepJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "item": {}
+      }
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "EventInfraPropertyDynamicNestedDeepJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "nested-deep",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "epl": "@name('s0') select * from EventInfraPropertyDynamicNestedDeepJson",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "EventInfraPropertyDynamicNestedDeepJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "item": {
+          "nested": {
+            "nestedValue": 100,
+            "nestedNested": {
+              "nestedNestedValue": 101
+            }
+          }
+        }
+      }
+    },
+    {
+      "case": "nested-deep",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "nested-deep",
+      "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyDynamicNestedDeep$MyLocalJsonProvided') @public @buseventtype @name('schema') create json schema EventInfraPropertyDynamicNestedDeepJsonProvided()",
+      "eventType": "EventInfraPropertyDynamicNestedDeepJsonProvided",
+      "mode": "json-provided",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-deep",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-deep",
+      "epl": "@name('s0') select  item.nested?.nestedValue as n1,  exists(item.nested?.nestedValue) as exists_n1,  item.nested?.nestedValue? as n2,  exists(item.nested?.nestedValue?) as exists_n2,  item.nested?.nestedNested.nestedNestedValue as n3,  exists(item.nested?.nestedNested.nestedNestedValue) as exists_n3,  item.nested?.nestedNested?.nestedNestedValue as n4,  exists(item.nested?.nestedNested?.nestedNestedValue) as exists_n4,  item.nested?.nestedNested.nestedNestedValue? as n5,  exists(item.nested?.nestedNested.nestedNestedValue?) as exists_n5,  item.nested?.nestedNested?.nestedNestedValue? as n6,  exists(item.nested?.nestedNested?.nestedNestedValue?) as exists_n6  from EventInfraPropertyDynamicNestedDeepJsonProvided",
+      "mode": "json-provided",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "op": "types",
+      "propertyOrder": [
+        "n1",
+        "exists_n1",
+        "n2",
+        "exists_n2",
+        "n3",
+        "exists_n3",
+        "n4",
+        "exists_n4",
+        "n5",
+        "exists_n5",
+        "n6",
+        "exists_n6"
+      ],
+      "propertyTypes": {
+        "exists_n1": "Boolean",
+        "exists_n2": "Boolean",
+        "exists_n3": "Boolean",
+        "exists_n4": "Boolean",
+        "exists_n5": "Boolean",
+        "exists_n6": "Boolean",
+        "n1": "Object",
+        "n2": "Object",
+        "n3": "Object",
+        "n4": "Object",
+        "n5": "Object",
+        "n6": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "EventInfraPropertyDynamicNestedDeepJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "item": {
+          "nested": {
+            "nestedValue": 100,
+            "nestedNested": {
+              "nestedNestedValue": 101
+            }
+          }
+        }
+      }
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "EventInfraPropertyDynamicNestedDeepJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "item": {
+          "nested": {}
+        }
+      }
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "EventInfraPropertyDynamicNestedDeepJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "item": {}
+      }
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "EventInfraPropertyDynamicNestedDeepJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "nested-deep",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "epl": "@name('s0') select * from EventInfraPropertyDynamicNestedDeepJsonProvided",
+      "mode": "json-provided",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-deep",
+      "eventType": "EventInfraPropertyDynamicNestedDeepJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "item": {
+          "nested": {
+            "nestedValue": 100,
+            "nestedNested": {
+              "nestedNestedValue": 101
+            }
+          }
+        }
+      }
+    },
+    {
+      "case": "nested-deep",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "op": "case"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "epl": "",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "epl": "@name('s0') select item?.indexed[0] as indexed1, exists(item?.indexed[0]) as exists_indexed1, item?.indexed[1]? as indexed2, exists(item?.indexed[1]?) as exists_indexed2, item?.arrayProperty[1]? as array, exists(item?.arrayProperty[1]?) as exists_array, item?.mapped('keyOne') as mapped1, exists(item?.mapped('keyOne')) as exists_mapped1, item?.mapped('keyTwo')? as mapped2,  exists(item?.mapped('keyTwo')?) as exists_mapped2,  item?.mapProperty('xOne')? as map, exists(item?.mapProperty('xOne')?) as exists_map  from SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "op": "types",
+      "propertyOrder": [
+        "indexed1",
+        "exists_indexed1",
+        "indexed2",
+        "exists_indexed2",
+        "array",
+        "exists_array",
+        "mapped1",
+        "exists_mapped1",
+        "mapped2",
+        "exists_mapped2",
+        "map",
+        "exists_map"
+      ],
+      "propertyTypes": {
+        "array": "Object",
+        "exists_array": "Boolean",
+        "exists_indexed1": "Boolean",
+        "exists_indexed2": "Boolean",
+        "exists_map": "Boolean",
+        "exists_mapped1": "Boolean",
+        "exists_mapped2": "Boolean",
+        "indexed1": "Object",
+        "indexed2": "Object",
+        "map": "Object",
+        "mapped1": "Object",
+        "mapped2": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "str-xxx"
+      }
+    },
+    {
+      "case": "rooted-nonsimple",
+      "eventType": "SupportBeanDynRoot",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "complex-default"
+      }
+    },
+    {
+      "case": "rooted-nonsimple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedRootedNonSimpleMap",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "epl": "@name('s0') select item?.indexed[0] as indexed1, exists(item?.indexed[0]) as exists_indexed1, item?.indexed[1]? as indexed2, exists(item?.indexed[1]?) as exists_indexed2, item?.arrayProperty[1]? as array, exists(item?.arrayProperty[1]?) as exists_array, item?.mapped('keyOne') as mapped1, exists(item?.mapped('keyOne')) as exists_mapped1, item?.mapped('keyTwo')? as mapped2,  exists(item?.mapped('keyTwo')?) as exists_mapped2,  item?.mapProperty('xOne')? as map, exists(item?.mapProperty('xOne')?) as exists_map  from EventInfraPropertyDynamicNestedRootedNonSimpleMap",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "op": "types",
+      "propertyOrder": [
+        "indexed1",
+        "exists_indexed1",
+        "indexed2",
+        "exists_indexed2",
+        "array",
+        "exists_array",
+        "mapped1",
+        "exists_mapped1",
+        "mapped2",
+        "exists_mapped2",
+        "map",
+        "exists_map"
+      ],
+      "propertyTypes": {
+        "array": "Object",
+        "exists_array": "Boolean",
+        "exists_indexed1": "Boolean",
+        "exists_indexed2": "Boolean",
+        "exists_map": "Boolean",
+        "exists_mapped1": "Boolean",
+        "exists_mapped2": "Boolean",
+        "indexed1": "Object",
+        "indexed2": "Object",
+        "map": "Object",
+        "mapped1": "Object",
+        "mapped2": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedNonSimpleMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "rooted-nonsimple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedNonSimpleMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "item": {
+          "indexed": [
+            1,
+            2
+          ],
+          "arrayProperty": null,
+          "mapped": {
+            "keyOne": 100,
+            "keyTwo": 200
+          },
+          "mapProperty": null
+        }
+      }
+    },
+    {
+      "case": "rooted-nonsimple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedRootedNonSimpleOA",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "epl": "@name('s0') select item?.indexed[0] as indexed1, exists(item?.indexed[0]) as exists_indexed1, item?.indexed[1]? as indexed2, exists(item?.indexed[1]?) as exists_indexed2, item?.arrayProperty[1]? as array, exists(item?.arrayProperty[1]?) as exists_array, item?.mapped('keyOne') as mapped1, exists(item?.mapped('keyOne')) as exists_mapped1, item?.mapped('keyTwo')? as mapped2,  exists(item?.mapped('keyTwo')?) as exists_mapped2,  item?.mapProperty('xOne')? as map, exists(item?.mapProperty('xOne')?) as exists_map  from EventInfraPropertyDynamicNestedRootedNonSimpleOA",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "op": "types",
+      "propertyOrder": [
+        "indexed1",
+        "exists_indexed1",
+        "indexed2",
+        "exists_indexed2",
+        "array",
+        "exists_array",
+        "mapped1",
+        "exists_mapped1",
+        "mapped2",
+        "exists_mapped2",
+        "map",
+        "exists_map"
+      ],
+      "propertyTypes": {
+        "array": "Object",
+        "exists_array": "Boolean",
+        "exists_indexed1": "Boolean",
+        "exists_indexed2": "Boolean",
+        "exists_map": "Boolean",
+        "exists_mapped1": "Boolean",
+        "exists_mapped2": "Boolean",
+        "indexed1": "Object",
+        "indexed2": "Object",
+        "map": "Object",
+        "mapped1": "Object",
+        "mapped2": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedNonSimpleOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          null,
+          null
+        ]
+      }
+    },
+    {
+      "case": "rooted-nonsimple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedNonSimpleOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          null,
+          {
+            "values": [
+              [
+                1,
+                2
+              ],
+              {
+                "keyOne": 100,
+                "keyTwo": 200
+              },
+              [
+                1000,
+                2000
+              ],
+              {
+                "xOne": "abc"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "case": "rooted-nonsimple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedRootedNonSimpleXML",
+      "mode": "xml",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "epl": "@name('s0') select item?.indexed[0] as indexed1, exists(item?.indexed[0]) as exists_indexed1, item?.indexed[1]? as indexed2, exists(item?.indexed[1]?) as exists_indexed2, item?.arrayProperty[1]? as array, exists(item?.arrayProperty[1]?) as exists_array, item?.mapped('keyOne') as mapped1, exists(item?.mapped('keyOne')) as exists_mapped1, item?.mapped('keyTwo')? as mapped2,  exists(item?.mapped('keyTwo')?) as exists_mapped2,  item?.mapProperty('xOne')? as map, exists(item?.mapProperty('xOne')?) as exists_map  from EventInfraPropertyDynamicNestedRootedNonSimpleXML",
+      "mode": "xml",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "op": "types",
+      "propertyOrder": [
+        "indexed1",
+        "exists_indexed1",
+        "indexed2",
+        "exists_indexed2",
+        "array",
+        "exists_array",
+        "mapped1",
+        "exists_mapped1",
+        "mapped2",
+        "exists_mapped2",
+        "map",
+        "exists_map"
+      ],
+      "propertyTypes": {
+        "array": "Node",
+        "exists_array": "Boolean",
+        "exists_indexed1": "Boolean",
+        "exists_indexed2": "Boolean",
+        "exists_map": "Boolean",
+        "exists_mapped1": "Boolean",
+        "exists_mapped2": "Boolean",
+        "indexed1": "Node",
+        "indexed2": "Node",
+        "map": "Node",
+        "mapped1": "Node",
+        "mapped2": "Node"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedNonSimpleXML",
+      "mode": "xml",
+      "op": "send",
+      "payload": {
+        "xml": "",
+        "goXml": "<myevent></myevent>"
+      }
+    },
+    {
+      "case": "rooted-nonsimple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedNonSimpleXML",
+      "mode": "xml",
+      "op": "send",
+      "payload": {
+        "xml": "<item><indexed>1</indexed><indexed>2</indexed><mapped id=\"keyOne\">3</mapped><mapped id=\"keyTwo\">4</mapped></item>",
+        "goXml": "<myevent><item><indexed>1</indexed><indexed>2</indexed><mapped id=\"keyOne\">3</mapped><mapped id=\"keyTwo\">4</mapped></item></myevent>"
+      }
+    },
+    {
+      "case": "rooted-nonsimple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedRootedNonSimpleAvro",
+      "mode": "avro",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "epl": "@name('s0') select item?.indexed[0] as indexed1, exists(item?.indexed[0]) as exists_indexed1, item?.indexed[1]? as indexed2, exists(item?.indexed[1]?) as exists_indexed2, item?.arrayProperty[1]? as array, exists(item?.arrayProperty[1]?) as exists_array, item?.mapped('keyOne') as mapped1, exists(item?.mapped('keyOne')) as exists_mapped1, item?.mapped('keyTwo')? as mapped2,  exists(item?.mapped('keyTwo')?) as exists_mapped2,  item?.mapProperty('xOne')? as map, exists(item?.mapProperty('xOne')?) as exists_map  from EventInfraPropertyDynamicNestedRootedNonSimpleAvro",
+      "mode": "avro",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "op": "types",
+      "propertyOrder": [
+        "indexed1",
+        "exists_indexed1",
+        "indexed2",
+        "exists_indexed2",
+        "array",
+        "exists_array",
+        "mapped1",
+        "exists_mapped1",
+        "mapped2",
+        "exists_mapped2",
+        "map",
+        "exists_map"
+      ],
+      "propertyTypes": {
+        "array": "Object",
+        "exists_array": "Boolean",
+        "exists_indexed1": "Boolean",
+        "exists_indexed2": "Boolean",
+        "exists_map": "Boolean",
+        "exists_mapped1": "Boolean",
+        "exists_mapped2": "Boolean",
+        "indexed1": "Object",
+        "indexed2": "Object",
+        "map": "Object",
+        "mapped1": "Object",
+        "mapped2": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedNonSimpleAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "item": null
+      }
+    },
+    {
+      "case": "rooted-nonsimple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedNonSimpleAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "item": null
+      }
+    },
+    {
+      "case": "rooted-nonsimple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedNonSimpleAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "item": {
+          "indexed": [
+            1,
+            2
+          ],
+          "mapped": {
+            "keyOne": 3,
+            "keyTwo": 4
+          }
+        }
+      }
+    },
+    {
+      "case": "rooted-nonsimple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "epl": "@public @buseventtype @name('schema') @JsonSchema(dynamic=true) create json schema EventInfraPropertyDynamicNestedRootedNonSimpleJson()",
+      "eventType": "EventInfraPropertyDynamicNestedRootedNonSimpleJson",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "epl": "@name('s0') select item?.indexed[0] as indexed1, exists(item?.indexed[0]) as exists_indexed1, item?.indexed[1]? as indexed2, exists(item?.indexed[1]?) as exists_indexed2, item?.arrayProperty[1]? as array, exists(item?.arrayProperty[1]?) as exists_array, item?.mapped('keyOne') as mapped1, exists(item?.mapped('keyOne')) as exists_mapped1, item?.mapped('keyTwo')? as mapped2,  exists(item?.mapped('keyTwo')?) as exists_mapped2,  item?.mapProperty('xOne')? as map, exists(item?.mapProperty('xOne')?) as exists_map  from EventInfraPropertyDynamicNestedRootedNonSimpleJson",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "op": "types",
+      "propertyOrder": [
+        "indexed1",
+        "exists_indexed1",
+        "indexed2",
+        "exists_indexed2",
+        "array",
+        "exists_array",
+        "mapped1",
+        "exists_mapped1",
+        "mapped2",
+        "exists_mapped2",
+        "map",
+        "exists_map"
+      ],
+      "propertyTypes": {
+        "array": "Object",
+        "exists_array": "Boolean",
+        "exists_indexed1": "Boolean",
+        "exists_indexed2": "Boolean",
+        "exists_map": "Boolean",
+        "exists_mapped1": "Boolean",
+        "exists_mapped2": "Boolean",
+        "indexed1": "Object",
+        "indexed2": "Object",
+        "map": "Object",
+        "mapped1": "Object",
+        "mapped2": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedNonSimpleJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "rooted-nonsimple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedNonSimpleJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "item": {}
+      }
+    },
+    {
+      "case": "rooted-nonsimple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedNonSimpleJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "item": {
+          "indexed": [
+            1,
+            2
+          ],
+          "mapped": {
+            "keyOne": 3,
+            "keyTwo": 4
+          }
+        }
+      }
+    },
+    {
+      "case": "rooted-nonsimple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyDynamicNestedRootedNonSimple$MyLocalJsonProvided') @public @buseventtype @name('schema') @JsonSchema(dynamic=true) create json schema EventInfraPropertyDynamicNestedRootedNonSimpleJsonProvided()",
+      "eventType": "EventInfraPropertyDynamicNestedRootedNonSimpleJsonProvided",
+      "mode": "json-provided",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "epl": "@name('s0') select item?.indexed[0] as indexed1, exists(item?.indexed[0]) as exists_indexed1, item?.indexed[1]? as indexed2, exists(item?.indexed[1]?) as exists_indexed2, item?.arrayProperty[1]? as array, exists(item?.arrayProperty[1]?) as exists_array, item?.mapped('keyOne') as mapped1, exists(item?.mapped('keyOne')) as exists_mapped1, item?.mapped('keyTwo')? as mapped2,  exists(item?.mapped('keyTwo')?) as exists_mapped2,  item?.mapProperty('xOne')? as map, exists(item?.mapProperty('xOne')?) as exists_map  from EventInfraPropertyDynamicNestedRootedNonSimpleJsonProvided",
+      "mode": "json-provided",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "op": "types",
+      "propertyOrder": [
+        "indexed1",
+        "exists_indexed1",
+        "indexed2",
+        "exists_indexed2",
+        "array",
+        "exists_array",
+        "mapped1",
+        "exists_mapped1",
+        "mapped2",
+        "exists_mapped2",
+        "map",
+        "exists_map"
+      ],
+      "propertyTypes": {
+        "array": "Object",
+        "exists_array": "Boolean",
+        "exists_indexed1": "Boolean",
+        "exists_indexed2": "Boolean",
+        "exists_map": "Boolean",
+        "exists_mapped1": "Boolean",
+        "exists_mapped2": "Boolean",
+        "indexed1": "Object",
+        "indexed2": "Object",
+        "map": "Object",
+        "mapped1": "Object",
+        "mapped2": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-nonsimple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedNonSimpleJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "rooted-nonsimple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedNonSimpleJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "item": {}
+      }
+    },
+    {
+      "case": "rooted-nonsimple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedNonSimpleJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "item": {
+          "indexed": [
+            1,
+            2
+          ],
+          "mapped": {
+            "keyOne": 3,
+            "keyTwo": 4
+          }
+        }
+      }
+    },
+    {
+      "case": "rooted-nonsimple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "rooted-simple",
+      "op": "case"
+    },
+    {
+      "case": "rooted-simple",
+      "epl": "",
+      "eventType": "SupportMarkerInterface",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "rooted-simple",
+      "epl": "@name('s0') select simpleProperty? as simple, exists(simpleProperty?) as exists_simple, nested?.nestedValue as nested, exists(nested?.nestedValue) as exists_nested, nested?.nestedNested.nestedNestedValue as nestedNested, exists(nested?.nestedNested.nestedNestedValue) as exists_nestedNested from SupportMarkerInterface",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-simple",
+      "op": "types",
+      "propertyOrder": [
+        "simple",
+        "exists_simple",
+        "nested",
+        "exists_nested",
+        "nestedNested",
+        "exists_nestedNested"
+      ],
+      "propertyTypes": {
+        "exists_nested": "Boolean",
+        "exists_nestedNested": "Boolean",
+        "exists_simple": "Boolean",
+        "nested": "Object",
+        "nestedNested": "Object",
+        "simple": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-simple",
+      "eventType": "SupportMarkerInterface",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "complex-default"
+      }
+    },
+    {
+      "case": "rooted-simple",
+      "eventType": "SupportMarkerInterface",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "impl-a-x"
+      }
+    },
+    {
+      "case": "rooted-simple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "rooted-simple",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedRootedSimpleMap",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "rooted-simple",
+      "epl": "@name('s0') select simpleProperty? as simple, exists(simpleProperty?) as exists_simple, nested?.nestedValue as nested, exists(nested?.nestedValue) as exists_nested, nested?.nestedNested.nestedNestedValue as nestedNested, exists(nested?.nestedNested.nestedNestedValue) as exists_nestedNested from EventInfraPropertyDynamicNestedRootedSimpleMap",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-simple",
+      "op": "types",
+      "propertyOrder": [
+        "simple",
+        "exists_simple",
+        "nested",
+        "exists_nested",
+        "nestedNested",
+        "exists_nestedNested"
+      ],
+      "propertyTypes": {
+        "exists_nested": "Boolean",
+        "exists_nestedNested": "Boolean",
+        "exists_simple": "Boolean",
+        "nested": "Object",
+        "nestedNested": "Object",
+        "simple": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-simple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedSimpleMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "simpleProperty": "a"
+      }
+    },
+    {
+      "case": "rooted-simple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedSimpleMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "simpleProperty": 5,
+        "nested": {
+          "nestedNested": {
+            "nestedNestedValue": 101
+          },
+          "nestedValue": "abc"
+        }
+      }
+    },
+    {
+      "case": "rooted-simple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "rooted-simple",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedRootedSimpleOA",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "rooted-simple",
+      "epl": "@name('s0') select simpleProperty? as simple, exists(simpleProperty?) as exists_simple, nested?.nestedValue as nested, exists(nested?.nestedValue) as exists_nested, nested?.nestedNested.nestedNestedValue as nestedNested, exists(nested?.nestedNested.nestedNestedValue) as exists_nestedNested from EventInfraPropertyDynamicNestedRootedSimpleOA",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-simple",
+      "op": "types",
+      "propertyOrder": [
+        "simple",
+        "exists_simple",
+        "nested",
+        "exists_nested",
+        "nestedNested",
+        "exists_nestedNested"
+      ],
+      "propertyTypes": {
+        "exists_nested": "Boolean",
+        "exists_nestedNested": "Boolean",
+        "exists_simple": "Boolean",
+        "nested": "Object",
+        "nestedNested": "Object",
+        "simple": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-simple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedSimpleOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          "a",
+          null
+        ]
+      }
+    },
+    {
+      "case": "rooted-simple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedSimpleOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          5,
+          {
+            "values": [
+              "abc",
+              {
+                "values": [
+                  101
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "case": "rooted-simple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "rooted-simple",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedRootedSimpleXML",
+      "mode": "xml",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "rooted-simple",
+      "epl": "@name('s0') select simpleProperty? as simple, exists(simpleProperty?) as exists_simple, nested?.nestedValue as nested, exists(nested?.nestedValue) as exists_nested, nested?.nestedNested.nestedNestedValue as nestedNested, exists(nested?.nestedNested.nestedNestedValue) as exists_nestedNested from EventInfraPropertyDynamicNestedRootedSimpleXML",
+      "mode": "xml",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-simple",
+      "op": "types",
+      "propertyOrder": [
+        "simple",
+        "exists_simple",
+        "nested",
+        "exists_nested",
+        "nestedNested",
+        "exists_nestedNested"
+      ],
+      "propertyTypes": {
+        "exists_nested": "Boolean",
+        "exists_nestedNested": "Boolean",
+        "exists_simple": "Boolean",
+        "nested": "Node",
+        "nestedNested": "Node",
+        "simple": "Node"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-simple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedSimpleXML",
+      "mode": "xml",
+      "op": "send",
+      "payload": {
+        "xml": "<simpleProperty>abc</simpleProperty><nested nestedValue=\"100\">\n\t<nestedNested nestedNestedValue=\"101\">\n\t</nestedNested>\n</nested>\n",
+        "goXml": "<myevent><simpleProperty>abc</simpleProperty><nested nestedValue=\"100\"><nestedNested nestedNestedValue=\"101\"/></nested></myevent>"
+      }
+    },
+    {
+      "case": "rooted-simple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedSimpleXML",
+      "mode": "xml",
+      "op": "send",
+      "payload": {
+        "xml": "<nested/>",
+        "goXml": "<myevent><nested/></myevent>"
+      }
+    },
+    {
+      "case": "rooted-simple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "rooted-simple",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNestedRootedSimpleAvro",
+      "mode": "avro",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "rooted-simple",
+      "epl": "@name('s0') select simpleProperty? as simple, exists(simpleProperty?) as exists_simple, nested?.nestedValue as nested, exists(nested?.nestedValue) as exists_nested, nested?.nestedNested.nestedNestedValue as nestedNested, exists(nested?.nestedNested.nestedNestedValue) as exists_nestedNested from EventInfraPropertyDynamicNestedRootedSimpleAvro",
+      "mode": "avro",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-simple",
+      "op": "types",
+      "propertyOrder": [
+        "simple",
+        "exists_simple",
+        "nested",
+        "exists_nested",
+        "nestedNested",
+        "exists_nestedNested"
+      ],
+      "propertyTypes": {
+        "exists_nested": "Boolean",
+        "exists_nestedNested": "Boolean",
+        "exists_simple": "Boolean",
+        "nested": "Object",
+        "nestedNested": "Object",
+        "simple": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-simple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedSimpleAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "simpleProperty": null,
+        "nested": null
+      }
+    },
+    {
+      "case": "rooted-simple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedSimpleAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "simpleProperty": null,
+        "nested": null
+      }
+    },
+    {
+      "case": "rooted-simple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedSimpleAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "simpleProperty": "abc",
+        "nested": {
+          "nestedValue": 100,
+          "nestedNested": {
+            "nestedNestedValue": 101
+          }
+        }
+      }
+    },
+    {
+      "case": "rooted-simple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "rooted-simple",
+      "epl": "@JsonSchema(dynamic=true) @public @buseventtype @name('schema') create json schema EventInfraPropertyDynamicNestedRootedSimpleJson()",
+      "eventType": "EventInfraPropertyDynamicNestedRootedSimpleJson",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "rooted-simple",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "rooted-simple",
+      "epl": "@name('s0') select simpleProperty? as simple, exists(simpleProperty?) as exists_simple, nested?.nestedValue as nested, exists(nested?.nestedValue) as exists_nested, nested?.nestedNested.nestedNestedValue as nestedNested, exists(nested?.nestedNested.nestedNestedValue) as exists_nestedNested from EventInfraPropertyDynamicNestedRootedSimpleJson",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-simple",
+      "op": "types",
+      "propertyOrder": [
+        "simple",
+        "exists_simple",
+        "nested",
+        "exists_nested",
+        "nestedNested",
+        "exists_nestedNested"
+      ],
+      "propertyTypes": {
+        "exists_nested": "Boolean",
+        "exists_nestedNested": "Boolean",
+        "exists_simple": "Boolean",
+        "nested": "Object",
+        "nestedNested": "Object",
+        "simple": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-simple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedSimpleJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "rooted-simple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedSimpleJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "simpleProperty": 1
+      }
+    },
+    {
+      "case": "rooted-simple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedSimpleJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "simpleProperty": "abc",
+        "nested": {
+          "nestedValue": 100,
+          "nestedNested": {
+            "nestedNestedValue": 101
+          }
+        }
+      }
+    },
+    {
+      "case": "rooted-simple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "rooted-simple",
+      "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyDynamicNestedRootedSimple$MyLocalJsonProvided') @public @buseventtype @name('schema') create json schema EventInfraPropertyDynamicNestedRootedSimpleJsonProvided()",
+      "eventType": "EventInfraPropertyDynamicNestedRootedSimpleJsonProvided",
+      "mode": "json-provided",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "rooted-simple",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "rooted-simple",
+      "epl": "@name('s0') select simpleProperty? as simple, exists(simpleProperty?) as exists_simple, nested?.nestedValue as nested, exists(nested?.nestedValue) as exists_nested, nested?.nestedNested.nestedNestedValue as nestedNested, exists(nested?.nestedNested.nestedNestedValue) as exists_nestedNested from EventInfraPropertyDynamicNestedRootedSimpleJsonProvided",
+      "mode": "json-provided",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-simple",
+      "op": "types",
+      "propertyOrder": [
+        "simple",
+        "exists_simple",
+        "nested",
+        "exists_nested",
+        "nestedNested",
+        "exists_nestedNested"
+      ],
+      "propertyTypes": {
+        "exists_nested": "Boolean",
+        "exists_nestedNested": "Boolean",
+        "exists_simple": "Boolean",
+        "nested": "Object",
+        "nestedNested": "Object",
+        "simple": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "rooted-simple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedSimpleJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "rooted-simple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedSimpleJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "simpleProperty": 1
+      }
+    },
+    {
+      "case": "rooted-simple",
+      "eventType": "EventInfraPropertyDynamicNestedRootedSimpleJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "simpleProperty": "abc",
+        "nested": {
+          "nestedValue": 100,
+          "nestedNested": {
+            "nestedNestedValue": 101
+          }
+        }
+      }
+    },
+    {
+      "case": "rooted-simple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "nonsimple",
+      "op": "case"
+    },
+    {
+      "case": "nonsimple",
+      "epl": "",
+      "eventType": "SupportBeanComplexProps",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nonsimple",
+      "epl": "@name('s0') select indexed[0]? as indexed1, exists(indexed[0]?) as exists_indexed1, indexed[1]? as indexed2, exists(indexed[1]?) as exists_indexed2, mapped('keyOne')? as mapped1, exists(mapped('keyOne')?) as exists_mapped1, mapped('keyTwo')? as mapped2,  exists(mapped('keyTwo')?) as exists_mapped2  from SupportBeanComplexProps",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nonsimple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nonsimple",
+      "op": "types",
+      "propertyOrder": [
+        "indexed1",
+        "exists_indexed1",
+        "indexed2",
+        "exists_indexed2",
+        "mapped1",
+        "exists_mapped1",
+        "mapped2",
+        "exists_mapped2"
+      ],
+      "propertyTypes": {
+        "exists_indexed1": "Boolean",
+        "exists_indexed2": "Boolean",
+        "exists_mapped1": "Boolean",
+        "exists_mapped2": "Boolean",
+        "indexed1": "Object",
+        "indexed2": "Object",
+        "mapped1": "Object",
+        "mapped2": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nonsimple",
+      "eventType": "SupportBeanComplexProps",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "complex-default"
+      }
+    },
+    {
+      "case": "nonsimple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "nonsimple",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNonSimpleMap",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nonsimple",
+      "epl": "@name('s0') select indexed[0]? as indexed1, exists(indexed[0]?) as exists_indexed1, indexed[1]? as indexed2, exists(indexed[1]?) as exists_indexed2, mapped('keyOne')? as mapped1, exists(mapped('keyOne')?) as exists_mapped1, mapped('keyTwo')? as mapped2,  exists(mapped('keyTwo')?) as exists_mapped2  from EventInfraPropertyDynamicNonSimpleMap",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nonsimple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nonsimple",
+      "op": "types",
+      "propertyOrder": [
+        "indexed1",
+        "exists_indexed1",
+        "indexed2",
+        "exists_indexed2",
+        "mapped1",
+        "exists_mapped1",
+        "mapped2",
+        "exists_mapped2"
+      ],
+      "propertyTypes": {
+        "exists_indexed1": "Boolean",
+        "exists_indexed2": "Boolean",
+        "exists_mapped1": "Boolean",
+        "exists_mapped2": "Boolean",
+        "indexed1": "Object",
+        "indexed2": "Object",
+        "mapped1": "Object",
+        "mapped2": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nonsimple",
+      "eventType": "EventInfraPropertyDynamicNonSimpleMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "somekey": "10"
+      }
+    },
+    {
+      "case": "nonsimple",
+      "eventType": "EventInfraPropertyDynamicNonSimpleMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "indexed": [
+          1,
+          2
+        ],
+        "mapped": {
+          "keyOne": 3,
+          "keyTwo": 4
+        }
+      }
+    },
+    {
+      "case": "nonsimple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "nonsimple",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNonSimpleOA",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nonsimple",
+      "epl": "@name('s0') select indexed[0]? as indexed1, exists(indexed[0]?) as exists_indexed1, indexed[1]? as indexed2, exists(indexed[1]?) as exists_indexed2, mapped('keyOne')? as mapped1, exists(mapped('keyOne')?) as exists_mapped1, mapped('keyTwo')? as mapped2,  exists(mapped('keyTwo')?) as exists_mapped2  from EventInfraPropertyDynamicNonSimpleOA",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nonsimple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nonsimple",
+      "op": "types",
+      "propertyOrder": [
+        "indexed1",
+        "exists_indexed1",
+        "indexed2",
+        "exists_indexed2",
+        "mapped1",
+        "exists_mapped1",
+        "mapped2",
+        "exists_mapped2"
+      ],
+      "propertyTypes": {
+        "exists_indexed1": "Boolean",
+        "exists_indexed2": "Boolean",
+        "exists_mapped1": "Boolean",
+        "exists_mapped2": "Boolean",
+        "indexed1": "Object",
+        "indexed2": "Object",
+        "mapped1": "Object",
+        "mapped2": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nonsimple",
+      "eventType": "EventInfraPropertyDynamicNonSimpleOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          null,
+          null
+        ]
+      }
+    },
+    {
+      "case": "nonsimple",
+      "eventType": "EventInfraPropertyDynamicNonSimpleOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          [
+            1,
+            2
+          ],
+          {
+            "keyOne": 3,
+            "keyTwo": 4
+          }
+        ]
+      }
+    },
+    {
+      "case": "nonsimple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "nonsimple",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNonSimpleXML",
+      "mode": "xml",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nonsimple",
+      "epl": "@name('s0') select indexed[0]? as indexed1, exists(indexed[0]?) as exists_indexed1, indexed[1]? as indexed2, exists(indexed[1]?) as exists_indexed2, mapped('keyOne')? as mapped1, exists(mapped('keyOne')?) as exists_mapped1, mapped('keyTwo')? as mapped2,  exists(mapped('keyTwo')?) as exists_mapped2  from EventInfraPropertyDynamicNonSimpleXML",
+      "mode": "xml",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nonsimple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nonsimple",
+      "op": "types",
+      "propertyOrder": [
+        "indexed1",
+        "exists_indexed1",
+        "indexed2",
+        "exists_indexed2",
+        "mapped1",
+        "exists_mapped1",
+        "mapped2",
+        "exists_mapped2"
+      ],
+      "propertyTypes": {
+        "exists_indexed1": "Boolean",
+        "exists_indexed2": "Boolean",
+        "exists_mapped1": "Boolean",
+        "exists_mapped2": "Boolean",
+        "indexed1": "Node",
+        "indexed2": "Node",
+        "mapped1": "Node",
+        "mapped2": "Node"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nonsimple",
+      "eventType": "EventInfraPropertyDynamicNonSimpleXML",
+      "mode": "xml",
+      "op": "send",
+      "payload": {
+        "xml": "",
+        "goXml": "<myevent></myevent>"
+      }
+    },
+    {
+      "case": "nonsimple",
+      "eventType": "EventInfraPropertyDynamicNonSimpleXML",
+      "mode": "xml",
+      "op": "send",
+      "payload": {
+        "xml": "<indexed>1</indexed><indexed>2</indexed><mapped id=\"keyOne\">3</mapped><mapped id=\"keyTwo\">4</mapped>",
+        "goXml": "<myevent><indexed>1</indexed><indexed>2</indexed><mapped id=\"keyOne\">3</mapped><mapped id=\"keyTwo\">4</mapped></myevent>"
+      }
+    },
+    {
+      "case": "nonsimple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "nonsimple",
+      "epl": "",
+      "eventType": "EventInfraPropertyDynamicNonSimpleAvro",
+      "mode": "avro",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nonsimple",
+      "epl": "@name('s0') select indexed[0]? as indexed1, exists(indexed[0]?) as exists_indexed1, indexed[1]? as indexed2, exists(indexed[1]?) as exists_indexed2, mapped('keyOne')? as mapped1, exists(mapped('keyOne')?) as exists_mapped1, mapped('keyTwo')? as mapped2,  exists(mapped('keyTwo')?) as exists_mapped2  from EventInfraPropertyDynamicNonSimpleAvro",
+      "mode": "avro",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nonsimple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nonsimple",
+      "op": "types",
+      "propertyOrder": [
+        "indexed1",
+        "exists_indexed1",
+        "indexed2",
+        "exists_indexed2",
+        "mapped1",
+        "exists_mapped1",
+        "mapped2",
+        "exists_mapped2"
+      ],
+      "propertyTypes": {
+        "exists_indexed1": "Boolean",
+        "exists_indexed2": "Boolean",
+        "exists_mapped1": "Boolean",
+        "exists_mapped2": "Boolean",
+        "indexed1": "Object",
+        "indexed2": "Object",
+        "mapped1": "Object",
+        "mapped2": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nonsimple",
+      "eventType": "EventInfraPropertyDynamicNonSimpleAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "nonsimple",
+      "eventType": "EventInfraPropertyDynamicNonSimpleAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "indexed": [
+          1,
+          2
+        ],
+        "mapped": {
+          "keyOne": 3,
+          "keyTwo": 4
+        }
+      }
+    },
+    {
+      "case": "nonsimple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "nonsimple",
+      "epl": "@JsonSchema(dynamic=true) @public @buseventtype create json schema EventInfraPropertyDynamicNonSimpleJson()",
+      "eventType": "EventInfraPropertyDynamicNonSimpleJson",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "op": "deployed",
+      "case": "nonsimple",
+      "statement": "schema"
+    },
+    {
+      "case": "nonsimple",
+      "epl": "@name('s0') select indexed[0]? as indexed1, exists(indexed[0]?) as exists_indexed1, indexed[1]? as indexed2, exists(indexed[1]?) as exists_indexed2, mapped('keyOne')? as mapped1, exists(mapped('keyOne')?) as exists_mapped1, mapped('keyTwo')? as mapped2,  exists(mapped('keyTwo')?) as exists_mapped2  from EventInfraPropertyDynamicNonSimpleJson",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nonsimple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nonsimple",
+      "op": "types",
+      "propertyOrder": [
+        "indexed1",
+        "exists_indexed1",
+        "indexed2",
+        "exists_indexed2",
+        "mapped1",
+        "exists_mapped1",
+        "mapped2",
+        "exists_mapped2"
+      ],
+      "propertyTypes": {
+        "exists_indexed1": "Boolean",
+        "exists_indexed2": "Boolean",
+        "exists_mapped1": "Boolean",
+        "exists_mapped2": "Boolean",
+        "indexed1": "Object",
+        "indexed2": "Object",
+        "mapped1": "Object",
+        "mapped2": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nonsimple",
+      "eventType": "EventInfraPropertyDynamicNonSimpleJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "nonsimple",
+      "eventType": "EventInfraPropertyDynamicNonSimpleJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "mapped": {
+          "keyOne": "3",
+          "keyTwo": "4"
+        },
+        "indexed": [
+          "1",
+          "2"
+        ]
+      }
+    },
+    {
+      "case": "nonsimple",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "nonsimple",
+      "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyDynamicNonSimple$MyLocalJsonProvided') @public @buseventtype create json schema EventInfraPropertyDynamicNonSimpleJsonProvided()",
+      "eventType": "EventInfraPropertyDynamicNonSimpleJsonProvided",
+      "mode": "json-provided",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "op": "deployed",
+      "case": "nonsimple",
+      "statement": "schema"
+    },
+    {
+      "case": "nonsimple",
+      "epl": "@name('s0') select indexed[0]? as indexed1, exists(indexed[0]?) as exists_indexed1, indexed[1]? as indexed2, exists(indexed[1]?) as exists_indexed2, mapped('keyOne')? as mapped1, exists(mapped('keyOne')?) as exists_mapped1, mapped('keyTwo')? as mapped2,  exists(mapped('keyTwo')?) as exists_mapped2  from EventInfraPropertyDynamicNonSimpleJsonProvided",
+      "mode": "json-provided",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nonsimple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nonsimple",
+      "op": "types",
+      "propertyOrder": [
+        "indexed1",
+        "exists_indexed1",
+        "indexed2",
+        "exists_indexed2",
+        "mapped1",
+        "exists_mapped1",
+        "mapped2",
+        "exists_mapped2"
+      ],
+      "propertyTypes": {
+        "exists_indexed1": "Boolean",
+        "exists_indexed2": "Boolean",
+        "exists_mapped1": "Boolean",
+        "exists_mapped2": "Boolean",
+        "indexed1": "Object",
+        "indexed2": "Object",
+        "mapped1": "Object",
+        "mapped2": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nonsimple",
+      "eventType": "EventInfraPropertyDynamicNonSimpleJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {}
+    },
+    {
+      "case": "nonsimple",
+      "eventType": "EventInfraPropertyDynamicNonSimpleJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "mapped": {
+          "keyOne": "3",
+          "keyTwo": "4"
+        },
+        "indexed": [
+          "1",
+          "2"
+        ]
+      }
+    },
+    {
+      "case": "nonsimple",
+      "op": "undeploy-all"
+    }
+  ],
+  "version": "esper-parity/v1"
+}
