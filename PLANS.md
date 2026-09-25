@@ -56,6 +56,38 @@ activity or a single coverage percentage.
 
 ## Current work unit
 
+Active: Draft 4.542 ('event-infra-getter-nested-fragment') - prefetch only.
+
+- Selection: `EventInfraGetterNested*` + `Simple*Fragment` cluster — 5
+  executions across 5 sibling files, all ord 0, no flags:
+  `EventInfraGetterNestedArray` (`java-runtime-718503411fc69f8f01c3`),
+  `EventInfraGetterNestedSimple` (`java-runtime-95388a521ff7fc9ae02e`),
+  `EventInfraGetterNestedSimpleDeep` (`java-runtime-08402ea2d9e12c7ad46c`),
+  `EventInfraGetterSimpleFragment` (`java-runtime-1eb5dcd8d9611c9f40eb`),
+  `EventInfraGetterSimpleNoFragment` (`java-runtime-9c65668855ac0fc31533`).
+- [ ] Java contract scout (JavaContract542) + Go surface scout
+- [x] Java contract scout (JavaContract542) + Go surface scout
+  (GoSurface542) complete; contract frozen in the Assets542 batch
+  context. All 5 representable, no boundaries: nested-array (fragment
+  null despite populated array), nested-simple (avro sender built but
+  never invoked in Java — only 5 underlyings), nested-simple-deep,
+  simple-fragment (only case with non-null fragments),
+  simple-no-fragment (7 underlyings incl. XML; Avro null ad-hoc
+  optionalString schema).
+- [x] Assets542 dispatched for scenario/oracle/runner/wiring.
+- [x] Assets542 delivered all assets after two repair rounds (internal
+  timer disabled for epoch times; merged-module deploy; XML XSD config;
+  nested-null untagging; typeof class names; OA fragment rendering;
+  no-op mutation fixed). Java trace + Go trace + evidence regenerated;
+  `-diff` passing / 0 differences (381 records each side); 6-test
+  family green; `make check` exit 0.
+- [x] Parity review (Review542): OVERALL PASS; P3 fixed — `epl` made
+  optional on xml-mode schema deploy steps so the evidence-embedded
+  scenario round-trips (omitempty gap), mutation repointed.
+- [ ] Commit.
+
+## Current work unit
+
 Active: Draft 4.541 ('event-infra-getter-dynamic') - prefetch only.
 
 - Selection: `EventInfraGetterDynamic*` cluster — 5 executions across 5
@@ -83,7 +115,8 @@ Active: Draft 4.541 ('event-infra-getter-dynamic') - prefetch only.
   `make check` exit 0.
 - [x] Parity review (Review541): OVERALL PASS; two PLANS.md P3 nits
   fixed (runtime ID leading zero, quirk wording).
-- [ ] Commit.
+- [x] Shipped; Git owns identity. Draft 4.541 committed and pushed as
+  `df006948c`.
 
 ## Current work unit
 

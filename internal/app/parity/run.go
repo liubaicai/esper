@@ -88,6 +88,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include event-map-properties and event-map-properties-diff")
 		fmt.Fprintln(stderr, "runner modes include event-object-array-core and event-object-array-core-diff")
 		fmt.Fprintln(stderr, "runner modes include event-infra-getter-dynamic and event-infra-getter-dynamic-diff")
+		fmt.Fprintln(stderr, "runner modes include event-infra-getter-nested and event-infra-getter-nested-diff")
 		fmt.Fprintln(stderr, "runner modes include epl-other-istream-rstream-keywords and epl-other-istream-rstream-keywords-diff")
 		fmt.Fprintln(stderr, "runner modes include epl-other-create-expression and epl-other-create-expression-diff")
 		fmt.Fprintln(stderr, "runner modes include epl-other-invalid and epl-other-invalid-diff")
@@ -473,6 +474,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadEventObjectArrayCoreScenario(file)
 	} else if *mode == "event-infra-getter-dynamic" || *mode == "event-infra-getter-dynamic-diff" {
 		scenario, err = loadEventInfraGetterDynamicScenario(file)
+	} else if *mode == "event-infra-getter-nested" || *mode == "event-infra-getter-nested-diff" {
+		scenario, err = loadEventInfraGetterNestedScenario(file)
 	} else if *mode == "epl-other-istream-rstream-keywords" || *mode == "epl-other-istream-rstream-keywords-diff" {
 		scenario, err = loadEplOtherIStreamRStreamKeywordsScenario(file)
 	} else if *mode == "infra-table-invalid" || *mode == "infra-table-invalid-diff" {
@@ -4827,6 +4830,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, eventInfraGetterDynamicJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, eventInfraGetterDynamicJavaSources),
 				splitMetadata(*javaExecutions, eventInfraGetterDynamicJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "event-infra-getter-nested" || *mode == "event-infra-getter-nested-diff" {
+		trace, err := runEventInfraGetterNestedScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "event-infra-getter-nested-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, eventInfraGetterNestedJavaCommit,
+				splitMetadata(*javaRuntimeIDs, eventInfraGetterNestedJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, eventInfraGetterNestedJavaSources),
+				splitMetadata(*javaExecutions, eventInfraGetterNestedJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

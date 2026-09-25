@@ -99,7 +99,8 @@
     "internal/esper/event_render.go",
     "internal/esper/schema_test.go",
     "internal/esper/event_render_test.go",
-    "internal/app/parity/event_infra_getter_dynamic.go"
+    "internal/app/parity/event_infra_getter_dynamic.go",
+    "internal/app/parity/event_infra_getter_nested.go"
    ],
    "phase": 1,
    "status": "differential-verified",
@@ -134,7 +135,12 @@
     "java-runtime-c6db3a43dfabaf9c0f86",
     "java-runtime-5ef37219e1c801e38af7",
     "java-runtime-1a68e3e356c953b9c774",
-    "java-runtime-0d912287d52a89b8725c"
+    "java-runtime-0d912287d52a89b8725c",
+    "java-runtime-718503411fc69f8f01c3",
+    "java-runtime-95388a521ff7fc9ae02e",
+    "java-runtime-08402ea2d9e12c7ad46c",
+    "java-runtime-1eb5dcd8d9611c9f40eb",
+    "java-runtime-9c65668855ac0fc31533"
    ]
   },
   {
@@ -6792,6 +6798,74 @@
     "java-runtime-5ef37219e1c801e38af7",
     "java-runtime-1a68e3e356c953b9c774",
     "java-runtime-0d912287d52a89b8725c"
+   ]
+  },
+  {
+   "id": "case.event-infra-getter-nested-fragment",
+   "javaRuntimeIds": [
+    "java-runtime-718503411fc69f8f01c3",
+    "java-runtime-95388a521ff7fc9ae02e",
+    "java-runtime-08402ea2d9e12c7ad46c",
+    "java-runtime-1eb5dcd8d9611c9f40eb",
+    "java-runtime-9c65668855ac0fc31533"
+   ],
+   "javaStaticIds": [
+    "java-fa2a2775be3aa199b6a8",
+    "java-45de20b4c43758274efe",
+    "java-45fb81d0945532503b7c",
+    "java-1d9833f8696776c207ae",
+    "java-2be3bd8162600f6a48eb"
+   ],
+   "javaNames": [
+    "EventInfraGetterNestedArray",
+    "EventInfraGetterNestedSimple",
+    "EventInfraGetterNestedSimpleDeep",
+    "EventInfraGetterSimpleFragment",
+    "EventInfraGetterSimpleNoFragment"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraGetterNestedArray.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraGetterNestedSimple.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraGetterNestedSimpleDeep.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraGetterSimpleFragment.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraGetterSimpleNoFragment.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunEventInfraGetterNestedDirectReplay",
+    "internal/app/parity/run_test.go:TestRunEventInfraGetterNestedDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunEventInfraGetterNestedCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunEventInfraGetterNestedDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunEventInfraGetterNestedRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunEventInfraGetterNestedRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "event",
+    "getter",
+    "nested-property",
+    "fragment",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/event-infra-getter-nested.json",
+    "testdata/parity/event-infra-getter-nested.trace.json",
+    "testdata/parity/event-infra-getter-nested.go.trace.json",
+    "testdata/parity/event-infra-getter-nested.evidence.json",
+    "tools/java-oracle/EventInfraGetterNestedScenarioOracle.java",
+    "tools/java-oracle/run-event-infra-getter-nested.sh"
+   ],
+   "notes": "EventInfraGetterNested*/Simple*Fragment cluster born-differential: 5 executions across underlyings (bean/map/objectarray/json/json-provided/avro, +XML for simple-no-fragment). Nested property getters \u2014 nested-array property[i].id (fragment always null despite populated array), nested-simple property.id (avro sender built but never invoked \u2014 5 underlyings only), nested-simple-deep property.leaf.id (leaf-null vs absent exists distinction), simple-fragment property (ONLY case with non-null fragments \u2014 fragment tracks hasValue, typeof reports binary class name for bean/json-provided), simple-no-fragment property (scalar, exists always true, fragment always null, 7 underlyings incl. XML with XSD-enabled registration and ad-hoc optionalString Avro null send). Java/Go 381 records each, 0 differences. Scenario testdata/parity/event-infra-getter-nested.json; Java trace via tools/java-oracle/run-event-infra-getter-nested.sh at commit 9e1b9f1cc9117fea4bf33ab043762c045d73839c.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-718503411fc69f8f01c3",
+    "java-runtime-95388a521ff7fc9ae02e",
+    "java-runtime-08402ea2d9e12c7ad46c",
+    "java-runtime-1eb5dcd8d9611c9f40eb",
+    "java-runtime-9c65668855ac0fc31533"
    ]
   },
   {
@@ -53453,13 +53527,17 @@
   {
    "capabilityId": "event.property-access-render",
    "caseId": "case.event-infra-getter-dynamic"
+  },
+  {
+   "capabilityId": "event.property-access-render",
+   "caseId": "case.event-infra-getter-nested-fragment"
   }
  ],
  "summary": {
-  "inventoriedCases": 772,
-  "implementedCases": 770,
-  "differentialVerifiedCases": 395,
-  "differentialVerifiedRuntimeIds": 1564,
+  "inventoriedCases": 773,
+  "implementedCases": 771,
+  "differentialVerifiedCases": 396,
+  "differentialVerifiedRuntimeIds": 1569,
   "intentionallyDifferentCases": 36,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -53469,13 +53547,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4102,
-  "referencedJavaRuntimeIds": 3662,
+  "runtimeAssociationCount": 4107,
+  "referencedJavaRuntimeIds": 3667,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 474,
+  "unreferencedJavaRuntimeIds": 469,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 772,
+  "totalCases": 773,
   "totalCapabilities": 126
  }
 }
