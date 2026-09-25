@@ -680,10 +680,11 @@
     "internal/esper/plan.go",
     "internal/esper/runtime.go",
     "internal/esper/stream.go",
-    "internal/esper/subquery.go"
+    "internal/esper/subquery.go",
+    "internal/app/parity/epl_other_invalid.go"
    ],
    "phase": 1,
-   "status": "implemented",
+   "status": "differential-verified",
    "remaining": [
     "automatic heterogeneous branch-result coercion and complete array/collection representation and parameterized metadata matrix",
     "complete MathContext/decimal scale and rounding policy, mixed BigDecimal/BigInteger result metadata and division configuration matrix",
@@ -693,7 +694,119 @@
    ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-0423d81802ef0e7eb910",
+    "java-runtime-05ccdeb4452a67eedf53",
+    "java-runtime-09f15b6eb39cbee59b0d",
+    "java-runtime-0a352fd0c30e1b3a175c",
+    "java-runtime-0a80365acd3e6ab25238",
+    "java-runtime-0b433ef7a54f23fbe592",
+    "java-runtime-0b91403db9a899efde99",
+    "java-runtime-0ee4f2c3f1d9129e2598",
+    "java-runtime-0ee5536b7a3d3d75f2eb",
+    "java-runtime-0f635579498bb6de3a4c",
+    "java-runtime-1145ffc38eea9ce1624e",
+    "java-runtime-1335a465f707da5fce60",
+    "java-runtime-13ae251df45f9dc74efa",
+    "java-runtime-143c2fcf5bb1e4e6aa4a",
+    "java-runtime-15341d9e0dc15c4b2fc3",
+    "java-runtime-1eaef3b328c31a863b26",
+    "java-runtime-2012a048edc6511a33e0",
+    "java-runtime-203a97dc1cba0371469c",
+    "java-runtime-247c1169dd5c24bd21f0",
+    "java-runtime-267b8adf5d9d88dc025f",
+    "java-runtime-28a96cc89bb103f3750a",
+    "java-runtime-2ee2b8ab1bf9bb2c4e90",
+    "java-runtime-2efbbb4fce55aa6ce513",
+    "java-runtime-2fb582ea3ac2dc026c82",
+    "java-runtime-2fcd2094aaf18ca4ce03",
+    "java-runtime-31934462edbc04c83973",
+    "java-runtime-35ef58e0d7badc88b6a8",
+    "java-runtime-376f347aa8fc8367fcbc",
+    "java-runtime-3fc2cde530f321dc3994",
+    "java-runtime-402d95bd69d700735100",
+    "java-runtime-4202039fb2f1ea65fd49",
+    "java-runtime-45b9d5a2e216f8063b75",
+    "java-runtime-472cb29d507ae5c936dc",
+    "java-runtime-4f528156acde446ee4bc",
+    "java-runtime-52fb8d57dd380f5efe6e",
+    "java-runtime-5382b8fdaf27ebf5549b",
+    "java-runtime-53d0455ef4e377c9c2f9",
+    "java-runtime-58852773df609efe7d69",
+    "java-runtime-5b126fe7fb865be8b293",
+    "java-runtime-5c9fdd17b5480f9d78e2",
+    "java-runtime-5e744f4720368eb6585b",
+    "java-runtime-5faf7e21d34b62b817da",
+    "java-runtime-61170f8386522145cdeb",
+    "java-runtime-615cb125ab25e488f40c",
+    "java-runtime-6464df255cd4e23a89e7",
+    "java-runtime-6593e0f0cc79ed906f52",
+    "java-runtime-67cfbf9b5ab8a66e4eb0",
+    "java-runtime-6bfe22f39179b852ffc6",
+    "java-runtime-6daa4310cb2a1762a0dd",
+    "java-runtime-725a9999f48d69d792a2",
+    "java-runtime-7819faeecbb3e817d49d",
+    "java-runtime-785742544d6ada82189d",
+    "java-runtime-791d833152f1266fa139",
+    "java-runtime-7cac5278b06087f8e7f2",
+    "java-runtime-7dc8b98263cf5e9e4c3f",
+    "java-runtime-7e8cd12d2a61f4041a0e",
+    "java-runtime-7f521477b7d4c3bca248",
+    "java-runtime-8015ac40d3460b710377",
+    "java-runtime-80f51700913a463ab267",
+    "java-runtime-81d2223362062b76b0a5",
+    "java-runtime-85175d99c086015482b2",
+    "java-runtime-8a8794063a0b9c4bfd0e",
+    "java-runtime-8fa7f5076dde9d791d08",
+    "java-runtime-90acb833cacfcc15bc5d",
+    "java-runtime-918e33ab1e3121523cc5",
+    "java-runtime-9341a1983c1f4fb3fdda",
+    "java-runtime-93515ff2a2f83c9dc747",
+    "java-runtime-94a2be557857d83a0b1b",
+    "java-runtime-96c8b8cb4cf36a523669",
+    "java-runtime-9763034f955be3c39731",
+    "java-runtime-9957cb6d9cd9ea836d4d",
+    "java-runtime-9babbbb6f96faf389bb7",
+    "java-runtime-a706db6229e97d723f3f",
+    "java-runtime-ab467628bb158bf8ce6c",
+    "java-runtime-afd826c7d955eb538001",
+    "java-runtime-b0d354033a204970cb26",
+    "java-runtime-b9d938f2dc52682b77c0",
+    "java-runtime-bc85bc8d79bc09bb8500",
+    "java-runtime-bcdd330f46ca3dd63da7",
+    "java-runtime-c0d2bebfa077f7e51474",
+    "java-runtime-c1c1fd3dc31af4864a50",
+    "java-runtime-c5af420270464e5633f7",
+    "java-runtime-c63d599754acde7bb4dc",
+    "java-runtime-c92db51ca175df9b4a5c",
+    "java-runtime-c9475d47ffbc6275e330",
+    "java-runtime-ca0799a6f2d163a49f7f",
+    "java-runtime-cb993aa0d17d61b0d45f",
+    "java-runtime-d3480b360fc494237ec7",
+    "java-runtime-d6084d5b7a191cbde6cd",
+    "java-runtime-d6258e053355ac85022b",
+    "java-runtime-d77c035088ce635538c7",
+    "java-runtime-d9a1d367adf58cbc3e72",
+    "java-runtime-dd66747a433d48b14c38",
+    "java-runtime-deee6eb6aef5c6bfa2a7",
+    "java-runtime-e1d8bce93d3743e9137f",
+    "java-runtime-e29e7c3671fa1488e788",
+    "java-runtime-e48bf14356e3aeb838b5",
+    "java-runtime-e9ae8d32b9f6155877ef",
+    "java-runtime-e9c9627ad604f3404620",
+    "java-runtime-eb0d233c3d7f90db1120",
+    "java-runtime-eeeacbe2c7669e1e1207",
+    "java-runtime-f446c95462162907b0c6",
+    "java-runtime-f44847213060b8eb3949",
+    "java-runtime-f53aa2ad87c7997d7c36",
+    "java-runtime-f57ec2f2f04aad28961d",
+    "java-runtime-fb5317848fcedbabf016",
+    "java-runtime-fc4c87ba7677b72cab9a",
+    "java-runtime-fdef3bed6ec0b16d36db",
+    "java-runtime-ffe28bce1e8e2a0dc4a0"
    ]
   },
   {
@@ -26464,6 +26577,98 @@
     "java-runtime-d1b67308d74aec6b3092",
     "java-runtime-65eb95bacf881252faa4",
     "java-runtime-45b280bc6b857cf5fa3a"
+   ]
+  },
+  {
+   "id": "case.epl-other-invalid",
+   "javaRuntimeIds": [
+    "java-runtime-13ae251df45f9dc74efa",
+    "java-runtime-7e8cd12d2a61f4041a0e"
+   ],
+   "javaStaticIds": [
+    "java-5f23e933953bbae72045",
+    "java-781d7db6d45ac322456b"
+   ],
+   "javaNames": [
+    "EPLOtherLongTypeConstant",
+    "EPLOtherDifferentJoins"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherInvalid.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunEplOtherInvalidDirectReplay",
+    "internal/app/parity/run_test.go:TestRunEplOtherInvalidDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunEplOtherInvalidCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunEplOtherInvalidDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunEplOtherInvalidRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunEplOtherInvalidRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "correctness",
+    "epl",
+    "invalid",
+    "join",
+    "compile-error",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/epl-other-invalid.json",
+    "testdata/parity/epl-other-invalid.trace.json",
+    "testdata/parity/epl-other-invalid.go.trace.json",
+    "testdata/parity/epl-other-invalid.evidence.json",
+    "tools/java-oracle/EPLOtherInvalidScenarioOracle.java",
+    "tools/java-oracle/run-epl-other-invalid.sh"
+   ],
+   "notes": "EPLOtherInvalid ordinals 2/3 born-differential. LongTypeConstant: `select 2512570244 as value` deploys and emits int64(2512570244) \u2014 the >int32 literal types as long on both sides (the L suffix is EPL-text-only). DifferentJoins: the 50-probe compile-only validity matrix \u2014 27 valid join forms deploy via JoinMany/JoinChain + OnSourcesEqual/OnSourcesCompare + Where (numeric coercion, arithmetic operands, nested And/Or, unqualified field on the two-different-type stream, outer-join ON operand order); 12 compile-error 'rejected' records (6 unknown-field/alias probes \u2014 sb.XX, sa.XX=sb.XX, sa.XX=sb.intBoxed, sX.theString x2, intPrimitive=x \u2014 plus 6 Build-rejected type mismatches via the untyped EqualOf/GreaterOrEqualOf surfaces: equalityTypesCompatible rejects int/string, *int/bool, int/string-literal, string/int-literal, *bool non-ordered, unknown field 'f'); 5 unrepresentable (4 unbalanced-paren EPL texts + ambiguous unqualified intPrimitive); 6 intentionally-different markers where Go accepts what Java rejects (non-equi outer-join ON sa.intPrimitive<=sb.intBoxed, same-source ON sa.intPrimitive=sa.intBoxed and sb.intPrimitive=sb.intBoxed, plus untyped-surface acceptances sa.intPrimitive>=sa.theString, on boolBoxed=intBoxed, on boolPrimitive=theString \u2014 all verified Go Build accepts). Java/Go 57 records each, 0 differences. Scenario testdata/parity/epl-other-invalid.json; Java trace via tools/java-oracle/run-epl-other-invalid.sh at commit 9e1b9f1cc9117fea4bf33ab043762c045d73839c.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-13ae251df45f9dc74efa",
+    "java-runtime-7e8cd12d2a61f4041a0e"
+   ]
+  },
+  {
+   "id": "case.epl-other-invalid-syntax",
+   "javaRuntimeIds": [
+    "java-runtime-57d4ed46cb893b70792c",
+    "java-runtime-1ca3b083af4e59da8024"
+   ],
+   "javaStaticIds": [
+    "java-6cb657c46f10fbb54e9f",
+    "java-1f8004583e889e7d519d"
+   ],
+   "javaNames": [
+    "EPLOtherInvalidFuncParams",
+    "EPLOtherInvalidSyntax"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherInvalid.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunEplOtherInvalidDirectReplay",
+    "internal/app/parity/run_test.go:TestRunEplOtherInvalidRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "epl",
+    "invalid",
+    "intentionally-different"
+   ],
+   "status": "intentionally-different",
+   "evidence": [
+    "testdata/parity/epl-other-invalid.json",
+    "testdata/parity/epl-other-invalid.trace.json",
+    "testdata/parity/epl-other-invalid.evidence.json"
+   ],
+   "difference": "EPLOtherInvalidFuncParams and EPLOtherInvalidSyntax are EPL-text-only rejection surfaces: count(theString,theString,theString) and leaving(theString) arity errors are Go compile-time (Count takes one argument, Leaving takes an optional bool filter); 'select * from *', the reserved-keyword 'start' between-probe, and the 1=2=3 equals chain are EPL parser diagnostics with no Go AST. Both sides emit pinned unrepresentable marker records carrying the exact Java messages; the oracle verifies each rejection in-process before emitting.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "intentionally-different"
    ]
   },
   {
@@ -53087,29 +53292,37 @@
   {
    "capabilityId": "expr.declared",
    "caseId": "case.expr-define-value-parameter"
+  },
+  {
+   "capabilityId": "expr.core",
+   "caseId": "case.epl-other-invalid"
+  },
+  {
+   "capabilityId": "expr.core",
+   "caseId": "case.epl-other-invalid-syntax"
   }
  ],
  "summary": {
-  "inventoriedCases": 768,
-  "implementedCases": 766,
-  "differentialVerifiedCases": 393,
-  "differentialVerifiedRuntimeIds": 1553,
-  "intentionallyDifferentCases": 34,
+  "inventoriedCases": 770,
+  "implementedCases": 768,
+  "differentialVerifiedCases": 394,
+  "differentialVerifiedRuntimeIds": 1555,
+  "intentionallyDifferentCases": 35,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 126,
   "implementedCapabilities": 125,
-  "differentialVerifiedCapabilities": 48,
+  "differentialVerifiedCapabilities": 49,
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4088,
-  "referencedJavaRuntimeIds": 3648,
+  "runtimeAssociationCount": 4092,
+  "referencedJavaRuntimeIds": 3652,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 488,
+  "unreferencedJavaRuntimeIds": 484,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 768,
+  "totalCases": 770,
   "totalCapabilities": 126
  }
 }

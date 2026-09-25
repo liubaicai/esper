@@ -81787,3 +81787,360 @@ func TestRunExprDefineValueParameterCheckedInEvidenceMatchesTraceAndReplay(t *te
 		t.Fatalf("checked-in scenario differs from evidence scenario")
 	}
 }
+
+func TestRunEplOtherInvalidDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", eplOtherInvalidID,
+		"-scenario", filepath.Join(root, eplOtherInvalidID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertEplOtherInvalidTrace(t, trace)
+}
+
+func TestRunEplOtherInvalidDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-invalid.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "epl-other-invalid.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-invalid.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "epl-other-invalid-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	if len(evidence.JavaRuntimeIDs) != 4 {
+		t.Fatalf("runtime ids = %d, want 4", len(evidence.JavaRuntimeIDs))
+	}
+}
+
+func TestRunEplOtherInvalidDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "count-arity-drift",
+			mutate: func(trace *compat.Trace) {
+				// The count-three-args unrepresentable record pins the
+				// full arity message verbatim.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "invalid-func-params" && rec.Statement == "count-three-args" {
+						rec.Value = "different error"
+						return
+					}
+				}
+				panic("no count-three-args record")
+			},
+		},
+		{
+			name: "syntax-message-drift",
+			mutate: func(trace *compat.Trace) {
+				// The reserved-keyword unrepresentable record pins the
+				// assertEquals message verbatim.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "invalid-syntax" && rec.Statement == "reserved-keyword" {
+						rec.Value = "different error"
+						return
+					}
+				}
+				panic("no reserved-keyword record")
+			},
+		},
+		{
+			name: "rejected-marker-drift",
+			mutate: func(trace *compat.Trace) {
+				// The on-int-eq-xx compile-error record pins the
+				// 'rejected' marker.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "different-joins" && rec.Statement == "on-int-eq-xx" {
+						rec.Value = "different error"
+						return
+					}
+				}
+				panic("no on-int-eq-xx record")
+			},
+		},
+		{
+			name: "divergent-note-drift",
+			mutate: func(trace *compat.Trace) {
+				// The on-int-le-intboxed intentionally-different record
+				// pins the divergence note.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "different-joins" && rec.Statement == "on-int-le-intboxed" {
+						rec.Value = "different error"
+						return
+					}
+				}
+				panic("no on-int-le-intboxed record")
+			},
+		},
+		{
+			name: "record-dropped",
+			mutate: func(trace *compat.Trace) {
+				// All 57 records must replay.
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-invalid.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "epl-other-invalid.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-invalid.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "epl-other-invalid-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunEplOtherInvalidRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "epl-other-invalid.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "epl-other-invalid"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "epl-other-invalid"`)...), 1)
+		}},
+		{name: "case-metadata", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 3`), []byte(`"ordinal": 4`), 1)
+		}},
+		{name: "step-field-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "deploy",
+   "case": "long-type-constant",
+   "statement": "s0"`), []byte(`"op": "deploy",
+   "case": "long-type-constant",
+   "statement": "s0",
+   "extra": 0`), 1)
+		}},
+		{name: "step-field-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"statement": "count-three-args",`), []byte(`"statement": "count-three-args",
+      "statement": "count-three-args",`), 1)
+		}},
+		{name: "step-path-mutated", mutate: func(data []byte) []byte {
+			// The probes compile without a module path; dropping the
+			// compileWithoutPath flag breaks the pinned key.
+			return bytes.Replace(data, []byte(`"statement": "from-star",
+   "epl": "select * from *",
+   "expectError": "Incorrect syntax near '*' at line 1 column 14, please check the from clause [select * from *]",
+   "compileWithoutPath": true
+  }`), []byte(`"statement": "from-star",
+   "epl": "select * from *",
+   "expectError": "Incorrect syntax near '*' at line 1 column 14, please check the from clause [select * from *]"
+  }`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", "epl-other-invalid",
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunEplOtherInvalidRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-invalid.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, eplOtherInvalidJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, eplOtherInvalidJavaExecutions) {
+		t.Fatalf("scenario metadata runtimes=%v names=%v", document.JavaRuntimes, document.JavaNames)
+	}
+	for _, entry := range document.Cases {
+		if eplOtherInvalidCaseRuntimeIDs[entry.Case] != entry.RuntimeID {
+			t.Fatalf("case %q runtimeId = %q, want %q", entry.Case, entry.RuntimeID, eplOtherInvalidCaseRuntimeIDs[entry.Case])
+		}
+	}
+}
+
+func TestRunHelpIncludesEplOtherInvalid(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-h"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("help exit code = %d, stderr = %q", code, stderr.String())
+	}
+	for _, mode := range []string{
+		"epl-other-invalid",
+		"epl-other-invalid-diff",
+	} {
+		if !strings.Contains(stderr.String(), mode) {
+			t.Fatalf("help output omits %q: %s", mode, stderr.String())
+		}
+	}
+}
+
+func assertEplOtherInvalidTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != eplOtherInvalidID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 57 {
+		t.Fatalf("trace records = %d, want 57", len(trace.Records))
+	}
+	counts := map[string]map[string]int{}
+	for _, record := range trace.Records {
+		if counts[record.Case] == nil {
+			counts[record.Case] = map[string]int{}
+		}
+		counts[record.Case][record.Operation]++
+	}
+	want := map[string]map[string]int{
+		"invalid-func-params": {"unrepresentable": 2},
+		"invalid-syntax":      {"unrepresentable": 3},
+		"long-type-constant":  {"deployed": 1, "listener": 1},
+		"different-joins":     {"deployed": 27, "compile-error": 12, "unrepresentable": 5, "intentionally-different": 6},
+	}
+	if !reflect.DeepEqual(counts, want) {
+		t.Fatalf("record counts = %#v, want %#v", counts, want)
+	}
+}
+
+func TestRunEplOtherInvalidCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, eplOtherInvalidID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, eplOtherInvalidID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, eplOtherInvalidID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if evidence.JavaCommit != eplOtherInvalidJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, eplOtherInvalidJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, eplOtherInvalidSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, eplOtherInvalidJavaExecutions) {
+		t.Fatalf("checked-in Java metadata = %#v", evidence)
+	}
+	assertEplOtherInvalidTrace(t, javaTrace)
+	assertEplOtherInvalidTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, eplOtherInvalidID+".json")
+	scenarioData, err := os.ReadFile(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rawScenario struct {
+		Version string        `json:"version"`
+		ID      string        `json:"id"`
+		Steps   []compat.Step `json:"steps"`
+	}
+	if err := json.Unmarshal(scenarioData, &rawScenario); err != nil {
+		t.Fatal(err)
+	}
+	scenario := compat.Scenario{Version: rawScenario.Version, ID: rawScenario.ID, Steps: rawScenario.Steps}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatalf("checked-in scenario differs from evidence scenario")
+	}
+}

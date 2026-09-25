@@ -1,0 +1,1390 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-57d4ed46cb893b70792c",
+    "java-runtime-1ca3b083af4e59da8024",
+    "java-runtime-13ae251df45f9dc74efa",
+    "java-runtime-7e8cd12d2a61f4041a0e"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherInvalid.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherInvalid.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherInvalid.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherInvalid.java"
+  ],
+  "javaExecutions": [
+    "EPLOtherInvalidFuncParams",
+    "EPLOtherInvalidSyntax",
+    "EPLOtherLongTypeConstant",
+    "EPLOtherDifferentJoins"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "epl-other-invalid",
+    "steps": [
+      {
+        "op": "case",
+        "case": "invalid-func-params"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "invalid-func-params",
+        "statement": "count-three-args",
+        "expectError": "Failed to validate select-clause expression 'count(theString,theString,theString)': The 'count' function expects at least 1 and up to 2 parameters",
+        "epl": "select count(theString, theString, theString) from SupportBean"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "invalid-func-params",
+        "statement": "leaving-with-param",
+        "expectError": "Failed to validate select-clause expression 'leaving(theString)': The 'leaving' function expects no parameters",
+        "epl": "select leaving(theString) from SupportBean"
+      },
+      {
+        "op": "case",
+        "case": "invalid-syntax"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "invalid-syntax",
+        "statement": "from-star",
+        "expectError": "Incorrect syntax near '*' at line 1 column 14, please check the from clause [select * from *]",
+        "epl": "select * from *"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "invalid-syntax",
+        "statement": "reserved-keyword",
+        "expectError": "Incorrect syntax near 'start' (a reserved keyword) at line 1 column 59, please check the where clause [select * from SupportBean a where a.intPrimitive between r.start and r.end]",
+        "epl": "select * from SupportBean a where a.intPrimitive between r.start and r.end"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "invalid-syntax",
+        "statement": "filter-equals-chain",
+        "expectError": "Failed to validate filter expression '1=2': Invalid use of equals, expecting left-hand side and right-hand side but received 3 expressions",
+        "epl": "select * from SupportBean(1=2=3)"
+      },
+      {
+        "op": "case",
+        "case": "long-type-constant"
+      },
+      {
+        "op": "deploy",
+        "case": "long-type-constant",
+        "statement": "s0",
+        "epl": "@name('s0') select 2512570244 as value from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "long-type-constant",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "long-type-constant",
+        "eventType": "SupportBean",
+        "payload": {}
+      },
+      {
+        "op": "undeploy-all",
+        "case": "long-type-constant"
+      },
+      {
+        "op": "case",
+        "case": "different-joins"
+      },
+      {
+        "op": "build-error",
+        "case": "different-joins",
+        "statement": "where-int-eq-string",
+        "expectError": "rejected",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.intPrimitive = sb.theString"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "where-int-eq-intboxed",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.intPrimitive = sb.intBoxed"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "where-int-eq-intboxed"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "where-int-eq-int",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.intPrimitive = sb.intPrimitive"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "where-int-eq-int"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "where-int-eq-longboxed",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.intPrimitive = sb.longBoxed"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "where-int-eq-longboxed"
+      },
+      {
+        "op": "build-error",
+        "case": "different-joins",
+        "statement": "where-and-intboxed-bool",
+        "expectError": "rejected",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.intPrimitive = sb.intPrimitive and sb.intBoxed = sa.boolPrimitive"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "where-and-boolboxed-bool",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.intPrimitive = sb.intPrimitive and sb.boolBoxed = sa.boolPrimitive"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "where-and-boolboxed-bool"
+      },
+      {
+        "op": "build-error",
+        "case": "different-joins",
+        "statement": "where-and-thestring-sx",
+        "expectError": "rejected",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.intPrimitive = sb.intPrimitive and sb.intBoxed = sa.intPrimitive and sa.theString=sX.theString"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "where-and-thestring-sb",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.intPrimitive = sb.intPrimitive and sb.intBoxed = sa.intPrimitive and sa.theString=sb.theString"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "where-and-thestring-sb"
+      },
+      {
+        "op": "build-error",
+        "case": "different-joins",
+        "statement": "where-or-thestring-sx",
+        "expectError": "rejected",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.intPrimitive = sb.intPrimitive or sa.theString=sX.theString"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "where-or-intboxed-eq-int",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.intPrimitive = sb.intPrimitive or sb.intBoxed = sa.intPrimitive"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "where-or-intboxed-eq-int"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "where-const-int",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.intPrimitive=5"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "where-const-int"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "where-const-string-sq",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.theString='4'"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "where-const-string-sq"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "where-const-string-dq",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.theString=\"4\""
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "where-const-string-dq"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "where-const-bool",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.boolPrimitive=false"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "where-const-bool"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "where-const-long",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.longPrimitive=-5L"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "where-const-long"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "where-const-double",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.doubleBoxed=5.6d"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "where-const-double"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "where-const-float",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.floatPrimitive=-5.6f"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "where-const-float"
+      },
+      {
+        "op": "build-error",
+        "case": "different-joins",
+        "statement": "where-int-eq-str5",
+        "expectError": "rejected",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.intPrimitive='5'"
+      },
+      {
+        "op": "build-error",
+        "case": "different-joins",
+        "statement": "where-thestring-eq-5",
+        "expectError": "rejected",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.theString=5"
+      },
+      {
+        "op": "build-error",
+        "case": "different-joins",
+        "statement": "where-boolboxed-eq-f",
+        "expectError": "rejected",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.boolBoxed=f"
+      },
+      {
+        "op": "build-error",
+        "case": "different-joins",
+        "statement": "where-int-eq-x",
+        "expectError": "rejected",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.intPrimitive=x"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "where-int-eq-double",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.intPrimitive=5.5"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "where-int-eq-double"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "where-int-eq-arith-add",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.intPrimitive=sa.intBoxed + 5"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "where-int-eq-arith-add"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "where-int-eq-arith-mixed",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.intPrimitive=2*sa.intBoxed - sa.intPrimitive/10 + 1"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "where-int-eq-arith-mixed"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "where-int-eq-arith-parens",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.intPrimitive=2*(sa.intBoxed - sa.intPrimitive)/(10 + 1)"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "where-int-eq-arith-parens"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "different-joins",
+        "statement": "where-arith-unbalanced",
+        "expectError": "sa.intPrimitive=2*(sa.intBoxed: the unbalanced-paren EPL text has no fluent form — the Go And/Or/arithmetic tree is structural; Java rejects the parse error at compile time",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.intPrimitive=2*(sa.intBoxed"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "where-cmp-cross",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.intPrimitive \u003e sa.intBoxed and sb.doublePrimitive \u003c sb.doubleBoxed"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "where-cmp-cross"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "where-cmp-same",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.intPrimitive \u003e= sa.intBoxed and sa.doublePrimitive \u003c= sa.doubleBoxed"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "where-cmp-same"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "where-cmp-arith",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.intPrimitive \u003e (sa.intBoxed + sb.doublePrimitive)"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "where-cmp-arith"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "different-joins",
+        "statement": "where-int-ge-thestring",
+        "expectError": "sa.intPrimitive \u003e= sa.theString: Java rejects the int-vs-string relational comparison at compile time; Go GreaterOrEqualOf takes untyped operands and its ordered-type check accepts strings, so the build succeeds",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.intPrimitive \u003e= sa.theString"
+      },
+      {
+        "op": "build-error",
+        "case": "different-joins",
+        "statement": "where-boolboxed-ge-bool",
+        "expectError": "rejected",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.boolBoxed \u003e= sa.boolPrimitive"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "where-nested-or",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where (sa.intPrimitive=3) or (sa.intBoxed=3 and sa.intPrimitive=1)"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "where-nested-or"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "where-nested-and",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where ((sa.intPrimitive\u003e3) or (sa.intBoxed\u003c3)) and sa.boolBoxed=false"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "where-nested-and"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "where-nested-mixed",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where (sa.intPrimitive\u003c=3 and sa.intPrimitive\u003e=1) or (sa.boolBoxed=false and sa.boolPrimitive=true)"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "where-nested-mixed"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "different-joins",
+        "statement": "where-or-unbalanced-open",
+        "expectError": "sa.intPrimitive=3 or (sa.intBoxed=2: the unbalanced-paren EPL text has no fluent form — the Go And/Or tree is structural; Java rejects the parse error at compile time",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.intPrimitive=3 or (sa.intBoxed=2"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "different-joins",
+        "statement": "where-or-unbalanced-close",
+        "expectError": "sa.intPrimitive=3 or sa.intBoxed=2): the unbalanced-paren EPL text has no fluent form — the Go And/Or tree is structural; Java rejects the parse error at compile time",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.intPrimitive=3 or sa.intBoxed=2)"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "different-joins",
+        "statement": "where-or-unbalanced-nested",
+        "expectError": "sa.intPrimitive=3 or ((sa.intBoxed=2): the unbalanced-paren EPL text has no fluent form — the Go And/Or tree is structural; Java rejects the parse error at compile time",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where sa.intPrimitive=3 or ((sa.intBoxed=2)"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "different-joins",
+        "statement": "where-unqualified-int",
+        "expectError": "intPrimitive=3 over two SupportBean streams: the unqualified EPL column is ambiguous between sa and sb; Go JoinField requires an explicit source index, so the ambiguity has no fluent form; Java rejects the ambiguous property at compile time",
+        "epl": "select * from SupportBean#length(3) as sa,SupportBean#length(3) as sb where intPrimitive=3"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "where-two-unqualified-int",
+        "epl": "select * from SupportBean#length(3),SupportMarketDataBean#length(3) where intPrimitive=3"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "where-two-unqualified-int"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "on-int-eq-intboxed",
+        "epl": "select * from SupportBean#length(3) as sa left outer join SupportBean#length(3) as sb on sa.intPrimitive = sb.intBoxed"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "on-int-eq-intboxed"
+      },
+      {
+        "op": "build-error",
+        "case": "different-joins",
+        "statement": "on-int-eq-xx",
+        "expectError": "rejected",
+        "epl": "select * from SupportBean#length(3) as sa left outer join SupportBean#length(3) as sb on sa.intPrimitive = sb.XX"
+      },
+      {
+        "op": "build-error",
+        "case": "different-joins",
+        "statement": "on-xx-eq-xx",
+        "expectError": "rejected",
+        "epl": "select * from SupportBean#length(3) as sa left outer join SupportBean#length(3) as sb on sa.XX = sb.XX"
+      },
+      {
+        "op": "build-error",
+        "case": "different-joins",
+        "statement": "on-xx-eq-intboxed",
+        "expectError": "rejected",
+        "epl": "select * from SupportBean#length(3) as sa left outer join SupportBean#length(3) as sb on sa.XX = sb.intBoxed"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "different-joins",
+        "statement": "on-boolboxed-eq-intboxed",
+        "expectError": "on sa.boolBoxed = sb.intBoxed: Java rejects the bool-vs-int ON key type mismatch at compile time; Go OnSourcesEqual takes untyped operands and never type-checks join-field operands, so the build succeeds",
+        "epl": "select * from SupportBean#length(3) as sa left outer join SupportBean#length(3) as sb on sa.boolBoxed = sb.intBoxed"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "on-bool-eq-boolboxed",
+        "epl": "select * from SupportBean#length(3) as sa left outer join SupportBean#length(3) as sb on sa.boolPrimitive = sb.boolBoxed"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "on-bool-eq-boolboxed"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "different-joins",
+        "statement": "on-bool-eq-thestring",
+        "expectError": "on sa.boolPrimitive = sb.theString: Java rejects the bool-vs-string ON key type mismatch at compile time; Go OnSourcesEqual takes untyped operands and never type-checks join-field operands, so the build succeeds",
+        "epl": "select * from SupportBean#length(3) as sa left outer join SupportBean#length(3) as sb on sa.boolPrimitive = sb.theString"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "different-joins",
+        "statement": "on-int-le-intboxed",
+        "expectError": "on sa.intPrimitive \u003c= sb.intBoxed: Java restricts outer-join ON to equality and rejects the \u003c= comparison; Go accepts any JoinComparison on an outer join edge, so the build succeeds",
+        "epl": "select * from SupportBean#length(3) as sa left outer join SupportBean#length(3) as sb on sa.intPrimitive \u003c= sb.intBoxed"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "different-joins",
+        "statement": "on-same-source-left",
+        "expectError": "on sa.intPrimitive = sa.intBoxed: Java requires outer-join ON keys to span both streams and rejects the same-source pair; Go validates field existence and source indexes only, so the build succeeds",
+        "epl": "select * from SupportBean#length(3) as sa left outer join SupportBean#length(3) as sb on sa.intPrimitive = sa.intBoxed"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "different-joins",
+        "statement": "on-same-source-right",
+        "expectError": "on sb.intPrimitive = sb.intBoxed: Java requires outer-join ON keys to span both streams and rejects the same-source pair; Go validates field existence and source indexes only, so the build succeeds",
+        "epl": "select * from SupportBean#length(3) as sa left outer join SupportBean#length(3) as sb on sb.intPrimitive = sb.intBoxed"
+      },
+      {
+        "op": "deploy",
+        "case": "different-joins",
+        "statement": "on-int-eq-intboxed-rev",
+        "epl": "select * from SupportBean#length(3) as sa left outer join SupportBean#length(3) as sb on sb.intPrimitive = sa.intBoxed"
+      },
+      {
+        "op": "deployed",
+        "case": "different-joins",
+        "statement": "on-int-eq-intboxed-rev"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "different-joins"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-other-invalid",
+    "records": [
+      {
+        "case": "invalid-func-params",
+        "operation": "unrepresentable",
+        "statement": "count-three-args",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'count(theString,theString,theString)': The 'count' function expects at least 1 and up to 2 parameters"
+      },
+      {
+        "case": "invalid-func-params",
+        "operation": "unrepresentable",
+        "statement": "leaving-with-param",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'leaving(theString)': The 'leaving' function expects no parameters"
+      },
+      {
+        "case": "invalid-syntax",
+        "operation": "unrepresentable",
+        "statement": "from-star",
+        "sequence": 0,
+        "value": "Incorrect syntax near '*' at line 1 column 14, please check the from clause [select * from *]"
+      },
+      {
+        "case": "invalid-syntax",
+        "operation": "unrepresentable",
+        "statement": "reserved-keyword",
+        "sequence": 0,
+        "value": "Incorrect syntax near 'start' (a reserved keyword) at line 1 column 59, please check the where clause [select * from SupportBean a where a.intPrimitive between r.start and r.end]"
+      },
+      {
+        "case": "invalid-syntax",
+        "operation": "unrepresentable",
+        "statement": "filter-equals-chain",
+        "sequence": 0,
+        "value": "Failed to validate filter expression '1=2': Invalid use of equals, expecting left-hand side and right-hand side but received 3 expressions"
+      },
+      {
+        "case": "long-type-constant",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "long-type-constant",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 2512570244
+            }
+          }
+        ]
+      },
+      {
+        "case": "different-joins",
+        "operation": "compile-error",
+        "statement": "where-int-eq-string",
+        "sequence": 0,
+        "value": "rejected"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-int-eq-intboxed",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-int-eq-int",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-int-eq-longboxed",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "compile-error",
+        "statement": "where-and-intboxed-bool",
+        "sequence": 0,
+        "value": "rejected"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-and-boolboxed-bool",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "compile-error",
+        "statement": "where-and-thestring-sx",
+        "sequence": 0,
+        "value": "rejected"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-and-thestring-sb",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "compile-error",
+        "statement": "where-or-thestring-sx",
+        "sequence": 0,
+        "value": "rejected"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-or-intboxed-eq-int",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-const-int",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-const-string-sq",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-const-string-dq",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-const-bool",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-const-long",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-const-double",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-const-float",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "compile-error",
+        "statement": "where-int-eq-str5",
+        "sequence": 0,
+        "value": "rejected"
+      },
+      {
+        "case": "different-joins",
+        "operation": "compile-error",
+        "statement": "where-thestring-eq-5",
+        "sequence": 0,
+        "value": "rejected"
+      },
+      {
+        "case": "different-joins",
+        "operation": "compile-error",
+        "statement": "where-boolboxed-eq-f",
+        "sequence": 0,
+        "value": "rejected"
+      },
+      {
+        "case": "different-joins",
+        "operation": "compile-error",
+        "statement": "where-int-eq-x",
+        "sequence": 0,
+        "value": "rejected"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-int-eq-double",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-int-eq-arith-add",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-int-eq-arith-mixed",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-int-eq-arith-parens",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "unrepresentable",
+        "statement": "where-arith-unbalanced",
+        "sequence": 0,
+        "value": "sa.intPrimitive=2*(sa.intBoxed: the unbalanced-paren EPL text has no fluent form — the Go And/Or/arithmetic tree is structural; Java rejects the parse error at compile time"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-cmp-cross",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-cmp-same",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-cmp-arith",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "intentionally-different",
+        "statement": "where-int-ge-thestring",
+        "sequence": 0,
+        "value": "sa.intPrimitive \u003e= sa.theString: Java rejects the int-vs-string relational comparison at compile time; Go GreaterOrEqualOf takes untyped operands and its ordered-type check accepts strings, so the build succeeds"
+      },
+      {
+        "case": "different-joins",
+        "operation": "compile-error",
+        "statement": "where-boolboxed-ge-bool",
+        "sequence": 0,
+        "value": "rejected"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-nested-or",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-nested-and",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-nested-mixed",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "unrepresentable",
+        "statement": "where-or-unbalanced-open",
+        "sequence": 0,
+        "value": "sa.intPrimitive=3 or (sa.intBoxed=2: the unbalanced-paren EPL text has no fluent form — the Go And/Or tree is structural; Java rejects the parse error at compile time"
+      },
+      {
+        "case": "different-joins",
+        "operation": "unrepresentable",
+        "statement": "where-or-unbalanced-close",
+        "sequence": 0,
+        "value": "sa.intPrimitive=3 or sa.intBoxed=2): the unbalanced-paren EPL text has no fluent form — the Go And/Or tree is structural; Java rejects the parse error at compile time"
+      },
+      {
+        "case": "different-joins",
+        "operation": "unrepresentable",
+        "statement": "where-or-unbalanced-nested",
+        "sequence": 0,
+        "value": "sa.intPrimitive=3 or ((sa.intBoxed=2): the unbalanced-paren EPL text has no fluent form — the Go And/Or tree is structural; Java rejects the parse error at compile time"
+      },
+      {
+        "case": "different-joins",
+        "operation": "unrepresentable",
+        "statement": "where-unqualified-int",
+        "sequence": 0,
+        "value": "intPrimitive=3 over two SupportBean streams: the unqualified EPL column is ambiguous between sa and sb; Go JoinField requires an explicit source index, so the ambiguity has no fluent form; Java rejects the ambiguous property at compile time"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-two-unqualified-int",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "on-int-eq-intboxed",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "compile-error",
+        "statement": "on-int-eq-xx",
+        "sequence": 0,
+        "value": "rejected"
+      },
+      {
+        "case": "different-joins",
+        "operation": "compile-error",
+        "statement": "on-xx-eq-xx",
+        "sequence": 0,
+        "value": "rejected"
+      },
+      {
+        "case": "different-joins",
+        "operation": "compile-error",
+        "statement": "on-xx-eq-intboxed",
+        "sequence": 0,
+        "value": "rejected"
+      },
+      {
+        "case": "different-joins",
+        "operation": "intentionally-different",
+        "statement": "on-boolboxed-eq-intboxed",
+        "sequence": 0,
+        "value": "on sa.boolBoxed = sb.intBoxed: Java rejects the bool-vs-int ON key type mismatch at compile time; Go OnSourcesEqual takes untyped operands and never type-checks join-field operands, so the build succeeds"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "on-bool-eq-boolboxed",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "intentionally-different",
+        "statement": "on-bool-eq-thestring",
+        "sequence": 0,
+        "value": "on sa.boolPrimitive = sb.theString: Java rejects the bool-vs-string ON key type mismatch at compile time; Go OnSourcesEqual takes untyped operands and never type-checks join-field operands, so the build succeeds"
+      },
+      {
+        "case": "different-joins",
+        "operation": "intentionally-different",
+        "statement": "on-int-le-intboxed",
+        "sequence": 0,
+        "value": "on sa.intPrimitive \u003c= sb.intBoxed: Java restricts outer-join ON to equality and rejects the \u003c= comparison; Go accepts any JoinComparison on an outer join edge, so the build succeeds"
+      },
+      {
+        "case": "different-joins",
+        "operation": "intentionally-different",
+        "statement": "on-same-source-left",
+        "sequence": 0,
+        "value": "on sa.intPrimitive = sa.intBoxed: Java requires outer-join ON keys to span both streams and rejects the same-source pair; Go validates field existence and source indexes only, so the build succeeds"
+      },
+      {
+        "case": "different-joins",
+        "operation": "intentionally-different",
+        "statement": "on-same-source-right",
+        "sequence": 0,
+        "value": "on sb.intPrimitive = sb.intBoxed: Java requires outer-join ON keys to span both streams and rejects the same-source pair; Go validates field existence and source indexes only, so the build succeeds"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "on-int-eq-intboxed-rev",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-other-invalid",
+    "records": [
+      {
+        "case": "invalid-func-params",
+        "operation": "unrepresentable",
+        "statement": "count-three-args",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'count(theString,theString,theString)': The 'count' function expects at least 1 and up to 2 parameters"
+      },
+      {
+        "case": "invalid-func-params",
+        "operation": "unrepresentable",
+        "statement": "leaving-with-param",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'leaving(theString)': The 'leaving' function expects no parameters"
+      },
+      {
+        "case": "invalid-syntax",
+        "operation": "unrepresentable",
+        "statement": "from-star",
+        "sequence": 0,
+        "value": "Incorrect syntax near '*' at line 1 column 14, please check the from clause [select * from *]"
+      },
+      {
+        "case": "invalid-syntax",
+        "operation": "unrepresentable",
+        "statement": "reserved-keyword",
+        "sequence": 0,
+        "value": "Incorrect syntax near 'start' (a reserved keyword) at line 1 column 59, please check the where clause [select * from SupportBean a where a.intPrimitive between r.start and r.end]"
+      },
+      {
+        "case": "invalid-syntax",
+        "operation": "unrepresentable",
+        "statement": "filter-equals-chain",
+        "sequence": 0,
+        "value": "Failed to validate filter expression '1=2': Invalid use of equals, expecting left-hand side and right-hand side but received 3 expressions"
+      },
+      {
+        "case": "long-type-constant",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "long-type-constant",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 2512570244
+            }
+          }
+        ]
+      },
+      {
+        "case": "different-joins",
+        "operation": "compile-error",
+        "statement": "where-int-eq-string",
+        "sequence": 0,
+        "value": "rejected"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-int-eq-intboxed",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-int-eq-int",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-int-eq-longboxed",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "compile-error",
+        "statement": "where-and-intboxed-bool",
+        "sequence": 0,
+        "value": "rejected"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-and-boolboxed-bool",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "compile-error",
+        "statement": "where-and-thestring-sx",
+        "sequence": 0,
+        "value": "rejected"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-and-thestring-sb",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "compile-error",
+        "statement": "where-or-thestring-sx",
+        "sequence": 0,
+        "value": "rejected"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-or-intboxed-eq-int",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-const-int",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-const-string-sq",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-const-string-dq",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-const-bool",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-const-long",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-const-double",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-const-float",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "compile-error",
+        "statement": "where-int-eq-str5",
+        "sequence": 0,
+        "value": "rejected"
+      },
+      {
+        "case": "different-joins",
+        "operation": "compile-error",
+        "statement": "where-thestring-eq-5",
+        "sequence": 0,
+        "value": "rejected"
+      },
+      {
+        "case": "different-joins",
+        "operation": "compile-error",
+        "statement": "where-boolboxed-eq-f",
+        "sequence": 0,
+        "value": "rejected"
+      },
+      {
+        "case": "different-joins",
+        "operation": "compile-error",
+        "statement": "where-int-eq-x",
+        "sequence": 0,
+        "value": "rejected"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-int-eq-double",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-int-eq-arith-add",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-int-eq-arith-mixed",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-int-eq-arith-parens",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "unrepresentable",
+        "statement": "where-arith-unbalanced",
+        "sequence": 0,
+        "value": "sa.intPrimitive=2*(sa.intBoxed: the unbalanced-paren EPL text has no fluent form — the Go And/Or/arithmetic tree is structural; Java rejects the parse error at compile time"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-cmp-cross",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-cmp-same",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-cmp-arith",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "intentionally-different",
+        "statement": "where-int-ge-thestring",
+        "sequence": 0,
+        "value": "sa.intPrimitive \u003e= sa.theString: Java rejects the int-vs-string relational comparison at compile time; Go GreaterOrEqualOf takes untyped operands and its ordered-type check accepts strings, so the build succeeds"
+      },
+      {
+        "case": "different-joins",
+        "operation": "compile-error",
+        "statement": "where-boolboxed-ge-bool",
+        "sequence": 0,
+        "value": "rejected"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-nested-or",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-nested-and",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-nested-mixed",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "unrepresentable",
+        "statement": "where-or-unbalanced-open",
+        "sequence": 0,
+        "value": "sa.intPrimitive=3 or (sa.intBoxed=2: the unbalanced-paren EPL text has no fluent form — the Go And/Or tree is structural; Java rejects the parse error at compile time"
+      },
+      {
+        "case": "different-joins",
+        "operation": "unrepresentable",
+        "statement": "where-or-unbalanced-close",
+        "sequence": 0,
+        "value": "sa.intPrimitive=3 or sa.intBoxed=2): the unbalanced-paren EPL text has no fluent form — the Go And/Or tree is structural; Java rejects the parse error at compile time"
+      },
+      {
+        "case": "different-joins",
+        "operation": "unrepresentable",
+        "statement": "where-or-unbalanced-nested",
+        "sequence": 0,
+        "value": "sa.intPrimitive=3 or ((sa.intBoxed=2): the unbalanced-paren EPL text has no fluent form — the Go And/Or tree is structural; Java rejects the parse error at compile time"
+      },
+      {
+        "case": "different-joins",
+        "operation": "unrepresentable",
+        "statement": "where-unqualified-int",
+        "sequence": 0,
+        "value": "intPrimitive=3 over two SupportBean streams: the unqualified EPL column is ambiguous between sa and sb; Go JoinField requires an explicit source index, so the ambiguity has no fluent form; Java rejects the ambiguous property at compile time"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "where-two-unqualified-int",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "on-int-eq-intboxed",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "compile-error",
+        "statement": "on-int-eq-xx",
+        "sequence": 0,
+        "value": "rejected"
+      },
+      {
+        "case": "different-joins",
+        "operation": "compile-error",
+        "statement": "on-xx-eq-xx",
+        "sequence": 0,
+        "value": "rejected"
+      },
+      {
+        "case": "different-joins",
+        "operation": "compile-error",
+        "statement": "on-xx-eq-intboxed",
+        "sequence": 0,
+        "value": "rejected"
+      },
+      {
+        "case": "different-joins",
+        "operation": "intentionally-different",
+        "statement": "on-boolboxed-eq-intboxed",
+        "sequence": 0,
+        "value": "on sa.boolBoxed = sb.intBoxed: Java rejects the bool-vs-int ON key type mismatch at compile time; Go OnSourcesEqual takes untyped operands and never type-checks join-field operands, so the build succeeds"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "on-bool-eq-boolboxed",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "different-joins",
+        "operation": "intentionally-different",
+        "statement": "on-bool-eq-thestring",
+        "sequence": 0,
+        "value": "on sa.boolPrimitive = sb.theString: Java rejects the bool-vs-string ON key type mismatch at compile time; Go OnSourcesEqual takes untyped operands and never type-checks join-field operands, so the build succeeds"
+      },
+      {
+        "case": "different-joins",
+        "operation": "intentionally-different",
+        "statement": "on-int-le-intboxed",
+        "sequence": 0,
+        "value": "on sa.intPrimitive \u003c= sb.intBoxed: Java restricts outer-join ON to equality and rejects the \u003c= comparison; Go accepts any JoinComparison on an outer join edge, so the build succeeds"
+      },
+      {
+        "case": "different-joins",
+        "operation": "intentionally-different",
+        "statement": "on-same-source-left",
+        "sequence": 0,
+        "value": "on sa.intPrimitive = sa.intBoxed: Java requires outer-join ON keys to span both streams and rejects the same-source pair; Go validates field existence and source indexes only, so the build succeeds"
+      },
+      {
+        "case": "different-joins",
+        "operation": "intentionally-different",
+        "statement": "on-same-source-right",
+        "sequence": 0,
+        "value": "on sb.intPrimitive = sb.intBoxed: Java requires outer-join ON keys to span both streams and rejects the same-source pair; Go validates field existence and source indexes only, so the build succeeds"
+      },
+      {
+        "case": "different-joins",
+        "operation": "deployed",
+        "statement": "on-int-eq-intboxed-rev",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

@@ -56,6 +56,37 @@ activity or a single coverage percentage.
 
 ## Current work unit
 
+Active: Draft 4.539 ('epl-other-invalid').
+
+- Selection: `EPLOtherInvalid.java` all 4 unreferenced executions —
+  ord 0 `EPLOtherInvalidFuncParams` (`java-runtime-57d4ed46cb893b70792c`),
+  ord 1 `EPLOtherInvalidSyntax` (`java-runtime-1ca3b083af4e59da8024`),
+  ord 2 `EPLOtherLongTypeConstant` (`java-runtime-13ae251df45f9dc74efa`),
+  ord 3 `EPLOtherDifferentJoins` (`java-runtime-7e8cd12d2a61f4041a0e`).
+- [x] Java contract scout (JavaContract539) + Go surface scout
+  (GoSurface539) complete; contract frozen in the Assets539 batch
+  context. FuncParams + Syntax fully unrepresentable (Go compile-time
+  arity / EPL-text parse surfaces). LongTypeConstant positive
+  (int64 literal). DifferentJoins compile-only validity matrix:
+  representable unknown-field Build errors, unrepresentable
+  type-mismatch/paren probes, intentionally-different non-equi and
+  same-source outer-ON acceptance.
+- [x] Assets539 dispatched for scenario/oracle/runner/wiring.
+- [x] Assets539 delivered all assets; Java trace + Go trace + evidence
+  regenerated; `-diff` passing / 0 differences (57 records each side);
+  6-test family green; `make check` exit 0.
+- [x] Parity review (Review539): initial FAIL — 9 ord-3 probes
+  misclassified unrepresentable (3 Go-accepts divergences, 6 real Build
+  rejections) + phantom goTests entry. Assets539 repaired: honest matrix
+  27 deployed / 12 compile-error / 5 unrepresentable / 6
+  intentionally-different; missing checked-in-evidence test written;
+  expr.core DV union populated (109 IDs). Re-review: OVERALL PASS, one
+  residual P3 (manifest note wording) fixed.
+- [ ] Commit.
+
+
+## Current work unit
+
 Active: Draft 4.538 ('infra-namedwindow-insert-from').
 
 - Selection: `InfraNamedWindowInsertFrom.java` all 3 unreferenced
@@ -84,7 +115,8 @@ Active: Draft 4.538 ('infra-namedwindow-insert-from').
   scenario observation reworded (create-window-as-select is
   type-derivation, not a continuous feed) and beanPrefixKeep restored to
   loud failure on unexpected underlying types.
-- [ ] Commit.
+- [x] Shipped; Git owns identity. Draft 4.538 committed and pushed as
+  `99440f9f7`.
 
 ## Current work unit
 
