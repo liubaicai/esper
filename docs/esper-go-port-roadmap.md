@@ -1629,18 +1629,18 @@
 
 > 最新补充：Draft 4.196（2026-08-20），新增 `expr-core-current-timestamp` differential-verified 场景，对照固定 Java `ExprCoreCurrentTimestamp` 的三个 execution（`ExprCoreCurrentTimestampGet` `java-runtime-c1c1fd3dc31af4864a50`、`ExprCoreCurrentTimestampOM` `java-runtime-96c8b8cb4cf36a523669`、`ExprCoreCurrentTimestampCompile` `java-runtime-5b126fe7fb865be8b293`），三个 isolated case、四条 listener records、0 differences。Go 侧复用类型化 `CurrentTimestamp()` 和虚拟时钟，覆盖未命名 `current_timestamp()` 字段、重复引用、加一运算，以及 100/999/777 毫秒绝对时间；Java boxed Long 元数据和文本编译诊断继续保持差异边界。Java oracle、固定 commit runner、scenario、trace、evidence 和 value/order/field/time mutation tests 已纳入兼容资产；manifest 更新为 122 个 differential-verified case、373 个 differential runtime IDs。
 
-截至 2026-09-05，manifest v2 的已校验摘要为：
+截至 2026-09-25，manifest v2 的已校验摘要为：
 
 | 维度 | 数值 |
 | --- | --- |
-| Capability | 119 |
-| Case | 609 |
-| Case differential-verified | 222 |
-| Differential-verified runtime | 790 / 4,136 |
-| Runtime 已关联 | 3,172 / 4,136（76.7%） |
-| Runtime 未关联 | 964 |
-| Representative scenario | 107 / 107 通过 |
-| Intentionally-different case | 23 |
+| Capability | 126 |
+| Case | 773 |
+| Case differential-verified | 396 |
+| Differential-verified runtime | 1,569 / 4,136 |
+| Runtime 已关联 | 3,667 / 4,136（88.7%） |
+| Runtime 未关联 | 469 |
+| Representative scenario | 122 / 122 通过 |
+| Intentionally-different case | 36 |
 | NFR-verified case | 0 |
 | 质量摘要 | Docker/stress/race 已通过；performance pending |
 
@@ -1760,8 +1760,8 @@
 ### 3.3 代码与清单管理
 
 - 所有 Java runtime 清单在 testdata/compat/java-execution-inventory.jsonl。
-- 静态候选清单在 testdata/compat/static-manifest.json（目前几乎为空）。
-- 非 Regression 源资产在 testdata/compat/source-test-manifest.json（目前几乎为空）。
+- 静态候选清单在 testdata/compat/static-manifest.json（3848 条静态候选）。
+- 非 Regression 源资产在 testdata/compat/source-test-manifest.json（726 条）。
 - Capability/case 映射在 testdata/compat/capability-manifest.json。
 - README 只保留公开摘要；manifest 维护机器统计，roadmap 维护当前优先级，CHANGELOG 维护逐轮历史。
 
@@ -1777,8 +1777,8 @@
 
 重点领域：
 
-- epl 剩余 247 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
-- infra 剩余 156 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
+- epl 剩余 152 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
+- infra 剩余 71 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
 - join 与 outer join 复杂链、unidirectional、Context Join。
 - resultset 聚合和输出高级特性（filtered、math-context、访问聚合、rollup、row-limit 组合）。
 - context 分区 selector、嵌套、生命周期、事务边界。
@@ -1802,8 +1802,8 @@
 ### 4.4 Phase 3 — 收尾与验收
 
 目标：100% 适用 Java runtime 映射并通过；所有门禁通过；文档、示例、性能、内存验收。
-- epl 剩余 247 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
-- infra 剩余 156 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
+- epl 剩余 152 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
+- infra 剩余 71 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
 - join 与 outer join 复杂链、unidirectional、Context Join。
 - resultset 聚合和输出高级特性（filtered、math-context、访问聚合、rollup、row-limit 组合）。
 - context 分区 selector、嵌套、生命周期、事务边界。
@@ -1813,7 +1813,7 @@
 ### 5.1 P0 — 立即完成
 
 1. 完成全量 `go test`、race、vet、布局和 diff 门禁，并将结果回写 Manifest v2。
-2. 扩展 persisted differential evidence。当前有 206 个 differential-verified case（755 个 runtime）和 107/107 个通过的 representative scenario；下一步优先转换共享 runtime 和高风险状态能力，不在路线图手写完整场景名称列表。
+2. 扩展 persisted differential evidence。当前有 396 个 differential-verified case（1569 个 runtime）和 122/122 个通过的 representative scenario；下一步优先转换共享 runtime 和高风险状态能力，不在路线图手写完整场景名称列表。
 3. 按未关联 runtime 和行为风险拆分下一批 epl/infra/expr/resultset/context 切片。
 4. 外部服务 fixture 已本地验证（2026-08-14 MySQL/Kafka/RabbitMQ 全部门控 round-trip 通过）；暂不建设 CI，后续按执行手册定期本地 Docker 重放，并保持普通测试中的显式环境型 skip。
 5. 已建立环境门控 stress 基线（`ESPER_STRESS=1 go test ./internal/esper -run '^TestStressSyntheticMediumLoad$'`）；已实现 `windowHistoryByEventRequired` 按需构建 `historyByEvent`，基线从 42.6s 降至 18.45s；继续优化剩余 filter/window/aggregate/join 热点后再宣称 NFR。
@@ -1825,15 +1825,15 @@
 
 | 域 | 未覆盖 runtime | 关键子域/类 |
 | --- | --- | --- |
-| epl | 243 | subselect、insertinto、database、dataflow、方法源 |
-| infra | 156 | 表、Named Window、mutation、transaction |
-| event | 151 | 事件表示和 Serde 完整矩阵 |
-| expr | 95 | 表达式函数、类型、脚本、枚举集合 |
-| resultset | 35 | 聚合、输出、排序、分组 |
+| epl | 152 | subselect、insertinto、database、dataflow、方法源 |
+| infra | 71 | 表、Named Window、mutation、transaction |
+| event | 127 | 事件表示和 Serde 完整矩阵 |
+| expr | 49 | 表达式函数、类型、脚本、枚举集合 |
+| resultset | 5 | 聚合、输出、排序、分组 |
 | multithread | 56 | 并发回归 |
-| context | 45 | Context 分区、嵌套、生命周期 |
-| rowrecog | 34 | Match Recognize |
-| view | 22 | 视图高级组合 |
+| context | 5 | Context 分区、嵌套、生命周期 |
+| rowrecog | 3 | Match Recognize |
+| view | 1 | 视图高级组合 |
 
 ### 5.3 P2 — 清单与能力拆分
 
@@ -1855,22 +1855,22 @@
 
 | 域 | 未覆盖 runtime | 说明 |
 | --- | --- | --- |
-| epl | 243 | subselect、insertinto、database、dataflow、方法源 |
-| infra | 156 | 表、Named Window、mutation、transaction |
-| event | 151 | 事件表示和 Serde 完整矩阵 |
-| expr | 95 | 表达式函数、类型、脚本、枚举集合 |
-| resultset | 35 | 聚合、输出、排序、分组 |
-| context | 45 | Context 分区、嵌套、生命周期 |
+| epl | 152 | subselect、insertinto、database、dataflow、方法源 |
+| infra | 71 | 表、Named Window、mutation、transaction |
+| event | 127 | 事件表示和 Serde 完整矩阵 |
+| expr | 49 | 表达式函数、类型、脚本、枚举集合 |
+| resultset | 5 | 聚合、输出、排序、分组 |
+| context | 5 | Context 分区、嵌套、生命周期 |
 | multithread | 56 | 并发回归 |
-| rowrecog | 34 | Match Recognize |
-| view | 22 | 视图高级组合 |
+| rowrecog | 3 | Match Recognize |
+| view | 1 | 视图高级组合 |
 ### 6.2 清单与追踪遗漏
 
-- static-manifest.json 目前几乎为空，需要把静态/编译期候选登记进去。
-- source-test-manifest.json 目前几乎为空，需要把非 Regression 源资产（单元测试、集成测试）登记进去。
+- static-manifest.json 已填充（3848 条静态候选），需要继续把静态/编译期候选关联到 case。
+- source-test-manifest.json 已填充（726 条），需要继续把非 Regression 源资产（单元测试、集成测试）关联到 capability/case。
 - epl/expr/resultset 等 capability 拆分过粗，需要继续细分为可验收的 case。
-- 23 个 intentionally-different case 需要保持书面差异理由和测试证据。
-- 当前未关联的 893 个 runtime 中，需要识别哪些属于平台无关核心语义，哪些属于 JVM 特有机制或性能阈值，并分别建立处置记录。
+- 36 个 intentionally-different case 需要保持书面差异理由和测试证据。
+- 当前未关联的 469 个 runtime 中，需要识别哪些属于平台无关核心语义，哪些属于 JVM 特有机制或性能阈值，并分别建立处置记录。
 
 ### 6.3 能力与边界遗漏
 
