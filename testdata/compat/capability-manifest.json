@@ -681,7 +681,8 @@
     "internal/esper/runtime.go",
     "internal/esper/stream.go",
     "internal/esper/subquery.go",
-    "internal/app/parity/epl_other_invalid.go"
+    "internal/app/parity/epl_other_invalid.go",
+    "internal/app/parity/expr_filter_optimizable_lookupable_limited.go"
    ],
    "phase": 1,
    "status": "differential-verified",
@@ -806,7 +807,11 @@
     "java-runtime-fb5317848fcedbabf016",
     "java-runtime-fc4c87ba7677b72cab9a",
     "java-runtime-fdef3bed6ec0b16d36db",
-    "java-runtime-ffe28bce1e8e2a0dc4a0"
+    "java-runtime-ffe28bce1e8e2a0dc4a0",
+    "java-runtime-bfeb8b79de810cba8674",
+    "java-runtime-2d0d6df65e1884579f65",
+    "java-runtime-20e9b043737a1b6b2c0d",
+    "java-runtime-0cd68bf813f2dd238a93"
    ]
   },
   {
@@ -36811,14 +36816,22 @@
     "java-runtime-80f51700913a463ab267",
     "java-runtime-85175d99c086015482b2",
     "java-runtime-93515ff2a2f83c9dc747",
-    "java-runtime-94a2be557857d83a0b1b"
+    "java-runtime-94a2be557857d83a0b1b",
+    "java-runtime-bfeb8b79de810cba8674",
+    "java-runtime-2d0d6df65e1884579f65",
+    "java-runtime-20e9b043737a1b6b2c0d",
+    "java-runtime-0cd68bf813f2dd238a93"
    ],
    "javaNames": [
     "ExprFilterOptLkupConstantEqualsNull",
     "ExprFilterOptLkupEqualsCoercion",
     "ExprFilterOptLkupEqualsOneStmt",
     "ExprFilterOptLkupInSetOfValue",
-    "ExprFilterOptLkupInRangeWCoercion"
+    "ExprFilterOptLkupInRangeWCoercion",
+    "ExprFilterOptLkupEqualsOneStmtWPatternSharingIndex",
+    "ExprFilterOptLkupEqualsMultiStmtSharingIndex",
+    "ExprFilterOptLkupCurrentTimestampWEquals",
+    "ExprFilterOptLkupCurrentTimestampCompare"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterOptimizableLookupableLimitedExpr.java"
@@ -36828,7 +36841,13 @@
     "TestExprFilterOptLkupEqualsCoercionParity",
     "TestExprFilterOptLkupEqualsOneStmtParity",
     "TestExprFilterOptLkupInSetOfValueParity",
-    "TestExprFilterOptLkupInRangeWCoercionParity"
+    "TestExprFilterOptLkupInRangeWCoercionParity",
+    "internal/app/parity/run_test.go:TestRunExprFilterOptLkupLimitedRemainingDirectReplay",
+    "internal/app/parity/run_test.go:TestRunExprFilterOptLkupLimitedRemainingDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunExprFilterOptLkupLimitedRemainingCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunExprFilterOptLkupLimitedRemainingDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunExprFilterOptLkupLimitedRemainingRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunExprFilterOptLkupLimitedRemainingRuntimeIDMappingMatchesScenario"
    ],
    "tags": [],
    "status": "differential-verified",
@@ -36839,7 +36858,13 @@
     "tools/java-oracle/ExprFilterOptLkupLimitedScenarioOracle.java",
     "tools/java-oracle/run-expr-filter-opt-lkup-limited.sh",
     "java-oracle-trace",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/expr-filter-opt-lkup-limited-remaining.json",
+    "testdata/parity/expr-filter-opt-lkup-limited-remaining.trace.json",
+    "testdata/parity/expr-filter-opt-lkup-limited-remaining.go.trace.json",
+    "testdata/parity/expr-filter-opt-lkup-limited-remaining.evidence.json",
+    "tools/java-oracle/ExprFilterOptLkupLimitedRemainingScenarioOracle.java",
+    "tools/java-oracle/run-expr-filter-opt-lkup-limited-remaining.sh"
    ],
    "difference": null,
    "verification": [
@@ -36852,7 +36877,54 @@
     "java-runtime-80f51700913a463ab267",
     "java-runtime-85175d99c086015482b2",
     "java-runtime-93515ff2a2f83c9dc747",
-    "java-runtime-94a2be557857d83a0b1b"
+    "java-runtime-94a2be557857d83a0b1b",
+    "java-runtime-bfeb8b79de810cba8674",
+    "java-runtime-2d0d6df65e1884579f65",
+    "java-runtime-20e9b043737a1b6b2c0d",
+    "java-runtime-0cd68bf813f2dd238a93"
+   ],
+   "javaStaticIds": [
+    "java-d829f38c7827ed840c38",
+    "java-f492b3ef1c2cf8f82889",
+    "java-ce489fee11685f77be34",
+    "java-7a65d419ecb8b96a4c38"
+   ],
+   "notes": " Extended (Draft 4.540) with ords 1/2/7/8: pattern-sharing index (every-guard concat lookupable, order-by s0.id), multi-statement sharing across plain/constant-variable/context/pattern forms (all 5 fire on one S0), current_timestamp evaluated per candidate event in both the equals lookupable and the second-of-minute compare under virtual time. Ord 6 Disqualify registered separately as intentionally-different (STATICHOOK plan assertion, no Go hook surface). Java/Go 21 records each, 0 differences."
+  },
+  {
+   "id": "case.expr-filter-optimizable-lookupable-limited-disqualify",
+   "javaRuntimeIds": [
+    "java-runtime-530153bd9731b1f9e439"
+   ],
+   "javaStaticIds": [
+    "java-2bdf30f91311c50a7b13"
+   ],
+   "javaNames": [
+    "ExprFilterOptLkupDisqualify"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterOptimizableLookupableLimitedExpr.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunExprFilterOptLkupLimitedRemainingDirectReplay",
+    "internal/app/parity/run_test.go:TestRunExprFilterOptLkupLimitedRemainingRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "expr",
+    "filter",
+    "intentionally-different"
+   ],
+   "status": "intentionally-different",
+   "evidence": [
+    "testdata/parity/expr-filter-opt-lkup-limited-remaining.json",
+    "testdata/parity/expr-filter-opt-lkup-limited-remaining.trace.json",
+    "testdata/parity/expr-filter-opt-lkup-limited-remaining.evidence.json"
+   ],
+   "difference": "ExprFilterOptLkupDisqualify asserts via a JVM-static INTERNAL_FILTERSPEC hook (SupportFilterPlanHook) that 7 expressions disqualify to FilterOperator.BOOLEAN_EXPRESSION: non-constant variable, table column, subquery, lambda, script expression, current_timestamp, inlined_class. Go has no filter-plan hook surface; the disqualification is internal plan shape with no observable contract. Both sides emit pinned unrepresentable marker records; the oracle verifies each expression still compiles in-process before emitting.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "intentionally-different"
    ]
   },
   {
@@ -53300,14 +53372,18 @@
   {
    "capabilityId": "expr.core",
    "caseId": "case.epl-other-invalid-syntax"
+  },
+  {
+   "capabilityId": "expr.core",
+   "caseId": "case.expr-filter-optimizable-lookupable-limited-disqualify"
   }
  ],
  "summary": {
-  "inventoriedCases": 770,
-  "implementedCases": 768,
+  "inventoriedCases": 771,
+  "implementedCases": 769,
   "differentialVerifiedCases": 394,
-  "differentialVerifiedRuntimeIds": 1555,
-  "intentionallyDifferentCases": 35,
+  "differentialVerifiedRuntimeIds": 1559,
+  "intentionallyDifferentCases": 36,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 126,
@@ -53316,13 +53392,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4092,
-  "referencedJavaRuntimeIds": 3652,
+  "runtimeAssociationCount": 4097,
+  "referencedJavaRuntimeIds": 3657,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 484,
+  "unreferencedJavaRuntimeIds": 479,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 770,
+  "totalCases": 771,
   "totalCapabilities": 126
  }
 }

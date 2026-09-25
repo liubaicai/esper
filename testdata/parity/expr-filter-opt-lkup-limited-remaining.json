@@ -1,0 +1,120 @@
+{
+ "version": "esper-parity/v1",
+ "id": "expr-filter-opt-lkup-limited-remaining",
+ "description": "Remaining five executions of ExprFilterOptimizableLookupableLimitedExpr (pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c) replayed with one fresh runtime per case: equals-pattern-sharing (ord 1, every s0=SupportBean_S0 -> every SupportBean_S1('ax' = p10 || p11) order by s0.id asc — two S0 events arm two subexpressions and one S1(10,'a','x') fires both rows ordered {1},{2}), equals-multi-stmt-sharing (ord 2, five statements sharing the p00||p01='ax' lookupable — s0/s1 literal, s2 constant variable VAR, s3 context MyContextOne reading context.s1.p10, s4 context MyContextTwo pattern a=SupportBean_S1 -> SupportBean_S0(a.p10 = p00||p01) — S1(0,'ax') initiates both context partitions and S0(10,'a','x') fires all five), disqualify (ord 6, STATICHOOK: seven compile-time probes whose filter plans are BOOLEAN_EXPRESSION — non-constant variable, table column, subquery, lambda, script expression, current_timestamp and a statement-local inlined class; unrepresentable because Go has no filter-plan hook), current-timestamp-equals (ord 7, pattern a=SupportBean -> SupportBean(a.longPrimitive = current_timestamp()+longPrimitive) — at t=1000 the 1123 send arms and the 123 send fires), current-timestamp-compare (ord 8, SupportBean(current_timestamp().getSecondOfMinute()%2=0) — fires at second 0 and 2, silent at second 1 and 3). Deployed markers pin the module fan-out, listener records carry the new-data rows, and unrepresentable records pin the verified Java surfaces with no Go boundary (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterOptimizableLookupableLimitedExpr.java).",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterOptimizableLookupableLimitedExpr.java",
+ "javaRuntimes": [
+  "java-runtime-bfeb8b79de810cba8674",
+  "java-runtime-2d0d6df65e1884579f65",
+  "java-runtime-530153bd9731b1f9e439",
+  "java-runtime-20e9b043737a1b6b2c0d",
+  "java-runtime-0cd68bf813f2dd238a93"
+ ],
+ "javaNames": [
+  "ExprFilterOptLkupEqualsOneStmtWPatternSharingIndex",
+  "ExprFilterOptLkupEqualsMultiStmtSharingIndex",
+  "ExprFilterOptLkupDisqualify",
+  "ExprFilterOptLkupCurrentTimestampWEquals",
+  "ExprFilterOptLkupCurrentTimestampCompare"
+ ],
+ "javaStaticIds": [
+  "java-d829f38c7827ed840c38",
+  "java-f492b3ef1c2cf8f82889",
+  "java-2bdf30f91311c50a7b13",
+  "java-ce489fee11685f77be34",
+  "java-7a65d419ecb8b96a4c38"
+ ],
+ "javaFlags": ["STATICHOOK"],
+ "cases": [
+  {
+   "case": "equals-pattern-sharing",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-bfeb8b79de810cba8674",
+   "executionName": "ExprFilterOptLkupEqualsOneStmtWPatternSharingIndex",
+   "observation": "deployed+listener; every s0=SupportBean_S0 -> every SupportBean_S1('ax' = p10 || p11) order by s0.id asc: S0(1) and S0(2) arm two subexpressions sharing one S1 index entry, then S1(10,'a','x') completes both and the ordered delivery carries s0={id:1} then s0={id:2}",
+   "epl": "@name('s0') select * from pattern[every s0=SupportBean_S0 -> every SupportBean_S1('ax' = p10 || p11)] order by s0.id asc;\n"
+  },
+  {
+   "case": "equals-multi-stmt-sharing",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-2d0d6df65e1884579f65",
+   "executionName": "ExprFilterOptLkupEqualsMultiStmtSharingIndex",
+   "observation": "deployed+listener; one module deploys s0/s1 (p00||p01='ax'), s2 (p00||p01=VAR constant variable), s3 (context MyContextOne, p00||p01=context.s1.p10) and s4 (context MyContextTwo, pattern a=SupportBean_S1 -> SupportBean_S0(a.p10 = p00||p01)); S1(0,'ax') initiates both context partitions silently and S0(10,'a','x') fires all five statements once",
+   "epl": "@name('s0') select * from SupportBean_S0(p00 || p01 = 'ax');\n@name('s1') select * from SupportBean_S0(p00 || p01 = 'ax');\ncreate constant variable string VAR = 'ax';\n@name('s2') select * from SupportBean_S0(p00 || p01 = VAR);\ncreate context MyContextOne start SupportBean_S1 as s1;\n@name('s3') context MyContextOne select * from SupportBean_S0(p00 || p01 = context.s1.p10);\ncreate context MyContextTwo start SupportBean_S1 as s1;\n@name('s4') context MyContextTwo select * from pattern[a=SupportBean_S1 -> SupportBean_S0(a.p10 = p00     ||     p01)];\n"
+  },
+  {
+   "case": "disqualify",
+   "ordinal": 6,
+   "runtimeId": "java-runtime-530153bd9731b1f9e439",
+   "executionName": "ExprFilterOptLkupDisqualify",
+   "observation": "unrepresentable; STATICHOOK compile-only: the objects preamble (MYVARIABLE_NONCONSTANT, MyTable, MyWindow, Helper inlined class, MyDeclaredExpr, MyHandThrough, js:MyJavaScript) compiles onto the path and each of the seven probes compiles with the INTERNAL_FILTERSPEC hook asserting filter operator BOOLEAN_EXPRESSION — non-constant variable, table column, subquery, lambda, script expression, current_timestamp and a statement-local inlined class; no Go filter-plan hook exists",
+   "epl": "@public create variable string MYVARIABLE_NONCONSTANT = 'abc';\n@public create table MyTable(tablecol string);\n@public create window MyWindow#keepall as SupportBean;\n@public create inlined_class \"\"\"\n  public class Helper {\n    public static String doit(Object param) { return null;}\n    public static String doit(Object one, Object two) { return null;}\n  }\n\"\"\";\n@public create expression MyDeclaredExpr { (select theString from MyWindow) };\n@public create expression MyHandThrough {v => v};\n@public create expression string js:MyJavaScript(param) [\"a\"];\n"
+  },
+  {
+   "case": "current-timestamp-equals",
+   "ordinal": 7,
+   "runtimeId": "java-runtime-20e9b043737a1b6b2c0d",
+   "executionName": "ExprFilterOptLkupCurrentTimestampWEquals",
+   "observation": "deployed+listener; pattern a=SupportBean -> SupportBean(a.longPrimitive = current_timestamp()+longPrimitive): at t=1000 the SupportBean(longPrimitive=1123) send arms the first atom and the SupportBean(longPrimitive=123) send matches 1000+123=1123, firing one row carrying tag a",
+   "epl": "@name('s0') select * from pattern[a=SupportBean -> SupportBean(a.longPrimitive = current_timestamp() + longPrimitive)];\n"
+  },
+  {
+   "case": "current-timestamp-compare",
+   "ordinal": 8,
+   "runtimeId": "java-runtime-0cd68bf813f2dd238a93",
+   "executionName": "ExprFilterOptLkupCurrentTimestampCompare",
+   "observation": "deployed+listener; SupportBean(current_timestamp().getSecondOfMinute()%2=0): sends at t=0 and t=999 (second 0) fire, t=1000 and t=1999 (second 1) stay silent, t=2000 (second 2) fires and t=3000 (second 3) stays silent",
+   "epl": "@name('s0') select * from SupportBean(current_timestamp().getSecondOfMinute()%2=0);\n"
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "equals-pattern-sharing"},
+  {"op": "advance-time", "case": "equals-pattern-sharing", "at": "1970-01-01T00:00:00Z"},
+  {"op": "deploy", "case": "equals-pattern-sharing", "statement": "s0", "epl": "@name('s0') select * from pattern[every s0=SupportBean_S0 -> every SupportBean_S1('ax' = p10 || p11)] order by s0.id asc;\n"},
+  {"op": "deployed", "case": "equals-pattern-sharing", "statement": "s0"},
+  {"op": "send", "case": "equals-pattern-sharing", "eventType": "SupportBean_S0", "payload": {"id": 1, "p00": null, "p01": null, "p02": null, "p03": null, "value": 0}},
+  {"op": "send", "case": "equals-pattern-sharing", "eventType": "SupportBean_S0", "payload": {"id": 2, "p00": null, "p01": null, "p02": null, "p03": null, "value": 0}},
+  {"op": "send", "case": "equals-pattern-sharing", "eventType": "SupportBean_S1", "payload": {"id": 10, "p10": "a", "p11": "x", "p12": null, "p13": null}},
+  {"op": "undeploy-all", "case": "equals-pattern-sharing"},
+  {"op": "case", "case": "equals-multi-stmt-sharing"},
+  {"op": "advance-time", "case": "equals-multi-stmt-sharing", "at": "1970-01-01T00:00:00Z"},
+  {"op": "deploy", "case": "equals-multi-stmt-sharing", "statement": "module", "epl": "@name('s0') select * from SupportBean_S0(p00 || p01 = 'ax');\n@name('s1') select * from SupportBean_S0(p00 || p01 = 'ax');\ncreate constant variable string VAR = 'ax';\n@name('s2') select * from SupportBean_S0(p00 || p01 = VAR);\ncreate context MyContextOne start SupportBean_S1 as s1;\n@name('s3') context MyContextOne select * from SupportBean_S0(p00 || p01 = context.s1.p10);\ncreate context MyContextTwo start SupportBean_S1 as s1;\n@name('s4') context MyContextTwo select * from pattern[a=SupportBean_S1 -> SupportBean_S0(a.p10 = p00     ||     p01)];\n"},
+  {"op": "deployed", "case": "equals-multi-stmt-sharing", "statement": "module"},
+  {"op": "send", "case": "equals-multi-stmt-sharing", "eventType": "SupportBean_S1", "payload": {"id": 0, "p10": "ax", "p11": null, "p12": null, "p13": null}},
+  {"op": "send", "case": "equals-multi-stmt-sharing", "eventType": "SupportBean_S0", "payload": {"id": 10, "p00": "a", "p01": "x", "p02": null, "p03": null, "value": 0}},
+  {"op": "undeploy-all", "case": "equals-multi-stmt-sharing"},
+  {"op": "case", "case": "disqualify"},
+  {"op": "unrepresentable", "case": "disqualify", "statement": "variable-nonconstant", "epl": "@Hook(type=HookType.INTERNAL_FILTERSPEC, hook='com.espertech.esper.regressionlib.support.filter.SupportFilterPlanHook')select * from SupportBean(theString||MYVARIABLE_NONCONSTANT='ax')", "expectError": "SupportBean(theString||MYVARIABLE_NONCONSTANT='ax') compiles with filter plan BOOLEAN_EXPRESSION (non-constant variable); no Go filter-plan hook"},
+  {"op": "unrepresentable", "case": "disqualify", "statement": "table-column", "epl": "@Hook(type=HookType.INTERNAL_FILTERSPEC, hook='com.espertech.esper.regressionlib.support.filter.SupportFilterPlanHook')select * from SupportBean(theString||MyTable.tablecol='ax')", "expectError": "SupportBean(theString||MyTable.tablecol='ax') compiles with filter plan BOOLEAN_EXPRESSION (table column); no Go filter-plan hook"},
+  {"op": "unrepresentable", "case": "disqualify", "statement": "subquery", "epl": "@Hook(type=HookType.INTERNAL_FILTERSPEC, hook='com.espertech.esper.regressionlib.support.filter.SupportFilterPlanHook')select * from SupportBean(theString||(select theString from MyWindow)='ax')", "expectError": "SupportBean(theString||(select theString from MyWindow)='ax') compiles with filter plan BOOLEAN_EXPRESSION (subquery); no Go filter-plan hook"},
+  {"op": "unrepresentable", "case": "disqualify", "statement": "lambda", "epl": "@Hook(type=HookType.INTERNAL_FILTERSPEC, hook='com.espertech.esper.regressionlib.support.filter.SupportFilterPlanHook')select * from SupportBeanArrayCollMap(id || setOfString.where(v => v=id).firstOf() = 'ax')", "expectError": "SupportBeanArrayCollMap(id || setOfString.where(v => v=id).firstOf() = 'ax') compiles with filter plan BOOLEAN_EXPRESSION (lambda); no Go filter-plan hook"},
+  {"op": "unrepresentable", "case": "disqualify", "statement": "script", "epl": "@Hook(type=HookType.INTERNAL_FILTERSPEC, hook='com.espertech.esper.regressionlib.support.filter.SupportFilterPlanHook')select * from pattern[s0=SupportBean_S0 -> SupportBean(MyJavaScript(theString)='x')]", "expectError": "pattern[s0=SupportBean_S0 -> SupportBean(MyJavaScript(theString)='x')] compiles with filter plan BOOLEAN_EXPRESSION (script expression); no Go filter-plan hook"},
+  {"op": "unrepresentable", "case": "disqualify", "statement": "current-timestamp", "epl": "@Hook(type=HookType.INTERNAL_FILTERSPEC, hook='com.espertech.esper.regressionlib.support.filter.SupportFilterPlanHook')select * from SupportBean(current_timestamp()=1)", "expectError": "SupportBean(current_timestamp()=1) compiles with filter plan BOOLEAN_EXPRESSION (current_timestamp); no Go filter-plan hook"},
+  {"op": "unrepresentable", "case": "disqualify", "statement": "inlined-class", "epl": "@Hook(type=HookType.INTERNAL_FILTERSPEC, hook='com.espertech.esper.regressionlib.support.filter.SupportFilterPlanHook')inlined_class \"\"\"\n  public class LocalHelper {\n    public static String doit(Object param) {\n      return null;\n    }\n  }\n\"\"\"\nselect * from SupportBean(LocalHelper.doit(theString) = 'abc')", "expectError": "SupportBean(LocalHelper.doit(theString) = 'abc') compiles with filter plan BOOLEAN_EXPRESSION (statement-local inlined class); no Go filter-plan hook"},
+  {"op": "case", "case": "current-timestamp-equals"},
+  {"op": "advance-time", "case": "current-timestamp-equals", "at": "1970-01-01T00:00:00Z"},
+  {"op": "deploy", "case": "current-timestamp-equals", "statement": "s0", "epl": "@name('s0') select * from pattern[a=SupportBean -> SupportBean(a.longPrimitive = current_timestamp() + longPrimitive)];\n"},
+  {"op": "deployed", "case": "current-timestamp-equals", "statement": "s0"},
+  {"op": "advance-time", "case": "current-timestamp-equals", "at": "1970-01-01T00:00:01Z"},
+  {"op": "send", "case": "current-timestamp-equals", "eventType": "SupportBean", "payload": {"longPrimitive": 1123, "theString": null}},
+  {"op": "send", "case": "current-timestamp-equals", "eventType": "SupportBean", "payload": {"longPrimitive": 123, "theString": null}},
+  {"op": "undeploy-all", "case": "current-timestamp-equals"},
+  {"op": "case", "case": "current-timestamp-compare"},
+  {"op": "advance-time", "case": "current-timestamp-compare", "at": "1970-01-01T00:00:00Z"},
+  {"op": "deploy", "case": "current-timestamp-compare", "statement": "s0", "epl": "@name('s0') select * from SupportBean(current_timestamp().getSecondOfMinute()%2=0);\n"},
+  {"op": "deployed", "case": "current-timestamp-compare", "statement": "s0"},
+  {"op": "send", "case": "current-timestamp-compare", "eventType": "SupportBean", "payload": {"longPrimitive": 0, "theString": null}},
+  {"op": "advance-time", "case": "current-timestamp-compare", "at": "1970-01-01T00:00:00.999Z"},
+  {"op": "send", "case": "current-timestamp-compare", "eventType": "SupportBean", "payload": {"longPrimitive": 0, "theString": null}},
+  {"op": "advance-time", "case": "current-timestamp-compare", "at": "1970-01-01T00:00:01Z"},
+  {"op": "send", "case": "current-timestamp-compare", "eventType": "SupportBean", "payload": {"longPrimitive": 0, "theString": null}},
+  {"op": "advance-time", "case": "current-timestamp-compare", "at": "1970-01-01T00:00:01.999Z"},
+  {"op": "send", "case": "current-timestamp-compare", "eventType": "SupportBean", "payload": {"longPrimitive": 0, "theString": null}},
+  {"op": "advance-time", "case": "current-timestamp-compare", "at": "1970-01-01T00:00:02Z"},
+  {"op": "send", "case": "current-timestamp-compare", "eventType": "SupportBean", "payload": {"longPrimitive": 0, "theString": null}},
+  {"op": "advance-time", "case": "current-timestamp-compare", "at": "1970-01-01T00:00:03Z"},
+  {"op": "send", "case": "current-timestamp-compare", "eventType": "SupportBean", "payload": {"longPrimitive": 0, "theString": null}},
+  {"op": "undeploy-all", "case": "current-timestamp-compare"}
+ ]
+}

@@ -56,6 +56,37 @@ activity or a single coverage percentage.
 
 ## Current work unit
 
+Active: Draft 4.540 ('expr-filter-optimizable-lookupable-limited') - prefetch only.
+
+- Selection corrected: `InfraNamedWindowViews` ords 39-42 abandoned —
+  already referenced by `case.infra-namedwindow-views-keepall-delete`
+  (inventory `id` field is the static ID, not runtime ID; use
+  `runtimeId`). New selection: `ExprFilterOptimizableLookupableLimitedExpr.java`
+  all 5 unreferenced executions — ords 1/2/6/7/8
+  (`java-runtime-bfeb8b79de810cba8674`/`2d0d6df65e1884579f65`/
+  `530153bd9731b1f9e439`/`20e9b043737a1b6b2c0d`/`0cd68bf813f2dd238a93`;
+  ord 6 STATICHOOK).
+- [x] Java contract scout (JavaContract540b) + Go surface scout
+  (GoSurface540b) complete; contract frozen in the Assets540 batch
+  context. Ords 1/2/7/8 representable (pattern-sharing index, multi-stmt
+  sharing via variable/context/pattern, current_timestamp equals +
+  compare); ord 6 Disqualify intentionally-different (STATICHOOK plan
+  assertion, no Go hook surface — precedent
+  case.expr-filter-optimizable-value-limited-disqualify).
+- [x] Assets540 dispatched for scenario/oracle/runner/wiring.
+- [x] Assets540 delivered all assets; Java trace + Go trace + evidence
+  regenerated; `-diff` passing / 0 differences (21 records each side);
+  6-test family green; `make check` exit 0.
+- [x] Parity review (Review540): OVERALL PASS; two P3s fixed — dead
+  code removed (efolrCaseSpecFor/efolrOrdinals) and the
+  'frozen at pattern creation' note corrected (Java evaluates
+  current_timestamp per candidate event, same as Go).
+- [ ] Commit.
+
+
+
+## Current work unit
+
 Active: Draft 4.539 ('epl-other-invalid').
 
 - Selection: `EPLOtherInvalid.java` all 4 unreferenced executions —
@@ -82,7 +113,8 @@ Active: Draft 4.539 ('epl-other-invalid').
   intentionally-different; missing checked-in-evidence test written;
   expr.core DV union populated (109 IDs). Re-review: OVERALL PASS, one
   residual P3 (manifest note wording) fixed.
-- [ ] Commit.
+- [x] Shipped; Git owns identity. Draft 4.539 committed and pushed as
+  `3d2dd2720`.
 
 
 ## Current work unit

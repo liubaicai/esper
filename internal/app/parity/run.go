@@ -91,6 +91,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include epl-other-create-expression and epl-other-create-expression-diff")
 		fmt.Fprintln(stderr, "runner modes include epl-other-invalid and epl-other-invalid-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-define-value-parameter and expr-define-value-parameter-diff")
+		fmt.Fprintln(stderr, "runner modes include expr-filter-opt-lkup-limited-remaining and expr-filter-opt-lkup-limited-remaining-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-dt-interval-ops and expr-dt-interval-ops-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-dt-resolution and expr-dt-resolution-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-dt-data-sources and expr-dt-data-sources-diff")
@@ -351,6 +352,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadEplOtherInvalidScenario(file)
 	} else if *mode == "expr-define-value-parameter" || *mode == "expr-define-value-parameter-diff" {
 		scenario, err = loadExprDefineValueParameterScenario(file)
+	} else if *mode == "expr-filter-opt-lkup-limited-remaining" || *mode == "expr-filter-opt-lkup-limited-remaining-diff" {
+		scenario, err = loadEfolrScenario(file)
 	} else if *mode == "epl-other-select-expr-stream-selector" || *mode == "epl-other-select-expr-stream-selector-diff" {
 		scenario, err = loadEplOtherSelectExprStreamSelectorScenario(file)
 	} else if *mode == "infra-nwtable-start-stop" || *mode == "infra-nwtable-start-stop-diff" {
@@ -5929,6 +5932,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, efovJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, efovJavaSources),
 				splitMetadata(*javaExecutions, efovJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "expr-filter-opt-lkup-limited-remaining" || *mode == "expr-filter-opt-lkup-limited-remaining-diff" {
+		trace, err := runEfolrScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "expr-filter-opt-lkup-limited-remaining-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, efolrJavaCommit,
+				splitMetadata(*javaRuntimeIDs, efolrJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, efolrJavaSources),
+				splitMetadata(*javaExecutions, efolrJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

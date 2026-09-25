@@ -1,0 +1,1005 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-bfeb8b79de810cba8674",
+    "java-runtime-2d0d6df65e1884579f65",
+    "java-runtime-530153bd9731b1f9e439",
+    "java-runtime-20e9b043737a1b6b2c0d",
+    "java-runtime-0cd68bf813f2dd238a93"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterOptimizableLookupableLimitedExpr.java"
+  ],
+  "javaExecutions": [
+    "ExprFilterOptLkupEqualsOneStmtWPatternSharingIndex",
+    "ExprFilterOptLkupEqualsMultiStmtSharingIndex",
+    "ExprFilterOptLkupDisqualify",
+    "ExprFilterOptLkupCurrentTimestampWEquals",
+    "ExprFilterOptLkupCurrentTimestampCompare"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "expr-filter-opt-lkup-limited-remaining",
+    "steps": [
+      {
+        "op": "case",
+        "case": "equals-pattern-sharing"
+      },
+      {
+        "op": "advance-time",
+        "case": "equals-pattern-sharing",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deploy",
+        "case": "equals-pattern-sharing",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern[every s0=SupportBean_S0 -\u003e every SupportBean_S1('ax' = p10 || p11)] order by s0.id asc;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "equals-pattern-sharing",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "equals-pattern-sharing",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": null,
+          "p01": null,
+          "p02": null,
+          "p03": null,
+          "value": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "equals-pattern-sharing",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 2,
+          "p00": null,
+          "p01": null,
+          "p02": null,
+          "p03": null,
+          "value": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "equals-pattern-sharing",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 10,
+          "p10": "a",
+          "p11": "x",
+          "p12": null,
+          "p13": null
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "equals-pattern-sharing"
+      },
+      {
+        "op": "case",
+        "case": "equals-multi-stmt-sharing"
+      },
+      {
+        "op": "advance-time",
+        "case": "equals-multi-stmt-sharing",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deploy",
+        "case": "equals-multi-stmt-sharing",
+        "statement": "module",
+        "epl": "@name('s0') select * from SupportBean_S0(p00 || p01 = 'ax');\n@name('s1') select * from SupportBean_S0(p00 || p01 = 'ax');\ncreate constant variable string VAR = 'ax';\n@name('s2') select * from SupportBean_S0(p00 || p01 = VAR);\ncreate context MyContextOne start SupportBean_S1 as s1;\n@name('s3') context MyContextOne select * from SupportBean_S0(p00 || p01 = context.s1.p10);\ncreate context MyContextTwo start SupportBean_S1 as s1;\n@name('s4') context MyContextTwo select * from pattern[a=SupportBean_S1 -\u003e SupportBean_S0(a.p10 = p00     ||     p01)];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "equals-multi-stmt-sharing",
+        "statement": "module"
+      },
+      {
+        "op": "send",
+        "case": "equals-multi-stmt-sharing",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 0,
+          "p10": "ax",
+          "p11": null,
+          "p12": null,
+          "p13": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "equals-multi-stmt-sharing",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "a",
+          "p01": "x",
+          "p02": null,
+          "p03": null,
+          "value": 0
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "equals-multi-stmt-sharing"
+      },
+      {
+        "op": "case",
+        "case": "disqualify"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "disqualify",
+        "statement": "variable-nonconstant",
+        "expectError": "SupportBean(theString||MYVARIABLE_NONCONSTANT='ax') compiles with filter plan BOOLEAN_EXPRESSION (non-constant variable); no Go filter-plan hook",
+        "epl": "@Hook(type=HookType.INTERNAL_FILTERSPEC, hook='com.espertech.esper.regressionlib.support.filter.SupportFilterPlanHook')select * from SupportBean(theString||MYVARIABLE_NONCONSTANT='ax')"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "disqualify",
+        "statement": "table-column",
+        "expectError": "SupportBean(theString||MyTable.tablecol='ax') compiles with filter plan BOOLEAN_EXPRESSION (table column); no Go filter-plan hook",
+        "epl": "@Hook(type=HookType.INTERNAL_FILTERSPEC, hook='com.espertech.esper.regressionlib.support.filter.SupportFilterPlanHook')select * from SupportBean(theString||MyTable.tablecol='ax')"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "disqualify",
+        "statement": "subquery",
+        "expectError": "SupportBean(theString||(select theString from MyWindow)='ax') compiles with filter plan BOOLEAN_EXPRESSION (subquery); no Go filter-plan hook",
+        "epl": "@Hook(type=HookType.INTERNAL_FILTERSPEC, hook='com.espertech.esper.regressionlib.support.filter.SupportFilterPlanHook')select * from SupportBean(theString||(select theString from MyWindow)='ax')"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "disqualify",
+        "statement": "lambda",
+        "expectError": "SupportBeanArrayCollMap(id || setOfString.where(v =\u003e v=id).firstOf() = 'ax') compiles with filter plan BOOLEAN_EXPRESSION (lambda); no Go filter-plan hook",
+        "epl": "@Hook(type=HookType.INTERNAL_FILTERSPEC, hook='com.espertech.esper.regressionlib.support.filter.SupportFilterPlanHook')select * from SupportBeanArrayCollMap(id || setOfString.where(v =\u003e v=id).firstOf() = 'ax')"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "disqualify",
+        "statement": "script",
+        "expectError": "pattern[s0=SupportBean_S0 -\u003e SupportBean(MyJavaScript(theString)='x')] compiles with filter plan BOOLEAN_EXPRESSION (script expression); no Go filter-plan hook",
+        "epl": "@Hook(type=HookType.INTERNAL_FILTERSPEC, hook='com.espertech.esper.regressionlib.support.filter.SupportFilterPlanHook')select * from pattern[s0=SupportBean_S0 -\u003e SupportBean(MyJavaScript(theString)='x')]"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "disqualify",
+        "statement": "current-timestamp",
+        "expectError": "SupportBean(current_timestamp()=1) compiles with filter plan BOOLEAN_EXPRESSION (current_timestamp); no Go filter-plan hook",
+        "epl": "@Hook(type=HookType.INTERNAL_FILTERSPEC, hook='com.espertech.esper.regressionlib.support.filter.SupportFilterPlanHook')select * from SupportBean(current_timestamp()=1)"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "disqualify",
+        "statement": "inlined-class",
+        "expectError": "SupportBean(LocalHelper.doit(theString) = 'abc') compiles with filter plan BOOLEAN_EXPRESSION (statement-local inlined class); no Go filter-plan hook",
+        "epl": "@Hook(type=HookType.INTERNAL_FILTERSPEC, hook='com.espertech.esper.regressionlib.support.filter.SupportFilterPlanHook')inlined_class \"\"\"\n  public class LocalHelper {\n    public static String doit(Object param) {\n      return null;\n    }\n  }\n\"\"\"\nselect * from SupportBean(LocalHelper.doit(theString) = 'abc')"
+      },
+      {
+        "op": "case",
+        "case": "current-timestamp-equals"
+      },
+      {
+        "op": "advance-time",
+        "case": "current-timestamp-equals",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deploy",
+        "case": "current-timestamp-equals",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern[a=SupportBean -\u003e SupportBean(a.longPrimitive = current_timestamp() + longPrimitive)];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "current-timestamp-equals",
+        "statement": "s0"
+      },
+      {
+        "op": "advance-time",
+        "case": "current-timestamp-equals",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "send",
+        "case": "current-timestamp-equals",
+        "eventType": "SupportBean",
+        "payload": {
+          "longPrimitive": 1123,
+          "theString": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "current-timestamp-equals",
+        "eventType": "SupportBean",
+        "payload": {
+          "longPrimitive": 123,
+          "theString": null
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "current-timestamp-equals"
+      },
+      {
+        "op": "case",
+        "case": "current-timestamp-compare"
+      },
+      {
+        "op": "advance-time",
+        "case": "current-timestamp-compare",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deploy",
+        "case": "current-timestamp-compare",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportBean(current_timestamp().getSecondOfMinute()%2=0);\n"
+      },
+      {
+        "op": "deployed",
+        "case": "current-timestamp-compare",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "current-timestamp-compare",
+        "eventType": "SupportBean",
+        "payload": {
+          "longPrimitive": 0,
+          "theString": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "current-timestamp-compare",
+        "at": "1970-01-01T00:00:00.999Z"
+      },
+      {
+        "op": "send",
+        "case": "current-timestamp-compare",
+        "eventType": "SupportBean",
+        "payload": {
+          "longPrimitive": 0,
+          "theString": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "current-timestamp-compare",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "send",
+        "case": "current-timestamp-compare",
+        "eventType": "SupportBean",
+        "payload": {
+          "longPrimitive": 0,
+          "theString": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "current-timestamp-compare",
+        "at": "1970-01-01T00:00:01.999Z"
+      },
+      {
+        "op": "send",
+        "case": "current-timestamp-compare",
+        "eventType": "SupportBean",
+        "payload": {
+          "longPrimitive": 0,
+          "theString": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "current-timestamp-compare",
+        "at": "1970-01-01T00:00:02Z"
+      },
+      {
+        "op": "send",
+        "case": "current-timestamp-compare",
+        "eventType": "SupportBean",
+        "payload": {
+          "longPrimitive": 0,
+          "theString": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "current-timestamp-compare",
+        "at": "1970-01-01T00:00:03Z"
+      },
+      {
+        "op": "send",
+        "case": "current-timestamp-compare",
+        "eventType": "SupportBean",
+        "payload": {
+          "longPrimitive": 0,
+          "theString": null
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "current-timestamp-compare"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-filter-opt-lkup-limited-remaining",
+    "records": [
+      {
+        "case": "equals-pattern-sharing",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "equals-pattern-sharing",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s0": {
+                "id": 1,
+                "p00": {
+                  "state": "null"
+                },
+                "p01": {
+                  "state": "null"
+                },
+                "p02": {
+                  "state": "null"
+                },
+                "p03": {
+                  "state": "null"
+                },
+                "value": 0
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "s0": {
+                "id": 2,
+                "p00": {
+                  "state": "null"
+                },
+                "p01": {
+                  "state": "null"
+                },
+                "p02": {
+                  "state": "null"
+                },
+                "p03": {
+                  "state": "null"
+                },
+                "value": 0
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "equals-multi-stmt-sharing",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "equals-multi-stmt-sharing",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 10,
+              "p00": "a",
+              "p01": "x",
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              },
+              "value": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "equals-multi-stmt-sharing",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 10,
+              "p00": "a",
+              "p01": "x",
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              },
+              "value": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "equals-multi-stmt-sharing",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 10,
+              "p00": "a",
+              "p01": "x",
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              },
+              "value": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "equals-multi-stmt-sharing",
+        "operation": "listener",
+        "statement": "s3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 10,
+              "p00": "a",
+              "p01": "x",
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              },
+              "value": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "equals-multi-stmt-sharing",
+        "operation": "listener",
+        "statement": "s4",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "id": 0,
+                "p10": "ax",
+                "p11": {
+                  "state": "null"
+                },
+                "p12": {
+                  "state": "null"
+                },
+                "p13": {
+                  "state": "null"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "disqualify",
+        "operation": "unrepresentable",
+        "statement": "variable-nonconstant",
+        "sequence": 0,
+        "value": "SupportBean(theString||MYVARIABLE_NONCONSTANT='ax') compiles with filter plan BOOLEAN_EXPRESSION (non-constant variable); no Go filter-plan hook"
+      },
+      {
+        "case": "disqualify",
+        "operation": "unrepresentable",
+        "statement": "table-column",
+        "sequence": 0,
+        "value": "SupportBean(theString||MyTable.tablecol='ax') compiles with filter plan BOOLEAN_EXPRESSION (table column); no Go filter-plan hook"
+      },
+      {
+        "case": "disqualify",
+        "operation": "unrepresentable",
+        "statement": "subquery",
+        "sequence": 0,
+        "value": "SupportBean(theString||(select theString from MyWindow)='ax') compiles with filter plan BOOLEAN_EXPRESSION (subquery); no Go filter-plan hook"
+      },
+      {
+        "case": "disqualify",
+        "operation": "unrepresentable",
+        "statement": "lambda",
+        "sequence": 0,
+        "value": "SupportBeanArrayCollMap(id || setOfString.where(v =\u003e v=id).firstOf() = 'ax') compiles with filter plan BOOLEAN_EXPRESSION (lambda); no Go filter-plan hook"
+      },
+      {
+        "case": "disqualify",
+        "operation": "unrepresentable",
+        "statement": "script",
+        "sequence": 0,
+        "value": "pattern[s0=SupportBean_S0 -\u003e SupportBean(MyJavaScript(theString)='x')] compiles with filter plan BOOLEAN_EXPRESSION (script expression); no Go filter-plan hook"
+      },
+      {
+        "case": "disqualify",
+        "operation": "unrepresentable",
+        "statement": "current-timestamp",
+        "sequence": 0,
+        "value": "SupportBean(current_timestamp()=1) compiles with filter plan BOOLEAN_EXPRESSION (current_timestamp); no Go filter-plan hook"
+      },
+      {
+        "case": "disqualify",
+        "operation": "unrepresentable",
+        "statement": "inlined-class",
+        "sequence": 0,
+        "value": "SupportBean(LocalHelper.doit(theString) = 'abc') compiles with filter plan BOOLEAN_EXPRESSION (statement-local inlined class); no Go filter-plan hook"
+      },
+      {
+        "case": "current-timestamp-equals",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "current-timestamp-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "longPrimitive": 1123,
+                "theString": {
+                  "state": "null"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "current-timestamp-compare",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "current-timestamp-compare",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 0,
+              "theString": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "current-timestamp-compare",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00.999Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 0,
+              "theString": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "current-timestamp-compare",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 0,
+              "theString": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-filter-opt-lkup-limited-remaining",
+    "records": [
+      {
+        "case": "equals-pattern-sharing",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "equals-pattern-sharing",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s0": {
+                "id": 1,
+                "p00": {
+                  "state": "null"
+                },
+                "p01": {
+                  "state": "null"
+                },
+                "p02": {
+                  "state": "null"
+                },
+                "p03": {
+                  "state": "null"
+                },
+                "value": 0
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "s0": {
+                "id": 2,
+                "p00": {
+                  "state": "null"
+                },
+                "p01": {
+                  "state": "null"
+                },
+                "p02": {
+                  "state": "null"
+                },
+                "p03": {
+                  "state": "null"
+                },
+                "value": 0
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "equals-multi-stmt-sharing",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "equals-multi-stmt-sharing",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 10,
+              "p00": "a",
+              "p01": "x",
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              },
+              "value": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "equals-multi-stmt-sharing",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 10,
+              "p00": "a",
+              "p01": "x",
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              },
+              "value": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "equals-multi-stmt-sharing",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 10,
+              "p00": "a",
+              "p01": "x",
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              },
+              "value": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "equals-multi-stmt-sharing",
+        "operation": "listener",
+        "statement": "s3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 10,
+              "p00": "a",
+              "p01": "x",
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              },
+              "value": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "equals-multi-stmt-sharing",
+        "operation": "listener",
+        "statement": "s4",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "id": 0,
+                "p10": "ax",
+                "p11": {
+                  "state": "null"
+                },
+                "p12": {
+                  "state": "null"
+                },
+                "p13": {
+                  "state": "null"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "disqualify",
+        "operation": "unrepresentable",
+        "statement": "variable-nonconstant",
+        "sequence": 0,
+        "value": "SupportBean(theString||MYVARIABLE_NONCONSTANT='ax') compiles with filter plan BOOLEAN_EXPRESSION (non-constant variable); no Go filter-plan hook"
+      },
+      {
+        "case": "disqualify",
+        "operation": "unrepresentable",
+        "statement": "table-column",
+        "sequence": 0,
+        "value": "SupportBean(theString||MyTable.tablecol='ax') compiles with filter plan BOOLEAN_EXPRESSION (table column); no Go filter-plan hook"
+      },
+      {
+        "case": "disqualify",
+        "operation": "unrepresentable",
+        "statement": "subquery",
+        "sequence": 0,
+        "value": "SupportBean(theString||(select theString from MyWindow)='ax') compiles with filter plan BOOLEAN_EXPRESSION (subquery); no Go filter-plan hook"
+      },
+      {
+        "case": "disqualify",
+        "operation": "unrepresentable",
+        "statement": "lambda",
+        "sequence": 0,
+        "value": "SupportBeanArrayCollMap(id || setOfString.where(v =\u003e v=id).firstOf() = 'ax') compiles with filter plan BOOLEAN_EXPRESSION (lambda); no Go filter-plan hook"
+      },
+      {
+        "case": "disqualify",
+        "operation": "unrepresentable",
+        "statement": "script",
+        "sequence": 0,
+        "value": "pattern[s0=SupportBean_S0 -\u003e SupportBean(MyJavaScript(theString)='x')] compiles with filter plan BOOLEAN_EXPRESSION (script expression); no Go filter-plan hook"
+      },
+      {
+        "case": "disqualify",
+        "operation": "unrepresentable",
+        "statement": "current-timestamp",
+        "sequence": 0,
+        "value": "SupportBean(current_timestamp()=1) compiles with filter plan BOOLEAN_EXPRESSION (current_timestamp); no Go filter-plan hook"
+      },
+      {
+        "case": "disqualify",
+        "operation": "unrepresentable",
+        "statement": "inlined-class",
+        "sequence": 0,
+        "value": "SupportBean(LocalHelper.doit(theString) = 'abc') compiles with filter plan BOOLEAN_EXPRESSION (statement-local inlined class); no Go filter-plan hook"
+      },
+      {
+        "case": "current-timestamp-equals",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "current-timestamp-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "longPrimitive": 1123,
+                "theString": {
+                  "state": "null"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "current-timestamp-compare",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "current-timestamp-compare",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 0,
+              "theString": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "current-timestamp-compare",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00.999Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 0,
+              "theString": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "current-timestamp-compare",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 0,
+              "theString": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
