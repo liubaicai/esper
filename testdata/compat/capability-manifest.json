@@ -98,10 +98,11 @@
     "internal/esper/expr.go",
     "internal/esper/event_render.go",
     "internal/esper/schema_test.go",
-    "internal/esper/event_render_test.go"
+    "internal/esper/event_render_test.go",
+    "internal/app/parity/event_infra_getter_dynamic.go"
    ],
    "phase": 1,
-   "status": "implemented",
+   "status": "differential-verified",
    "remaining": [
     "fragment/metadata integration across all event representations",
     "dynamic XPath/DOM/XML namespace and XSD-backed rendering",
@@ -128,7 +129,12 @@
     "java-runtime-b4077c7d900735417782",
     "java-runtime-93fd5baf00af2e252e0b",
     "java-runtime-415ec6ff4f1b6f87cc65",
-    "java-runtime-aa515a1f3bad40ec148b"
+    "java-runtime-aa515a1f3bad40ec148b",
+    "java-runtime-23791e63adf0caaff235",
+    "java-runtime-c6db3a43dfabaf9c0f86",
+    "java-runtime-5ef37219e1c801e38af7",
+    "java-runtime-1a68e3e356c953b9c774",
+    "java-runtime-0d912287d52a89b8725c"
    ]
   },
   {
@@ -6719,6 +6725,73 @@
    ],
    "differentialVerifiedRuntimeIds": [
     "java-runtime-b36d999f7edc275dacd2"
+   ]
+  },
+  {
+   "id": "case.event-infra-getter-dynamic",
+   "javaRuntimeIds": [
+    "java-runtime-23791e63adf0caaff235",
+    "java-runtime-c6db3a43dfabaf9c0f86",
+    "java-runtime-5ef37219e1c801e38af7",
+    "java-runtime-1a68e3e356c953b9c774",
+    "java-runtime-0d912287d52a89b8725c"
+   ],
+   "javaStaticIds": [
+    "java-aab99c02485fd4c7259e",
+    "java-681d397823021b2f5617",
+    "java-6d027a1951a0f0c26280",
+    "java-d89f3bc0bdc8ad41ac17",
+    "java-c869682acfea77412912"
+   ],
+   "javaNames": [
+    "EventInfraGetterDynamicSimple",
+    "EventInfraGetterDynamicNested",
+    "EventInfraGetterDynamicNestedDeep",
+    "EventInfraGetterDynamicIndexexPropertyPredefined",
+    "EventInfraGetterDynamicSimplePropertyPredefined"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraGetterDynamicSimple.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraGetterDynamicNested.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraGetterDynamicNestedDeep.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraGetterDynamicIndexexPropertyPredefined.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraGetterDynamicSimplePropertyPredefined.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunEventInfraGetterDynamicDirectReplay",
+    "internal/app/parity/run_test.go:TestRunEventInfraGetterDynamicDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunEventInfraGetterDynamicCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunEventInfraGetterDynamicDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunEventInfraGetterDynamicRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunEventInfraGetterDynamicRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "event",
+    "getter",
+    "dynamic-property",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/event-infra-getter-dynamic.json",
+    "testdata/parity/event-infra-getter-dynamic.trace.json",
+    "testdata/parity/event-infra-getter-dynamic.go.trace.json",
+    "testdata/parity/event-infra-getter-dynamic.evidence.json",
+    "tools/java-oracle/EventInfraGetterDynamicScenarioOracle.java",
+    "tools/java-oracle/run-event-infra-getter-dynamic.sh"
+   ],
+   "notes": "EventInfraGetterDynamic* cluster born-differential: 5 executions x 6 underlyings (bean/map/objectarray/json-dynamic/json-provided/avro). Dynamic `?` property getters \u2014 top-level (property?), nested (property?.id), nested-deep (property?.leaf.id), indexed-predefined (array[0]?/array[1]?), simple-predefined (property? on a schema-declared field). Listener rows pin c0 value / c1 exists / c2 typeof; getter probes pin exists/value/fragment per send. Avro-dynamic iterations emit unrepresentable markers (Go NewAvroSchema rejects AllowDynamicFields); OA sender=null emits getter-null probe records; the beanBackedJsonOrAvro exists()-on-absent quirk is preserved only for dynamic-simple (Java source passes true only there). Java/Go 353 records each, 0 differences. Scenario testdata/parity/event-infra-getter-dynamic.json; Java trace via tools/java-oracle/run-event-infra-getter-dynamic.sh at commit 9e1b9f1cc9117fea4bf33ab043762c045d73839c.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-23791e63adf0caaff235",
+    "java-runtime-c6db3a43dfabaf9c0f86",
+    "java-runtime-5ef37219e1c801e38af7",
+    "java-runtime-1a68e3e356c953b9c774",
+    "java-runtime-0d912287d52a89b8725c"
    ]
   },
   {
@@ -53376,13 +53449,17 @@
   {
    "capabilityId": "expr.core",
    "caseId": "case.expr-filter-optimizable-lookupable-limited-disqualify"
+  },
+  {
+   "capabilityId": "event.property-access-render",
+   "caseId": "case.event-infra-getter-dynamic"
   }
  ],
  "summary": {
-  "inventoriedCases": 771,
-  "implementedCases": 769,
-  "differentialVerifiedCases": 394,
-  "differentialVerifiedRuntimeIds": 1559,
+  "inventoriedCases": 772,
+  "implementedCases": 770,
+  "differentialVerifiedCases": 395,
+  "differentialVerifiedRuntimeIds": 1564,
   "intentionallyDifferentCases": 36,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -53392,13 +53469,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4097,
-  "referencedJavaRuntimeIds": 3657,
+  "runtimeAssociationCount": 4102,
+  "referencedJavaRuntimeIds": 3662,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 479,
+  "unreferencedJavaRuntimeIds": 474,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 771,
+  "totalCases": 772,
   "totalCapabilities": 126
  }
 }

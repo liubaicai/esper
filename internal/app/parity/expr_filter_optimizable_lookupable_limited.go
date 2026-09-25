@@ -281,7 +281,6 @@ type efolrS1 struct {
 	P13 *string `esper:"p13"`
 }
 
-
 // runEfolrScenario replays the five cases, one fresh environment and engine
 // per case (each Java execution gets its own runtime and ends with
 // undeployAll).

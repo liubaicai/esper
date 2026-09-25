@@ -1,0 +1,1941 @@
+{
+ "version": "esper-parity/v1",
+ "id": "event-infra-getter-dynamic",
+ "description": "EventInfraGetterDynamic* dynamic-property getter slice (all ord 0, no flags): dynamic-simple replays property? over six underlyings with exists true/true/false and the beanBackedJsonOrAvro exists-on-absent quirk for json-provided and avro (Avro dynamic unrepresentable in Go); dynamic-nested replays property?.id and dynamic-nested-deep property?.leaf.id with null-safe tails (objectarray has no sender and asserts the getter is null); indexed-predefined replays array[0]?/array[1]? non-null/exists/typeof pairs with bean and json-provided fragments; simple-predefined replays declared property string access including Avro. Java sources are the five sibling files under suite/event/infra (pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c).",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra",
+ "javaRuntimes": [
+  "java-runtime-23791e63adf0caaff235",
+  "java-runtime-c6db3a43dfabaf9c0f86",
+  "java-runtime-5ef37219e1c801e38af7",
+  "java-runtime-1a68e3e356c953b9c774",
+  "java-runtime-0d912287d52a89b8725c"
+ ],
+ "javaNames": [
+  "EventInfraGetterDynamicSimple",
+  "EventInfraGetterDynamicNested",
+  "EventInfraGetterDynamicNestedDeep",
+  "EventInfraGetterDynamicIndexexPropertyPredefined",
+  "EventInfraGetterDynamicSimplePropertyPredefined"
+ ],
+ "javaStaticIds": [
+  "java-aab99c02485fd4c7259e",
+  "java-681d397823021b2f5617",
+  "java-6d027a1951a0f0c26280",
+  "java-d89f3bc0bdc8ad41ac17",
+  "java-c869682acfea77412912"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "dynamic-simple",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-23791e63adf0caaff235",
+   "executionName": "EventInfraGetterDynamicSimple",
+   "observation": "listener+getter; six underlyings replay property? on LocalEvent: bean/map/objectarray/json-dynamic send 'a', null and absent with exists true/true/false while json-provided and avro report exists true on absent (beanBackedJsonOrAvro); the Avro iteration is unrepresentable in Go",
+   "epl": "@name('s1') select property? as c0, exists(property?) as c1, typeof(property?) as c2 from LocalEvent;\n"
+  },
+  {
+   "case": "dynamic-nested",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-c6db3a43dfabaf9c0f86",
+   "executionName": "EventInfraGetterDynamicNested",
+   "observation": "listener+getter; property?.id over six underlyings: three sends ({id:'a'}, {id:null}, absent) with exists true/true/false; objectarray has no sender and asserts the getter is null; Avro dynamic is unrepresentable",
+   "epl": "@name('s1') select property?.id as c0, exists(property?.id) as c1, typeof(property?.id) as c2 from LocalEvent;\n"
+  },
+  {
+   "case": "dynamic-nested-deep",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-5ef37219e1c801e38af7",
+   "executionName": "EventInfraGetterDynamicNestedDeep",
+   "observation": "listener+getter; property?.leaf.id over six underlyings: four sends ({leaf:{id:'a'}}, {leaf:{id:null}}, {leaf:null}, absent) with exists true/true/false/false; objectarray asserts the getter is null; Avro dynamic is unrepresentable",
+   "epl": "@name('s1') select property?.leaf.id as c0, exists(property?.leaf.id) as c1, typeof(property?.leaf.id) as c2 from LocalEvent;\n"
+  },
+  {
+   "case": "indexed-predefined",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-1a68e3e356c953b9c774",
+   "executionName": "EventInfraGetterDynamicIndexexPropertyPredefined",
+   "observation": "listener+getter; array[0]?/array[1]? over six underlyings: five sends (len2, len1, len0, null, absent) assert non-null/exists/typeof pairs; bean and json-provided fragments are non-null on present elements; objectarray asserts both getters null",
+   "epl": "@name('s1') select array[0]? as c0, array[1]? as c1,exists(array[0]?) as c2, exists(array[1]?) as c3, typeof(array[0]?) as c4, typeof(array[1]?) as c5 from LocalEvent;\n"
+  },
+  {
+   "case": "simple-predefined",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-0d912287d52a89b8725c",
+   "executionName": "EventInfraGetterDynamicSimplePropertyPredefined",
+   "observation": "listener+getter; declared property string with property? access over all six underlyings including Avro: two sends ('a', null) with exists true/true",
+   "epl": "@name('s1') select property? as c0, exists(property?) as c1, typeof(property?) as c2 from LocalEvent;\n"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "dynamic-simple"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-simple",
+   "statement": "schema",
+   "epl": "@public @buseventtype create schema LocalEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraGetterDynamicSimple$LocalEvent;\n@public @buseventtype create schema LocalEventSubA as com.espertech.esper.regressionlib.suite.event.infra.EventInfraGetterDynamicSimple$LocalEventSubA;\n",
+   "mode": "bean"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-simple",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-simple",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-simple",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-simple",
+   "statement": "s1",
+   "epl": "@name('s1') select property? as c0, exists(property?) as c1, typeof(property?) as c2 from LocalEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-simple",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "dynamic-simple",
+   "eventType": "LocalEventSubA",
+   "mode": "bean",
+   "payload": {
+    "property": "a"
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-simple",
+   "eventType": "LocalEventSubA",
+   "mode": "bean",
+   "payload": {
+    "property": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-simple",
+   "eventType": "LocalEvent",
+   "mode": "bean",
+   "payload": {}
+  },
+  {
+   "op": "undeploy-all",
+   "case": "dynamic-simple"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-simple",
+   "statement": "schema",
+   "epl": "@public @buseventtype create schema LocalEvent();\n",
+   "mode": "map"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-simple",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-simple",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-simple",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-simple",
+   "statement": "s1",
+   "epl": "@name('s1') select property? as c0, exists(property?) as c1, typeof(property?) as c2 from LocalEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-simple",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "dynamic-simple",
+   "eventType": "LocalEvent",
+   "mode": "map",
+   "payload": {
+    "property": "a"
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-simple",
+   "eventType": "LocalEvent",
+   "mode": "map",
+   "payload": {
+    "property": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-simple",
+   "eventType": "LocalEvent",
+   "mode": "map",
+   "payload": {}
+  },
+  {
+   "op": "undeploy-all",
+   "case": "dynamic-simple"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-simple",
+   "statement": "schema",
+   "epl": "@public @buseventtype create objectarray schema LocalEvent();\n@public @buseventtype create objectarray schema LocalEventSubA (property string) inherits LocalEvent;\n",
+   "mode": "objectarray"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-simple",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-simple",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-simple",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-simple",
+   "statement": "s1",
+   "epl": "@name('s1') select property? as c0, exists(property?) as c1, typeof(property?) as c2 from LocalEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-simple",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "dynamic-simple",
+   "eventType": "LocalEventSubA",
+   "mode": "objectarray",
+   "payload": {
+    "property": "a"
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-simple",
+   "eventType": "LocalEventSubA",
+   "mode": "objectarray",
+   "payload": {
+    "property": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-simple",
+   "eventType": "LocalEvent",
+   "mode": "objectarray",
+   "payload": {}
+  },
+  {
+   "op": "undeploy-all",
+   "case": "dynamic-simple"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-simple",
+   "statement": "schema",
+   "epl": "@public @buseventtype @JsonSchema(dynamic=true) create json schema LocalEvent();\n",
+   "mode": "json"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-simple",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-simple",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-simple",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-simple",
+   "statement": "s1",
+   "epl": "@name('s1') select property? as c0, exists(property?) as c1, typeof(property?) as c2 from LocalEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-simple",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "dynamic-simple",
+   "eventType": "LocalEvent",
+   "mode": "json",
+   "payload": {
+    "property": "a"
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-simple",
+   "eventType": "LocalEvent",
+   "mode": "json",
+   "payload": {
+    "property": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-simple",
+   "eventType": "LocalEvent",
+   "mode": "json",
+   "payload": {}
+  },
+  {
+   "op": "undeploy-all",
+   "case": "dynamic-simple"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-simple",
+   "statement": "schema",
+   "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraGetterDynamicSimple$MyLocalJsonProvided') @public @buseventtype create json schema LocalEvent();\n",
+   "mode": "json-provided"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-simple",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-simple",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-simple",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-simple",
+   "statement": "s1",
+   "epl": "@name('s1') select property? as c0, exists(property?) as c1, typeof(property?) as c2 from LocalEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-simple",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "dynamic-simple",
+   "eventType": "LocalEvent",
+   "mode": "json-provided",
+   "payload": {
+    "property": "a"
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-simple",
+   "eventType": "LocalEvent",
+   "mode": "json-provided",
+   "payload": {
+    "property": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-simple",
+   "eventType": "LocalEvent",
+   "mode": "json-provided",
+   "payload": {}
+  },
+  {
+   "op": "undeploy-all",
+   "case": "dynamic-simple"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-simple",
+   "statement": "schema",
+   "epl": "@public @buseventtype create avro schema LocalEvent();\n",
+   "mode": "avro"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-simple",
+   "statement": "schema"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "dynamic-simple",
+   "statement": "avro-dynamic",
+   "expectError": "Java replays the Avro dynamic-property iteration: create avro schema LocalEvent() deploys, s0 and s1 deploy, three sends (property 'a', null, absent) assert c0/c1/c2 and the property? getter with beanBackedJsonOrAvro exists-on-absent; Go Avro schemas reject AllowDynamicFields and undeclared record fields, so the iteration is unrepresentable"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "dynamic-simple"
+  },
+  {
+   "op": "case",
+   "case": "dynamic-nested"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested",
+   "statement": "schema",
+   "epl": "@public @buseventtype create schema LocalEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraGetterDynamicNested$LocalEvent;\n@public @buseventtype create schema LocalEventSubA as com.espertech.esper.regressionlib.suite.event.infra.EventInfraGetterDynamicNested$LocalEventSubA;\n",
+   "mode": "bean"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested",
+   "statement": "s1",
+   "epl": "@name('s1') select property?.id as c0, exists(property?.id) as c1, typeof(property?.id) as c2 from LocalEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested",
+   "eventType": "LocalEventSubA",
+   "mode": "bean",
+   "payload": {
+    "property": {
+     "id": "a"
+    }
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested",
+   "eventType": "LocalEventSubA",
+   "mode": "bean",
+   "payload": {
+    "property": {
+     "id": null
+    }
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested",
+   "eventType": "LocalEvent",
+   "mode": "bean",
+   "payload": {}
+  },
+  {
+   "op": "undeploy-all",
+   "case": "dynamic-nested"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested",
+   "statement": "schema",
+   "epl": "@public @buseventtype @JsonSchema(dynamic=true) create map schema LocalEvent();\n",
+   "mode": "map"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested",
+   "statement": "s1",
+   "epl": "@name('s1') select property?.id as c0, exists(property?.id) as c1, typeof(property?.id) as c2 from LocalEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested",
+   "eventType": "LocalEvent",
+   "mode": "map",
+   "payload": {
+    "property": {
+     "id": "a"
+    }
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested",
+   "eventType": "LocalEvent",
+   "mode": "map",
+   "payload": {
+    "property": {
+     "id": null
+    }
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested",
+   "eventType": "LocalEvent",
+   "mode": "map",
+   "payload": {}
+  },
+  {
+   "op": "undeploy-all",
+   "case": "dynamic-nested"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested",
+   "statement": "schema",
+   "epl": "@public @buseventtype @JsonSchema(dynamic=true) create objectarray schema LocalEvent();\n",
+   "mode": "objectarray"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested",
+   "statement": "s0"
+  },
+  {
+   "op": "types",
+   "case": "dynamic-nested",
+   "statement": "s0",
+   "name": "property?.id"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "dynamic-nested"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested",
+   "statement": "schema",
+   "epl": "@public @buseventtype @JsonSchema(dynamic=true) create json schema LocalEvent();\n",
+   "mode": "json"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested",
+   "statement": "s1",
+   "epl": "@name('s1') select property?.id as c0, exists(property?.id) as c1, typeof(property?.id) as c2 from LocalEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested",
+   "eventType": "LocalEvent",
+   "mode": "json",
+   "payload": {
+    "property": {
+     "id": "a"
+    }
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested",
+   "eventType": "LocalEvent",
+   "mode": "json",
+   "payload": {
+    "property": {
+     "id": null
+    }
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested",
+   "eventType": "LocalEvent",
+   "mode": "json",
+   "payload": {}
+  },
+  {
+   "op": "undeploy-all",
+   "case": "dynamic-nested"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested",
+   "statement": "schema",
+   "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraGetterDynamicNested$MyLocalJsonProvided') @public @buseventtype create json schema LocalEvent();\n",
+   "mode": "json-provided"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested",
+   "statement": "s1",
+   "epl": "@name('s1') select property?.id as c0, exists(property?.id) as c1, typeof(property?.id) as c2 from LocalEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested",
+   "eventType": "LocalEvent",
+   "mode": "json-provided",
+   "payload": {
+    "property": {
+     "id": "a"
+    }
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested",
+   "eventType": "LocalEvent",
+   "mode": "json-provided",
+   "payload": {
+    "property": {
+     "id": null
+    }
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested",
+   "eventType": "LocalEvent",
+   "mode": "json-provided",
+   "payload": {}
+  },
+  {
+   "op": "undeploy-all",
+   "case": "dynamic-nested"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested",
+   "statement": "schema",
+   "epl": "@public @buseventtype @JsonSchema(dynamic=true) create avro schema LocalEvent();\n",
+   "mode": "avro"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested",
+   "statement": "schema"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "dynamic-nested",
+   "statement": "avro-dynamic",
+   "expectError": "Java replays the Avro dynamic-property iteration: create avro schema LocalEvent() deploys, s0 and s1 deploy, three sends assert c0/c1/c2 and the property?.id getter; Go Avro schemas reject AllowDynamicFields and undeclared record fields, so the iteration is unrepresentable"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "dynamic-nested"
+  },
+  {
+   "op": "case",
+   "case": "dynamic-nested-deep"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested-deep",
+   "statement": "schema",
+   "epl": "@public @buseventtype create schema LocalEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraGetterDynamicNested$LocalEvent;\n@public @buseventtype create schema LocalEventSubA as com.espertech.esper.regressionlib.suite.event.infra.EventInfraGetterDynamicNested$LocalEventSubA;\n",
+   "mode": "bean"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested-deep",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested-deep",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested-deep",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested-deep",
+   "statement": "s1",
+   "epl": "@name('s1') select property?.leaf.id as c0, exists(property?.leaf.id) as c1, typeof(property?.leaf.id) as c2 from LocalEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested-deep",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested-deep",
+   "eventType": "LocalEvent",
+   "mode": "bean",
+   "payload": {
+    "property": {
+     "leaf": {
+      "id": "a"
+     }
+    }
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested-deep",
+   "eventType": "LocalEvent",
+   "mode": "bean",
+   "payload": {
+    "property": {
+     "leaf": {
+      "id": null
+     }
+    }
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested-deep",
+   "eventType": "LocalEvent",
+   "mode": "bean",
+   "payload": {
+    "property": {
+     "leaf": null
+    }
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested-deep",
+   "eventType": "LocalEvent",
+   "mode": "bean",
+   "payload": {}
+  },
+  {
+   "op": "undeploy-all",
+   "case": "dynamic-nested-deep"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested-deep",
+   "statement": "schema",
+   "epl": "@public @buseventtype @JsonSchema(dynamic=true) create map schema LocalEvent();\n",
+   "mode": "map"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested-deep",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested-deep",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested-deep",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested-deep",
+   "statement": "s1",
+   "epl": "@name('s1') select property?.leaf.id as c0, exists(property?.leaf.id) as c1, typeof(property?.leaf.id) as c2 from LocalEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested-deep",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested-deep",
+   "eventType": "LocalEvent",
+   "mode": "map",
+   "payload": {
+    "property": {
+     "leaf": {
+      "id": "a"
+     }
+    }
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested-deep",
+   "eventType": "LocalEvent",
+   "mode": "map",
+   "payload": {
+    "property": {
+     "leaf": {
+      "id": null
+     }
+    }
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested-deep",
+   "eventType": "LocalEvent",
+   "mode": "map",
+   "payload": {
+    "property": {
+     "leaf": null
+    }
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested-deep",
+   "eventType": "LocalEvent",
+   "mode": "map",
+   "payload": {}
+  },
+  {
+   "op": "undeploy-all",
+   "case": "dynamic-nested-deep"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested-deep",
+   "statement": "schema",
+   "epl": "@public @buseventtype @JsonSchema(dynamic=true) create objectarray schema LocalEvent();\n",
+   "mode": "objectarray"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested-deep",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested-deep",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested-deep",
+   "statement": "s0"
+  },
+  {
+   "op": "types",
+   "case": "dynamic-nested-deep",
+   "statement": "s0",
+   "name": "property?.leaf.id"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "dynamic-nested-deep"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested-deep",
+   "statement": "schema",
+   "epl": "@public @buseventtype @JsonSchema(dynamic=true) create json schema LocalEvent();\n",
+   "mode": "json"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested-deep",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested-deep",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested-deep",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested-deep",
+   "statement": "s1",
+   "epl": "@name('s1') select property?.leaf.id as c0, exists(property?.leaf.id) as c1, typeof(property?.leaf.id) as c2 from LocalEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested-deep",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested-deep",
+   "eventType": "LocalEvent",
+   "mode": "json",
+   "payload": {
+    "property": {
+     "leaf": {
+      "id": "a"
+     }
+    }
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested-deep",
+   "eventType": "LocalEvent",
+   "mode": "json",
+   "payload": {
+    "property": {
+     "leaf": {
+      "id": null
+     }
+    }
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested-deep",
+   "eventType": "LocalEvent",
+   "mode": "json",
+   "payload": {
+    "property": {
+     "leaf": null
+    }
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested-deep",
+   "eventType": "LocalEvent",
+   "mode": "json",
+   "payload": {}
+  },
+  {
+   "op": "undeploy-all",
+   "case": "dynamic-nested-deep"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested-deep",
+   "statement": "schema",
+   "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraGetterDynamicNestedDeep$MyLocalJsonProvided') @public @buseventtype create json schema LocalEvent();\n",
+   "mode": "json-provided"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested-deep",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested-deep",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested-deep",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested-deep",
+   "statement": "s1",
+   "epl": "@name('s1') select property?.leaf.id as c0, exists(property?.leaf.id) as c1, typeof(property?.leaf.id) as c2 from LocalEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested-deep",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested-deep",
+   "eventType": "LocalEvent",
+   "mode": "json-provided",
+   "payload": {
+    "property": {
+     "leaf": {
+      "id": "a"
+     }
+    }
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested-deep",
+   "eventType": "LocalEvent",
+   "mode": "json-provided",
+   "payload": {
+    "property": {
+     "leaf": {
+      "id": null
+     }
+    }
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested-deep",
+   "eventType": "LocalEvent",
+   "mode": "json-provided",
+   "payload": {
+    "property": {
+     "leaf": null
+    }
+   }
+  },
+  {
+   "op": "send",
+   "case": "dynamic-nested-deep",
+   "eventType": "LocalEvent",
+   "mode": "json-provided",
+   "payload": {}
+  },
+  {
+   "op": "undeploy-all",
+   "case": "dynamic-nested-deep"
+  },
+  {
+   "op": "deploy",
+   "case": "dynamic-nested-deep",
+   "statement": "schema",
+   "epl": "@public @buseventtype @JsonSchema(dynamic=true) create avro schema LocalEvent();\n",
+   "mode": "avro"
+  },
+  {
+   "op": "deployed",
+   "case": "dynamic-nested-deep",
+   "statement": "schema"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "dynamic-nested-deep",
+   "statement": "avro-dynamic",
+   "expectError": "Java replays the Avro dynamic-property iteration: create avro schema LocalEvent() deploys, s0 and s1 deploy, four sends assert c0/c1/c2 and the property?.leaf.id getter; Go Avro schemas reject AllowDynamicFields and undeclared record fields, so the iteration is unrepresentable"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "dynamic-nested-deep"
+  },
+  {
+   "op": "case",
+   "case": "indexed-predefined"
+  },
+  {
+   "op": "deploy",
+   "case": "indexed-predefined",
+   "statement": "schema",
+   "epl": "@public @buseventtype create schema LocalInnerEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraGetterDynamicIndexexPropertyPredefined$LocalInnerEvent;\n@public @buseventtype create schema LocalEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraGetterDynamicIndexexPropertyPredefined$LocalEvent;\n@public @buseventtype create schema LocalEventSubA as com.espertech.esper.regressionlib.suite.event.infra.EventInfraGetterDynamicIndexexPropertyPredefined$LocalEventSubA;\n",
+   "mode": "bean"
+  },
+  {
+   "op": "deployed",
+   "case": "indexed-predefined",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "indexed-predefined",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "indexed-predefined",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "indexed-predefined",
+   "statement": "s1",
+   "epl": "@name('s1') select array[0]? as c0, array[1]? as c1,exists(array[0]?) as c2, exists(array[1]?) as c3, typeof(array[0]?) as c4, typeof(array[1]?) as c5 from LocalEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "indexed-predefined",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "indexed-predefined",
+   "eventType": "LocalEventSubA",
+   "mode": "bean",
+   "payload": {
+    "array": [
+     {},
+     {}
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "case": "indexed-predefined",
+   "eventType": "LocalEventSubA",
+   "mode": "bean",
+   "payload": {
+    "array": [
+     {}
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "case": "indexed-predefined",
+   "eventType": "LocalEventSubA",
+   "mode": "bean",
+   "payload": {
+    "array": []
+   }
+  },
+  {
+   "op": "send",
+   "case": "indexed-predefined",
+   "eventType": "LocalEventSubA",
+   "mode": "bean",
+   "payload": {
+    "array": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "indexed-predefined",
+   "eventType": "LocalEvent",
+   "mode": "bean",
+   "payload": {}
+  },
+  {
+   "op": "undeploy-all",
+   "case": "indexed-predefined"
+  },
+  {
+   "op": "deploy",
+   "case": "indexed-predefined",
+   "statement": "schema",
+   "epl": "@public @buseventtype create schema LocalInnerEvent();\n@public @buseventtype create schema LocalEvent(array LocalInnerEvent[]);\n",
+   "mode": "map"
+  },
+  {
+   "op": "deployed",
+   "case": "indexed-predefined",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "indexed-predefined",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "indexed-predefined",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "indexed-predefined",
+   "statement": "s1",
+   "epl": "@name('s1') select array[0]? as c0, array[1]? as c1,exists(array[0]?) as c2, exists(array[1]?) as c3, typeof(array[0]?) as c4, typeof(array[1]?) as c5 from LocalEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "indexed-predefined",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "indexed-predefined",
+   "eventType": "LocalEvent",
+   "mode": "map",
+   "payload": {
+    "array": [
+     {},
+     {}
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "case": "indexed-predefined",
+   "eventType": "LocalEvent",
+   "mode": "map",
+   "payload": {
+    "array": [
+     {}
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "case": "indexed-predefined",
+   "eventType": "LocalEvent",
+   "mode": "map",
+   "payload": {
+    "array": []
+   }
+  },
+  {
+   "op": "send",
+   "case": "indexed-predefined",
+   "eventType": "LocalEvent",
+   "mode": "map",
+   "payload": {
+    "array": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "indexed-predefined",
+   "eventType": "LocalEvent",
+   "mode": "map",
+   "payload": {}
+  },
+  {
+   "op": "undeploy-all",
+   "case": "indexed-predefined"
+  },
+  {
+   "op": "deploy",
+   "case": "indexed-predefined",
+   "statement": "schema",
+   "epl": "@public @buseventtype create objectarray schema LocalEvent();\n@public @buseventtype create objectarray schema LocalEventSubA (array string[]) inherits LocalEvent;\n",
+   "mode": "objectarray"
+  },
+  {
+   "op": "deployed",
+   "case": "indexed-predefined",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "indexed-predefined",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "indexed-predefined",
+   "statement": "s0"
+  },
+  {
+   "op": "types",
+   "case": "indexed-predefined",
+   "statement": "s0",
+   "name": "array[0]?"
+  },
+  {
+   "op": "types",
+   "case": "indexed-predefined",
+   "statement": "s0",
+   "name": "array[1]?"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "indexed-predefined"
+  },
+  {
+   "op": "deploy",
+   "case": "indexed-predefined",
+   "statement": "schema",
+   "epl": "@public @buseventtype create json schema LocalInnerEvent();\n@public @buseventtype create json schema LocalEvent(array LocalInnerEvent[]);\n",
+   "mode": "json"
+  },
+  {
+   "op": "deployed",
+   "case": "indexed-predefined",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "indexed-predefined",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "indexed-predefined",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "indexed-predefined",
+   "statement": "s1",
+   "epl": "@name('s1') select array[0]? as c0, array[1]? as c1,exists(array[0]?) as c2, exists(array[1]?) as c3, typeof(array[0]?) as c4, typeof(array[1]?) as c5 from LocalEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "indexed-predefined",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "indexed-predefined",
+   "eventType": "LocalEvent",
+   "mode": "json",
+   "payload": {
+    "array": [
+     {},
+     {}
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "case": "indexed-predefined",
+   "eventType": "LocalEvent",
+   "mode": "json",
+   "payload": {
+    "array": [
+     {}
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "case": "indexed-predefined",
+   "eventType": "LocalEvent",
+   "mode": "json",
+   "payload": {
+    "array": []
+   }
+  },
+  {
+   "op": "send",
+   "case": "indexed-predefined",
+   "eventType": "LocalEvent",
+   "mode": "json",
+   "payload": {
+    "array": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "indexed-predefined",
+   "eventType": "LocalEvent",
+   "mode": "json",
+   "payload": {}
+  },
+  {
+   "op": "undeploy-all",
+   "case": "indexed-predefined"
+  },
+  {
+   "op": "deploy",
+   "case": "indexed-predefined",
+   "statement": "schema",
+   "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraGetterDynamicIndexexPropertyPredefined$MyLocalJsonProvided') @public @buseventtype create json schema LocalEvent();\n",
+   "mode": "json-provided"
+  },
+  {
+   "op": "deployed",
+   "case": "indexed-predefined",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "indexed-predefined",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "indexed-predefined",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "indexed-predefined",
+   "statement": "s1",
+   "epl": "@name('s1') select array[0]? as c0, array[1]? as c1,exists(array[0]?) as c2, exists(array[1]?) as c3, typeof(array[0]?) as c4, typeof(array[1]?) as c5 from LocalEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "indexed-predefined",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "indexed-predefined",
+   "eventType": "LocalEvent",
+   "mode": "json-provided",
+   "payload": {
+    "array": [
+     {},
+     {}
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "case": "indexed-predefined",
+   "eventType": "LocalEvent",
+   "mode": "json-provided",
+   "payload": {
+    "array": [
+     {}
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "case": "indexed-predefined",
+   "eventType": "LocalEvent",
+   "mode": "json-provided",
+   "payload": {
+    "array": []
+   }
+  },
+  {
+   "op": "send",
+   "case": "indexed-predefined",
+   "eventType": "LocalEvent",
+   "mode": "json-provided",
+   "payload": {
+    "array": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "indexed-predefined",
+   "eventType": "LocalEvent",
+   "mode": "json-provided",
+   "payload": {}
+  },
+  {
+   "op": "undeploy-all",
+   "case": "indexed-predefined"
+  },
+  {
+   "op": "deploy",
+   "case": "indexed-predefined",
+   "statement": "schema",
+   "epl": "@public @buseventtype create avro schema LocalInnerEvent();\n@public @buseventtype create avro schema LocalEvent(array LocalInnerEvent[]);\n",
+   "mode": "avro"
+  },
+  {
+   "op": "deployed",
+   "case": "indexed-predefined",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "indexed-predefined",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "indexed-predefined",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "indexed-predefined",
+   "statement": "s1",
+   "epl": "@name('s1') select array[0]? as c0, array[1]? as c1,exists(array[0]?) as c2, exists(array[1]?) as c3, typeof(array[0]?) as c4, typeof(array[1]?) as c5 from LocalEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "indexed-predefined",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "indexed-predefined",
+   "eventType": "LocalEvent",
+   "mode": "avro",
+   "payload": {
+    "array": [
+     {},
+     {}
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "case": "indexed-predefined",
+   "eventType": "LocalEvent",
+   "mode": "avro",
+   "payload": {
+    "array": [
+     {}
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "case": "indexed-predefined",
+   "eventType": "LocalEvent",
+   "mode": "avro",
+   "payload": {
+    "array": []
+   }
+  },
+  {
+   "op": "send",
+   "case": "indexed-predefined",
+   "eventType": "LocalEvent",
+   "mode": "avro",
+   "payload": {
+    "array": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "indexed-predefined",
+   "eventType": "LocalEvent",
+   "mode": "avro",
+   "payload": {}
+  },
+  {
+   "op": "undeploy-all",
+   "case": "indexed-predefined"
+  },
+  {
+   "op": "case",
+   "case": "simple-predefined"
+  },
+  {
+   "op": "deploy",
+   "case": "simple-predefined",
+   "statement": "schema",
+   "epl": "@public @buseventtype create schema LocalEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraGetterDynamicSimplePropertyPredefined$LocalEvent;\n",
+   "mode": "bean"
+  },
+  {
+   "op": "deployed",
+   "case": "simple-predefined",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "simple-predefined",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "simple-predefined",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "simple-predefined",
+   "statement": "s1",
+   "epl": "@name('s1') select property? as c0, exists(property?) as c1, typeof(property?) as c2 from LocalEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "simple-predefined",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "simple-predefined",
+   "eventType": "LocalEvent",
+   "mode": "bean",
+   "payload": {
+    "property": "a"
+   }
+  },
+  {
+   "op": "send",
+   "case": "simple-predefined",
+   "eventType": "LocalEvent",
+   "mode": "bean",
+   "payload": {
+    "property": null
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "simple-predefined"
+  },
+  {
+   "op": "deploy",
+   "case": "simple-predefined",
+   "statement": "schema",
+   "epl": "@name('schema') @buseventtype @public create map schema LocalEvent(property string);\n",
+   "mode": "map"
+  },
+  {
+   "op": "deployed",
+   "case": "simple-predefined",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "simple-predefined",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "simple-predefined",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "simple-predefined",
+   "statement": "s1",
+   "epl": "@name('s1') select property? as c0, exists(property?) as c1, typeof(property?) as c2 from LocalEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "simple-predefined",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "simple-predefined",
+   "eventType": "LocalEvent",
+   "mode": "map",
+   "payload": {
+    "property": "a"
+   }
+  },
+  {
+   "op": "send",
+   "case": "simple-predefined",
+   "eventType": "LocalEvent",
+   "mode": "map",
+   "payload": {
+    "property": null
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "simple-predefined"
+  },
+  {
+   "op": "deploy",
+   "case": "simple-predefined",
+   "statement": "schema",
+   "epl": "@name('schema') @buseventtype @public create objectarray schema LocalEvent(property string);\n",
+   "mode": "objectarray"
+  },
+  {
+   "op": "deployed",
+   "case": "simple-predefined",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "simple-predefined",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "simple-predefined",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "simple-predefined",
+   "statement": "s1",
+   "epl": "@name('s1') select property? as c0, exists(property?) as c1, typeof(property?) as c2 from LocalEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "simple-predefined",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "simple-predefined",
+   "eventType": "LocalEvent",
+   "mode": "objectarray",
+   "payload": {
+    "property": "a"
+   }
+  },
+  {
+   "op": "send",
+   "case": "simple-predefined",
+   "eventType": "LocalEvent",
+   "mode": "objectarray",
+   "payload": {
+    "property": null
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "simple-predefined"
+  },
+  {
+   "op": "deploy",
+   "case": "simple-predefined",
+   "statement": "schema",
+   "epl": "@name('schema') @buseventtype @public create json schema LocalEvent(property string);\n",
+   "mode": "json"
+  },
+  {
+   "op": "deployed",
+   "case": "simple-predefined",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "simple-predefined",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "simple-predefined",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "simple-predefined",
+   "statement": "s1",
+   "epl": "@name('s1') select property? as c0, exists(property?) as c1, typeof(property?) as c2 from LocalEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "simple-predefined",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "simple-predefined",
+   "eventType": "LocalEvent",
+   "mode": "json",
+   "payload": {
+    "property": "a"
+   }
+  },
+  {
+   "op": "send",
+   "case": "simple-predefined",
+   "eventType": "LocalEvent",
+   "mode": "json",
+   "payload": {
+    "property": null
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "simple-predefined"
+  },
+  {
+   "op": "deploy",
+   "case": "simple-predefined",
+   "statement": "schema",
+   "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraGetterDynamicSimplePropertyPredefined$MyLocalJsonProvided') @buseventtype @public create json schema LocalEvent();\n",
+   "mode": "json-provided"
+  },
+  {
+   "op": "deployed",
+   "case": "simple-predefined",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "simple-predefined",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "simple-predefined",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "simple-predefined",
+   "statement": "s1",
+   "epl": "@name('s1') select property? as c0, exists(property?) as c1, typeof(property?) as c2 from LocalEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "simple-predefined",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "simple-predefined",
+   "eventType": "LocalEvent",
+   "mode": "json-provided",
+   "payload": {
+    "property": "a"
+   }
+  },
+  {
+   "op": "send",
+   "case": "simple-predefined",
+   "eventType": "LocalEvent",
+   "mode": "json-provided",
+   "payload": {
+    "property": null
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "simple-predefined"
+  },
+  {
+   "op": "deploy",
+   "case": "simple-predefined",
+   "statement": "schema",
+   "epl": "@name('schema') @buseventtype @public create avro schema LocalEvent(property string);\n",
+   "mode": "avro"
+  },
+  {
+   "op": "deployed",
+   "case": "simple-predefined",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "simple-predefined",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "simple-predefined",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "simple-predefined",
+   "statement": "s1",
+   "epl": "@name('s1') select property? as c0, exists(property?) as c1, typeof(property?) as c2 from LocalEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "simple-predefined",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "simple-predefined",
+   "eventType": "LocalEvent",
+   "mode": "avro",
+   "payload": {
+    "property": "a"
+   }
+  },
+  {
+   "op": "send",
+   "case": "simple-predefined",
+   "eventType": "LocalEvent",
+   "mode": "avro",
+   "payload": {
+    "property": null
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "simple-predefined"
+  }
+ ]
+}

@@ -56,6 +56,37 @@ activity or a single coverage percentage.
 
 ## Current work unit
 
+Active: Draft 4.541 ('event-infra-getter-dynamic') - prefetch only.
+
+- Selection: `EventInfraGetterDynamic*` cluster — 5 executions across 5
+  sibling files, all ord 0, no flags:
+  `EventInfraGetterDynamicSimple` (`java-runtime-23791e63adf0caaff235`),
+  `EventInfraGetterDynamicNested` (`java-runtime-c6db3a43dfabaf9c0f86`),
+  `EventInfraGetterDynamicNestedDeep` (`java-runtime-5ef37219e1c801e38af7`),
+  `EventInfraGetterDynamicIndexexPropertyPredefined`
+  (`java-runtime-1a68e3e356c953b9c774`),
+  `EventInfraGetterDynamicSimplePropertyPredefined`
+  (`java-runtime-0d912287d52a89b8725c`).
+- [ ] Java contract scout (JavaContract541) + Go surface scout
+- [x] Java contract scout (JavaContract541) + Go surface scout
+  (GoSurface541) complete; contract frozen in the Assets541 batch
+  context. 5 cases × 6 underlyings (bean/map/OA/json-dynamic/
+  json-provided/avro); Avro dynamic unrepresentable (no
+  AllowDynamicFields), OA sender=null getter-null probes boundary;
+  the beanBackedJsonOrAvro exists()-on-absent quirk is reproduced
+  on-trace for dynamic-simple only (not intentionally-different).
+- [x] Assets541 dispatched for scenario/oracle/runner/wiring.
+- [x] Assets541 delivered all assets after one repair round (Avro
+  expectation flag + convergence fixes + no-op mutation fixed); Java
+  trace + Go trace + evidence regenerated; `-diff` passing /
+  0 differences (353 records each side); 6-test family green;
+  `make check` exit 0.
+- [x] Parity review (Review541): OVERALL PASS; two PLANS.md P3 nits
+  fixed (runtime ID leading zero, quirk wording).
+- [ ] Commit.
+
+## Current work unit
+
 Active: Draft 4.540 ('expr-filter-optimizable-lookupable-limited') - prefetch only.
 
 - Selection corrected: `InfraNamedWindowViews` ords 39-42 abandoned —
@@ -81,7 +112,8 @@ Active: Draft 4.540 ('expr-filter-optimizable-lookupable-limited') - prefetch on
   code removed (efolrCaseSpecFor/efolrOrdinals) and the
   'frozen at pattern creation' note corrected (Java evaluates
   current_timestamp per candidate event, same as Go).
-- [ ] Commit.
+- [x] Shipped; Git owns identity. Draft 4.540 committed and pushed as
+  `ec613de94`.
 
 
 

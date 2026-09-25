@@ -82459,3 +82459,285 @@ func TestRunExprFilterOptLkupLimitedRemainingCheckedInEvidenceMatchesTraceAndRep
 		t.Fatalf("checked-in scenario differs from evidence scenario")
 	}
 }
+
+func TestRunEventInfraGetterDynamicDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", eventInfraGetterDynamicID,
+		"-scenario", filepath.Join(root, eventInfraGetterDynamicID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertEigdTrace(t, trace)
+}
+
+func TestRunEventInfraGetterDynamicRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, eventInfraGetterDynamicID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "dynamic-simple"`), []byte(`"case": "dynamic-simple", "extra": 0`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-23791e63adf0caaff235"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "s1-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`select property?.id as c0`), []byte(`select property?.name as c0`), 1)
+		}},
+		{name: "schema-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`create schema LocalEventSubA as com.espertech.esper.regressionlib.suite.event.infra.EventInfraGetterDynamicSimple$LocalEventSubA`), []byte(`create schema LocalEventSubA as com.espertech.esper.regressionlib.suite.event.infra.EventInfraGetterDynamicNested$LocalEventSubA`), 1)
+		}},
+		{name: "unrepresentable-note-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`beanBackedJsonOrAvro exists-on-absent`), []byte(`exists-on-absent`), 1)
+		}},
+		{name: "probe-name-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"name": "array[1]?"`), []byte(`"name": "array[2]?"`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "LocalEventSubA"`), []byte(`"eventType": "WrongEvent"`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", eventInfraGetterDynamicID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunEventInfraGetterDynamicRuntimeIDMappingMatchesScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, eventInfraGetterDynamicID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenario struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &scenario); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenario.JavaRuntimes, eventInfraGetterDynamicJavaRuntimeIDs) {
+		t.Fatalf("javaRuntimes = %#v", scenario.JavaRuntimes)
+	}
+	if !reflect.DeepEqual(scenario.JavaNames, eventInfraGetterDynamicJavaExecutions) {
+		t.Fatalf("javaNames = %#v", scenario.JavaNames)
+	}
+	for index, definition := range scenario.Cases {
+		if definition.RuntimeID != eventInfraGetterDynamicJavaRuntimeIDs[index] {
+			t.Fatalf("case %q runtimeId = %q, want %q", definition.Case, definition.RuntimeID, eventInfraGetterDynamicJavaRuntimeIDs[index])
+		}
+	}
+}
+
+func assertEigdTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != eventInfraGetterDynamicID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 353 {
+		t.Fatalf("trace records = %d, want 353", len(trace.Records))
+	}
+	counts := map[string]map[string]int{}
+	for _, record := range trace.Records {
+		if counts[record.Case] == nil {
+			counts[record.Case] = map[string]int{}
+		}
+		counts[record.Case][record.Operation]++
+	}
+	want := map[string]map[string]int{
+		"dynamic-simple":      {"deployed": 16, "listener": 30, "getter": 15, "unrepresentable": 1},
+		"dynamic-nested":      {"deployed": 15, "listener": 24, "getter": 13, "unrepresentable": 1},
+		"dynamic-nested-deep": {"deployed": 15, "listener": 32, "getter": 17, "unrepresentable": 1},
+		"indexed-predefined":  {"deployed": 17, "listener": 50, "getter": 52},
+		"simple-predefined":   {"deployed": 18, "listener": 24, "getter": 12},
+	}
+	if !reflect.DeepEqual(counts, want) {
+		t.Fatalf("record counts = %#v, want %#v", counts, want)
+	}
+}
+
+func TestRunEventInfraGetterDynamicDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), eventInfraGetterDynamicID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", eventInfraGetterDynamicID + "-diff",
+		"-scenario", filepath.Join(root, eventInfraGetterDynamicID+".json"),
+		"-java-trace", filepath.Join(root, eventInfraGetterDynamicID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != eventInfraGetterDynamicJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, eventInfraGetterDynamicJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, eventInfraGetterDynamicJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, eventInfraGetterDynamicJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertEigdTrace(t, evidence.JavaTrace)
+	assertEigdTrace(t, evidence.GoTrace)
+}
+
+func TestRunEventInfraGetterDynamicDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "simple-exists-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "dynamic-simple" && rec.Operation == "listener" && rec.Statement == "s1" {
+						rec.New[0].Fields["c1"] = false
+						return
+					}
+				}
+				panic("no dynamic-simple s1 listener record")
+			},
+		},
+		{
+			name: "nested-getter-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "dynamic-nested" && rec.Operation == "getter" && rec.Name == "property?.id" {
+						rec.Value = map[string]any{"exists": true, "fragment": true, "value": "a"}
+						return
+					}
+				}
+				panic("no dynamic-nested getter record")
+			},
+		},
+		{
+			name: "indexed-s1-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "indexed-predefined" && rec.Operation == "listener" && rec.Statement == "s1" {
+						rec.New[0].Fields["c3"] = false
+						return
+					}
+				}
+				panic("no indexed-predefined s1 listener record")
+			},
+		},
+		{
+			name: "unrepresentable-note-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "dynamic-simple" && rec.Operation == "unrepresentable" {
+						rec.Value = "WRONG"
+						return
+					}
+				}
+				panic("no dynamic-simple unrepresentable record")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join(root, eventInfraGetterDynamicID+".evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), eventInfraGetterDynamicID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", eventInfraGetterDynamicID + "-diff",
+				"-scenario", filepath.Join(root, eventInfraGetterDynamicID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunEventInfraGetterDynamicCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, eventInfraGetterDynamicID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, eventInfraGetterDynamicID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, eventInfraGetterDynamicID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if evidence.JavaCommit != eventInfraGetterDynamicJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, eventInfraGetterDynamicJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, eventInfraGetterDynamicJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, eventInfraGetterDynamicJavaExecutions) {
+		t.Fatalf("checked-in Java metadata = %#v", evidence)
+	}
+	assertEigdTrace(t, javaTrace)
+	assertEigdTrace(t, goTrace)
+}
