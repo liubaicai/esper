@@ -104,7 +104,11 @@
     "EventInfraPropertyMappedRuntimeKey",
     "EventInfraPropertyNestedIndexed",
     "EventInfraPropertyNestedNestedEscaped",
-    "EventInfraPropertyNestedSimple"
+    "EventInfraPropertyNestedSimple",
+    "EventInfraEventRenderer",
+    "EventInfraEventSender",
+    "EventInfraManufacturer",
+    "EventInfraSuperType"
    ],
    "goRefs": [
     "internal/esper/schema.go",
@@ -115,7 +119,8 @@
     "internal/app/parity/event_infra_getter_dynamic.go",
     "internal/app/parity/event_infra_getter_nested.go",
     "internal/app/parity/event_infra_property_dynamic.go",
-    "internal/app/parity/event_infra_property_non_dynamic.go"
+    "internal/app/parity/event_infra_property_non_dynamic.go",
+    "internal/app/parity/event_infra_sender_supertype_545.go"
    ],
    "phase": 1,
    "status": "differential-verified",
@@ -168,7 +173,11 @@
     "java-runtime-c4f7fe6163eff7d35461",
     "java-runtime-594a57ed26499f1ccd30",
     "java-runtime-0b17042e1ee4d75b7007",
-    "java-runtime-848063976a9d6485ec20"
+    "java-runtime-848063976a9d6485ec20",
+    "java-runtime-788241891a0cf2f7b34c",
+    "java-runtime-87613a44bc6e8ae3ffa1",
+    "java-runtime-70823aef36342bc74b8b",
+    "java-runtime-c176a2422bef1680520b"
    ]
   },
   {
@@ -202,7 +211,8 @@
     "internal/esper/contained_split_chain_test.go",
     "internal/esper/contained_split_sequence_test.go",
     "internal/esper/expr.go",
-    "internal/app/parity/epl_contained_event_example.go"
+    "internal/app/parity/epl_contained_event_example.go",
+    "internal/app/parity/event_infra_contained_545.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -223,7 +233,11 @@
     "java-runtime-06cbcd9c14891d14a995",
     "java-runtime-bfcd3e5954bd02726c90",
     "java-runtime-e9cfcbfcc5556a9ea9ab",
-    "java-runtime-23292c0fd335038c05d4"
+    "java-runtime-23292c0fd335038c05d4",
+    "java-runtime-6de635c8b30a4103c24c",
+    "java-runtime-7fbe252dc4d607cf0da6",
+    "java-runtime-597b6eca244190805083",
+    "java-runtime-d0c21881fb79f2ca6b4a"
    ]
   },
   {
@@ -50272,6 +50286,90 @@
     "java-runtime-0b17042e1ee4d75b7007",
     "java-runtime-848063976a9d6485ec20"
    ]
+  },
+  {
+   "id": "case.event-infra-contained-render-sender-supertype",
+   "javaRuntimeIds": [
+    "java-runtime-6de635c8b30a4103c24c",
+    "java-runtime-7fbe252dc4d607cf0da6",
+    "java-runtime-597b6eca244190805083",
+    "java-runtime-d0c21881fb79f2ca6b4a",
+    "java-runtime-788241891a0cf2f7b34c",
+    "java-runtime-87613a44bc6e8ae3ffa1",
+    "java-runtime-70823aef36342bc74b8b",
+    "java-runtime-c176a2422bef1680520b"
+   ],
+   "javaStaticIds": [
+    "java-8f4b72204f2de143e7d6",
+    "java-6d44ccad0601887a5cc9",
+    "java-7237e890e9d5099098ae",
+    "java-ae11bd7db18ccc5d85d2",
+    "java-ff6cea41581250ee3355",
+    "java-43967b1d953020c817f3",
+    "java-7a8e8dfe74f34afb9a93",
+    "java-1d560262d9f9e74790be"
+   ],
+   "javaNames": [
+    "EventInfraContainedSimple",
+    "EventInfraContainedNested",
+    "EventInfraContainedNestedArray",
+    "EventInfraContainedIndexedWithIndex",
+    "EventInfraEventRenderer",
+    "EventInfraEventSender",
+    "EventInfraManufacturer",
+    "EventInfraSuperType"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraContainedSimple.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraContainedNested.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraContainedNestedArray.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraContainedIndexedWithIndex.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraEventRenderer.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraEventSender.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraManufacturer.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraSuperType.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunEventInfra545DirectReplay",
+    "internal/app/parity/run_test.go:TestRunEventInfra545DiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunEventInfra545CheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunEventInfra545DiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunEventInfra545RejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunEventInfra545RuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "event",
+    "contained",
+    "renderer",
+    "sender",
+    "supertype",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/event-infra-545.json",
+    "testdata/parity/event-infra-545.trace.json",
+    "testdata/parity/event-infra-545.go.trace.json",
+    "testdata/parity/event-infra-545.evidence.json",
+    "tools/java-oracle/EventInfra545ScenarioOracle.java",
+    "tools/java-oracle/run-event-infra-545.sh"
+   ],
+   "notes": "EventInfra infra-tail cluster born-differential: all 8 executions. Contained quad (simple/nested/nested-array/indexed-with-index, flags []) replays LocalEvent[property]/[property.leaf]/[indexed[N]]/[property[N].leaf] single-fragment selects over bean/map/objectarray/json/json-provided/avro, emulating indexed-element contained streams via UnnestAs + indexed property paths (bean-mode contained schemas register as map schemas \u2014 goType-backed sources degrade contained expansion; documented in runner). EventRenderer pins whitespace-stripped RenderJSON/RenderXML strings for 7 underlyings as in-process value records. EventSender (OBSERVEROPS) covers send+route happy paths via Send/Route in-process with delivery markers; 9 invalid-probe texts are Java-verbatim unrepresentable (Go error strings differ). Manufacturer (STATICHOOK) exercises the real forge in the oracle (EventTypeUtility.getManufacturer make/makeUnderlying) while Go emits construct-and-assert rows; forge boundary unrepresentable. SuperType (OBSERVEROPS) pins the 4x4 invoked-flag dispatch matrix over bean/map/OA/avro WithSchemaParent chains; JSON-inherits rows unrepresentable (Go SchemaJSON rejects parents). Java/Go 235 records each, 0 differences. Scenario testdata/parity/event-infra-545.json; Java trace via tools/java-oracle/run-event-infra-545.sh at commit 9e1b9f1cc9117fea4bf33ab043762c045d73839c. Listener rows for sender/manufacturer/renderer emit normalized {delivered:true} markers and manufacturer value rows are constructed constants, so Java's assertSame underlying-identity and manufacturer row assertions are pinned only on the Java side (established marker convention, strength-reduced observable scope).",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-6de635c8b30a4103c24c",
+    "java-runtime-7fbe252dc4d607cf0da6",
+    "java-runtime-597b6eca244190805083",
+    "java-runtime-d0c21881fb79f2ca6b4a",
+    "java-runtime-788241891a0cf2f7b34c",
+    "java-runtime-87613a44bc6e8ae3ffa1",
+    "java-runtime-70823aef36342bc74b8b",
+    "java-runtime-c176a2422bef1680520b"
+   ]
   }
  ],
  "mappings": [
@@ -53718,13 +53816,21 @@
   {
    "capabilityId": "event.property-access-render",
    "caseId": "case.event-infra-property-non-dynamic"
+  },
+  {
+   "capabilityId": "event.contained",
+   "caseId": "case.event-infra-contained-render-sender-supertype"
+  },
+  {
+   "capabilityId": "event.property-access-render",
+   "caseId": "case.event-infra-contained-render-sender-supertype"
   }
  ],
  "summary": {
-  "inventoriedCases": 775,
-  "implementedCases": 773,
-  "differentialVerifiedCases": 398,
-  "differentialVerifiedRuntimeIds": 1582,
+  "inventoriedCases": 776,
+  "implementedCases": 774,
+  "differentialVerifiedCases": 399,
+  "differentialVerifiedRuntimeIds": 1590,
   "intentionallyDifferentCases": 36,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -53734,13 +53840,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4120,
-  "referencedJavaRuntimeIds": 3680,
+  "runtimeAssociationCount": 4128,
+  "referencedJavaRuntimeIds": 3688,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 456,
+  "unreferencedJavaRuntimeIds": 448,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 775,
+  "totalCases": 776,
   "totalCapabilities": 126
  }
 }

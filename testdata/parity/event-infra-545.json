@@ -1,0 +1,2645 @@
+{
+ "version": "esper-parity/v1",
+ "id": "event-infra-545",
+ "description": "Event infra contained/renderer/sender/manufacturer/supertype parity (8 executions, ord 0): contained selects over six underlyings (bean registered as untyped map schema to work around typed-source contained expansion), renderer JSON/XML whitespace-stripped pins, sender happy-path send/route markers with Java-message unrepresentable probes, manufacturer construct-and-assert rows, supertype dispatch flags.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra",
+ "javaRuntimes": [
+  "java-runtime-6de635c8b30a4103c24c",
+  "java-runtime-7fbe252dc4d607cf0da6",
+  "java-runtime-597b6eca244190805083",
+  "java-runtime-d0c21881fb79f2ca6b4a",
+  "java-runtime-788241891a0cf2f7b34c",
+  "java-runtime-87613a44bc6e8ae3ffa1",
+  "java-runtime-70823aef36342bc74b8b",
+  "java-runtime-c176a2422bef1680520b"
+ ],
+ "javaNames": [
+  "EventInfraContainedSimple",
+  "EventInfraContainedNested",
+  "EventInfraContainedNestedArray",
+  "EventInfraContainedIndexedWithIndex",
+  "EventInfraEventRenderer",
+  "EventInfraEventSender",
+  "EventInfraManufacturer",
+  "EventInfraSuperType"
+ ],
+ "javaStaticIds": [
+  "java-8f4b72204f2de143e7d6",
+  "java-6d44ccad0601887a5cc9",
+  "java-7237e890e9d5099098ae",
+  "java-ae11bd7db18ccc5d85d2",
+  "java-ff6cea41581250ee3355",
+  "java-43967b1d953020c817f3",
+  "java-7a8e8dfe74f34afb9a93",
+  "java-1d560262d9f9e74790be"
+ ],
+ "javaFlags": [
+  "OBSERVEROPS",
+  "STATICHOOK"
+ ],
+ "cases": [
+  {
+   "case": "contained-simple",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-6de635c8b30a4103c24c",
+   "executionName": "EventInfraContainedSimple",
+   "observation": "LocalEvent[property] over six underlyings",
+   "epl": "@name('s0') select * from LocalEvent[property];\n",
+   "flags": []
+  },
+  {
+   "case": "contained-nested",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-7fbe252dc4d607cf0da6",
+   "executionName": "EventInfraContainedNested",
+   "observation": "LocalEvent[property.leaf] over six underlyings",
+   "epl": "@name('s0') select * from LocalEvent[property.leaf];\n",
+   "flags": []
+  },
+  {
+   "case": "contained-nested-array",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-597b6eca244190805083",
+   "executionName": "EventInfraContainedNestedArray",
+   "observation": "LocalEvent[property[0].leaf]/[1].leaf over six underlyings",
+   "epl": "@name('s0') select * from LocalEvent[property[0].leaf];\n@name('s1') select * from LocalEvent[property[1].leaf];\n",
+   "flags": []
+  },
+  {
+   "case": "contained-indexed",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-d0c21881fb79f2ca6b4a",
+   "executionName": "EventInfraContainedIndexedWithIndex",
+   "observation": "LocalEvent[indexed[0]]/indexed[1] over six underlyings",
+   "epl": "@name('s0') select * from LocalEvent[indexed[0]];\n@name('s1') select * from LocalEvent[indexed[1]];\n",
+   "flags": []
+  },
+  {
+   "case": "renderer",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-788241891a0cf2f7b34c",
+   "executionName": "EventInfraEventRenderer",
+   "observation": "RenderJSON/RenderXML whitespace-stripped output for seven underlyings",
+   "epl": "@name('s0') select * from <typename>",
+   "flags": []
+  },
+  {
+   "case": "sender",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-87613a44bc6e8ae3ffa1",
+   "executionName": "EventInfraEventSender",
+   "observation": "send/route happy path + invalid-object probes pinned as unrepresentable",
+   "flags": [
+    "OBSERVEROPS"
+   ],
+   "epl": "@name('s0') select * from <typename>"
+  },
+  {
+   "case": "manufacturer",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-70823aef36342bc74b8b",
+   "executionName": "EventInfraManufacturer",
+   "observation": "construct-and-assert observable rows; forge boundary unrepresentable",
+   "flags": [
+    "STATICHOOK"
+   ],
+   "epl": "@public @name('schema') <create schema>"
+  },
+  {
+   "case": "supertype",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-c176a2422bef1680520b",
+   "executionName": "EventInfraSuperType",
+   "observation": "four-statement supertype dispatch flags over bean/map/OA/avro; json inherits unrepresentable",
+   "flags": [
+    "OBSERVEROPS"
+   ],
+   "epl": "@name('s<i>') select * from <prefix>_Type_<n>"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "contained-simple"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-simple",
+   "statement": "schema",
+   "epl": "@public @buseventtype create schema LocalInnerEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedSimple$LocalInnerEvent;\n@public @buseventtype create schema LocalEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedSimple$LocalEvent;\n",
+   "mode": "bean"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-simple",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-simple",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent[property];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-simple",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "contained-simple",
+   "eventType": "LocalEvent",
+   "mode": "bean",
+   "payload": {
+    "ids": [
+     "a"
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "contained-simple"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-simple",
+   "statement": "schema",
+   "epl": "@public @buseventtype create schema LocalInnerEvent(id string);\n@public @buseventtype create schema LocalEvent(property LocalInnerEvent);\n",
+   "mode": "map"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-simple",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-simple",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent[property];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-simple",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "contained-simple",
+   "eventType": "LocalEvent",
+   "mode": "map",
+   "payload": {
+    "ids": [
+     "a"
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "contained-simple"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-simple",
+   "statement": "schema",
+   "epl": "@public @buseventtype create objectarray schema LocalInnerEvent(id string);\n@public @buseventtype create objectarray schema LocalEvent(property LocalInnerEvent);\n",
+   "mode": "objectarray"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-simple",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-simple",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent[property];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-simple",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "contained-simple",
+   "eventType": "LocalEvent",
+   "mode": "objectarray",
+   "payload": {
+    "ids": [
+     "a"
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "contained-simple"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-simple",
+   "statement": "schema",
+   "epl": "@public @buseventtype create json schema LocalInnerEvent(id string);\n@public @buseventtype create json schema LocalEvent(property LocalInnerEvent);\n",
+   "mode": "json"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-simple",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-simple",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent[property];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-simple",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "contained-simple",
+   "eventType": "LocalEvent",
+   "mode": "json",
+   "payload": {
+    "ids": [
+     "a"
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "contained-simple"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-simple",
+   "statement": "schema",
+   "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedSimple$MyLocalJsonProvided') @public @buseventtype create json schema LocalEvent();\n",
+   "mode": "json-provided"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-simple",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-simple",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent[property];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-simple",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "contained-simple",
+   "eventType": "LocalEvent",
+   "mode": "json-provided",
+   "payload": {
+    "ids": [
+     "a"
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "contained-simple"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-simple",
+   "statement": "schema",
+   "epl": "@name('schema') @public @buseventtype create avro schema LocalInnerEvent(id string);\n@public @buseventtype create avro schema LocalEvent(property LocalInnerEvent);\n",
+   "mode": "avro"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-simple",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-simple",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent[property];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-simple",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "contained-simple",
+   "eventType": "LocalEvent",
+   "mode": "avro",
+   "payload": {
+    "ids": [
+     "a"
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "contained-simple"
+  },
+  {
+   "op": "case",
+   "case": "contained-nested"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested",
+   "statement": "schema",
+   "epl": "@public @buseventtype create schema LocalLeafEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedNested$LocalLeafEvent;\n@public @buseventtype create schema LocalInnerEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedNested$LocalInnerEvent;\n@public @buseventtype create schema LocalEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedNested$LocalEvent;\n",
+   "mode": "bean"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent[property.leaf];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "contained-nested",
+   "eventType": "LocalEvent",
+   "mode": "bean",
+   "payload": {
+    "ids": [
+     "a"
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "contained-nested"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested",
+   "statement": "schema",
+   "epl": "create map schema LocalLeafEvent(id string);\ncreate map schema LocalInnerEvent(leaf LocalLeafEvent);\n@name('schema') @public @buseventtype create map schema LocalEvent(property LocalInnerEvent);\n",
+   "mode": "map"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent[property.leaf];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "contained-nested",
+   "eventType": "LocalEvent",
+   "mode": "map",
+   "payload": {
+    "ids": [
+     "a"
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "contained-nested"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested",
+   "statement": "schema",
+   "epl": "create objectarray schema LocalLeafEvent(id string);\ncreate objectarray schema LocalInnerEvent(leaf LocalLeafEvent);\n@name('schema') @public @buseventtype create objectarray schema LocalEvent(property LocalInnerEvent);\n",
+   "mode": "objectarray"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent[property.leaf];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "contained-nested",
+   "eventType": "LocalEvent",
+   "mode": "objectarray",
+   "payload": {
+    "ids": [
+     "a"
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "contained-nested"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested",
+   "statement": "schema",
+   "epl": "create json schema LocalLeafEvent(id string);\ncreate json schema LocalInnerEvent(leaf LocalLeafEvent);\n@name('schema') @public @buseventtype create json schema LocalEvent(property LocalInnerEvent);\n",
+   "mode": "json"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent[property.leaf];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "contained-nested",
+   "eventType": "LocalEvent",
+   "mode": "json",
+   "payload": {
+    "ids": [
+     "a"
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "contained-nested"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested",
+   "statement": "schema",
+   "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedNested$MyLocalJsonProvided') @public @buseventtype create json schema LocalEvent();\n",
+   "mode": "json-provided"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent[property.leaf];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "contained-nested",
+   "eventType": "LocalEvent",
+   "mode": "json-provided",
+   "payload": {
+    "ids": [
+     "a"
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "contained-nested"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested",
+   "statement": "schema",
+   "epl": "create avro schema LocalLeafEvent(id string);\ncreate avro schema LocalInnerEvent(leaf LocalLeafEvent);\n@name('schema') @public @buseventtype create avro schema LocalEvent(property LocalInnerEvent);\n",
+   "mode": "avro"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent[property.leaf];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "contained-nested",
+   "eventType": "LocalEvent",
+   "mode": "avro",
+   "payload": {
+    "ids": [
+     "a"
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "contained-nested"
+  },
+  {
+   "op": "case",
+   "case": "contained-nested-array"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested-array",
+   "statement": "schema",
+   "epl": "@public @buseventtype create schema LocalLeafEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedNestedArray$LocalLeafEvent;\n@public @buseventtype create schema LocalInnerEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedNestedArray$LocalInnerEvent;\n@public @buseventtype create schema LocalEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedNestedArray$LocalEvent;\n",
+   "mode": "bean"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested-array",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested-array",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent[property[0].leaf];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested-array",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested-array",
+   "statement": "s1",
+   "epl": "@name('s1') select * from LocalEvent[property[1].leaf];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested-array",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "contained-nested-array",
+   "eventType": "LocalEvent",
+   "mode": "bean",
+   "payload": {
+    "ids": [
+     "a",
+     "b"
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "contained-nested-array"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested-array",
+   "statement": "schema",
+   "epl": "create map schema LocalLeafEvent(id string);\ncreate map schema LocalInnerEvent(leaf LocalLeafEvent);\n@name('schema') @public @buseventtype create map schema LocalEvent(property LocalInnerEvent[]);\n",
+   "mode": "map"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested-array",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested-array",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent[property[0].leaf];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested-array",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested-array",
+   "statement": "s1",
+   "epl": "@name('s1') select * from LocalEvent[property[1].leaf];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested-array",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "contained-nested-array",
+   "eventType": "LocalEvent",
+   "mode": "map",
+   "payload": {
+    "ids": [
+     "a",
+     "b"
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "contained-nested-array"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested-array",
+   "statement": "schema",
+   "epl": "create objectarray schema LocalLeafEvent(id string);\ncreate objectarray schema LocalInnerEvent(leaf LocalLeafEvent);\n@name('schema') @public @buseventtype create objectarray schema LocalEvent(property LocalInnerEvent[]);\n",
+   "mode": "objectarray"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested-array",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested-array",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent[property[0].leaf];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested-array",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested-array",
+   "statement": "s1",
+   "epl": "@name('s1') select * from LocalEvent[property[1].leaf];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested-array",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "contained-nested-array",
+   "eventType": "LocalEvent",
+   "mode": "objectarray",
+   "payload": {
+    "ids": [
+     "a",
+     "b"
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "contained-nested-array"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested-array",
+   "statement": "schema",
+   "epl": "create json schema LocalLeafEvent(id string);\ncreate json schema LocalInnerEvent(leaf LocalLeafEvent);\n@name('schema') @public @buseventtype create json schema LocalEvent(property LocalInnerEvent[]);\n",
+   "mode": "json"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested-array",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested-array",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent[property[0].leaf];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested-array",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested-array",
+   "statement": "s1",
+   "epl": "@name('s1') select * from LocalEvent[property[1].leaf];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested-array",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "contained-nested-array",
+   "eventType": "LocalEvent",
+   "mode": "json",
+   "payload": {
+    "ids": [
+     "a",
+     "b"
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "contained-nested-array"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested-array",
+   "statement": "schema",
+   "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedNestedArray$MyLocalJsonProvided') @public @buseventtype create json schema LocalEvent();\n",
+   "mode": "json-provided"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested-array",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested-array",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent[property[0].leaf];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested-array",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested-array",
+   "statement": "s1",
+   "epl": "@name('s1') select * from LocalEvent[property[1].leaf];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested-array",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "contained-nested-array",
+   "eventType": "LocalEvent",
+   "mode": "json-provided",
+   "payload": {
+    "ids": [
+     "a",
+     "b"
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "contained-nested-array"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested-array",
+   "statement": "schema",
+   "epl": "create avro schema LocalLeafEvent(id string);\ncreate avro schema LocalInnerEvent(leaf LocalLeafEvent);\n@name('schema') @public @buseventtype create avro schema LocalEvent(property LocalInnerEvent[]);\n",
+   "mode": "avro"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested-array",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested-array",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent[property[0].leaf];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested-array",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-nested-array",
+   "statement": "s1",
+   "epl": "@name('s1') select * from LocalEvent[property[1].leaf];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-nested-array",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "contained-nested-array",
+   "eventType": "LocalEvent",
+   "mode": "avro",
+   "payload": {
+    "ids": [
+     "a",
+     "b"
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "contained-nested-array"
+  },
+  {
+   "op": "case",
+   "case": "contained-indexed"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-indexed",
+   "statement": "schema",
+   "epl": "@public @buseventtype create schema LocalInnerEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedIndexedWithIndex$LocalInnerEvent;\n@public @buseventtype create schema LocalEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedIndexedWithIndex$LocalEvent;\n",
+   "mode": "bean"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-indexed",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-indexed",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent[indexed[0]];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-indexed",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-indexed",
+   "statement": "s1",
+   "epl": "@name('s1') select * from LocalEvent[indexed[1]];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-indexed",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "contained-indexed",
+   "eventType": "LocalEvent",
+   "mode": "bean",
+   "payload": {
+    "ids": [
+     "a",
+     "b"
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "contained-indexed"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-indexed",
+   "statement": "schema",
+   "epl": "@public @buseventtype create schema LocalInnerEvent(id string);\n@public @buseventtype create schema LocalEvent(indexed LocalInnerEvent[]);\n",
+   "mode": "map"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-indexed",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-indexed",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent[indexed[0]];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-indexed",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-indexed",
+   "statement": "s1",
+   "epl": "@name('s1') select * from LocalEvent[indexed[1]];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-indexed",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "contained-indexed",
+   "eventType": "LocalEvent",
+   "mode": "map",
+   "payload": {
+    "ids": [
+     "a",
+     "b"
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "contained-indexed"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-indexed",
+   "statement": "schema",
+   "epl": "@public @buseventtype create objectarray schema LocalInnerEvent(id string);\n@public @buseventtype create objectarray schema LocalEvent(indexed LocalInnerEvent[]);\n",
+   "mode": "objectarray"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-indexed",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-indexed",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent[indexed[0]];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-indexed",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-indexed",
+   "statement": "s1",
+   "epl": "@name('s1') select * from LocalEvent[indexed[1]];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-indexed",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "contained-indexed",
+   "eventType": "LocalEvent",
+   "mode": "objectarray",
+   "payload": {
+    "ids": [
+     "a",
+     "b"
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "contained-indexed"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-indexed",
+   "statement": "schema",
+   "epl": "@public @buseventtype create json schema LocalInnerEvent(id string);\n@public @buseventtype create json schema LocalEvent(indexed LocalInnerEvent[]);\n",
+   "mode": "json"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-indexed",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-indexed",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent[indexed[0]];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-indexed",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-indexed",
+   "statement": "s1",
+   "epl": "@name('s1') select * from LocalEvent[indexed[1]];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-indexed",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "contained-indexed",
+   "eventType": "LocalEvent",
+   "mode": "json",
+   "payload": {
+    "ids": [
+     "a",
+     "b"
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "contained-indexed"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-indexed",
+   "statement": "schema",
+   "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedIndexedWithIndex$MyLocalJsonProvided') @public @buseventtype create json schema LocalEvent();\n",
+   "mode": "json-provided"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-indexed",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-indexed",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent[indexed[0]];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-indexed",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-indexed",
+   "statement": "s1",
+   "epl": "@name('s1') select * from LocalEvent[indexed[1]];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-indexed",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "contained-indexed",
+   "eventType": "LocalEvent",
+   "mode": "json-provided",
+   "payload": {
+    "ids": [
+     "a",
+     "b"
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "contained-indexed"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-indexed",
+   "statement": "schema",
+   "epl": "@name('schema') @public @buseventtype create avro schema LocalInnerEvent(id string);\n@public @buseventtype create avro schema LocalEvent(indexed LocalInnerEvent[]);\n",
+   "mode": "avro"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-indexed",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-indexed",
+   "statement": "s0",
+   "epl": "@name('s0') select * from LocalEvent[indexed[0]];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-indexed",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "contained-indexed",
+   "statement": "s1",
+   "epl": "@name('s1') select * from LocalEvent[indexed[1]];\n"
+  },
+  {
+   "op": "deployed",
+   "case": "contained-indexed",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "case": "contained-indexed",
+   "eventType": "LocalEvent",
+   "mode": "avro",
+   "payload": {
+    "ids": [
+     "a",
+     "b"
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "contained-indexed"
+  },
+  {
+   "op": "case",
+   "case": "renderer"
+  },
+  {
+   "op": "deploy",
+   "case": "renderer",
+   "statement": "s0",
+   "epl": "@name('s0') select * from MyEvent",
+   "mode": "bean"
+  },
+  {
+   "op": "deployed",
+   "case": "renderer",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "renderer",
+   "eventType": "MyEvent",
+   "mode": "bean",
+   "payload": {
+    "payload": "bean"
+   }
+  },
+  {
+   "op": "value",
+   "case": "renderer",
+   "statement": "s0",
+   "name": "json"
+  },
+  {
+   "op": "value",
+   "case": "renderer",
+   "statement": "s0",
+   "name": "xml"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "renderer"
+  },
+  {
+   "op": "deploy",
+   "case": "renderer",
+   "statement": "s0",
+   "epl": "@name('s0') select * from EventInfraEventRendererMap",
+   "mode": "map"
+  },
+  {
+   "op": "deployed",
+   "case": "renderer",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "renderer",
+   "eventType": "EventInfraEventRendererMap",
+   "mode": "map",
+   "payload": {
+    "payload": "map"
+   }
+  },
+  {
+   "op": "value",
+   "case": "renderer",
+   "statement": "s0",
+   "name": "json"
+  },
+  {
+   "op": "value",
+   "case": "renderer",
+   "statement": "s0",
+   "name": "xml"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "renderer"
+  },
+  {
+   "op": "deploy",
+   "case": "renderer",
+   "statement": "s0",
+   "epl": "@name('s0') select * from EventInfraEventRendererOA",
+   "mode": "objectarray"
+  },
+  {
+   "op": "deployed",
+   "case": "renderer",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "renderer",
+   "eventType": "EventInfraEventRendererOA",
+   "mode": "objectarray",
+   "payload": {
+    "payload": "objectarray"
+   }
+  },
+  {
+   "op": "value",
+   "case": "renderer",
+   "statement": "s0",
+   "name": "json"
+  },
+  {
+   "op": "value",
+   "case": "renderer",
+   "statement": "s0",
+   "name": "xml"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "renderer"
+  },
+  {
+   "op": "deploy",
+   "case": "renderer",
+   "statement": "s0",
+   "epl": "@name('s0') select * from EventInfraEventRendererXML",
+   "mode": "xml"
+  },
+  {
+   "op": "deployed",
+   "case": "renderer",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "renderer",
+   "eventType": "EventInfraEventRendererXML",
+   "mode": "xml",
+   "payload": {
+    "payload": "xml"
+   }
+  },
+  {
+   "op": "value",
+   "case": "renderer",
+   "statement": "s0",
+   "name": "json"
+  },
+  {
+   "op": "value",
+   "case": "renderer",
+   "statement": "s0",
+   "name": "xml"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "renderer"
+  },
+  {
+   "op": "deploy",
+   "case": "renderer",
+   "statement": "s0",
+   "epl": "@name('s0') select * from EventInfraEventRendererAvro",
+   "mode": "avro"
+  },
+  {
+   "op": "deployed",
+   "case": "renderer",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "renderer",
+   "eventType": "EventInfraEventRendererAvro",
+   "mode": "avro",
+   "payload": {
+    "payload": "avro"
+   }
+  },
+  {
+   "op": "value",
+   "case": "renderer",
+   "statement": "s0",
+   "name": "json"
+  },
+  {
+   "op": "value",
+   "case": "renderer",
+   "statement": "s0",
+   "name": "xml"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "renderer"
+  },
+  {
+   "op": "deploy",
+   "case": "renderer",
+   "statement": "schema",
+   "epl": "create json schema Nested(myInsideInt int);\n@public @buseventtype @name('schema') create json schema EventInfraEventRendererJson(myInt int, myString string, nested Nested);\n",
+   "mode": "json"
+  },
+  {
+   "op": "deployed",
+   "case": "renderer",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "renderer",
+   "statement": "s0",
+   "epl": "@name('s0') select * from EventInfraEventRendererJson",
+   "mode": "json"
+  },
+  {
+   "op": "deployed",
+   "case": "renderer",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "renderer",
+   "eventType": "EventInfraEventRendererJson",
+   "mode": "json",
+   "payload": {
+    "payload": "json"
+   }
+  },
+  {
+   "op": "value",
+   "case": "renderer",
+   "statement": "s0",
+   "name": "json"
+  },
+  {
+   "op": "value",
+   "case": "renderer",
+   "statement": "s0",
+   "name": "xml"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "renderer"
+  },
+  {
+   "op": "deploy",
+   "case": "renderer",
+   "statement": "schema",
+   "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraEventRenderer$MyLocalJsonProvided') @public @buseventtype @name('schema') create json schema EventInfraEventRendererJsonProvided()\n",
+   "mode": "json-provided"
+  },
+  {
+   "op": "deployed",
+   "case": "renderer",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "renderer",
+   "statement": "s0",
+   "epl": "@name('s0') select * from EventInfraEventRendererJsonProvided",
+   "mode": "json-provided"
+  },
+  {
+   "op": "deployed",
+   "case": "renderer",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "renderer",
+   "eventType": "EventInfraEventRendererJsonProvided",
+   "mode": "json-provided",
+   "payload": {
+    "payload": "json-provided"
+   }
+  },
+  {
+   "op": "value",
+   "case": "renderer",
+   "statement": "s0",
+   "name": "json"
+  },
+  {
+   "op": "value",
+   "case": "renderer",
+   "statement": "s0",
+   "name": "xml"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "renderer"
+  },
+  {
+   "op": "case",
+   "case": "sender"
+  },
+  {
+   "op": "deploy",
+   "case": "sender",
+   "statement": "s0",
+   "epl": "@name('s0') select * from SupportBean",
+   "mode": "bean"
+  },
+  {
+   "op": "deployed",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "sender",
+   "eventType": "SupportBean",
+   "mode": "bean",
+   "payload": {
+    "mode": "bean",
+    "op": "send"
+   }
+  },
+  {
+   "op": "unrepresentable",
+   "case": "sender",
+   "statement": "s0",
+   "expectError": "Event object of type com.espertech.esper.regressionlib.support.bean.SupportBean_G does not equal, extend or implement the type com.espertech.esper.common.internal.support.SupportBean of event type 'SupportBean'"
+  },
+  {
+   "op": "undeploy",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "sender",
+   "statement": "s0",
+   "epl": "@name('s0') select * from SupportMarkerInterface",
+   "mode": "marker"
+  },
+  {
+   "op": "deployed",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "sender",
+   "eventType": "SupportMarkerInterface",
+   "mode": "marker",
+   "payload": {
+    "mode": "marker-impl",
+    "op": "send"
+   }
+  },
+  {
+   "op": "send",
+   "case": "sender",
+   "eventType": "SupportMarkerInterface",
+   "mode": "marker",
+   "payload": {
+    "mode": "marker-g",
+    "op": "send"
+   }
+  },
+  {
+   "op": "undeploy",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "sender",
+   "statement": "s0",
+   "epl": "@name('s0') select * from SupportBean",
+   "mode": "bean"
+  },
+  {
+   "op": "deployed",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "sender",
+   "statement": "trigger",
+   "epl": "@public @buseventtype create schema TriggerEvent();\n@name('trigger') select * from TriggerEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "sender",
+   "statement": "trigger"
+  },
+  {
+   "op": "send",
+   "case": "sender",
+   "eventType": "SupportBean",
+   "mode": "bean",
+   "payload": {
+    "mode": "bean",
+    "op": "route"
+   }
+  },
+  {
+   "op": "undeploy",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "undeploy",
+   "case": "sender",
+   "statement": "trigger"
+  },
+  {
+   "op": "deploy",
+   "case": "sender",
+   "statement": "s0",
+   "epl": "@name('s0') select * from EventInfraEventSenderMap",
+   "mode": "map"
+  },
+  {
+   "op": "deployed",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "sender",
+   "eventType": "EventInfraEventSenderMap",
+   "mode": "map",
+   "payload": {
+    "mode": "map",
+    "op": "send"
+   }
+  },
+  {
+   "op": "undeploy",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "sender",
+   "statement": "s0",
+   "epl": "@name('s0') select * from EventInfraEventSenderMap",
+   "mode": "map"
+  },
+  {
+   "op": "deployed",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "sender",
+   "statement": "trigger",
+   "epl": "@public @buseventtype create schema TriggerEvent();\n@name('trigger') select * from TriggerEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "sender",
+   "statement": "trigger"
+  },
+  {
+   "op": "send",
+   "case": "sender",
+   "eventType": "EventInfraEventSenderMap",
+   "mode": "map",
+   "payload": {
+    "mode": "map",
+    "op": "route"
+   }
+  },
+  {
+   "op": "undeploy",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "undeploy",
+   "case": "sender",
+   "statement": "trigger"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "sender",
+   "statement": "s0",
+   "expectError": "Unexpected event object of type com.espertech.esper.common.internal.support.SupportBean, expected java.util.Map"
+  },
+  {
+   "op": "deploy",
+   "case": "sender",
+   "statement": "s0",
+   "epl": "@name('s0') select * from EventInfraEventSenderOA",
+   "mode": "objectarray"
+  },
+  {
+   "op": "deployed",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "sender",
+   "eventType": "EventInfraEventSenderOA",
+   "mode": "objectarray",
+   "payload": {
+    "mode": "objectarray",
+    "op": "send"
+   }
+  },
+  {
+   "op": "undeploy",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "sender",
+   "statement": "s0",
+   "epl": "@name('s0') select * from EventInfraEventSenderOA",
+   "mode": "objectarray"
+  },
+  {
+   "op": "deployed",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "sender",
+   "statement": "trigger",
+   "epl": "@public @buseventtype create schema TriggerEvent();\n@name('trigger') select * from TriggerEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "sender",
+   "statement": "trigger"
+  },
+  {
+   "op": "send",
+   "case": "sender",
+   "eventType": "EventInfraEventSenderOA",
+   "mode": "objectarray",
+   "payload": {
+    "mode": "objectarray",
+    "op": "route"
+   }
+  },
+  {
+   "op": "undeploy",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "undeploy",
+   "case": "sender",
+   "statement": "trigger"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "sender",
+   "statement": "s0",
+   "expectError": "Unexpected event object of type com.espertech.esper.common.internal.support.SupportBean, expected Object[]"
+  },
+  {
+   "op": "deploy",
+   "case": "sender",
+   "statement": "s0",
+   "epl": "@name('s0') select * from EventInfraEventSenderXML",
+   "mode": "xml"
+  },
+  {
+   "op": "deployed",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "sender",
+   "eventType": "EventInfraEventSenderXML",
+   "mode": "xml",
+   "payload": {
+    "mode": "xml",
+    "op": "send"
+   }
+  },
+  {
+   "op": "undeploy",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "sender",
+   "statement": "s0",
+   "epl": "@name('s0') select * from EventInfraEventSenderXML",
+   "mode": "xml"
+  },
+  {
+   "op": "deployed",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "sender",
+   "statement": "trigger",
+   "epl": "@public @buseventtype create schema TriggerEvent();\n@name('trigger') select * from TriggerEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "sender",
+   "statement": "trigger"
+  },
+  {
+   "op": "send",
+   "case": "sender",
+   "eventType": "EventInfraEventSenderXML",
+   "mode": "xml",
+   "payload": {
+    "mode": "xml",
+    "op": "route"
+   }
+  },
+  {
+   "op": "undeploy",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "undeploy",
+   "case": "sender",
+   "statement": "trigger"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "sender",
+   "statement": "s0",
+   "expectError": "Unexpected event object type 'com.espertech.esper.common.internal.support.SupportBean' encountered, please supply a org.w3c.dom.Document or Element node"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "sender",
+   "statement": "s0",
+   "expectError": "Unexpected root element name 'xxxx' encountered, expected a root element name of 'myevent'"
+  },
+  {
+   "op": "deploy",
+   "case": "sender",
+   "statement": "s0",
+   "epl": "@name('s0') select * from EventInfraEventSenderAvro",
+   "mode": "avro"
+  },
+  {
+   "op": "deployed",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "sender",
+   "eventType": "EventInfraEventSenderAvro",
+   "mode": "avro",
+   "payload": {
+    "mode": "avro",
+    "op": "send"
+   }
+  },
+  {
+   "op": "undeploy",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "sender",
+   "statement": "s0",
+   "epl": "@name('s0') select * from EventInfraEventSenderAvro",
+   "mode": "avro"
+  },
+  {
+   "op": "deployed",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "sender",
+   "statement": "trigger",
+   "epl": "@public @buseventtype create schema TriggerEvent();\n@name('trigger') select * from TriggerEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "sender",
+   "statement": "trigger"
+  },
+  {
+   "op": "send",
+   "case": "sender",
+   "eventType": "EventInfraEventSenderAvro",
+   "mode": "avro",
+   "payload": {
+    "mode": "avro",
+    "op": "route"
+   }
+  },
+  {
+   "op": "undeploy",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "undeploy",
+   "case": "sender",
+   "statement": "trigger"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "sender",
+   "statement": "s0",
+   "expectError": "Unexpected event object type 'com.espertech.esper.common.internal.support.SupportBean' encountered, please supply a GenericData.Record"
+  },
+  {
+   "op": "deploy",
+   "case": "sender",
+   "statement": "schema",
+   "epl": "@public @buseventtype @name('schema') create json schema EventInfraEventSenderJson()\n",
+   "mode": "json"
+  },
+  {
+   "op": "deployed",
+   "case": "sender",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "sender",
+   "statement": "s0",
+   "epl": "@name('s0') select * from EventInfraEventSenderJson",
+   "mode": "json"
+  },
+  {
+   "op": "deployed",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "sender",
+   "eventType": "EventInfraEventSenderJson",
+   "mode": "json",
+   "payload": {
+    "mode": "json",
+    "op": "send"
+   }
+  },
+  {
+   "op": "undeploy",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "sender",
+   "statement": "s0",
+   "epl": "@name('s0') select * from EventInfraEventSenderJson",
+   "mode": "json"
+  },
+  {
+   "op": "deployed",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "sender",
+   "statement": "trigger",
+   "epl": "@public @buseventtype create schema TriggerEvent();\n@name('trigger') select * from TriggerEvent;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "sender",
+   "statement": "trigger"
+  },
+  {
+   "op": "send",
+   "case": "sender",
+   "eventType": "EventInfraEventSenderJson",
+   "mode": "json",
+   "payload": {
+    "mode": "json",
+    "op": "route"
+   }
+  },
+  {
+   "op": "undeploy",
+   "case": "sender",
+   "statement": "s0"
+  },
+  {
+   "op": "undeploy",
+   "case": "sender",
+   "statement": "trigger"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "sender",
+   "statement": "s0",
+   "expectError": "Unexpected event object of type 'com.espertech.esper.common.internal.support.SupportBean', expected a Json-formatted string-type value"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "sender",
+   "statement": "ABC",
+   "expectError": "Event type named 'ABC' could not be found"
+  },
+  {
+   "op": "deploy",
+   "case": "sender",
+   "statement": "insert-into-abc",
+   "epl": "insert into ABC select *, theString as value from SupportBean",
+   "mode": "bean"
+  },
+  {
+   "op": "deployed",
+   "case": "sender",
+   "statement": "insert-into-abc"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "sender",
+   "statement": "ABC",
+   "expectError": "Event type named 'ABC' could not be found"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "sender"
+  },
+  {
+   "op": "case",
+   "case": "manufacturer"
+  },
+  {
+   "op": "deploy",
+   "case": "manufacturer",
+   "statement": "schema",
+   "epl": "@public @name('schema') create schema BeanEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraManufacturer$MyLocalBeanEvent",
+   "mode": "bean"
+  },
+  {
+   "op": "deployed",
+   "case": "manufacturer",
+   "statement": "schema"
+  },
+  {
+   "op": "value",
+   "case": "manufacturer",
+   "statement": "schema",
+   "name": "make"
+  },
+  {
+   "op": "value",
+   "case": "manufacturer",
+   "statement": "schema",
+   "name": "makeUnderlying"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "manufacturer",
+   "statement": "schema",
+   "expectError": "EventBeanManufacturerForge/make/makeUnderlying is an internal SPI with no Go boundary; construct-and-assert rows cover the observable assertions"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "manufacturer"
+  },
+  {
+   "op": "deploy",
+   "case": "manufacturer",
+   "statement": "schema",
+   "epl": "@public @name('schema') create map schema MapEvent(p1 string, p2 int)",
+   "mode": "map"
+  },
+  {
+   "op": "deployed",
+   "case": "manufacturer",
+   "statement": "schema"
+  },
+  {
+   "op": "value",
+   "case": "manufacturer",
+   "statement": "schema",
+   "name": "make"
+  },
+  {
+   "op": "value",
+   "case": "manufacturer",
+   "statement": "schema",
+   "name": "makeUnderlying"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "manufacturer",
+   "statement": "schema",
+   "expectError": "EventBeanManufacturerForge/make/makeUnderlying is an internal SPI with no Go boundary; construct-and-assert rows cover the observable assertions"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "manufacturer"
+  },
+  {
+   "op": "deploy",
+   "case": "manufacturer",
+   "statement": "schema",
+   "epl": "@public @name('schema') create objectarray schema MapEvent(p1 string, p2 int)",
+   "mode": "objectarray"
+  },
+  {
+   "op": "deployed",
+   "case": "manufacturer",
+   "statement": "schema"
+  },
+  {
+   "op": "value",
+   "case": "manufacturer",
+   "statement": "schema",
+   "name": "make"
+  },
+  {
+   "op": "value",
+   "case": "manufacturer",
+   "statement": "schema",
+   "name": "makeUnderlying"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "manufacturer",
+   "statement": "schema",
+   "expectError": "EventBeanManufacturerForge/make/makeUnderlying is an internal SPI with no Go boundary; construct-and-assert rows cover the observable assertions"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "manufacturer"
+  },
+  {
+   "op": "deploy",
+   "case": "manufacturer",
+   "statement": "schema",
+   "epl": "@public @name('schema') create json schema JsonEvent(p1 string, p2 int)",
+   "mode": "json"
+  },
+  {
+   "op": "deployed",
+   "case": "manufacturer",
+   "statement": "schema"
+  },
+  {
+   "op": "value",
+   "case": "manufacturer",
+   "statement": "schema",
+   "name": "make"
+  },
+  {
+   "op": "value",
+   "case": "manufacturer",
+   "statement": "schema",
+   "name": "makeUnderlying"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "manufacturer",
+   "statement": "schema",
+   "expectError": "EventBeanManufacturerForge/make/makeUnderlying is an internal SPI with no Go boundary; construct-and-assert rows cover the observable assertions"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "manufacturer"
+  },
+  {
+   "op": "deploy",
+   "case": "manufacturer",
+   "statement": "schema",
+   "epl": "@public @name('schema') @JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraManufacturer$MyLocalJsonProvided') create json schema JsonEvent()",
+   "mode": "json-provided"
+  },
+  {
+   "op": "deployed",
+   "case": "manufacturer",
+   "statement": "schema"
+  },
+  {
+   "op": "value",
+   "case": "manufacturer",
+   "statement": "schema",
+   "name": "make"
+  },
+  {
+   "op": "value",
+   "case": "manufacturer",
+   "statement": "schema",
+   "name": "makeUnderlying"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "manufacturer",
+   "statement": "schema",
+   "expectError": "EventBeanManufacturerForge/make/makeUnderlying is an internal SPI with no Go boundary; construct-and-assert rows cover the observable assertions"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "manufacturer"
+  },
+  {
+   "op": "deploy",
+   "case": "manufacturer",
+   "statement": "schema",
+   "epl": "@public @name('schema') select * from EventInfraManufacturerAVRO",
+   "mode": "avro"
+  },
+  {
+   "op": "deployed",
+   "case": "manufacturer",
+   "statement": "schema"
+  },
+  {
+   "op": "value",
+   "case": "manufacturer",
+   "statement": "schema",
+   "name": "make"
+  },
+  {
+   "op": "value",
+   "case": "manufacturer",
+   "statement": "schema",
+   "name": "makeUnderlying"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "manufacturer",
+   "statement": "schema",
+   "expectError": "EventBeanManufacturerForge/make/makeUnderlying is an internal SPI with no Go boundary; construct-and-assert rows cover the observable assertions"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "manufacturer"
+  },
+  {
+   "op": "case",
+   "case": "supertype"
+  },
+  {
+   "op": "deploy",
+   "case": "supertype",
+   "statement": "s0",
+   "epl": "@name('s0') select * from Bean_Type_Root",
+   "mode": "Bean"
+  },
+  {
+   "op": "deployed",
+   "case": "supertype",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "supertype",
+   "statement": "s1",
+   "epl": "@name('s1') select * from Bean_Type_1"
+  },
+  {
+   "op": "deployed",
+   "case": "supertype",
+   "statement": "s1"
+  },
+  {
+   "op": "deploy",
+   "case": "supertype",
+   "statement": "s2",
+   "epl": "@name('s2') select * from Bean_Type_2"
+  },
+  {
+   "op": "deployed",
+   "case": "supertype",
+   "statement": "s2"
+  },
+  {
+   "op": "deploy",
+   "case": "supertype",
+   "statement": "s3",
+   "epl": "@name('s3') select * from Bean_Type_2_1"
+  },
+  {
+   "op": "deployed",
+   "case": "supertype",
+   "statement": "s3"
+  },
+  {
+   "op": "send",
+   "case": "supertype",
+   "eventType": "Bean_Type_Root",
+   "payload": {
+    "element": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "supertype",
+   "eventType": "Bean_Type_1",
+   "payload": {
+    "element": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "supertype",
+   "eventType": "Bean_Type_2",
+   "payload": {
+    "element": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "supertype",
+   "eventType": "Bean_Type_2_1",
+   "payload": {
+    "element": 3
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "supertype"
+  },
+  {
+   "op": "deploy",
+   "case": "supertype",
+   "statement": "s0",
+   "epl": "@name('s0') select * from Map_Type_Root",
+   "mode": "Map"
+  },
+  {
+   "op": "deployed",
+   "case": "supertype",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "supertype",
+   "statement": "s1",
+   "epl": "@name('s1') select * from Map_Type_1"
+  },
+  {
+   "op": "deployed",
+   "case": "supertype",
+   "statement": "s1"
+  },
+  {
+   "op": "deploy",
+   "case": "supertype",
+   "statement": "s2",
+   "epl": "@name('s2') select * from Map_Type_2"
+  },
+  {
+   "op": "deployed",
+   "case": "supertype",
+   "statement": "s2"
+  },
+  {
+   "op": "deploy",
+   "case": "supertype",
+   "statement": "s3",
+   "epl": "@name('s3') select * from Map_Type_2_1"
+  },
+  {
+   "op": "deployed",
+   "case": "supertype",
+   "statement": "s3"
+  },
+  {
+   "op": "send",
+   "case": "supertype",
+   "eventType": "Map_Type_Root",
+   "payload": {
+    "element": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "supertype",
+   "eventType": "Map_Type_1",
+   "payload": {
+    "element": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "supertype",
+   "eventType": "Map_Type_2",
+   "payload": {
+    "element": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "supertype",
+   "eventType": "Map_Type_2_1",
+   "payload": {
+    "element": 3
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "supertype"
+  },
+  {
+   "op": "deploy",
+   "case": "supertype",
+   "statement": "s0",
+   "epl": "@name('s0') select * from OA_Type_Root",
+   "mode": "OA"
+  },
+  {
+   "op": "deployed",
+   "case": "supertype",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "supertype",
+   "statement": "s1",
+   "epl": "@name('s1') select * from OA_Type_1"
+  },
+  {
+   "op": "deployed",
+   "case": "supertype",
+   "statement": "s1"
+  },
+  {
+   "op": "deploy",
+   "case": "supertype",
+   "statement": "s2",
+   "epl": "@name('s2') select * from OA_Type_2"
+  },
+  {
+   "op": "deployed",
+   "case": "supertype",
+   "statement": "s2"
+  },
+  {
+   "op": "deploy",
+   "case": "supertype",
+   "statement": "s3",
+   "epl": "@name('s3') select * from OA_Type_2_1"
+  },
+  {
+   "op": "deployed",
+   "case": "supertype",
+   "statement": "s3"
+  },
+  {
+   "op": "send",
+   "case": "supertype",
+   "eventType": "OA_Type_Root",
+   "payload": {
+    "element": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "supertype",
+   "eventType": "OA_Type_1",
+   "payload": {
+    "element": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "supertype",
+   "eventType": "OA_Type_2",
+   "payload": {
+    "element": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "supertype",
+   "eventType": "OA_Type_2_1",
+   "payload": {
+    "element": 3
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "supertype"
+  },
+  {
+   "op": "deploy",
+   "case": "supertype",
+   "statement": "s0",
+   "epl": "@name('s0') select * from Avro_Type_Root",
+   "mode": "Avro"
+  },
+  {
+   "op": "deployed",
+   "case": "supertype",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "supertype",
+   "statement": "s1",
+   "epl": "@name('s1') select * from Avro_Type_1"
+  },
+  {
+   "op": "deployed",
+   "case": "supertype",
+   "statement": "s1"
+  },
+  {
+   "op": "deploy",
+   "case": "supertype",
+   "statement": "s2",
+   "epl": "@name('s2') select * from Avro_Type_2"
+  },
+  {
+   "op": "deployed",
+   "case": "supertype",
+   "statement": "s2"
+  },
+  {
+   "op": "deploy",
+   "case": "supertype",
+   "statement": "s3",
+   "epl": "@name('s3') select * from Avro_Type_2_1"
+  },
+  {
+   "op": "deployed",
+   "case": "supertype",
+   "statement": "s3"
+  },
+  {
+   "op": "send",
+   "case": "supertype",
+   "eventType": "Avro_Type_Root",
+   "payload": {
+    "element": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "supertype",
+   "eventType": "Avro_Type_1",
+   "payload": {
+    "element": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "supertype",
+   "eventType": "Avro_Type_2",
+   "payload": {
+    "element": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "supertype",
+   "eventType": "Avro_Type_2_1",
+   "payload": {
+    "element": 3
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "supertype"
+  },
+  {
+   "op": "deploy",
+   "case": "supertype",
+   "statement": "schema",
+   "epl": "@public @buseventtype @name('schema') create json schema Json_Type_Root();\n@public @buseventtype create json schema Json_Type_1() inherits Json_Type_Root;\n@public @buseventtype create json schema Json_Type_2() inherits Json_Type_Root;\n@public @buseventtype create json schema Json_Type_2_1() inherits Json_Type_2;\n",
+   "mode": "Json"
+  },
+  {
+   "op": "deployed",
+   "case": "supertype",
+   "statement": "schema"
+  },
+  {
+   "op": "deploy",
+   "case": "supertype",
+   "statement": "s0",
+   "epl": "@name('s0') select * from Json_Type_Root"
+  },
+  {
+   "op": "deployed",
+   "case": "supertype",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "supertype",
+   "statement": "s1",
+   "epl": "@name('s1') select * from Json_Type_1"
+  },
+  {
+   "op": "deployed",
+   "case": "supertype",
+   "statement": "s1"
+  },
+  {
+   "op": "deploy",
+   "case": "supertype",
+   "statement": "s2",
+   "epl": "@name('s2') select * from Json_Type_2"
+  },
+  {
+   "op": "deployed",
+   "case": "supertype",
+   "statement": "s2"
+  },
+  {
+   "op": "deploy",
+   "case": "supertype",
+   "statement": "s3",
+   "epl": "@name('s3') select * from Json_Type_2_1"
+  },
+  {
+   "op": "deployed",
+   "case": "supertype",
+   "statement": "s3"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "supertype",
+   "statement": "Json_Type_Root",
+   "expectError": "json schema inherits has no Go registration surface; dispatch matrix verified in the oracle"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "supertype",
+   "statement": "Json_Type_1",
+   "expectError": "json schema inherits has no Go registration surface; dispatch matrix verified in the oracle"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "supertype",
+   "statement": "Json_Type_2",
+   "expectError": "json schema inherits has no Go registration surface; dispatch matrix verified in the oracle"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "supertype",
+   "statement": "Json_Type_2_1",
+   "expectError": "json schema inherits has no Go registration surface; dispatch matrix verified in the oracle"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "supertype"
+  }
+ ]
+}

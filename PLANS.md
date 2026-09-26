@@ -38,47 +38,41 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.539 ('epl-other-invalid') committed and pushed as 3d2dd2720; Git owns identity.
 
 ## Current work unit
+Active: Draft 4.545 ('event-infra-contained-renderer-sender-supertype').
 
-Active: Draft 4.544 ('event-infra-property-non-dynamic').
-
-- Selection: `EventInfraProperty*` non-dynamic cluster — 7 executions,
-  all ord 0, no flags: IndexedKeyExpr (`java-runtime-f5d82c0cf0cf2516d0ef`,
-  static `java-461ebcf502cbdf9ba15c`), IndexedRuntimeIndex
-  (`java-runtime-10ce593e8d5ae6a9dd89`, static `java-ed0cc8c7b0867c0cd502`),
-  MappedIndexed (`java-runtime-b25d2dc5c7eb2c968105`, static
-  `java-287c4bf86e9464e7b595`), MappedRuntimeKey
-  (`java-runtime-c4f7fe6163eff7d35461`, static `java-899877f666cfc36adcb1`),
-  NestedIndexed (`java-runtime-594a57ed26499f1ccd30`, static
-  `java-ff678fbbd673309b12b2`), NestedNestedEscaped
-  (`java-runtime-0b17042e1ee4d75b7007`, static `java-2d629e45d1948a6770ee`),
-  NestedSimple (`java-runtime-848063976a9d6485ec20`, static
-  `java-eb62cc47423e42ec7671`).
-- [x] Java contract scout (JavaContract544) + Go surface scout
-  (GoSurface544) complete; contract frozen. All 7 representable, no
-  unrepresentable spots, existing oracle harness suffices. Per-execution
-  byte-exact EPL/payload/assertion table at agent://JavaContract544;
-  surface map + file list at agent://GoSurface544 (runner file:
-  internal/app/parity/event_infra_property_non_dynamic.go; scenario:
-  testdata/parity/event-infra-property-non-dynamic.json).
-- [x] Assets544 delivered (after one infra-crash resume): runner 3206
-  lines, scenario JSON, oracle + run.sh, run.go/run_test.go wiring.
-  Java trace 824 records, Go replay 824, `-diff` passing / 0
-  differences; evidence + traces checked in; manifest
-  case.event-infra-property-non-dynamic born-DV (775 cases / 398 DV /
-  1582 DV IDs / 456 unreferenced); roadmap + CHANGELOG prepended;
-  `make check` GREEN (parity 97s, esper 119s).
-- [x] ParityRev544 + JavaContract545 + GoSurface545 dispatched.
+- Contract frozen (JavaContract545 + GoSurface545): all 8 candidates
+  genuinely unreferenced — ContainedSimple/Nested/NestedArray/
+  IndexedWithIndex (`java-runtime-6de635c8b30a4103c24c` /
+  `-7fbe252dc4d607cf0da6` / `-597b6eca244190805083` /
+  `-d0c21881fb79f2ca6b4a`, flags []), EventRenderer
+  (`java-runtime-788241891a0cf2f7b34c`, flags []), EventSender
+  (`java-runtime-87613a44bc6e8ae3ffa1`, OBSERVEROPS), Manufacturer
+  (`java-runtime-70823aef36342bc74b8b`, STATICHOOK, forge API
+  unrepresentable — observable construct-and-assert or
+  unrepresentable markers), SuperType
+  (`java-runtime-c176a2422bef1680520b`, OBSERVEROPS, WithSchemaParent
+  dispatch matrix). No overlap with case.epl-contained-event-example.
+- [x] Assets545 dispatched (runner event_infra_contained_545.go +
+  event_infra_sender_supertype_545.go, scenario event-infra-545.json,
+  oracle EventInfra545ScenarioOracle.java, mode event-infra-545).
+- [x] Integrated: Java trace 235 records, Go replay 235, `-diff`
+  passing / 0 differences; evidence + traces checked in. Manifest
+  case.event-infra-contained-render-sender-supertype born-DV mapped to
+  event.contained + event.property-access-render (776 cases / 399 DV /
+  1590 DV IDs / 448 unreferenced); roadmap + CHANGELOG prepended;
+  worker added missing 3 evidence tests on request — all 6 pass;
+  `make check` GREEN (parity 99s, esper 118s).
+- [x] ParityRev545 + JavaContract546 + GoSurface546 dispatched
+  (4.546 candidate: EventRender* family, 7 executions).
 - [ ] Review outcome, commit, push.
-
-Next: Draft 4.545 — prefetch only.
-
-- Candidate: `EventInfraContained*` (4) + EventInfraEventRenderer /
-  EventInfraEventSender / EventInfraManufacturer / EventInfraSuperType
-  leftovers; scouts must first drop any execution already covered by
-  case.epl-contained-event-example (4.518). Contract freeze pending.
 
 ## Previous work units (shipped)
 
+- Shipped: Draft 4.544 ('event-infra-property-non-dynamic') committed
+  and pushed as 756f32910; Git owns identity. Parity review PASS, one
+  P3 (dead identity wrapper) fixed. Java/Go 824 records each, 0
+  differences; manifest 775 cases / 398 DV / 1582 DV IDs / 456
+  unreferenced.
 - Shipped: Draft 4.543 ('event-infra-property-dynamic') committed and
   pushed as 8ddf1704a; Git owns identity. Parity review initial FAIL
   (P1 orphaned sixth execution NonSimple -> covered as 6th case; P3

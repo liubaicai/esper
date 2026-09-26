@@ -1,0 +1,7184 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-6de635c8b30a4103c24c",
+    "java-runtime-7fbe252dc4d607cf0da6",
+    "java-runtime-597b6eca244190805083",
+    "java-runtime-d0c21881fb79f2ca6b4a",
+    "java-runtime-788241891a0cf2f7b34c",
+    "java-runtime-87613a44bc6e8ae3ffa1",
+    "java-runtime-70823aef36342bc74b8b",
+    "java-runtime-c176a2422bef1680520b"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraContainedSimple.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraContainedNested.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraContainedNestedArray.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraContainedIndexedWithIndex.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraEventRenderer.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraEventSender.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraManufacturer.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraSuperType.java"
+  ],
+  "javaExecutions": [
+    "EventInfraContainedSimple",
+    "EventInfraContainedNested",
+    "EventInfraContainedNestedArray",
+    "EventInfraContainedIndexedWithIndex",
+    "EventInfraEventRenderer",
+    "EventInfraEventSender",
+    "EventInfraManufacturer",
+    "EventInfraSuperType"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "event-infra-545",
+    "steps": [
+      {
+        "op": "case",
+        "case": "contained-simple"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-simple",
+        "statement": "schema",
+        "epl": "@public @buseventtype create schema LocalInnerEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedSimple$LocalInnerEvent;\n@public @buseventtype create schema LocalEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedSimple$LocalEvent;\n",
+        "mode": "bean"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-simple",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-simple",
+        "statement": "s0",
+        "epl": "@name('s0') select * from LocalEvent[property];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-simple",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "contained-simple",
+        "eventType": "LocalEvent",
+        "payload": {
+          "ids": [
+            "a"
+          ]
+        },
+        "mode": "bean"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "contained-simple"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-simple",
+        "statement": "schema",
+        "epl": "@public @buseventtype create schema LocalInnerEvent(id string);\n@public @buseventtype create schema LocalEvent(property LocalInnerEvent);\n",
+        "mode": "map"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-simple",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-simple",
+        "statement": "s0",
+        "epl": "@name('s0') select * from LocalEvent[property];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-simple",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "contained-simple",
+        "eventType": "LocalEvent",
+        "payload": {
+          "ids": [
+            "a"
+          ]
+        },
+        "mode": "map"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "contained-simple"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-simple",
+        "statement": "schema",
+        "epl": "@public @buseventtype create objectarray schema LocalInnerEvent(id string);\n@public @buseventtype create objectarray schema LocalEvent(property LocalInnerEvent);\n",
+        "mode": "objectarray"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-simple",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-simple",
+        "statement": "s0",
+        "epl": "@name('s0') select * from LocalEvent[property];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-simple",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "contained-simple",
+        "eventType": "LocalEvent",
+        "payload": {
+          "ids": [
+            "a"
+          ]
+        },
+        "mode": "objectarray"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "contained-simple"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-simple",
+        "statement": "schema",
+        "epl": "@public @buseventtype create json schema LocalInnerEvent(id string);\n@public @buseventtype create json schema LocalEvent(property LocalInnerEvent);\n",
+        "mode": "json"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-simple",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-simple",
+        "statement": "s0",
+        "epl": "@name('s0') select * from LocalEvent[property];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-simple",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "contained-simple",
+        "eventType": "LocalEvent",
+        "payload": {
+          "ids": [
+            "a"
+          ]
+        },
+        "mode": "json"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "contained-simple"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-simple",
+        "statement": "schema",
+        "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedSimple$MyLocalJsonProvided') @public @buseventtype create json schema LocalEvent();\n",
+        "mode": "json-provided"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-simple",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-simple",
+        "statement": "s0",
+        "epl": "@name('s0') select * from LocalEvent[property];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-simple",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "contained-simple",
+        "eventType": "LocalEvent",
+        "payload": {
+          "ids": [
+            "a"
+          ]
+        },
+        "mode": "json-provided"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "contained-simple"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-simple",
+        "statement": "schema",
+        "epl": "@name('schema') @public @buseventtype create avro schema LocalInnerEvent(id string);\n@public @buseventtype create avro schema LocalEvent(property LocalInnerEvent);\n",
+        "mode": "avro"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-simple",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-simple",
+        "statement": "s0",
+        "epl": "@name('s0') select * from LocalEvent[property];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-simple",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "contained-simple",
+        "eventType": "LocalEvent",
+        "payload": {
+          "ids": [
+            "a"
+          ]
+        },
+        "mode": "avro"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "contained-simple"
+      },
+      {
+        "op": "case",
+        "case": "contained-nested"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested",
+        "statement": "schema",
+        "epl": "@public @buseventtype create schema LocalLeafEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedNested$LocalLeafEvent;\n@public @buseventtype create schema LocalInnerEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedNested$LocalInnerEvent;\n@public @buseventtype create schema LocalEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedNested$LocalEvent;\n",
+        "mode": "bean"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested",
+        "statement": "s0",
+        "epl": "@name('s0') select * from LocalEvent[property.leaf];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "contained-nested",
+        "eventType": "LocalEvent",
+        "payload": {
+          "ids": [
+            "a"
+          ]
+        },
+        "mode": "bean"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "contained-nested"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested",
+        "statement": "schema",
+        "epl": "create map schema LocalLeafEvent(id string);\ncreate map schema LocalInnerEvent(leaf LocalLeafEvent);\n@name('schema') @public @buseventtype create map schema LocalEvent(property LocalInnerEvent);\n",
+        "mode": "map"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested",
+        "statement": "s0",
+        "epl": "@name('s0') select * from LocalEvent[property.leaf];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "contained-nested",
+        "eventType": "LocalEvent",
+        "payload": {
+          "ids": [
+            "a"
+          ]
+        },
+        "mode": "map"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "contained-nested"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested",
+        "statement": "schema",
+        "epl": "create objectarray schema LocalLeafEvent(id string);\ncreate objectarray schema LocalInnerEvent(leaf LocalLeafEvent);\n@name('schema') @public @buseventtype create objectarray schema LocalEvent(property LocalInnerEvent);\n",
+        "mode": "objectarray"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested",
+        "statement": "s0",
+        "epl": "@name('s0') select * from LocalEvent[property.leaf];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "contained-nested",
+        "eventType": "LocalEvent",
+        "payload": {
+          "ids": [
+            "a"
+          ]
+        },
+        "mode": "objectarray"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "contained-nested"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested",
+        "statement": "schema",
+        "epl": "create json schema LocalLeafEvent(id string);\ncreate json schema LocalInnerEvent(leaf LocalLeafEvent);\n@name('schema') @public @buseventtype create json schema LocalEvent(property LocalInnerEvent);\n",
+        "mode": "json"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested",
+        "statement": "s0",
+        "epl": "@name('s0') select * from LocalEvent[property.leaf];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "contained-nested",
+        "eventType": "LocalEvent",
+        "payload": {
+          "ids": [
+            "a"
+          ]
+        },
+        "mode": "json"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "contained-nested"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested",
+        "statement": "schema",
+        "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedNested$MyLocalJsonProvided') @public @buseventtype create json schema LocalEvent();\n",
+        "mode": "json-provided"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested",
+        "statement": "s0",
+        "epl": "@name('s0') select * from LocalEvent[property.leaf];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "contained-nested",
+        "eventType": "LocalEvent",
+        "payload": {
+          "ids": [
+            "a"
+          ]
+        },
+        "mode": "json-provided"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "contained-nested"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested",
+        "statement": "schema",
+        "epl": "create avro schema LocalLeafEvent(id string);\ncreate avro schema LocalInnerEvent(leaf LocalLeafEvent);\n@name('schema') @public @buseventtype create avro schema LocalEvent(property LocalInnerEvent);\n",
+        "mode": "avro"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested",
+        "statement": "s0",
+        "epl": "@name('s0') select * from LocalEvent[property.leaf];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "contained-nested",
+        "eventType": "LocalEvent",
+        "payload": {
+          "ids": [
+            "a"
+          ]
+        },
+        "mode": "avro"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "contained-nested"
+      },
+      {
+        "op": "case",
+        "case": "contained-nested-array"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested-array",
+        "statement": "schema",
+        "epl": "@public @buseventtype create schema LocalLeafEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedNestedArray$LocalLeafEvent;\n@public @buseventtype create schema LocalInnerEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedNestedArray$LocalInnerEvent;\n@public @buseventtype create schema LocalEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedNestedArray$LocalEvent;\n",
+        "mode": "bean"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested-array",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested-array",
+        "statement": "s0",
+        "epl": "@name('s0') select * from LocalEvent[property[0].leaf];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested-array",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested-array",
+        "statement": "s1",
+        "epl": "@name('s1') select * from LocalEvent[property[1].leaf];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested-array",
+        "statement": "s1"
+      },
+      {
+        "op": "send",
+        "case": "contained-nested-array",
+        "eventType": "LocalEvent",
+        "payload": {
+          "ids": [
+            "a",
+            "b"
+          ]
+        },
+        "mode": "bean"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "contained-nested-array"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested-array",
+        "statement": "schema",
+        "epl": "create map schema LocalLeafEvent(id string);\ncreate map schema LocalInnerEvent(leaf LocalLeafEvent);\n@name('schema') @public @buseventtype create map schema LocalEvent(property LocalInnerEvent[]);\n",
+        "mode": "map"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested-array",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested-array",
+        "statement": "s0",
+        "epl": "@name('s0') select * from LocalEvent[property[0].leaf];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested-array",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested-array",
+        "statement": "s1",
+        "epl": "@name('s1') select * from LocalEvent[property[1].leaf];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested-array",
+        "statement": "s1"
+      },
+      {
+        "op": "send",
+        "case": "contained-nested-array",
+        "eventType": "LocalEvent",
+        "payload": {
+          "ids": [
+            "a",
+            "b"
+          ]
+        },
+        "mode": "map"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "contained-nested-array"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested-array",
+        "statement": "schema",
+        "epl": "create objectarray schema LocalLeafEvent(id string);\ncreate objectarray schema LocalInnerEvent(leaf LocalLeafEvent);\n@name('schema') @public @buseventtype create objectarray schema LocalEvent(property LocalInnerEvent[]);\n",
+        "mode": "objectarray"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested-array",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested-array",
+        "statement": "s0",
+        "epl": "@name('s0') select * from LocalEvent[property[0].leaf];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested-array",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested-array",
+        "statement": "s1",
+        "epl": "@name('s1') select * from LocalEvent[property[1].leaf];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested-array",
+        "statement": "s1"
+      },
+      {
+        "op": "send",
+        "case": "contained-nested-array",
+        "eventType": "LocalEvent",
+        "payload": {
+          "ids": [
+            "a",
+            "b"
+          ]
+        },
+        "mode": "objectarray"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "contained-nested-array"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested-array",
+        "statement": "schema",
+        "epl": "create json schema LocalLeafEvent(id string);\ncreate json schema LocalInnerEvent(leaf LocalLeafEvent);\n@name('schema') @public @buseventtype create json schema LocalEvent(property LocalInnerEvent[]);\n",
+        "mode": "json"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested-array",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested-array",
+        "statement": "s0",
+        "epl": "@name('s0') select * from LocalEvent[property[0].leaf];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested-array",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested-array",
+        "statement": "s1",
+        "epl": "@name('s1') select * from LocalEvent[property[1].leaf];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested-array",
+        "statement": "s1"
+      },
+      {
+        "op": "send",
+        "case": "contained-nested-array",
+        "eventType": "LocalEvent",
+        "payload": {
+          "ids": [
+            "a",
+            "b"
+          ]
+        },
+        "mode": "json"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "contained-nested-array"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested-array",
+        "statement": "schema",
+        "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedNestedArray$MyLocalJsonProvided') @public @buseventtype create json schema LocalEvent();\n",
+        "mode": "json-provided"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested-array",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested-array",
+        "statement": "s0",
+        "epl": "@name('s0') select * from LocalEvent[property[0].leaf];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested-array",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested-array",
+        "statement": "s1",
+        "epl": "@name('s1') select * from LocalEvent[property[1].leaf];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested-array",
+        "statement": "s1"
+      },
+      {
+        "op": "send",
+        "case": "contained-nested-array",
+        "eventType": "LocalEvent",
+        "payload": {
+          "ids": [
+            "a",
+            "b"
+          ]
+        },
+        "mode": "json-provided"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "contained-nested-array"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested-array",
+        "statement": "schema",
+        "epl": "create avro schema LocalLeafEvent(id string);\ncreate avro schema LocalInnerEvent(leaf LocalLeafEvent);\n@name('schema') @public @buseventtype create avro schema LocalEvent(property LocalInnerEvent[]);\n",
+        "mode": "avro"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested-array",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested-array",
+        "statement": "s0",
+        "epl": "@name('s0') select * from LocalEvent[property[0].leaf];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested-array",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-nested-array",
+        "statement": "s1",
+        "epl": "@name('s1') select * from LocalEvent[property[1].leaf];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-nested-array",
+        "statement": "s1"
+      },
+      {
+        "op": "send",
+        "case": "contained-nested-array",
+        "eventType": "LocalEvent",
+        "payload": {
+          "ids": [
+            "a",
+            "b"
+          ]
+        },
+        "mode": "avro"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "contained-nested-array"
+      },
+      {
+        "op": "case",
+        "case": "contained-indexed"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-indexed",
+        "statement": "schema",
+        "epl": "@public @buseventtype create schema LocalInnerEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedIndexedWithIndex$LocalInnerEvent;\n@public @buseventtype create schema LocalEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedIndexedWithIndex$LocalEvent;\n",
+        "mode": "bean"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-indexed",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-indexed",
+        "statement": "s0",
+        "epl": "@name('s0') select * from LocalEvent[indexed[0]];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-indexed",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-indexed",
+        "statement": "s1",
+        "epl": "@name('s1') select * from LocalEvent[indexed[1]];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-indexed",
+        "statement": "s1"
+      },
+      {
+        "op": "send",
+        "case": "contained-indexed",
+        "eventType": "LocalEvent",
+        "payload": {
+          "ids": [
+            "a",
+            "b"
+          ]
+        },
+        "mode": "bean"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "contained-indexed"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-indexed",
+        "statement": "schema",
+        "epl": "@public @buseventtype create schema LocalInnerEvent(id string);\n@public @buseventtype create schema LocalEvent(indexed LocalInnerEvent[]);\n",
+        "mode": "map"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-indexed",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-indexed",
+        "statement": "s0",
+        "epl": "@name('s0') select * from LocalEvent[indexed[0]];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-indexed",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-indexed",
+        "statement": "s1",
+        "epl": "@name('s1') select * from LocalEvent[indexed[1]];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-indexed",
+        "statement": "s1"
+      },
+      {
+        "op": "send",
+        "case": "contained-indexed",
+        "eventType": "LocalEvent",
+        "payload": {
+          "ids": [
+            "a",
+            "b"
+          ]
+        },
+        "mode": "map"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "contained-indexed"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-indexed",
+        "statement": "schema",
+        "epl": "@public @buseventtype create objectarray schema LocalInnerEvent(id string);\n@public @buseventtype create objectarray schema LocalEvent(indexed LocalInnerEvent[]);\n",
+        "mode": "objectarray"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-indexed",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-indexed",
+        "statement": "s0",
+        "epl": "@name('s0') select * from LocalEvent[indexed[0]];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-indexed",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-indexed",
+        "statement": "s1",
+        "epl": "@name('s1') select * from LocalEvent[indexed[1]];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-indexed",
+        "statement": "s1"
+      },
+      {
+        "op": "send",
+        "case": "contained-indexed",
+        "eventType": "LocalEvent",
+        "payload": {
+          "ids": [
+            "a",
+            "b"
+          ]
+        },
+        "mode": "objectarray"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "contained-indexed"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-indexed",
+        "statement": "schema",
+        "epl": "@public @buseventtype create json schema LocalInnerEvent(id string);\n@public @buseventtype create json schema LocalEvent(indexed LocalInnerEvent[]);\n",
+        "mode": "json"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-indexed",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-indexed",
+        "statement": "s0",
+        "epl": "@name('s0') select * from LocalEvent[indexed[0]];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-indexed",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-indexed",
+        "statement": "s1",
+        "epl": "@name('s1') select * from LocalEvent[indexed[1]];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-indexed",
+        "statement": "s1"
+      },
+      {
+        "op": "send",
+        "case": "contained-indexed",
+        "eventType": "LocalEvent",
+        "payload": {
+          "ids": [
+            "a",
+            "b"
+          ]
+        },
+        "mode": "json"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "contained-indexed"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-indexed",
+        "statement": "schema",
+        "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraContainedIndexedWithIndex$MyLocalJsonProvided') @public @buseventtype create json schema LocalEvent();\n",
+        "mode": "json-provided"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-indexed",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-indexed",
+        "statement": "s0",
+        "epl": "@name('s0') select * from LocalEvent[indexed[0]];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-indexed",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-indexed",
+        "statement": "s1",
+        "epl": "@name('s1') select * from LocalEvent[indexed[1]];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-indexed",
+        "statement": "s1"
+      },
+      {
+        "op": "send",
+        "case": "contained-indexed",
+        "eventType": "LocalEvent",
+        "payload": {
+          "ids": [
+            "a",
+            "b"
+          ]
+        },
+        "mode": "json-provided"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "contained-indexed"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-indexed",
+        "statement": "schema",
+        "epl": "@name('schema') @public @buseventtype create avro schema LocalInnerEvent(id string);\n@public @buseventtype create avro schema LocalEvent(indexed LocalInnerEvent[]);\n",
+        "mode": "avro"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-indexed",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-indexed",
+        "statement": "s0",
+        "epl": "@name('s0') select * from LocalEvent[indexed[0]];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-indexed",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "contained-indexed",
+        "statement": "s1",
+        "epl": "@name('s1') select * from LocalEvent[indexed[1]];\n"
+      },
+      {
+        "op": "deployed",
+        "case": "contained-indexed",
+        "statement": "s1"
+      },
+      {
+        "op": "send",
+        "case": "contained-indexed",
+        "eventType": "LocalEvent",
+        "payload": {
+          "ids": [
+            "a",
+            "b"
+          ]
+        },
+        "mode": "avro"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "contained-indexed"
+      },
+      {
+        "op": "case",
+        "case": "renderer"
+      },
+      {
+        "op": "deploy",
+        "case": "renderer",
+        "statement": "s0",
+        "epl": "@name('s0') select * from MyEvent",
+        "mode": "bean"
+      },
+      {
+        "op": "deployed",
+        "case": "renderer",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "renderer",
+        "eventType": "MyEvent",
+        "payload": {
+          "payload": "bean"
+        },
+        "mode": "bean"
+      },
+      {
+        "op": "value",
+        "case": "renderer",
+        "statement": "s0",
+        "name": "json"
+      },
+      {
+        "op": "value",
+        "case": "renderer",
+        "statement": "s0",
+        "name": "xml"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "renderer"
+      },
+      {
+        "op": "deploy",
+        "case": "renderer",
+        "statement": "s0",
+        "epl": "@name('s0') select * from EventInfraEventRendererMap",
+        "mode": "map"
+      },
+      {
+        "op": "deployed",
+        "case": "renderer",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "renderer",
+        "eventType": "EventInfraEventRendererMap",
+        "payload": {
+          "payload": "map"
+        },
+        "mode": "map"
+      },
+      {
+        "op": "value",
+        "case": "renderer",
+        "statement": "s0",
+        "name": "json"
+      },
+      {
+        "op": "value",
+        "case": "renderer",
+        "statement": "s0",
+        "name": "xml"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "renderer"
+      },
+      {
+        "op": "deploy",
+        "case": "renderer",
+        "statement": "s0",
+        "epl": "@name('s0') select * from EventInfraEventRendererOA",
+        "mode": "objectarray"
+      },
+      {
+        "op": "deployed",
+        "case": "renderer",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "renderer",
+        "eventType": "EventInfraEventRendererOA",
+        "payload": {
+          "payload": "objectarray"
+        },
+        "mode": "objectarray"
+      },
+      {
+        "op": "value",
+        "case": "renderer",
+        "statement": "s0",
+        "name": "json"
+      },
+      {
+        "op": "value",
+        "case": "renderer",
+        "statement": "s0",
+        "name": "xml"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "renderer"
+      },
+      {
+        "op": "deploy",
+        "case": "renderer",
+        "statement": "s0",
+        "epl": "@name('s0') select * from EventInfraEventRendererXML",
+        "mode": "xml"
+      },
+      {
+        "op": "deployed",
+        "case": "renderer",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "renderer",
+        "eventType": "EventInfraEventRendererXML",
+        "payload": {
+          "payload": "xml"
+        },
+        "mode": "xml"
+      },
+      {
+        "op": "value",
+        "case": "renderer",
+        "statement": "s0",
+        "name": "json"
+      },
+      {
+        "op": "value",
+        "case": "renderer",
+        "statement": "s0",
+        "name": "xml"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "renderer"
+      },
+      {
+        "op": "deploy",
+        "case": "renderer",
+        "statement": "s0",
+        "epl": "@name('s0') select * from EventInfraEventRendererAvro",
+        "mode": "avro"
+      },
+      {
+        "op": "deployed",
+        "case": "renderer",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "renderer",
+        "eventType": "EventInfraEventRendererAvro",
+        "payload": {
+          "payload": "avro"
+        },
+        "mode": "avro"
+      },
+      {
+        "op": "value",
+        "case": "renderer",
+        "statement": "s0",
+        "name": "json"
+      },
+      {
+        "op": "value",
+        "case": "renderer",
+        "statement": "s0",
+        "name": "xml"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "renderer"
+      },
+      {
+        "op": "deploy",
+        "case": "renderer",
+        "statement": "schema",
+        "epl": "create json schema Nested(myInsideInt int);\n@public @buseventtype @name('schema') create json schema EventInfraEventRendererJson(myInt int, myString string, nested Nested);\n",
+        "mode": "json"
+      },
+      {
+        "op": "deployed",
+        "case": "renderer",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "renderer",
+        "statement": "s0",
+        "epl": "@name('s0') select * from EventInfraEventRendererJson",
+        "mode": "json"
+      },
+      {
+        "op": "deployed",
+        "case": "renderer",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "renderer",
+        "eventType": "EventInfraEventRendererJson",
+        "payload": {
+          "payload": "json"
+        },
+        "mode": "json"
+      },
+      {
+        "op": "value",
+        "case": "renderer",
+        "statement": "s0",
+        "name": "json"
+      },
+      {
+        "op": "value",
+        "case": "renderer",
+        "statement": "s0",
+        "name": "xml"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "renderer"
+      },
+      {
+        "op": "deploy",
+        "case": "renderer",
+        "statement": "schema",
+        "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraEventRenderer$MyLocalJsonProvided') @public @buseventtype @name('schema') create json schema EventInfraEventRendererJsonProvided()\n",
+        "mode": "json-provided"
+      },
+      {
+        "op": "deployed",
+        "case": "renderer",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "renderer",
+        "statement": "s0",
+        "epl": "@name('s0') select * from EventInfraEventRendererJsonProvided",
+        "mode": "json-provided"
+      },
+      {
+        "op": "deployed",
+        "case": "renderer",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "renderer",
+        "eventType": "EventInfraEventRendererJsonProvided",
+        "payload": {
+          "payload": "json-provided"
+        },
+        "mode": "json-provided"
+      },
+      {
+        "op": "value",
+        "case": "renderer",
+        "statement": "s0",
+        "name": "json"
+      },
+      {
+        "op": "value",
+        "case": "renderer",
+        "statement": "s0",
+        "name": "xml"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "renderer"
+      },
+      {
+        "op": "case",
+        "case": "sender"
+      },
+      {
+        "op": "deploy",
+        "case": "sender",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportBean",
+        "mode": "bean"
+      },
+      {
+        "op": "deployed",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "sender",
+        "eventType": "SupportBean",
+        "payload": {
+          "mode": "bean",
+          "op": "send"
+        },
+        "mode": "bean"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "sender",
+        "statement": "s0",
+        "expectError": "Event object of type com.espertech.esper.regressionlib.support.bean.SupportBean_G does not equal, extend or implement the type com.espertech.esper.common.internal.support.SupportBean of event type 'SupportBean'"
+      },
+      {
+        "op": "undeploy",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "sender",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportMarkerInterface",
+        "mode": "marker"
+      },
+      {
+        "op": "deployed",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "sender",
+        "eventType": "SupportMarkerInterface",
+        "payload": {
+          "mode": "marker-impl",
+          "op": "send"
+        },
+        "mode": "marker"
+      },
+      {
+        "op": "send",
+        "case": "sender",
+        "eventType": "SupportMarkerInterface",
+        "payload": {
+          "mode": "marker-g",
+          "op": "send"
+        },
+        "mode": "marker"
+      },
+      {
+        "op": "undeploy",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "sender",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportBean",
+        "mode": "bean"
+      },
+      {
+        "op": "deployed",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "sender",
+        "statement": "trigger",
+        "epl": "@public @buseventtype create schema TriggerEvent();\n@name('trigger') select * from TriggerEvent;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "sender",
+        "statement": "trigger"
+      },
+      {
+        "op": "send",
+        "case": "sender",
+        "eventType": "SupportBean",
+        "payload": {
+          "mode": "bean",
+          "op": "route"
+        },
+        "mode": "bean"
+      },
+      {
+        "op": "undeploy",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "undeploy",
+        "case": "sender",
+        "statement": "trigger"
+      },
+      {
+        "op": "deploy",
+        "case": "sender",
+        "statement": "s0",
+        "epl": "@name('s0') select * from EventInfraEventSenderMap",
+        "mode": "map"
+      },
+      {
+        "op": "deployed",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "sender",
+        "eventType": "EventInfraEventSenderMap",
+        "payload": {
+          "mode": "map",
+          "op": "send"
+        },
+        "mode": "map"
+      },
+      {
+        "op": "undeploy",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "sender",
+        "statement": "s0",
+        "epl": "@name('s0') select * from EventInfraEventSenderMap",
+        "mode": "map"
+      },
+      {
+        "op": "deployed",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "sender",
+        "statement": "trigger",
+        "epl": "@public @buseventtype create schema TriggerEvent();\n@name('trigger') select * from TriggerEvent;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "sender",
+        "statement": "trigger"
+      },
+      {
+        "op": "send",
+        "case": "sender",
+        "eventType": "EventInfraEventSenderMap",
+        "payload": {
+          "mode": "map",
+          "op": "route"
+        },
+        "mode": "map"
+      },
+      {
+        "op": "undeploy",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "undeploy",
+        "case": "sender",
+        "statement": "trigger"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "sender",
+        "statement": "s0",
+        "expectError": "Unexpected event object of type com.espertech.esper.common.internal.support.SupportBean, expected java.util.Map"
+      },
+      {
+        "op": "deploy",
+        "case": "sender",
+        "statement": "s0",
+        "epl": "@name('s0') select * from EventInfraEventSenderOA",
+        "mode": "objectarray"
+      },
+      {
+        "op": "deployed",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "sender",
+        "eventType": "EventInfraEventSenderOA",
+        "payload": {
+          "mode": "objectarray",
+          "op": "send"
+        },
+        "mode": "objectarray"
+      },
+      {
+        "op": "undeploy",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "sender",
+        "statement": "s0",
+        "epl": "@name('s0') select * from EventInfraEventSenderOA",
+        "mode": "objectarray"
+      },
+      {
+        "op": "deployed",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "sender",
+        "statement": "trigger",
+        "epl": "@public @buseventtype create schema TriggerEvent();\n@name('trigger') select * from TriggerEvent;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "sender",
+        "statement": "trigger"
+      },
+      {
+        "op": "send",
+        "case": "sender",
+        "eventType": "EventInfraEventSenderOA",
+        "payload": {
+          "mode": "objectarray",
+          "op": "route"
+        },
+        "mode": "objectarray"
+      },
+      {
+        "op": "undeploy",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "undeploy",
+        "case": "sender",
+        "statement": "trigger"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "sender",
+        "statement": "s0",
+        "expectError": "Unexpected event object of type com.espertech.esper.common.internal.support.SupportBean, expected Object[]"
+      },
+      {
+        "op": "deploy",
+        "case": "sender",
+        "statement": "s0",
+        "epl": "@name('s0') select * from EventInfraEventSenderXML",
+        "mode": "xml"
+      },
+      {
+        "op": "deployed",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "sender",
+        "eventType": "EventInfraEventSenderXML",
+        "payload": {
+          "mode": "xml",
+          "op": "send"
+        },
+        "mode": "xml"
+      },
+      {
+        "op": "undeploy",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "sender",
+        "statement": "s0",
+        "epl": "@name('s0') select * from EventInfraEventSenderXML",
+        "mode": "xml"
+      },
+      {
+        "op": "deployed",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "sender",
+        "statement": "trigger",
+        "epl": "@public @buseventtype create schema TriggerEvent();\n@name('trigger') select * from TriggerEvent;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "sender",
+        "statement": "trigger"
+      },
+      {
+        "op": "send",
+        "case": "sender",
+        "eventType": "EventInfraEventSenderXML",
+        "payload": {
+          "mode": "xml",
+          "op": "route"
+        },
+        "mode": "xml"
+      },
+      {
+        "op": "undeploy",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "undeploy",
+        "case": "sender",
+        "statement": "trigger"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "sender",
+        "statement": "s0",
+        "expectError": "Unexpected event object type 'com.espertech.esper.common.internal.support.SupportBean' encountered, please supply a org.w3c.dom.Document or Element node"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "sender",
+        "statement": "s0",
+        "expectError": "Unexpected root element name 'xxxx' encountered, expected a root element name of 'myevent'"
+      },
+      {
+        "op": "deploy",
+        "case": "sender",
+        "statement": "s0",
+        "epl": "@name('s0') select * from EventInfraEventSenderAvro",
+        "mode": "avro"
+      },
+      {
+        "op": "deployed",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "sender",
+        "eventType": "EventInfraEventSenderAvro",
+        "payload": {
+          "mode": "avro",
+          "op": "send"
+        },
+        "mode": "avro"
+      },
+      {
+        "op": "undeploy",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "sender",
+        "statement": "s0",
+        "epl": "@name('s0') select * from EventInfraEventSenderAvro",
+        "mode": "avro"
+      },
+      {
+        "op": "deployed",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "sender",
+        "statement": "trigger",
+        "epl": "@public @buseventtype create schema TriggerEvent();\n@name('trigger') select * from TriggerEvent;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "sender",
+        "statement": "trigger"
+      },
+      {
+        "op": "send",
+        "case": "sender",
+        "eventType": "EventInfraEventSenderAvro",
+        "payload": {
+          "mode": "avro",
+          "op": "route"
+        },
+        "mode": "avro"
+      },
+      {
+        "op": "undeploy",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "undeploy",
+        "case": "sender",
+        "statement": "trigger"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "sender",
+        "statement": "s0",
+        "expectError": "Unexpected event object type 'com.espertech.esper.common.internal.support.SupportBean' encountered, please supply a GenericData.Record"
+      },
+      {
+        "op": "deploy",
+        "case": "sender",
+        "statement": "schema",
+        "epl": "@public @buseventtype @name('schema') create json schema EventInfraEventSenderJson()\n",
+        "mode": "json"
+      },
+      {
+        "op": "deployed",
+        "case": "sender",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "sender",
+        "statement": "s0",
+        "epl": "@name('s0') select * from EventInfraEventSenderJson",
+        "mode": "json"
+      },
+      {
+        "op": "deployed",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "sender",
+        "eventType": "EventInfraEventSenderJson",
+        "payload": {
+          "mode": "json",
+          "op": "send"
+        },
+        "mode": "json"
+      },
+      {
+        "op": "undeploy",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "sender",
+        "statement": "s0",
+        "epl": "@name('s0') select * from EventInfraEventSenderJson",
+        "mode": "json"
+      },
+      {
+        "op": "deployed",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "sender",
+        "statement": "trigger",
+        "epl": "@public @buseventtype create schema TriggerEvent();\n@name('trigger') select * from TriggerEvent;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "sender",
+        "statement": "trigger"
+      },
+      {
+        "op": "send",
+        "case": "sender",
+        "eventType": "EventInfraEventSenderJson",
+        "payload": {
+          "mode": "json",
+          "op": "route"
+        },
+        "mode": "json"
+      },
+      {
+        "op": "undeploy",
+        "case": "sender",
+        "statement": "s0"
+      },
+      {
+        "op": "undeploy",
+        "case": "sender",
+        "statement": "trigger"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "sender",
+        "statement": "s0",
+        "expectError": "Unexpected event object of type 'com.espertech.esper.common.internal.support.SupportBean', expected a Json-formatted string-type value"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "sender",
+        "statement": "ABC",
+        "expectError": "Event type named 'ABC' could not be found"
+      },
+      {
+        "op": "deploy",
+        "case": "sender",
+        "statement": "insert-into-abc",
+        "epl": "insert into ABC select *, theString as value from SupportBean",
+        "mode": "bean"
+      },
+      {
+        "op": "deployed",
+        "case": "sender",
+        "statement": "insert-into-abc"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "sender",
+        "statement": "ABC",
+        "expectError": "Event type named 'ABC' could not be found"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "sender"
+      },
+      {
+        "op": "case",
+        "case": "manufacturer"
+      },
+      {
+        "op": "deploy",
+        "case": "manufacturer",
+        "statement": "schema",
+        "epl": "@public @name('schema') create schema BeanEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraManufacturer$MyLocalBeanEvent",
+        "mode": "bean"
+      },
+      {
+        "op": "deployed",
+        "case": "manufacturer",
+        "statement": "schema"
+      },
+      {
+        "op": "value",
+        "case": "manufacturer",
+        "statement": "schema",
+        "name": "make"
+      },
+      {
+        "op": "value",
+        "case": "manufacturer",
+        "statement": "schema",
+        "name": "makeUnderlying"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "manufacturer",
+        "statement": "schema",
+        "expectError": "EventBeanManufacturerForge/make/makeUnderlying is an internal SPI with no Go boundary; construct-and-assert rows cover the observable assertions"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "manufacturer"
+      },
+      {
+        "op": "deploy",
+        "case": "manufacturer",
+        "statement": "schema",
+        "epl": "@public @name('schema') create map schema MapEvent(p1 string, p2 int)",
+        "mode": "map"
+      },
+      {
+        "op": "deployed",
+        "case": "manufacturer",
+        "statement": "schema"
+      },
+      {
+        "op": "value",
+        "case": "manufacturer",
+        "statement": "schema",
+        "name": "make"
+      },
+      {
+        "op": "value",
+        "case": "manufacturer",
+        "statement": "schema",
+        "name": "makeUnderlying"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "manufacturer",
+        "statement": "schema",
+        "expectError": "EventBeanManufacturerForge/make/makeUnderlying is an internal SPI with no Go boundary; construct-and-assert rows cover the observable assertions"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "manufacturer"
+      },
+      {
+        "op": "deploy",
+        "case": "manufacturer",
+        "statement": "schema",
+        "epl": "@public @name('schema') create objectarray schema MapEvent(p1 string, p2 int)",
+        "mode": "objectarray"
+      },
+      {
+        "op": "deployed",
+        "case": "manufacturer",
+        "statement": "schema"
+      },
+      {
+        "op": "value",
+        "case": "manufacturer",
+        "statement": "schema",
+        "name": "make"
+      },
+      {
+        "op": "value",
+        "case": "manufacturer",
+        "statement": "schema",
+        "name": "makeUnderlying"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "manufacturer",
+        "statement": "schema",
+        "expectError": "EventBeanManufacturerForge/make/makeUnderlying is an internal SPI with no Go boundary; construct-and-assert rows cover the observable assertions"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "manufacturer"
+      },
+      {
+        "op": "deploy",
+        "case": "manufacturer",
+        "statement": "schema",
+        "epl": "@public @name('schema') create json schema JsonEvent(p1 string, p2 int)",
+        "mode": "json"
+      },
+      {
+        "op": "deployed",
+        "case": "manufacturer",
+        "statement": "schema"
+      },
+      {
+        "op": "value",
+        "case": "manufacturer",
+        "statement": "schema",
+        "name": "make"
+      },
+      {
+        "op": "value",
+        "case": "manufacturer",
+        "statement": "schema",
+        "name": "makeUnderlying"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "manufacturer",
+        "statement": "schema",
+        "expectError": "EventBeanManufacturerForge/make/makeUnderlying is an internal SPI with no Go boundary; construct-and-assert rows cover the observable assertions"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "manufacturer"
+      },
+      {
+        "op": "deploy",
+        "case": "manufacturer",
+        "statement": "schema",
+        "epl": "@public @name('schema') @JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraManufacturer$MyLocalJsonProvided') create json schema JsonEvent()",
+        "mode": "json-provided"
+      },
+      {
+        "op": "deployed",
+        "case": "manufacturer",
+        "statement": "schema"
+      },
+      {
+        "op": "value",
+        "case": "manufacturer",
+        "statement": "schema",
+        "name": "make"
+      },
+      {
+        "op": "value",
+        "case": "manufacturer",
+        "statement": "schema",
+        "name": "makeUnderlying"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "manufacturer",
+        "statement": "schema",
+        "expectError": "EventBeanManufacturerForge/make/makeUnderlying is an internal SPI with no Go boundary; construct-and-assert rows cover the observable assertions"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "manufacturer"
+      },
+      {
+        "op": "deploy",
+        "case": "manufacturer",
+        "statement": "schema",
+        "epl": "@public @name('schema') select * from EventInfraManufacturerAVRO",
+        "mode": "avro"
+      },
+      {
+        "op": "deployed",
+        "case": "manufacturer",
+        "statement": "schema"
+      },
+      {
+        "op": "value",
+        "case": "manufacturer",
+        "statement": "schema",
+        "name": "make"
+      },
+      {
+        "op": "value",
+        "case": "manufacturer",
+        "statement": "schema",
+        "name": "makeUnderlying"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "manufacturer",
+        "statement": "schema",
+        "expectError": "EventBeanManufacturerForge/make/makeUnderlying is an internal SPI with no Go boundary; construct-and-assert rows cover the observable assertions"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "manufacturer"
+      },
+      {
+        "op": "case",
+        "case": "supertype"
+      },
+      {
+        "op": "deploy",
+        "case": "supertype",
+        "statement": "s0",
+        "epl": "@name('s0') select * from Bean_Type_Root",
+        "mode": "Bean"
+      },
+      {
+        "op": "deployed",
+        "case": "supertype",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "supertype",
+        "statement": "s1",
+        "epl": "@name('s1') select * from Bean_Type_1"
+      },
+      {
+        "op": "deployed",
+        "case": "supertype",
+        "statement": "s1"
+      },
+      {
+        "op": "deploy",
+        "case": "supertype",
+        "statement": "s2",
+        "epl": "@name('s2') select * from Bean_Type_2"
+      },
+      {
+        "op": "deployed",
+        "case": "supertype",
+        "statement": "s2"
+      },
+      {
+        "op": "deploy",
+        "case": "supertype",
+        "statement": "s3",
+        "epl": "@name('s3') select * from Bean_Type_2_1"
+      },
+      {
+        "op": "deployed",
+        "case": "supertype",
+        "statement": "s3"
+      },
+      {
+        "op": "send",
+        "case": "supertype",
+        "eventType": "Bean_Type_Root",
+        "payload": {
+          "element": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "supertype",
+        "eventType": "Bean_Type_1",
+        "payload": {
+          "element": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "supertype",
+        "eventType": "Bean_Type_2",
+        "payload": {
+          "element": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "supertype",
+        "eventType": "Bean_Type_2_1",
+        "payload": {
+          "element": 3
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "supertype"
+      },
+      {
+        "op": "deploy",
+        "case": "supertype",
+        "statement": "s0",
+        "epl": "@name('s0') select * from Map_Type_Root",
+        "mode": "Map"
+      },
+      {
+        "op": "deployed",
+        "case": "supertype",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "supertype",
+        "statement": "s1",
+        "epl": "@name('s1') select * from Map_Type_1"
+      },
+      {
+        "op": "deployed",
+        "case": "supertype",
+        "statement": "s1"
+      },
+      {
+        "op": "deploy",
+        "case": "supertype",
+        "statement": "s2",
+        "epl": "@name('s2') select * from Map_Type_2"
+      },
+      {
+        "op": "deployed",
+        "case": "supertype",
+        "statement": "s2"
+      },
+      {
+        "op": "deploy",
+        "case": "supertype",
+        "statement": "s3",
+        "epl": "@name('s3') select * from Map_Type_2_1"
+      },
+      {
+        "op": "deployed",
+        "case": "supertype",
+        "statement": "s3"
+      },
+      {
+        "op": "send",
+        "case": "supertype",
+        "eventType": "Map_Type_Root",
+        "payload": {
+          "element": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "supertype",
+        "eventType": "Map_Type_1",
+        "payload": {
+          "element": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "supertype",
+        "eventType": "Map_Type_2",
+        "payload": {
+          "element": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "supertype",
+        "eventType": "Map_Type_2_1",
+        "payload": {
+          "element": 3
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "supertype"
+      },
+      {
+        "op": "deploy",
+        "case": "supertype",
+        "statement": "s0",
+        "epl": "@name('s0') select * from OA_Type_Root",
+        "mode": "OA"
+      },
+      {
+        "op": "deployed",
+        "case": "supertype",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "supertype",
+        "statement": "s1",
+        "epl": "@name('s1') select * from OA_Type_1"
+      },
+      {
+        "op": "deployed",
+        "case": "supertype",
+        "statement": "s1"
+      },
+      {
+        "op": "deploy",
+        "case": "supertype",
+        "statement": "s2",
+        "epl": "@name('s2') select * from OA_Type_2"
+      },
+      {
+        "op": "deployed",
+        "case": "supertype",
+        "statement": "s2"
+      },
+      {
+        "op": "deploy",
+        "case": "supertype",
+        "statement": "s3",
+        "epl": "@name('s3') select * from OA_Type_2_1"
+      },
+      {
+        "op": "deployed",
+        "case": "supertype",
+        "statement": "s3"
+      },
+      {
+        "op": "send",
+        "case": "supertype",
+        "eventType": "OA_Type_Root",
+        "payload": {
+          "element": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "supertype",
+        "eventType": "OA_Type_1",
+        "payload": {
+          "element": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "supertype",
+        "eventType": "OA_Type_2",
+        "payload": {
+          "element": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "supertype",
+        "eventType": "OA_Type_2_1",
+        "payload": {
+          "element": 3
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "supertype"
+      },
+      {
+        "op": "deploy",
+        "case": "supertype",
+        "statement": "s0",
+        "epl": "@name('s0') select * from Avro_Type_Root",
+        "mode": "Avro"
+      },
+      {
+        "op": "deployed",
+        "case": "supertype",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "supertype",
+        "statement": "s1",
+        "epl": "@name('s1') select * from Avro_Type_1"
+      },
+      {
+        "op": "deployed",
+        "case": "supertype",
+        "statement": "s1"
+      },
+      {
+        "op": "deploy",
+        "case": "supertype",
+        "statement": "s2",
+        "epl": "@name('s2') select * from Avro_Type_2"
+      },
+      {
+        "op": "deployed",
+        "case": "supertype",
+        "statement": "s2"
+      },
+      {
+        "op": "deploy",
+        "case": "supertype",
+        "statement": "s3",
+        "epl": "@name('s3') select * from Avro_Type_2_1"
+      },
+      {
+        "op": "deployed",
+        "case": "supertype",
+        "statement": "s3"
+      },
+      {
+        "op": "send",
+        "case": "supertype",
+        "eventType": "Avro_Type_Root",
+        "payload": {
+          "element": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "supertype",
+        "eventType": "Avro_Type_1",
+        "payload": {
+          "element": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "supertype",
+        "eventType": "Avro_Type_2",
+        "payload": {
+          "element": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "supertype",
+        "eventType": "Avro_Type_2_1",
+        "payload": {
+          "element": 3
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "supertype"
+      },
+      {
+        "op": "deploy",
+        "case": "supertype",
+        "statement": "schema",
+        "epl": "@public @buseventtype @name('schema') create json schema Json_Type_Root();\n@public @buseventtype create json schema Json_Type_1() inherits Json_Type_Root;\n@public @buseventtype create json schema Json_Type_2() inherits Json_Type_Root;\n@public @buseventtype create json schema Json_Type_2_1() inherits Json_Type_2;\n",
+        "mode": "Json"
+      },
+      {
+        "op": "deployed",
+        "case": "supertype",
+        "statement": "schema"
+      },
+      {
+        "op": "deploy",
+        "case": "supertype",
+        "statement": "s0",
+        "epl": "@name('s0') select * from Json_Type_Root"
+      },
+      {
+        "op": "deployed",
+        "case": "supertype",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "supertype",
+        "statement": "s1",
+        "epl": "@name('s1') select * from Json_Type_1"
+      },
+      {
+        "op": "deployed",
+        "case": "supertype",
+        "statement": "s1"
+      },
+      {
+        "op": "deploy",
+        "case": "supertype",
+        "statement": "s2",
+        "epl": "@name('s2') select * from Json_Type_2"
+      },
+      {
+        "op": "deployed",
+        "case": "supertype",
+        "statement": "s2"
+      },
+      {
+        "op": "deploy",
+        "case": "supertype",
+        "statement": "s3",
+        "epl": "@name('s3') select * from Json_Type_2_1"
+      },
+      {
+        "op": "deployed",
+        "case": "supertype",
+        "statement": "s3"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "supertype",
+        "statement": "Json_Type_Root",
+        "expectError": "json schema inherits has no Go registration surface; dispatch matrix verified in the oracle"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "supertype",
+        "statement": "Json_Type_1",
+        "expectError": "json schema inherits has no Go registration surface; dispatch matrix verified in the oracle"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "supertype",
+        "statement": "Json_Type_2",
+        "expectError": "json schema inherits has no Go registration surface; dispatch matrix verified in the oracle"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "supertype",
+        "statement": "Json_Type_2_1",
+        "expectError": "json schema inherits has no Go registration surface; dispatch matrix verified in the oracle"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "supertype"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "event-infra-545",
+    "records": [
+      {
+        "case": "contained-simple",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-simple",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-simple",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-simple",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-simple",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-simple",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-simple",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-simple",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-simple",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-simple",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-simple",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-simple",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "renderer",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "renderer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"myInt\":1,\"myString\":\"abc\",\"nested\":{\"myInsideInt\":10}}"
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "xml",
+        "value": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003croot\u003e\u003cmyInt\u003e1\u003c/myInt\u003e\u003cmyString\u003eabc\u003c/myString\u003e\u003cnested\u003e\u003cmyInsideInt\u003e10\u003c/myInsideInt\u003e\u003c/nested\u003e\u003c/root\u003e"
+      },
+      {
+        "case": "renderer",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "renderer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"myInt\":1,\"myString\":\"abc\",\"nested\":{\"myInsideInt\":10}}"
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "xml",
+        "value": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003croot\u003e\u003cmyInt\u003e1\u003c/myInt\u003e\u003cmyString\u003eabc\u003c/myString\u003e\u003cnested\u003e\u003cmyInsideInt\u003e10\u003c/myInsideInt\u003e\u003c/nested\u003e\u003c/root\u003e"
+      },
+      {
+        "case": "renderer",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "renderer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"myInt\":1,\"myString\":\"abc\",\"nested\":{\"myInsideInt\":10}}"
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "xml",
+        "value": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003croot\u003e\u003cmyInt\u003e1\u003c/myInt\u003e\u003cmyString\u003eabc\u003c/myString\u003e\u003cnested\u003e\u003cmyInsideInt\u003e10\u003c/myInsideInt\u003e\u003c/nested\u003e\u003c/root\u003e"
+      },
+      {
+        "case": "renderer",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "renderer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"myInt\":1,\"myString\":\"abc\",\"nested\":{\"myInsideInt\":10}}"
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "xml",
+        "value": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003croot\u003e\u003cmyInt\u003e1\u003c/myInt\u003e\u003cmyString\u003eabc\u003c/myString\u003e\u003cnested\u003e\u003cmyInsideInt\u003e10\u003c/myInsideInt\u003e\u003c/nested\u003e\u003c/root\u003e"
+      },
+      {
+        "case": "renderer",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "renderer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"myInt\":1,\"myString\":\"abc\",\"nested\":{\"myInsideInt\":10}}"
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "xml",
+        "value": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003croot\u003e\u003cmyInt\u003e1\u003c/myInt\u003e\u003cmyString\u003eabc\u003c/myString\u003e\u003cnested\u003e\u003cmyInsideInt\u003e10\u003c/myInsideInt\u003e\u003c/nested\u003e\u003c/root\u003e"
+      },
+      {
+        "case": "renderer",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "renderer",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "renderer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"myInt\":1,\"myString\":\"abc\",\"nested\":{\"myInsideInt\":10}}"
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "xml",
+        "value": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003croot\u003e\u003cmyInt\u003e1\u003c/myInt\u003e\u003cmyString\u003eabc\u003c/myString\u003e\u003cnested\u003e\u003cmyInsideInt\u003e10\u003c/myInsideInt\u003e\u003c/nested\u003e\u003c/root\u003e"
+      },
+      {
+        "case": "renderer",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "renderer",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "renderer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"myInt\":1,\"myString\":\"abc\",\"nested\":{\"myInsideInt\":10}}"
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "xml",
+        "value": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003croot\u003e\u003cmyInt\u003e1\u003c/myInt\u003e\u003cmyString\u003eabc\u003c/myString\u003e\u003cnested\u003e\u003cmyInsideInt\u003e10\u003c/myInsideInt\u003e\u003c/nested\u003e\u003c/root\u003e"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "unrepresentable",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Event object of type com.espertech.esper.regressionlib.support.bean.SupportBean_G does not equal, extend or implement the type com.espertech.esper.common.internal.support.SupportBean of event type 'SupportBean'"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "trigger",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "trigger",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "unrepresentable",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Unexpected event object of type com.espertech.esper.common.internal.support.SupportBean, expected java.util.Map"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "trigger",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "unrepresentable",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Unexpected event object of type com.espertech.esper.common.internal.support.SupportBean, expected Object[]"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "trigger",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "unrepresentable",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Unexpected event object type 'com.espertech.esper.common.internal.support.SupportBean' encountered, please supply a org.w3c.dom.Document or Element node"
+      },
+      {
+        "case": "sender",
+        "operation": "unrepresentable",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Unexpected root element name 'xxxx' encountered, expected a root element name of 'myevent'"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "trigger",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "unrepresentable",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Unexpected event object type 'com.espertech.esper.common.internal.support.SupportBean' encountered, please supply a GenericData.Record"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 13,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 13,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "trigger",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 14,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "unrepresentable",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Unexpected event object of type 'com.espertech.esper.common.internal.support.SupportBean', expected a Json-formatted string-type value"
+      },
+      {
+        "case": "sender",
+        "operation": "unrepresentable",
+        "statement": "ABC",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Event type named 'ABC' could not be found"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "insert-into-abc",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "unrepresentable",
+        "statement": "ABC",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Event type named 'ABC' could not be found"
+      },
+      {
+        "case": "manufacturer",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "manufacturer",
+        "operation": "value",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "make",
+        "value": {
+          "p1": "a",
+          "p2": 1
+        }
+      },
+      {
+        "case": "manufacturer",
+        "operation": "value",
+        "statement": "schema",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "makeUnderlying",
+        "value": {
+          "p1": "a",
+          "p2": 1
+        }
+      },
+      {
+        "case": "manufacturer",
+        "operation": "unrepresentable",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "EventBeanManufacturerForge/make/makeUnderlying is an internal SPI with no Go boundary; construct-and-assert rows cover the observable assertions"
+      },
+      {
+        "case": "manufacturer",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "manufacturer",
+        "operation": "value",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "make",
+        "value": {
+          "p1": "a",
+          "p2": 1
+        }
+      },
+      {
+        "case": "manufacturer",
+        "operation": "value",
+        "statement": "schema",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "makeUnderlying",
+        "value": {
+          "p1": "a",
+          "p2": 1
+        }
+      },
+      {
+        "case": "manufacturer",
+        "operation": "unrepresentable",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "EventBeanManufacturerForge/make/makeUnderlying is an internal SPI with no Go boundary; construct-and-assert rows cover the observable assertions"
+      },
+      {
+        "case": "manufacturer",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "manufacturer",
+        "operation": "value",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "make",
+        "value": {
+          "p1": "a",
+          "p2": 1
+        }
+      },
+      {
+        "case": "manufacturer",
+        "operation": "value",
+        "statement": "schema",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "makeUnderlying",
+        "value": {
+          "p1": "a",
+          "p2": 1
+        }
+      },
+      {
+        "case": "manufacturer",
+        "operation": "unrepresentable",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "EventBeanManufacturerForge/make/makeUnderlying is an internal SPI with no Go boundary; construct-and-assert rows cover the observable assertions"
+      },
+      {
+        "case": "manufacturer",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "manufacturer",
+        "operation": "value",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "make",
+        "value": {
+          "p1": "a",
+          "p2": 1
+        }
+      },
+      {
+        "case": "manufacturer",
+        "operation": "value",
+        "statement": "schema",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "makeUnderlying",
+        "value": {
+          "p1": "a",
+          "p2": 1
+        }
+      },
+      {
+        "case": "manufacturer",
+        "operation": "unrepresentable",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "EventBeanManufacturerForge/make/makeUnderlying is an internal SPI with no Go boundary; construct-and-assert rows cover the observable assertions"
+      },
+      {
+        "case": "manufacturer",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "manufacturer",
+        "operation": "value",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "make",
+        "value": {
+          "p1": "a",
+          "p2": 1
+        }
+      },
+      {
+        "case": "manufacturer",
+        "operation": "value",
+        "statement": "schema",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "makeUnderlying",
+        "value": {
+          "p1": "a",
+          "p2": 1
+        }
+      },
+      {
+        "case": "manufacturer",
+        "operation": "unrepresentable",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "EventBeanManufacturerForge/make/makeUnderlying is an internal SPI with no Go boundary; construct-and-assert rows cover the observable assertions"
+      },
+      {
+        "case": "manufacturer",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "manufacturer",
+        "operation": "value",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "make",
+        "value": {
+          "p1": "a",
+          "p2": 1
+        }
+      },
+      {
+        "case": "manufacturer",
+        "operation": "value",
+        "statement": "schema",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "makeUnderlying",
+        "value": {
+          "p1": "a",
+          "p2": 1
+        }
+      },
+      {
+        "case": "manufacturer",
+        "operation": "unrepresentable",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "EventBeanManufacturerForge/make/makeUnderlying is an internal SPI with no Go boundary; construct-and-assert rows cover the observable assertions"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "Bean_Type_Root",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "Bean_Type_1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          true,
+          false,
+          false
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "Bean_Type_2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          false,
+          true,
+          false
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "Bean_Type_2_1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "Map_Type_Root",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "Map_Type_1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          true,
+          false,
+          false
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "Map_Type_2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          false,
+          true,
+          false
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "Map_Type_2_1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "OA_Type_Root",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "OA_Type_1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          true,
+          false,
+          false
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "OA_Type_2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          false,
+          true,
+          false
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "OA_Type_2_1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "Avro_Type_Root",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "Avro_Type_1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          true,
+          false,
+          false
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "Avro_Type_2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          false,
+          true,
+          false
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "Avro_Type_2_1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "unrepresentable",
+        "statement": "Json_Type_Root",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "json schema inherits has no Go registration surface; dispatch matrix verified in the oracle"
+      },
+      {
+        "case": "supertype",
+        "operation": "unrepresentable",
+        "statement": "Json_Type_1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "json schema inherits has no Go registration surface; dispatch matrix verified in the oracle"
+      },
+      {
+        "case": "supertype",
+        "operation": "unrepresentable",
+        "statement": "Json_Type_2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "json schema inherits has no Go registration surface; dispatch matrix verified in the oracle"
+      },
+      {
+        "case": "supertype",
+        "operation": "unrepresentable",
+        "statement": "Json_Type_2_1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "json schema inherits has no Go registration surface; dispatch matrix verified in the oracle"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "event-infra-545",
+    "records": [
+      {
+        "case": "contained-simple",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-simple",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-simple",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-simple",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-simple",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-simple",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-simple",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-simple",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-simple",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-simple",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-simple",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-simple",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-nested-array",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "contained-indexed",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "renderer",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "renderer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"myInt\":1,\"myString\":\"abc\",\"nested\":{\"myInsideInt\":10}}"
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "xml",
+        "value": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003croot\u003e\u003cmyInt\u003e1\u003c/myInt\u003e\u003cmyString\u003eabc\u003c/myString\u003e\u003cnested\u003e\u003cmyInsideInt\u003e10\u003c/myInsideInt\u003e\u003c/nested\u003e\u003c/root\u003e"
+      },
+      {
+        "case": "renderer",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "renderer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"myInt\":1,\"myString\":\"abc\",\"nested\":{\"myInsideInt\":10}}"
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "xml",
+        "value": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003croot\u003e\u003cmyInt\u003e1\u003c/myInt\u003e\u003cmyString\u003eabc\u003c/myString\u003e\u003cnested\u003e\u003cmyInsideInt\u003e10\u003c/myInsideInt\u003e\u003c/nested\u003e\u003c/root\u003e"
+      },
+      {
+        "case": "renderer",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "renderer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"myInt\":1,\"myString\":\"abc\",\"nested\":{\"myInsideInt\":10}}"
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "xml",
+        "value": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003croot\u003e\u003cmyInt\u003e1\u003c/myInt\u003e\u003cmyString\u003eabc\u003c/myString\u003e\u003cnested\u003e\u003cmyInsideInt\u003e10\u003c/myInsideInt\u003e\u003c/nested\u003e\u003c/root\u003e"
+      },
+      {
+        "case": "renderer",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "renderer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"myInt\":1,\"myString\":\"abc\",\"nested\":{\"myInsideInt\":10}}"
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "xml",
+        "value": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003croot\u003e\u003cmyInt\u003e1\u003c/myInt\u003e\u003cmyString\u003eabc\u003c/myString\u003e\u003cnested\u003e\u003cmyInsideInt\u003e10\u003c/myInsideInt\u003e\u003c/nested\u003e\u003c/root\u003e"
+      },
+      {
+        "case": "renderer",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "renderer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"myInt\":1,\"myString\":\"abc\",\"nested\":{\"myInsideInt\":10}}"
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "xml",
+        "value": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003croot\u003e\u003cmyInt\u003e1\u003c/myInt\u003e\u003cmyString\u003eabc\u003c/myString\u003e\u003cnested\u003e\u003cmyInsideInt\u003e10\u003c/myInsideInt\u003e\u003c/nested\u003e\u003c/root\u003e"
+      },
+      {
+        "case": "renderer",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "renderer",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "renderer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"myInt\":1,\"myString\":\"abc\",\"nested\":{\"myInsideInt\":10}}"
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "xml",
+        "value": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003croot\u003e\u003cmyInt\u003e1\u003c/myInt\u003e\u003cmyString\u003eabc\u003c/myString\u003e\u003cnested\u003e\u003cmyInsideInt\u003e10\u003c/myInsideInt\u003e\u003c/nested\u003e\u003c/root\u003e"
+      },
+      {
+        "case": "renderer",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "renderer",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "renderer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"myInt\":1,\"myString\":\"abc\",\"nested\":{\"myInsideInt\":10}}"
+      },
+      {
+        "case": "renderer",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "xml",
+        "value": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003croot\u003e\u003cmyInt\u003e1\u003c/myInt\u003e\u003cmyString\u003eabc\u003c/myString\u003e\u003cnested\u003e\u003cmyInsideInt\u003e10\u003c/myInsideInt\u003e\u003c/nested\u003e\u003c/root\u003e"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "unrepresentable",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Event object of type com.espertech.esper.regressionlib.support.bean.SupportBean_G does not equal, extend or implement the type com.espertech.esper.common.internal.support.SupportBean of event type 'SupportBean'"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "trigger",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "trigger",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "unrepresentable",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Unexpected event object of type com.espertech.esper.common.internal.support.SupportBean, expected java.util.Map"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "trigger",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "unrepresentable",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Unexpected event object of type com.espertech.esper.common.internal.support.SupportBean, expected Object[]"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "trigger",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "unrepresentable",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Unexpected event object type 'com.espertech.esper.common.internal.support.SupportBean' encountered, please supply a org.w3c.dom.Document or Element node"
+      },
+      {
+        "case": "sender",
+        "operation": "unrepresentable",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Unexpected root element name 'xxxx' encountered, expected a root element name of 'myevent'"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "trigger",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "unrepresentable",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Unexpected event object type 'com.espertech.esper.common.internal.support.SupportBean' encountered, please supply a GenericData.Record"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 13,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 13,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "trigger",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 14,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sender",
+        "operation": "unrepresentable",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Unexpected event object of type 'com.espertech.esper.common.internal.support.SupportBean', expected a Json-formatted string-type value"
+      },
+      {
+        "case": "sender",
+        "operation": "unrepresentable",
+        "statement": "ABC",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Event type named 'ABC' could not be found"
+      },
+      {
+        "case": "sender",
+        "operation": "deployed",
+        "statement": "insert-into-abc",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sender",
+        "operation": "unrepresentable",
+        "statement": "ABC",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Event type named 'ABC' could not be found"
+      },
+      {
+        "case": "manufacturer",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "manufacturer",
+        "operation": "value",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "make",
+        "value": {
+          "p1": "a",
+          "p2": 1
+        }
+      },
+      {
+        "case": "manufacturer",
+        "operation": "value",
+        "statement": "schema",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "makeUnderlying",
+        "value": {
+          "p1": "a",
+          "p2": 1
+        }
+      },
+      {
+        "case": "manufacturer",
+        "operation": "unrepresentable",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "EventBeanManufacturerForge/make/makeUnderlying is an internal SPI with no Go boundary; construct-and-assert rows cover the observable assertions"
+      },
+      {
+        "case": "manufacturer",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "manufacturer",
+        "operation": "value",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "make",
+        "value": {
+          "p1": "a",
+          "p2": 1
+        }
+      },
+      {
+        "case": "manufacturer",
+        "operation": "value",
+        "statement": "schema",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "makeUnderlying",
+        "value": {
+          "p1": "a",
+          "p2": 1
+        }
+      },
+      {
+        "case": "manufacturer",
+        "operation": "unrepresentable",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "EventBeanManufacturerForge/make/makeUnderlying is an internal SPI with no Go boundary; construct-and-assert rows cover the observable assertions"
+      },
+      {
+        "case": "manufacturer",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "manufacturer",
+        "operation": "value",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "make",
+        "value": {
+          "p1": "a",
+          "p2": 1
+        }
+      },
+      {
+        "case": "manufacturer",
+        "operation": "value",
+        "statement": "schema",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "makeUnderlying",
+        "value": {
+          "p1": "a",
+          "p2": 1
+        }
+      },
+      {
+        "case": "manufacturer",
+        "operation": "unrepresentable",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "EventBeanManufacturerForge/make/makeUnderlying is an internal SPI with no Go boundary; construct-and-assert rows cover the observable assertions"
+      },
+      {
+        "case": "manufacturer",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "manufacturer",
+        "operation": "value",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "make",
+        "value": {
+          "p1": "a",
+          "p2": 1
+        }
+      },
+      {
+        "case": "manufacturer",
+        "operation": "value",
+        "statement": "schema",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "makeUnderlying",
+        "value": {
+          "p1": "a",
+          "p2": 1
+        }
+      },
+      {
+        "case": "manufacturer",
+        "operation": "unrepresentable",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "EventBeanManufacturerForge/make/makeUnderlying is an internal SPI with no Go boundary; construct-and-assert rows cover the observable assertions"
+      },
+      {
+        "case": "manufacturer",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "manufacturer",
+        "operation": "value",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "make",
+        "value": {
+          "p1": "a",
+          "p2": 1
+        }
+      },
+      {
+        "case": "manufacturer",
+        "operation": "value",
+        "statement": "schema",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "makeUnderlying",
+        "value": {
+          "p1": "a",
+          "p2": 1
+        }
+      },
+      {
+        "case": "manufacturer",
+        "operation": "unrepresentable",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "EventBeanManufacturerForge/make/makeUnderlying is an internal SPI with no Go boundary; construct-and-assert rows cover the observable assertions"
+      },
+      {
+        "case": "manufacturer",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "manufacturer",
+        "operation": "value",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "make",
+        "value": {
+          "p1": "a",
+          "p2": 1
+        }
+      },
+      {
+        "case": "manufacturer",
+        "operation": "value",
+        "statement": "schema",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "makeUnderlying",
+        "value": {
+          "p1": "a",
+          "p2": 1
+        }
+      },
+      {
+        "case": "manufacturer",
+        "operation": "unrepresentable",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "EventBeanManufacturerForge/make/makeUnderlying is an internal SPI with no Go boundary; construct-and-assert rows cover the observable assertions"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "Bean_Type_Root",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "Bean_Type_1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          true,
+          false,
+          false
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "Bean_Type_2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          false,
+          true,
+          false
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "Bean_Type_2_1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "Map_Type_Root",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "Map_Type_1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          true,
+          false,
+          false
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "Map_Type_2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          false,
+          true,
+          false
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "Map_Type_2_1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "OA_Type_Root",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "OA_Type_1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          true,
+          false,
+          false
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "OA_Type_2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          false,
+          true,
+          false
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "OA_Type_2_1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "Avro_Type_Root",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "Avro_Type_1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          true,
+          false,
+          false
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "Avro_Type_2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          false,
+          true,
+          false
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "dispatch",
+        "statement": "Avro_Type_2_1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          true,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "schema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "deployed",
+        "statement": "s3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "supertype",
+        "operation": "unrepresentable",
+        "statement": "Json_Type_Root",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "json schema inherits has no Go registration surface; dispatch matrix verified in the oracle"
+      },
+      {
+        "case": "supertype",
+        "operation": "unrepresentable",
+        "statement": "Json_Type_1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "json schema inherits has no Go registration surface; dispatch matrix verified in the oracle"
+      },
+      {
+        "case": "supertype",
+        "operation": "unrepresentable",
+        "statement": "Json_Type_2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "json schema inherits has no Go registration surface; dispatch matrix verified in the oracle"
+      },
+      {
+        "case": "supertype",
+        "operation": "unrepresentable",
+        "statement": "Json_Type_2_1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "json schema inherits has no Go registration surface; dispatch matrix verified in the oracle"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

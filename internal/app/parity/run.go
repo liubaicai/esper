@@ -89,6 +89,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include event-object-array-core and event-object-array-core-diff")
 		fmt.Fprintln(stderr, "runner modes include event-infra-getter-dynamic and event-infra-getter-dynamic-diff")
 		fmt.Fprintln(stderr, "runner modes include event-infra-getter-nested and event-infra-getter-nested-diff")
+		fmt.Fprintln(stderr, "runner modes include event-infra-545 and event-infra-545-diff")
 		fmt.Fprintln(stderr, "runner modes include event-infra-property-dynamic and event-infra-property-dynamic-diff")
 		fmt.Fprintln(stderr, "runner modes include event-infra-property-non-dynamic and event-infra-property-non-dynamic-diff")
 		fmt.Fprintln(stderr, "runner modes include epl-other-istream-rstream-keywords and epl-other-istream-rstream-keywords-diff")
@@ -478,6 +479,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadEventInfraGetterDynamicScenario(file)
 	} else if *mode == "event-infra-getter-nested" || *mode == "event-infra-getter-nested-diff" {
 		scenario, err = loadEventInfraGetterNestedScenario(file)
+	} else if *mode == "event-infra-545" || *mode == "event-infra-545-diff" {
+		scenario, err = loadEventInfra545Scenario(file)
 	} else if *mode == "event-infra-property-dynamic" || *mode == "event-infra-property-dynamic-diff" {
 		scenario, err = loadEventInfraPropertyDynamicScenario(file)
 	} else if *mode == "event-infra-property-non-dynamic" || *mode == "event-infra-property-non-dynamic-diff" {
@@ -4852,6 +4855,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, eventInfraGetterNestedJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, eventInfraGetterNestedJavaSources),
 				splitMetadata(*javaExecutions, eventInfraGetterNestedJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "event-infra-545" || *mode == "event-infra-545-diff" {
+		trace, err := runEventInfra545Scenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "event-infra-545-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, eventInfra545JavaCommit,
+				splitMetadata(*javaRuntimeIDs, eventInfra545JavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, eventInfra545JavaSources),
+				splitMetadata(*javaExecutions, eventInfra545JavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
