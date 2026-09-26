@@ -1,0 +1,240 @@
+{
+ "version": "esper-parity/v1",
+ "id": "event-avro-hook-548",
+ "description": "EventAvroHook hook slice (all 4 executions, ord 2-3 STATICHOOK): property-coerce pins the invalid zdt->isodate insert-into compile probe and the valid ldt insert-into asserting the captured ISO_DATE_TIME string; schema-from-class pins the MyEventOut avro schema JSON byte-exact plus a shape-only now() listener row; populate inserts a SupportBeanSchema record into MyEventPopulate(sb) pinning the flat avroToJson; named-window-property-assignment updates a keepall window's union sb through a SupportBean trigger pinning the double-nested SupportBeanSchema union encoding. The TypeRepresentationMapper/ObjectValueTypeWidenerFactory codegen-hook mechanism is intentionally-different (explicit Func1 UDFs + predeclared schemas).",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/avro/EventAvroHook.java",
+ "javaRuntimes": [
+  "java-runtime-34ec4dc8abe4f2443930",
+  "java-runtime-c80f13d8b1a53d4ff458",
+  "java-runtime-20190c427227521c092b",
+  "java-runtime-85c9c44d4baae883febe"
+ ],
+ "javaNames": [
+  "EventAvroHookSimpleWriteablePropertyCoerce",
+  "EventAvroHookSchemaFromClass",
+  "EventAvroHookPopulate",
+  "EventAvroHookNamedWindowPropertyAssignment"
+ ],
+ "javaStaticIds": [
+  "java-281ee8b5adc379b62b2c",
+  "java-281ee8b5adc379b62b2c",
+  "java-281ee8b5adc379b62b2c",
+  "java-281ee8b5adc379b62b2c"
+ ],
+ "javaFlags": [
+  "STATICHOOK"
+ ],
+ "cases": [
+  {
+   "case": "property-coerce",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-34ec4dc8abe4f2443930",
+   "executionName": "EventAvroHookSimpleWriteablePropertyCoerce",
+   "observation": "compile-error+deployed+listener",
+   "epl": "@name('s0') insert into MyEvent(isodate) select ldt from SupportEventWithLocalDateTime",
+   "flags": []
+  },
+  {
+   "case": "schema-from-class",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-c80f13d8b1a53d4ff458",
+   "executionName": "EventAvroHookSchemaFromClass",
+   "observation": "deployed+value+listener",
+   "epl": "@name('s0') @public @EventRepresentation('avro')insert into MyEventOut select com.espertech.esper.regressionlib.suite.event.avro.EventAvroHook.makeLocalDateTime() as isodate from SupportBean as e1",
+   "flags": []
+  },
+  {
+   "case": "populate",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-20190c427227521c092b",
+   "executionName": "EventAvroHookPopulate",
+   "observation": "deployed+listener+value",
+   "epl": "@name('s0') insert into MyEventPopulate(sb) select com.espertech.esper.regressionlib.suite.event.avro.EventAvroHook.makeSupportBean() from SupportBean_S0 as e1",
+   "flags": [
+    "STATICHOOK"
+   ]
+  },
+  {
+   "case": "named-window-property-assignment",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-85c9c44d4baae883febe",
+   "executionName": "EventAvroHookNamedWindowPropertyAssignment",
+   "observation": "deployed+snapshot+value",
+   "epl": "@Name('NamedWindow') @public create window MyWindow#keepall as MyEventWSchema\ninsert into MyWindow select * from MyEventWSchema\non SupportBean thebean update MyWindow set sb = thebean",
+   "flags": [
+    "STATICHOOK"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "property-coerce"
+  },
+  {
+   "op": "build-error",
+   "case": "property-coerce",
+   "statement": "probe",
+   "epl": "insert into MyEvent(isodate) select zdt from SupportEventWithZonedDateTime",
+   "expectError": "Invalid assignment of column 'isodate' of type 'java.time.ZonedDateTime' to event property 'isodate' typed as 'java.lang.CharSequence', column and parameter types mismatch"
+  },
+  {
+   "op": "deploy",
+   "case": "property-coerce",
+   "statement": "s0",
+   "epl": "@name('s0') insert into MyEvent(isodate) select ldt from SupportEventWithLocalDateTime"
+  },
+  {
+   "op": "deployed",
+   "case": "property-coerce",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "property-coerce",
+   "eventType": "SupportEventWithLocalDateTime",
+   "payload": {
+    "ldt": "2026-09-27T01:02:03.123456789"
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "property-coerce"
+  },
+  {
+   "op": "case",
+   "case": "schema-from-class"
+  },
+  {
+   "op": "deploy",
+   "case": "schema-from-class",
+   "statement": "s0",
+   "epl": "@name('s0') @public @EventRepresentation('avro')insert into MyEventOut select com.espertech.esper.regressionlib.suite.event.avro.EventAvroHook.makeLocalDateTime() as isodate from SupportBean as e1"
+  },
+  {
+   "op": "deployed",
+   "case": "schema-from-class",
+   "statement": "s0"
+  },
+  {
+   "op": "value",
+   "case": "schema-from-class",
+   "statement": "s0",
+   "name": "avro-schema"
+  },
+  {
+   "op": "send",
+   "case": "schema-from-class",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "schema-from-class"
+  },
+  {
+   "op": "case",
+   "case": "populate"
+  },
+  {
+   "op": "deploy",
+   "case": "populate",
+   "statement": "s0",
+   "epl": "@name('s0') insert into MyEventPopulate(sb) select com.espertech.esper.regressionlib.suite.event.avro.EventAvroHook.makeSupportBean() from SupportBean_S0 as e1"
+  },
+  {
+   "op": "deployed",
+   "case": "populate",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "populate",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10
+   }
+  },
+  {
+   "op": "value",
+   "case": "populate",
+   "statement": "s0",
+   "name": "avroToJson"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "populate"
+  },
+  {
+   "op": "case",
+   "case": "named-window-property-assignment"
+  },
+  {
+   "op": "deploy",
+   "case": "named-window-property-assignment",
+   "statement": "NamedWindow",
+   "epl": "@Name('NamedWindow') @public create window MyWindow#keepall as MyEventWSchema"
+  },
+  {
+   "op": "deployed",
+   "case": "named-window-property-assignment",
+   "statement": "NamedWindow"
+  },
+  {
+   "op": "deploy",
+   "case": "named-window-property-assignment",
+   "statement": "insert-window",
+   "epl": "insert into MyWindow select * from MyEventWSchema"
+  },
+  {
+   "op": "deployed",
+   "case": "named-window-property-assignment",
+   "statement": "insert-window"
+  },
+  {
+   "op": "deploy",
+   "case": "named-window-property-assignment",
+   "statement": "update-window",
+   "epl": "on SupportBean thebean update MyWindow set sb = thebean"
+  },
+  {
+   "op": "deployed",
+   "case": "named-window-property-assignment",
+   "statement": "update-window"
+  },
+  {
+   "op": "send",
+   "case": "named-window-property-assignment",
+   "eventType": "MyEventWSchema",
+   "payload": {}
+  },
+  {
+   "op": "send",
+   "case": "named-window-property-assignment",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "named-window-property-assignment",
+   "statement": "NamedWindow"
+  },
+  {
+   "op": "value",
+   "case": "named-window-property-assignment",
+   "statement": "NamedWindow",
+   "name": "avroToJson"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "named-window-property-assignment"
+  }
+ ]
+}

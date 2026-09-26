@@ -1,0 +1,495 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-34ec4dc8abe4f2443930",
+    "java-runtime-c80f13d8b1a53d4ff458",
+    "java-runtime-20190c427227521c092b",
+    "java-runtime-85c9c44d4baae883febe"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/avro/EventAvroHook.java"
+  ],
+  "javaExecutions": [
+    "EventAvroHookSimpleWriteablePropertyCoerce",
+    "EventAvroHookSchemaFromClass",
+    "EventAvroHookPopulate",
+    "EventAvroHookNamedWindowPropertyAssignment"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "event-avro-hook-548",
+    "steps": [
+      {
+        "op": "case",
+        "case": "property-coerce"
+      },
+      {
+        "op": "build-error",
+        "case": "property-coerce",
+        "statement": "probe",
+        "expectError": "Invalid assignment of column 'isodate' of type 'java.time.ZonedDateTime' to event property 'isodate' typed as 'java.lang.CharSequence', column and parameter types mismatch",
+        "epl": "insert into MyEvent(isodate) select zdt from SupportEventWithZonedDateTime"
+      },
+      {
+        "op": "deploy",
+        "case": "property-coerce",
+        "statement": "s0",
+        "epl": "@name('s0') insert into MyEvent(isodate) select ldt from SupportEventWithLocalDateTime"
+      },
+      {
+        "op": "deployed",
+        "case": "property-coerce",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "property-coerce",
+        "eventType": "SupportEventWithLocalDateTime",
+        "payload": {
+          "ldt": "2026-09-27T01:02:03.123456789"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "property-coerce"
+      },
+      {
+        "op": "case",
+        "case": "schema-from-class"
+      },
+      {
+        "op": "deploy",
+        "case": "schema-from-class",
+        "statement": "s0",
+        "epl": "@name('s0') @public @EventRepresentation('avro')insert into MyEventOut select com.espertech.esper.regressionlib.suite.event.avro.EventAvroHook.makeLocalDateTime() as isodate from SupportBean as e1"
+      },
+      {
+        "op": "deployed",
+        "case": "schema-from-class",
+        "statement": "s0"
+      },
+      {
+        "op": "value",
+        "case": "schema-from-class",
+        "statement": "s0",
+        "name": "avro-schema"
+      },
+      {
+        "op": "send",
+        "case": "schema-from-class",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "schema-from-class"
+      },
+      {
+        "op": "case",
+        "case": "populate"
+      },
+      {
+        "op": "deploy",
+        "case": "populate",
+        "statement": "s0",
+        "epl": "@name('s0') insert into MyEventPopulate(sb) select com.espertech.esper.regressionlib.suite.event.avro.EventAvroHook.makeSupportBean() from SupportBean_S0 as e1"
+      },
+      {
+        "op": "deployed",
+        "case": "populate",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "populate",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10
+        }
+      },
+      {
+        "op": "value",
+        "case": "populate",
+        "statement": "s0",
+        "name": "avroToJson"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "populate"
+      },
+      {
+        "op": "case",
+        "case": "named-window-property-assignment"
+      },
+      {
+        "op": "deploy",
+        "case": "named-window-property-assignment",
+        "statement": "NamedWindow",
+        "epl": "@Name('NamedWindow') @public create window MyWindow#keepall as MyEventWSchema"
+      },
+      {
+        "op": "deployed",
+        "case": "named-window-property-assignment",
+        "statement": "NamedWindow"
+      },
+      {
+        "op": "deploy",
+        "case": "named-window-property-assignment",
+        "statement": "insert-window",
+        "epl": "insert into MyWindow select * from MyEventWSchema"
+      },
+      {
+        "op": "deployed",
+        "case": "named-window-property-assignment",
+        "statement": "insert-window"
+      },
+      {
+        "op": "deploy",
+        "case": "named-window-property-assignment",
+        "statement": "update-window",
+        "epl": "on SupportBean thebean update MyWindow set sb = thebean"
+      },
+      {
+        "op": "deployed",
+        "case": "named-window-property-assignment",
+        "statement": "update-window"
+      },
+      {
+        "op": "send",
+        "case": "named-window-property-assignment",
+        "eventType": "MyEventWSchema",
+        "payload": {}
+      },
+      {
+        "op": "send",
+        "case": "named-window-property-assignment",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "named-window-property-assignment",
+        "statement": "NamedWindow"
+      },
+      {
+        "op": "value",
+        "case": "named-window-property-assignment",
+        "statement": "NamedWindow",
+        "name": "avroToJson"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "named-window-property-assignment"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "event-avro-hook-548",
+    "records": [
+      {
+        "case": "property-coerce",
+        "operation": "compile-error",
+        "statement": "probe",
+        "sequence": 0,
+        "value": "Invalid assignment of column 'isodate' of type 'java.time.ZonedDateTime' to event property 'isodate' typed as 'java.lang.CharSequence', column and parameter types mismatch"
+      },
+      {
+        "case": "property-coerce",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "property-coerce",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "isodate": "2026-09-27T01:02:03.123456789"
+            }
+          }
+        ]
+      },
+      {
+        "case": "schema-from-class",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "schema-from-class",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "avro-schema",
+        "value": "{\"type\":\"record\",\"name\":\"MyEventOut\",\"fields\":[{\"name\":\"isodate\",\"type\":\"string\"}]}"
+      },
+      {
+        "case": "schema-from-class",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "isodate": "\u003cisodate\u003e"
+            }
+          }
+        ]
+      },
+      {
+        "case": "populate",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "populate",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sb": {
+                "intPrimitive": 10,
+                "theString": "E1"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "populate",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "avroToJson",
+        "value": "{\"sb\":{\"theString\":\"E1\",\"intPrimitive\":10}}"
+      },
+      {
+        "case": "named-window-property-assignment",
+        "operation": "deployed",
+        "statement": "NamedWindow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "named-window-property-assignment",
+        "operation": "deployed",
+        "statement": "insert-window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "named-window-property-assignment",
+        "operation": "deployed",
+        "statement": "update-window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "named-window-property-assignment",
+        "operation": "snapshot",
+        "statement": "NamedWindow",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sb": {
+                "SupportBeanSchema": {
+                  "intPrimitive": 10,
+                  "theString": "E1"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-window-property-assignment",
+        "operation": "value",
+        "statement": "NamedWindow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "avroToJson",
+        "value": "{\"sb\":{\"SupportBeanSchema\":{\"theString\":\"E1\",\"intPrimitive\":10}}}"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "event-avro-hook-548",
+    "records": [
+      {
+        "case": "property-coerce",
+        "operation": "compile-error",
+        "statement": "probe",
+        "sequence": 0,
+        "value": "Invalid assignment of column 'isodate' of type 'java.time.ZonedDateTime' to event property 'isodate' typed as 'java.lang.CharSequence', column and parameter types mismatch"
+      },
+      {
+        "case": "property-coerce",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "property-coerce",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "isodate": "2026-09-27T01:02:03.123456789"
+            }
+          }
+        ]
+      },
+      {
+        "case": "schema-from-class",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "schema-from-class",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "avro-schema",
+        "value": "{\"type\":\"record\",\"name\":\"MyEventOut\",\"fields\":[{\"name\":\"isodate\",\"type\":\"string\"}]}"
+      },
+      {
+        "case": "schema-from-class",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "isodate": "\u003cisodate\u003e"
+            }
+          }
+        ]
+      },
+      {
+        "case": "populate",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "populate",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sb": {
+                "intPrimitive": 10,
+                "theString": "E1"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "populate",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "avroToJson",
+        "value": "{\"sb\":{\"theString\":\"E1\",\"intPrimitive\":10}}"
+      },
+      {
+        "case": "named-window-property-assignment",
+        "operation": "deployed",
+        "statement": "NamedWindow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "named-window-property-assignment",
+        "operation": "deployed",
+        "statement": "insert-window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "named-window-property-assignment",
+        "operation": "deployed",
+        "statement": "update-window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "named-window-property-assignment",
+        "operation": "snapshot",
+        "statement": "NamedWindow",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sb": {
+                "SupportBeanSchema": {
+                  "intPrimitive": 10,
+                  "theString": "E1"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-window-property-assignment",
+        "operation": "value",
+        "statement": "NamedWindow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "avroToJson",
+        "value": "{\"sb\":{\"SupportBeanSchema\":{\"theString\":\"E1\",\"intPrimitive\":10}}}"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

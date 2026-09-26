@@ -38,30 +38,43 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.539 ('epl-other-invalid') committed and pushed as 3d2dd2720; Git owns identity.
 
 ## Current work unit
-Active: Draft 4.547 ('event-map-nested').
+Active: Draft 4.548 ('event-avro-hook').
 
-- Contract frozen (JavaContract547 + GoSurface547): EventMapNested.java
-  4/4 unreferenced executions, static java-26557b255ea0dcbd9d2a, all
-  SERDEREQUIRED; all 4 representable. ord0 InsertInto
-  (`java-runtime-7eef27d1…`): @public insert into MyStream select
-  map.mapOne as val1 from NestedMap#length(5) + select val1 as a;
-  ord1 EventType (`-17f60eac…`): select * + PropertyNames/PropertyType
-  metadata markers; ord2 NestedPojo (`-cf3abd23…`): 22-column projection
-  incl. `?` optional paths, indexed[1], bean chains, mapped('1ma'),
-  fragment cols, full+partial sends; ord3 IsExists (`-68a5f852…`).
-  Fixture NestedMap = {simple,object:SupportBean_A,nodefmap:Map,map:L1…};
-  partial payload drops L1 fields, `?` never throws, f1 survives
-  partial send.
-- [x] Assets547 delivered + integrated: Java trace 6 records, Go
-  replay 6, `-diff` passing / 0 differences; evidence + traces checked
-  in. Manifest case.event-map-nested born-DV → event.map-core (778
-  cases / 401 DV / 1601 DV IDs / 437 unreferenced); roadmap +
-  CHANGELOG prepended; `make check` GREEN (parity 98s, esper 121s).
-- [x] ParityRev547 + JavaContract548 + GoSurface548 dispatched
-  (4.548 candidate: EventAvroHook 4-exec or EventAvro singletons).
+- Contract frozen (JavaContract548 + GoSurface548): EventAvroHook.java
+  4/4 unreferenced, static java-281ee8b5adc379b62b2c, one harness
+  (TestSuiteEventAvroWConfig). Singleton cluster rejected (4 files /
+  disjoint surfaces / AllowDynamicFields + inherits unrepresentable).
+  ord0 SimpleWriteablePropertyCoerce `java-runtime-34ec4dc8abe4f2443930`:
+  (a) tryInvalidCompile ZonedDateTime→CharSequence msg oracle-only
+  (intentionally-different error kind) + (b) LDT→ISO string via
+  explicit Func1 UDF, exact-match (now captured pre-send).
+  ord1 SchemaFromClass `-c80f13d8b1a53d4ff458`: UDF makeLocalDateTime
+  (now() INSIDE call — shape-only: schema JSON +
+  avroToJson isodate length>10, never exact string).
+  ord2 Populate `-20190c427227521c092b` STATICHOOK: Func1
+  SupportBean→*AvroRecord + InsertInto into predeclared
+  MyEventPopulate; flat avroToJson `{"sb":{"theString":"E1",...}}`.
+  ord3 NamedWindowPropertyAssignment `-85c9c44d4baae883febe`
+  STATICHOOK: create window + on-update set sb=thebean; union-null
+  seed; DOUBLE-NESTED `{"sb":{"SupportBeanSchema":{...}}}` JSON.
+- [x] Assets548 delivered + integrated: Java trace 14 records, Go
+  replay 14, `-diff` passing / 0 differences; evidence + traces
+  checked in. Manifest case.event-avro-hook born-DV →
+  event.avro-record (779 cases / 402 DV / 1605 DV IDs / 433
+  unreferenced / caps 126-125-50-11); capability gained
+  `differential-verified` in verification (precedent
+  event.contained); summary counters recomputed (validator caught
+  stale counts); roadmap + CHANGELOG prepended; `make check` GREEN.
+- [x] ParityRev548 + JavaContract549 + GoSurface549 dispatched.
 - [ ] Review outcome, commit, push.
 
+
 ## Previous work units (shipped)
+
+- Shipped: Draft 4.547 ('event-map-nested') committed and pushed as
+  88ee76ee4; Git owns identity. EventMapNested 4/4 born-DV (6 records
+  each, 0 differences); review PASS, two P3s fixed (dead statements
+  map, overstated deploy doc).
 
 - Shipped: Draft 4.546 ('event-render') committed and pushed as
   a13138036; Git owns identity. All 7 EventRender* executions born-DV

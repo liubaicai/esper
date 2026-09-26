@@ -84469,3 +84469,287 @@ func TestRunEventMapNested547CheckedInEvidenceMatchesTraceAndReplay(t *testing.T
 	assertEMN547Trace(t, javaTrace)
 	assertEMN547Trace(t, goTrace)
 }
+
+func TestRunEventAvroHook548DirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", eventAvroHook548ID,
+		"-scenario", filepath.Join(root, eventAvroHook548ID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertEAH548Trace(t, trace)
+}
+
+func assertEAH548Trace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != eventAvroHook548ID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	counts := map[string]map[string]int{}
+	for _, record := range trace.Records {
+		if counts[record.Case] == nil {
+			counts[record.Case] = map[string]int{}
+		}
+		counts[record.Case][record.Operation]++
+	}
+	want := map[string]map[string]int{
+		"property-coerce":                  {"compile-error": 1, "deployed": 1, "listener": 1},
+		"schema-from-class":                {"deployed": 1, "value": 1, "listener": 1},
+		"populate":                         {"deployed": 1, "listener": 1, "value": 1},
+		"named-window-property-assignment": {"deployed": 3, "snapshot": 1, "value": 1},
+	}
+	if !reflect.DeepEqual(counts, want) {
+		t.Fatalf("record counts = %#v, want %#v", counts, want)
+	}
+}
+
+func TestRunEventAvroHook548RejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, eventAvroHook548ID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "populate"`), []byte(`"case": "populate", "extra": 0`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-85c9c44d4baae883febe"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "case-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`insert into MyEventPopulate(sb)`), []byte(`insert into MyEventPopulate(other)`), 1)
+		}},
+		{name: "step-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`on SupportBean thebean update MyWindow set sb = thebean`), []byte(`on SupportBean thebean update MyWindow set sb = null`), 1)
+		}},
+		{name: "flag-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"STATICHOOK"`), []byte(`"WRONGFLAG"`), 1)
+		}},
+		{name: "payload-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 10`), []byte(`"intPrimitive": 11`), 1)
+		}},
+		{name: "send-type-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportBean_S0"`), []byte(`"eventType": "SupportBean"`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", eventAvroHook548ID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunEventAvroHook548RuntimeIDMappingMatchesScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, eventAvroHook548ID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenario struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &scenario); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenario.JavaRuntimes, eventAvroHook548JavaRuntimeIDs) {
+		t.Fatalf("javaRuntimes = %#v", scenario.JavaRuntimes)
+	}
+	if !reflect.DeepEqual(scenario.JavaNames, eventAvroHook548JavaExecutions) {
+		t.Fatalf("javaNames = %#v", scenario.JavaNames)
+	}
+	for index, definition := range scenario.Cases {
+		if definition.RuntimeID != eventAvroHook548JavaRuntimeIDs[index] {
+			t.Fatalf("case %q runtimeId = %q, want %q", definition.Case, definition.RuntimeID, eventAvroHook548JavaRuntimeIDs[index])
+		}
+	}
+}
+
+func TestRunEventAvroHook548DiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), eventAvroHook548ID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", eventAvroHook548ID + "-diff",
+		"-scenario", filepath.Join(root, eventAvroHook548ID+".json"),
+		"-java-trace", filepath.Join(root, eventAvroHook548ID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != eventAvroHook548JavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, eventAvroHook548JavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, eventAvroHook548JavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, eventAvroHook548JavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertEAH548Trace(t, evidence.JavaTrace)
+	assertEAH548Trace(t, evidence.GoTrace)
+}
+
+func TestRunEventAvroHook548DiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "populate-json-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "populate" && rec.Operation == "value" && rec.Name == "avroToJson" {
+						rec.Value = `{"sb":{"theString":"E1","intPrimitive":11}}`
+						return
+					}
+				}
+				panic("no populate avroToJson record")
+			},
+		},
+		{
+			name: "window-union-flattened",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "named-window-property-assignment" && rec.Operation == "value" {
+						rec.Value = `{"sb":{"theString":"E1","intPrimitive":10}}`
+						return
+					}
+				}
+				panic("no window avroToJson record")
+			},
+		},
+		{
+			name: "schema-text-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "schema-from-class" && rec.Operation == "value" {
+						rec.Value = `{"type":"record","name":"MyEventOut","fields":[]}`
+						return
+					}
+				}
+				panic("no avro-schema record")
+			},
+		},
+		{
+			name: "deployed-sequence-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "named-window-property-assignment" && rec.Operation == "deployed" && rec.Statement == "update-window" {
+						rec.Sequence = 2
+						return
+					}
+				}
+				panic("no update-window deployed record")
+			},
+		},
+		{
+			name: "record-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0], trace.Records[1] = trace.Records[1], trace.Records[0]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join(root, eventAvroHook548ID+".trace.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), eventAvroHook548ID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", eventAvroHook548ID + "-diff",
+				"-scenario", filepath.Join(root, eventAvroHook548ID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunEventAvroHook548CheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, eventAvroHook548ID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, eventAvroHook548ID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, eventAvroHook548ID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if evidence.JavaCommit != eventAvroHook548JavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, eventAvroHook548JavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, eventAvroHook548JavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, eventAvroHook548JavaExecutions) {
+		t.Fatalf("checked-in Java metadata = %#v", evidence)
+	}
+	assertEAH548Trace(t, javaTrace)
+	assertEAH548Trace(t, goTrace)
+}

@@ -52,7 +52,11 @@
    "summary": "Schema-bound native Avro record underlying values, typed fields, ingestion and representation propagation",
    "javaRefs": [
     "EventInfraPropertyUnderlyingSimple",
-    "EPLDataflowBeaconFields"
+    "EPLDataflowBeaconFields",
+    "EventAvroHookSimpleWriteablePropertyCoerce",
+    "EventAvroHookSchemaFromClass",
+    "EventAvroHookPopulate",
+    "EventAvroHookNamedWindowPropertyAssignment"
    ],
    "goRefs": [
     "internal/esper/avro.go",
@@ -62,7 +66,8 @@
     "internal/esper/avro_test.go",
     "internal/esper/insert_recast_test.go",
     "internal/esper/dataflow_beacon_event_test.go",
-    "internal/esper/dataflow_representation_test.go"
+    "internal/esper/dataflow_representation_test.go",
+    "internal/app/parity/event_avro_hook_548.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -74,7 +79,14 @@
    ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-34ec4dc8abe4f2443930",
+    "java-runtime-c80f13d8b1a53d4ff458",
+    "java-runtime-20190c427227521c092b",
+    "java-runtime-85c9c44d4baae883febe"
    ]
   },
   {
@@ -50532,6 +50544,68 @@
     "java-runtime-cf3abd23bf728441a001",
     "java-runtime-68a5f852752eba589f5b"
    ]
+  },
+  {
+   "id": "case.event-avro-hook",
+   "javaRuntimeIds": [
+    "java-runtime-34ec4dc8abe4f2443930",
+    "java-runtime-c80f13d8b1a53d4ff458",
+    "java-runtime-20190c427227521c092b",
+    "java-runtime-85c9c44d4baae883febe"
+   ],
+   "javaStaticIds": [
+    "java-281ee8b5adc379b62b2c",
+    "java-281ee8b5adc379b62b2c",
+    "java-281ee8b5adc379b62b2c",
+    "java-281ee8b5adc379b62b2c"
+   ],
+   "javaNames": [
+    "EventAvroHookSimpleWriteablePropertyCoerce",
+    "EventAvroHookSchemaFromClass",
+    "EventAvroHookPopulate",
+    "EventAvroHookNamedWindowPropertyAssignment"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/avro/EventAvroHook.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/avro/EventAvroHook.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/avro/EventAvroHook.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/avro/EventAvroHook.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunEventAvroHook548DirectReplay",
+    "internal/app/parity/run_test.go:TestRunEventAvroHook548DiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunEventAvroHook548CheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunEventAvroHook548DiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunEventAvroHook548RejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunEventAvroHook548RuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "event",
+    "avro",
+    "hook",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/event-avro-hook-548.json",
+    "testdata/parity/event-avro-hook-548.trace.json",
+    "testdata/parity/event-avro-hook-548.go.trace.json",
+    "testdata/parity/event-avro-hook-548.evidence.json",
+    "tools/java-oracle/EventAvroHook548ScenarioOracle.java",
+    "tools/java-oracle/run-event-avro-hook-548.sh"
+   ],
+   "notes": "EventAvroHook.java complete born-differential (4/4 executions, static java-281ee8b5adc379b62b2c, ord2/ord3 STATICHOOK). The hook MECHANISM (TypeRepresentationMapper, ObjectValueTypeWidenerFactory, widenCodegen, STATICHOOK static-field wiring) has no Go counterpart and is intentionally-different; Go models the observable contract with predeclared Avro schemas + explicit Func1 UDFs (isoDateTime/makeLocalDateTime/makeSupportBean/widenInput). SimpleWriteablePropertyCoerce: invalid-compile text pinned oracle-only (error kind intentionally-different); valid LDT insert-into pins exact ISO string. SchemaFromClass: now()-inside-UDF keeps shape-only (byte-exact MyEventOut schema JSON + isodate length>10 marker, now never pinned). Populate: flat avroToJson {\"sb\":{\"theString\":\"E1\",\"intPrimitive\":10}} byte-exact. NamedWindowPropertyAssignment: union-null seed + on-update set sb=thebean; double-nested union encoding {\"sb\":{\"SupportBeanSchema\":{...}}} never flattened. Java/Go 14 records each, 0 differences. Scenario testdata/parity/event-avro-hook-548.json; Java trace via tools/java-oracle/run-event-avro-hook-548.sh at commit 9e1b9f1cc9117fea4bf33ab043762c045d73839c.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-34ec4dc8abe4f2443930",
+    "java-runtime-c80f13d8b1a53d4ff458",
+    "java-runtime-20190c427227521c092b",
+    "java-runtime-85c9c44d4baae883febe"
+   ]
   }
  ],
  "mappings": [
@@ -53994,29 +54068,33 @@
   {
    "capabilityId": "event.map-core",
    "caseId": "case.event-map-nested"
+  },
+  {
+   "capabilityId": "event.avro-record",
+   "caseId": "case.event-avro-hook"
   }
  ],
  "summary": {
-  "inventoriedCases": 778,
-  "implementedCases": 776,
-  "differentialVerifiedCases": 401,
-  "differentialVerifiedRuntimeIds": 1601,
+  "inventoriedCases": 779,
+  "implementedCases": 777,
+  "differentialVerifiedCases": 402,
+  "differentialVerifiedRuntimeIds": 1605,
   "intentionallyDifferentCases": 36,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 126,
   "implementedCapabilities": 125,
-  "differentialVerifiedCapabilities": 49,
+  "differentialVerifiedCapabilities": 50,
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4139,
-  "referencedJavaRuntimeIds": 3699,
+  "runtimeAssociationCount": 4143,
+  "referencedJavaRuntimeIds": 3703,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 437,
+  "unreferencedJavaRuntimeIds": 433,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 778,
+  "totalCases": 779,
   "totalCapabilities": 126
  }
 }
