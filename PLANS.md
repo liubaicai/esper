@@ -38,42 +38,38 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.539 ('epl-other-invalid') committed and pushed as 3d2dd2720; Git owns identity.
 
 ## Current work unit
-Active: Draft 4.546 ('event-render').
+Active: Draft 4.547 ('event-map-nested').
 
-- Contract frozen (JavaContract546 + GoSurface546): 7 unreferenced
-  EventRender* executions — EventRender ord0 CustomRenderer
-  (`java-runtime-26bb69572227aa67230c`, SERDEREQUIRED,
-  unrepresentable: needs JSONRenderingOptions.setRenderer hook),
-  ord1 ObjectArray (`-eacece93880bd4448b7d`, representable:
-  RenderJSON/XML title MyEvent, explicit-null props, order
-  p0,p1,p3,p4,p2), ord2 POJOMap (`-6af1376411de38cffefe`,
-  representable: bean + map field, JSON/XML/XML-attr);
-  EventRenderJSON ord2 EmptyMap (`-96f1450787b11db671fd`,
-  representable), ord3 Enquote (`-8cce94662734d4052c0e`,
-  unrepresentable: pure OutputValueRendererJSONString.enquote loop);
-  EventRenderXML ord2 SQLDate (`-f47d81ef0d1a48b66476`,
-  representable w/ risk: pin xmlScalar 2010-01-31 not RFC3339),
-  ord3 Enquote (`-539c60ae3344b3001b44`, unrepresentable:
-  OutputValueRendererXMLString.xmlEncode loop). Global rule:
-  removeNewline collapses ≥2 whitespace runs; XML always emits the
-  `<?xml ...?>` header; renderJSON/XML first arg is a TITLE, not the
-  event-type name.
-- [x] Assets546 delivered (runner event_render_546.go, scenario
-  event-render-546.json, oracle EventRender546ScenarioOracle.java,
-  mode event-render-546, 6-test family). Two field-level honest
-  unrepresentable pins added beyond the contract: OA XML + pojo-map
-  attr-XML null-rendering divergences.
-- [x] Integrated: Java trace 37 records, Go replay 37, `-diff`
-  passing / 0 differences; evidence + traces checked in. Manifest
-  case.event-render born-DV → event.property-access-render (777 cases
-  / 400 DV / 1597 DV IDs / 441 unreferenced); roadmap + CHANGELOG
-  prepended; `make check` GREEN (parity 99s, esper 116s).
-- [x] ParityRev546 + JavaContract547 + GoSurface547 dispatched
-  (4.547 candidate: next event file — EventMapNested or EventAvro).
+- Contract frozen (JavaContract547 + GoSurface547): EventMapNested.java
+  4/4 unreferenced executions, static java-26557b255ea0dcbd9d2a, all
+  SERDEREQUIRED; all 4 representable. ord0 InsertInto
+  (`java-runtime-7eef27d1…`): @public insert into MyStream select
+  map.mapOne as val1 from NestedMap#length(5) + select val1 as a;
+  ord1 EventType (`-17f60eac…`): select * + PropertyNames/PropertyType
+  metadata markers; ord2 NestedPojo (`-cf3abd23…`): 22-column projection
+  incl. `?` optional paths, indexed[1], bean chains, mapped('1ma'),
+  fragment cols, full+partial sends; ord3 IsExists (`-68a5f852…`).
+  Fixture NestedMap = {simple,object:SupportBean_A,nodefmap:Map,map:L1…};
+  partial payload drops L1 fields, `?` never throws, f1 survives
+  partial send.
+- [x] Assets547 delivered + integrated: Java trace 6 records, Go
+  replay 6, `-diff` passing / 0 differences; evidence + traces checked
+  in. Manifest case.event-map-nested born-DV → event.map-core (778
+  cases / 401 DV / 1601 DV IDs / 437 unreferenced); roadmap +
+  CHANGELOG prepended; `make check` GREEN (parity 98s, esper 121s).
+- [x] ParityRev547 + JavaContract548 + GoSurface548 dispatched
+  (4.548 candidate: EventAvroHook 4-exec or EventAvro singletons).
 - [ ] Review outcome, commit, push.
 
-
 ## Previous work units (shipped)
+
+- Shipped: Draft 4.546 ('event-render') committed and pushed as
+  a13138036; Git owns identity. All 7 EventRender* executions born-DV
+  (37 records each, 0 differences); review PASS, two P3s fixed (null-key
+  send comment, misleading mutation-subtest names).
+
+
+
 
 - Shipped: Draft 4.545 ('event-infra-contained-render-sender-supertype')
   committed and pushed as 8c07533b2; Git owns identity. All 8 executions

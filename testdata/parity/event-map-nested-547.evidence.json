@@ -1,0 +1,2552 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-7eef27d1a8de16f61ff7",
+    "java-runtime-17f60eacc6ec6d23d967",
+    "java-runtime-cf3abd23bf728441a001",
+    "java-runtime-68a5f852752eba589f5b"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/map/EventMapNested.java"
+  ],
+  "javaExecutions": [
+    "EventMapNestedInsertInto",
+    "EventMapNestedEventType",
+    "EventMapNestedNestedPojo",
+    "EventMapNestedIsExists"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "event-map-nested-547",
+    "steps": [
+      {
+        "op": "case",
+        "case": "insert-into"
+      },
+      {
+        "op": "deploy",
+        "case": "insert-into",
+        "statement": "insert-into",
+        "epl": "@public insert into MyStream select map.mapOne as val1 from NestedMap#length(5)"
+      },
+      {
+        "op": "deploy",
+        "case": "insert-into",
+        "statement": "s0",
+        "epl": "@name('s0') select val1 as a from MyStream"
+      },
+      {
+        "op": "send",
+        "case": "insert-into",
+        "eventType": "NestedMap",
+        "payload": {
+          "map": {
+            "mapOne": {
+              "mapTwo": {
+                "objectThree": {
+                  "_bean": "SupportBean_B",
+                  "id": "B1"
+                },
+                "simpleThree": {
+                  "_long": 4000
+                }
+              },
+              "nodefmapTwo": {
+                "key3": "val3"
+              },
+              "objectTwo": {
+                "_bean": "SupportBeanCombinedProps"
+              },
+              "simpleTwo": 300
+            },
+            "nodefmapOne": {
+              "key2": "val2"
+            },
+            "objectOne": {
+              "_bean": "SupportBeanComplexProps"
+            },
+            "simpleOne": 10
+          },
+          "nodefmap": {
+            "key1": "val1"
+          },
+          "object": {
+            "_bean": "SupportBean_A",
+            "id": "A1"
+          },
+          "simple": "abc"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insert-into"
+      },
+      {
+        "op": "case",
+        "case": "event-type"
+      },
+      {
+        "op": "deploy",
+        "case": "event-type",
+        "statement": "s0",
+        "epl": "@name('s0') select * from NestedMap"
+      },
+      {
+        "op": "deployed",
+        "case": "event-type",
+        "statement": "s0"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "event-type"
+      },
+      {
+        "op": "case",
+        "case": "nested-pojo"
+      },
+      {
+        "op": "deploy",
+        "case": "nested-pojo",
+        "statement": "s0",
+        "epl": "@name('s0') select simple, object, nodefmap, map, object.id as a1, nodefmap.key1? as a2, nodefmap.key2? as a3, nodefmap.key3?.key4 as a4, map.objectOne as b1, map.simpleOne as b2, map.nodefmapOne.key2? as b3, map.mapOne.simpleTwo? as b4, map.objectOne.indexed[1] as c1, map.objectOne.nested.nestedValue as c2,map.mapOne.simpleTwo as d1, map.mapOne.objectTwo as d2, map.mapOne.nodefmapTwo as d3, map.mapOne.mapTwo as e1, map.mapOne.mapTwo.simpleThree as e2, map.mapOne.mapTwo.objectThree as e3, map.mapOne.objectTwo.array[1].mapped('1ma').value as f1, map.mapOne.mapTwo.objectThree.id as f2 from NestedMap#length(5)"
+      },
+      {
+        "op": "send",
+        "case": "nested-pojo",
+        "eventType": "NestedMap",
+        "payload": {
+          "map": {
+            "mapOne": {
+              "mapTwo": {
+                "objectThree": {
+                  "_bean": "SupportBean_B",
+                  "id": "B1"
+                },
+                "simpleThree": {
+                  "_long": 4000
+                }
+              },
+              "nodefmapTwo": {
+                "key3": "val3"
+              },
+              "objectTwo": {
+                "_bean": "SupportBeanCombinedProps"
+              },
+              "simpleTwo": 300
+            },
+            "nodefmapOne": {
+              "key2": "val2"
+            },
+            "objectOne": {
+              "_bean": "SupportBeanComplexProps"
+            },
+            "simpleOne": 10
+          },
+          "nodefmap": {
+            "key1": "val1"
+          },
+          "object": {
+            "_bean": "SupportBean_A",
+            "id": "A1"
+          },
+          "simple": "abc"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nested-pojo",
+        "eventType": "NestedMap",
+        "payload": {
+          "map": {
+            "mapOne": {
+              "mapTwo": {
+                "simpleThree": {
+                  "_long": 4000
+                }
+              },
+              "nodefmapTwo": {
+                "key3": "val3"
+              },
+              "objectTwo": {
+                "_bean": "SupportBeanCombinedProps"
+              }
+            },
+            "objectOne": null,
+            "simpleOne": null
+          },
+          "nodefmap": {
+            "key1": "val1"
+          },
+          "object": {
+            "_bean": "SupportBean_A",
+            "id": "A1"
+          },
+          "simple": "abc"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nested-pojo"
+      },
+      {
+        "op": "case",
+        "case": "is-exists"
+      },
+      {
+        "op": "deploy",
+        "case": "is-exists",
+        "statement": "s0",
+        "epl": "@name('s0') select exists(map.mapOne?) as a,exists(map.mapOne?.simpleOne) as b,exists(map.mapOne?.simpleTwo) as c,exists(map.mapOne?.mapTwo) as d,exists(map.mapOne.mapTwo?) as e,exists(map.mapOne.mapTwo.simpleThree?) as f,exists(map.mapOne.mapTwo.objectThree?) as g  from NestedMap#length(5)"
+      },
+      {
+        "op": "send",
+        "case": "is-exists",
+        "eventType": "NestedMap",
+        "payload": {
+          "map": {
+            "mapOne": {
+              "mapTwo": {
+                "objectThree": {
+                  "_bean": "SupportBean_B",
+                  "id": "B1"
+                },
+                "simpleThree": {
+                  "_long": 4000
+                }
+              },
+              "nodefmapTwo": {
+                "key3": "val3"
+              },
+              "objectTwo": {
+                "_bean": "SupportBeanCombinedProps"
+              },
+              "simpleTwo": 300
+            },
+            "nodefmapOne": {
+              "key2": "val2"
+            },
+            "objectOne": {
+              "_bean": "SupportBeanComplexProps"
+            },
+            "simpleOne": 10
+          },
+          "nodefmap": {
+            "key1": "val1"
+          },
+          "object": {
+            "_bean": "SupportBean_A",
+            "id": "A1"
+          },
+          "simple": "abc"
+        }
+      },
+      {
+        "op": "send",
+        "case": "is-exists",
+        "eventType": "NestedMap",
+        "payload": {
+          "map": {
+            "mapOne": {
+              "mapTwo": {
+                "simpleThree": {
+                  "_long": 4000
+                }
+              },
+              "nodefmapTwo": {
+                "key3": "val3"
+              },
+              "objectTwo": {
+                "_bean": "SupportBeanCombinedProps"
+              }
+            },
+            "objectOne": null,
+            "simpleOne": null
+          },
+          "nodefmap": {
+            "key1": "val1"
+          },
+          "object": {
+            "_bean": "SupportBean_A",
+            "id": "A1"
+          },
+          "simple": "abc"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "is-exists"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "event-map-nested-547",
+    "records": [
+      {
+        "case": "insert-into",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "mapTwo": {
+                    "fields": {
+                      "objectThree": {
+                        "fields": {
+                          "id": "B1"
+                        },
+                        "kind": "row"
+                      },
+                      "simpleThree": 4000
+                    },
+                    "kind": "row"
+                  },
+                  "nodefmapTwo": {
+                    "fields": {
+                      "key3": "val3"
+                    },
+                    "kind": "row"
+                  },
+                  "objectTwo": {
+                    "fields": {
+                      "array": [
+                        {
+                          "fields": {
+                            "mapprop": {
+                              "fields": {
+                                "0ma": {
+                                  "fields": {
+                                    "value": "0ma0"
+                                  },
+                                  "kind": "row"
+                                },
+                                "0mb": {
+                                  "fields": {
+                                    "value": "0ma1"
+                                  },
+                                  "kind": "row"
+                                }
+                              },
+                              "kind": "row"
+                            },
+                            "nestLevOneVal": "abc"
+                          },
+                          "kind": "row"
+                        },
+                        {
+                          "fields": {
+                            "mapprop": {
+                              "fields": {
+                                "1ma": {
+                                  "fields": {
+                                    "value": "1ma0"
+                                  },
+                                  "kind": "row"
+                                },
+                                "1mb": {
+                                  "fields": {
+                                    "value": "1ma1"
+                                  },
+                                  "kind": "row"
+                                }
+                              },
+                              "kind": "row"
+                            },
+                            "nestLevOneVal": "abc"
+                          },
+                          "kind": "row"
+                        },
+                        {
+                          "fields": {
+                            "mapprop": {
+                              "fields": {
+                                "2ma": {
+                                  "fields": {
+                                    "value": "valueOne"
+                                  },
+                                  "kind": "row"
+                                },
+                                "2mb": {
+                                  "fields": {
+                                    "value": "2ma1"
+                                  },
+                                  "kind": "row"
+                                }
+                              },
+                              "kind": "row"
+                            },
+                            "nestLevOneVal": "abc"
+                          },
+                          "kind": "row"
+                        },
+                        {
+                          "state": "null"
+                        }
+                      ],
+                      "indexed": [
+                        {
+                          "fields": {
+                            "mapprop": {
+                              "fields": {
+                                "0ma": {
+                                  "fields": {
+                                    "value": "0ma0"
+                                  },
+                                  "kind": "row"
+                                },
+                                "0mb": {
+                                  "fields": {
+                                    "value": "0ma1"
+                                  },
+                                  "kind": "row"
+                                }
+                              },
+                              "kind": "row"
+                            },
+                            "nestLevOneVal": "abc"
+                          },
+                          "kind": "row"
+                        },
+                        {
+                          "fields": {
+                            "mapprop": {
+                              "fields": {
+                                "1ma": {
+                                  "fields": {
+                                    "value": "1ma0"
+                                  },
+                                  "kind": "row"
+                                },
+                                "1mb": {
+                                  "fields": {
+                                    "value": "1ma1"
+                                  },
+                                  "kind": "row"
+                                }
+                              },
+                              "kind": "row"
+                            },
+                            "nestLevOneVal": "abc"
+                          },
+                          "kind": "row"
+                        },
+                        {
+                          "fields": {
+                            "mapprop": {
+                              "fields": {
+                                "2ma": {
+                                  "fields": {
+                                    "value": "valueOne"
+                                  },
+                                  "kind": "row"
+                                },
+                                "2mb": {
+                                  "fields": {
+                                    "value": "2ma1"
+                                  },
+                                  "kind": "row"
+                                }
+                              },
+                              "kind": "row"
+                            },
+                            "nestLevOneVal": "abc"
+                          },
+                          "kind": "row"
+                        },
+                        {
+                          "state": "null"
+                        }
+                      ]
+                    },
+                    "kind": "row"
+                  },
+                  "simpleTwo": 300
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "event-type",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nested-pojo",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "A1",
+              "a2": "val1",
+              "a3": {
+                "state": "null"
+              },
+              "a4": {
+                "state": "null"
+              },
+              "b1": {
+                "fields": {
+                  "arrayProperty": [
+                    10,
+                    20,
+                    30
+                  ],
+                  "indexed": [
+                    1,
+                    2
+                  ],
+                  "mapProperty": {
+                    "fields": {
+                      "xOne": "yOne",
+                      "xTwo": "yTwo"
+                    },
+                    "kind": "row"
+                  },
+                  "nested": {
+                    "fields": {
+                      "nestedNested": {
+                        "fields": {
+                          "nestedNestedValue": "nestedNestedValue"
+                        },
+                        "kind": "row"
+                      },
+                      "nestedValue": "nestedValue"
+                    },
+                    "kind": "row"
+                  },
+                  "simpleProperty": "simple"
+                },
+                "kind": "row"
+              },
+              "b2": 10,
+              "b3": "val2",
+              "b4": 300,
+              "c1": 2,
+              "c2": "nestedValue",
+              "d1": 300,
+              "d2": {
+                "fields": {
+                  "array": [
+                    {
+                      "fields": {
+                        "mapprop": {
+                          "fields": {
+                            "0ma": {
+                              "fields": {
+                                "value": "0ma0"
+                              },
+                              "kind": "row"
+                            },
+                            "0mb": {
+                              "fields": {
+                                "value": "0ma1"
+                              },
+                              "kind": "row"
+                            }
+                          },
+                          "kind": "row"
+                        },
+                        "nestLevOneVal": "abc"
+                      },
+                      "kind": "row"
+                    },
+                    {
+                      "fields": {
+                        "mapprop": {
+                          "fields": {
+                            "1ma": {
+                              "fields": {
+                                "value": "1ma0"
+                              },
+                              "kind": "row"
+                            },
+                            "1mb": {
+                              "fields": {
+                                "value": "1ma1"
+                              },
+                              "kind": "row"
+                            }
+                          },
+                          "kind": "row"
+                        },
+                        "nestLevOneVal": "abc"
+                      },
+                      "kind": "row"
+                    },
+                    {
+                      "fields": {
+                        "mapprop": {
+                          "fields": {
+                            "2ma": {
+                              "fields": {
+                                "value": "valueOne"
+                              },
+                              "kind": "row"
+                            },
+                            "2mb": {
+                              "fields": {
+                                "value": "2ma1"
+                              },
+                              "kind": "row"
+                            }
+                          },
+                          "kind": "row"
+                        },
+                        "nestLevOneVal": "abc"
+                      },
+                      "kind": "row"
+                    },
+                    {
+                      "state": "null"
+                    }
+                  ],
+                  "indexed": [
+                    {
+                      "fields": {
+                        "mapprop": {
+                          "fields": {
+                            "0ma": {
+                              "fields": {
+                                "value": "0ma0"
+                              },
+                              "kind": "row"
+                            },
+                            "0mb": {
+                              "fields": {
+                                "value": "0ma1"
+                              },
+                              "kind": "row"
+                            }
+                          },
+                          "kind": "row"
+                        },
+                        "nestLevOneVal": "abc"
+                      },
+                      "kind": "row"
+                    },
+                    {
+                      "fields": {
+                        "mapprop": {
+                          "fields": {
+                            "1ma": {
+                              "fields": {
+                                "value": "1ma0"
+                              },
+                              "kind": "row"
+                            },
+                            "1mb": {
+                              "fields": {
+                                "value": "1ma1"
+                              },
+                              "kind": "row"
+                            }
+                          },
+                          "kind": "row"
+                        },
+                        "nestLevOneVal": "abc"
+                      },
+                      "kind": "row"
+                    },
+                    {
+                      "fields": {
+                        "mapprop": {
+                          "fields": {
+                            "2ma": {
+                              "fields": {
+                                "value": "valueOne"
+                              },
+                              "kind": "row"
+                            },
+                            "2mb": {
+                              "fields": {
+                                "value": "2ma1"
+                              },
+                              "kind": "row"
+                            }
+                          },
+                          "kind": "row"
+                        },
+                        "nestLevOneVal": "abc"
+                      },
+                      "kind": "row"
+                    },
+                    {
+                      "state": "null"
+                    }
+                  ]
+                },
+                "kind": "row"
+              },
+              "d3": {
+                "fields": {
+                  "key3": "val3"
+                },
+                "kind": "row"
+              },
+              "e1": {
+                "fields": {
+                  "objectThree": {
+                    "fields": {
+                      "id": "B1"
+                    },
+                    "kind": "row"
+                  },
+                  "simpleThree": 4000
+                },
+                "kind": "row"
+              },
+              "e2": 4000,
+              "e3": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "f1": "1ma0",
+              "f2": "B1",
+              "map": {
+                "fields": {
+                  "mapOne": {
+                    "fields": {
+                      "mapTwo": {
+                        "fields": {
+                          "objectThree": {
+                            "fields": {
+                              "id": "B1"
+                            },
+                            "kind": "row"
+                          },
+                          "simpleThree": 4000
+                        },
+                        "kind": "row"
+                      },
+                      "nodefmapTwo": {
+                        "fields": {
+                          "key3": "val3"
+                        },
+                        "kind": "row"
+                      },
+                      "objectTwo": {
+                        "fields": {
+                          "array": [
+                            {
+                              "fields": {
+                                "mapprop": {
+                                  "fields": {
+                                    "0ma": {
+                                      "fields": {
+                                        "value": "0ma0"
+                                      },
+                                      "kind": "row"
+                                    },
+                                    "0mb": {
+                                      "fields": {
+                                        "value": "0ma1"
+                                      },
+                                      "kind": "row"
+                                    }
+                                  },
+                                  "kind": "row"
+                                },
+                                "nestLevOneVal": "abc"
+                              },
+                              "kind": "row"
+                            },
+                            {
+                              "fields": {
+                                "mapprop": {
+                                  "fields": {
+                                    "1ma": {
+                                      "fields": {
+                                        "value": "1ma0"
+                                      },
+                                      "kind": "row"
+                                    },
+                                    "1mb": {
+                                      "fields": {
+                                        "value": "1ma1"
+                                      },
+                                      "kind": "row"
+                                    }
+                                  },
+                                  "kind": "row"
+                                },
+                                "nestLevOneVal": "abc"
+                              },
+                              "kind": "row"
+                            },
+                            {
+                              "fields": {
+                                "mapprop": {
+                                  "fields": {
+                                    "2ma": {
+                                      "fields": {
+                                        "value": "valueOne"
+                                      },
+                                      "kind": "row"
+                                    },
+                                    "2mb": {
+                                      "fields": {
+                                        "value": "2ma1"
+                                      },
+                                      "kind": "row"
+                                    }
+                                  },
+                                  "kind": "row"
+                                },
+                                "nestLevOneVal": "abc"
+                              },
+                              "kind": "row"
+                            },
+                            {
+                              "state": "null"
+                            }
+                          ],
+                          "indexed": [
+                            {
+                              "fields": {
+                                "mapprop": {
+                                  "fields": {
+                                    "0ma": {
+                                      "fields": {
+                                        "value": "0ma0"
+                                      },
+                                      "kind": "row"
+                                    },
+                                    "0mb": {
+                                      "fields": {
+                                        "value": "0ma1"
+                                      },
+                                      "kind": "row"
+                                    }
+                                  },
+                                  "kind": "row"
+                                },
+                                "nestLevOneVal": "abc"
+                              },
+                              "kind": "row"
+                            },
+                            {
+                              "fields": {
+                                "mapprop": {
+                                  "fields": {
+                                    "1ma": {
+                                      "fields": {
+                                        "value": "1ma0"
+                                      },
+                                      "kind": "row"
+                                    },
+                                    "1mb": {
+                                      "fields": {
+                                        "value": "1ma1"
+                                      },
+                                      "kind": "row"
+                                    }
+                                  },
+                                  "kind": "row"
+                                },
+                                "nestLevOneVal": "abc"
+                              },
+                              "kind": "row"
+                            },
+                            {
+                              "fields": {
+                                "mapprop": {
+                                  "fields": {
+                                    "2ma": {
+                                      "fields": {
+                                        "value": "valueOne"
+                                      },
+                                      "kind": "row"
+                                    },
+                                    "2mb": {
+                                      "fields": {
+                                        "value": "2ma1"
+                                      },
+                                      "kind": "row"
+                                    }
+                                  },
+                                  "kind": "row"
+                                },
+                                "nestLevOneVal": "abc"
+                              },
+                              "kind": "row"
+                            },
+                            {
+                              "state": "null"
+                            }
+                          ]
+                        },
+                        "kind": "row"
+                      },
+                      "simpleTwo": 300
+                    },
+                    "kind": "row"
+                  },
+                  "nodefmapOne": {
+                    "fields": {
+                      "key2": "val2"
+                    },
+                    "kind": "row"
+                  },
+                  "objectOne": {
+                    "fields": {
+                      "arrayProperty": [
+                        10,
+                        20,
+                        30
+                      ],
+                      "indexed": [
+                        1,
+                        2
+                      ],
+                      "mapProperty": {
+                        "fields": {
+                          "xOne": "yOne",
+                          "xTwo": "yTwo"
+                        },
+                        "kind": "row"
+                      },
+                      "nested": {
+                        "fields": {
+                          "nestedNested": {
+                            "fields": {
+                              "nestedNestedValue": "nestedNestedValue"
+                            },
+                            "kind": "row"
+                          },
+                          "nestedValue": "nestedValue"
+                        },
+                        "kind": "row"
+                      },
+                      "simpleProperty": "simple"
+                    },
+                    "kind": "row"
+                  },
+                  "simpleOne": 10
+                },
+                "kind": "row"
+              },
+              "nodefmap": {
+                "fields": {
+                  "key1": "val1"
+                },
+                "kind": "row"
+              },
+              "object": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "simple": "abc"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nested-pojo",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "A1",
+              "a2": "val1",
+              "a3": {
+                "state": "null"
+              },
+              "a4": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              },
+              "b3": {
+                "state": "null"
+              },
+              "b4": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "d1": {
+                "state": "null"
+              },
+              "d2": {
+                "fields": {
+                  "array": [
+                    {
+                      "fields": {
+                        "mapprop": {
+                          "fields": {
+                            "0ma": {
+                              "fields": {
+                                "value": "0ma0"
+                              },
+                              "kind": "row"
+                            },
+                            "0mb": {
+                              "fields": {
+                                "value": "0ma1"
+                              },
+                              "kind": "row"
+                            }
+                          },
+                          "kind": "row"
+                        },
+                        "nestLevOneVal": "abc"
+                      },
+                      "kind": "row"
+                    },
+                    {
+                      "fields": {
+                        "mapprop": {
+                          "fields": {
+                            "1ma": {
+                              "fields": {
+                                "value": "1ma0"
+                              },
+                              "kind": "row"
+                            },
+                            "1mb": {
+                              "fields": {
+                                "value": "1ma1"
+                              },
+                              "kind": "row"
+                            }
+                          },
+                          "kind": "row"
+                        },
+                        "nestLevOneVal": "abc"
+                      },
+                      "kind": "row"
+                    },
+                    {
+                      "fields": {
+                        "mapprop": {
+                          "fields": {
+                            "2ma": {
+                              "fields": {
+                                "value": "valueOne"
+                              },
+                              "kind": "row"
+                            },
+                            "2mb": {
+                              "fields": {
+                                "value": "2ma1"
+                              },
+                              "kind": "row"
+                            }
+                          },
+                          "kind": "row"
+                        },
+                        "nestLevOneVal": "abc"
+                      },
+                      "kind": "row"
+                    },
+                    {
+                      "state": "null"
+                    }
+                  ],
+                  "indexed": [
+                    {
+                      "fields": {
+                        "mapprop": {
+                          "fields": {
+                            "0ma": {
+                              "fields": {
+                                "value": "0ma0"
+                              },
+                              "kind": "row"
+                            },
+                            "0mb": {
+                              "fields": {
+                                "value": "0ma1"
+                              },
+                              "kind": "row"
+                            }
+                          },
+                          "kind": "row"
+                        },
+                        "nestLevOneVal": "abc"
+                      },
+                      "kind": "row"
+                    },
+                    {
+                      "fields": {
+                        "mapprop": {
+                          "fields": {
+                            "1ma": {
+                              "fields": {
+                                "value": "1ma0"
+                              },
+                              "kind": "row"
+                            },
+                            "1mb": {
+                              "fields": {
+                                "value": "1ma1"
+                              },
+                              "kind": "row"
+                            }
+                          },
+                          "kind": "row"
+                        },
+                        "nestLevOneVal": "abc"
+                      },
+                      "kind": "row"
+                    },
+                    {
+                      "fields": {
+                        "mapprop": {
+                          "fields": {
+                            "2ma": {
+                              "fields": {
+                                "value": "valueOne"
+                              },
+                              "kind": "row"
+                            },
+                            "2mb": {
+                              "fields": {
+                                "value": "2ma1"
+                              },
+                              "kind": "row"
+                            }
+                          },
+                          "kind": "row"
+                        },
+                        "nestLevOneVal": "abc"
+                      },
+                      "kind": "row"
+                    },
+                    {
+                      "state": "null"
+                    }
+                  ]
+                },
+                "kind": "row"
+              },
+              "d3": {
+                "fields": {
+                  "key3": "val3"
+                },
+                "kind": "row"
+              },
+              "e1": {
+                "fields": {
+                  "simpleThree": 4000
+                },
+                "kind": "row"
+              },
+              "e2": 4000,
+              "e3": {
+                "state": "null"
+              },
+              "f1": "1ma0",
+              "f2": {
+                "state": "null"
+              },
+              "map": {
+                "fields": {
+                  "mapOne": {
+                    "fields": {
+                      "mapTwo": {
+                        "fields": {
+                          "simpleThree": 4000
+                        },
+                        "kind": "row"
+                      },
+                      "nodefmapTwo": {
+                        "fields": {
+                          "key3": "val3"
+                        },
+                        "kind": "row"
+                      },
+                      "objectTwo": {
+                        "fields": {
+                          "array": [
+                            {
+                              "fields": {
+                                "mapprop": {
+                                  "fields": {
+                                    "0ma": {
+                                      "fields": {
+                                        "value": "0ma0"
+                                      },
+                                      "kind": "row"
+                                    },
+                                    "0mb": {
+                                      "fields": {
+                                        "value": "0ma1"
+                                      },
+                                      "kind": "row"
+                                    }
+                                  },
+                                  "kind": "row"
+                                },
+                                "nestLevOneVal": "abc"
+                              },
+                              "kind": "row"
+                            },
+                            {
+                              "fields": {
+                                "mapprop": {
+                                  "fields": {
+                                    "1ma": {
+                                      "fields": {
+                                        "value": "1ma0"
+                                      },
+                                      "kind": "row"
+                                    },
+                                    "1mb": {
+                                      "fields": {
+                                        "value": "1ma1"
+                                      },
+                                      "kind": "row"
+                                    }
+                                  },
+                                  "kind": "row"
+                                },
+                                "nestLevOneVal": "abc"
+                              },
+                              "kind": "row"
+                            },
+                            {
+                              "fields": {
+                                "mapprop": {
+                                  "fields": {
+                                    "2ma": {
+                                      "fields": {
+                                        "value": "valueOne"
+                                      },
+                                      "kind": "row"
+                                    },
+                                    "2mb": {
+                                      "fields": {
+                                        "value": "2ma1"
+                                      },
+                                      "kind": "row"
+                                    }
+                                  },
+                                  "kind": "row"
+                                },
+                                "nestLevOneVal": "abc"
+                              },
+                              "kind": "row"
+                            },
+                            {
+                              "state": "null"
+                            }
+                          ],
+                          "indexed": [
+                            {
+                              "fields": {
+                                "mapprop": {
+                                  "fields": {
+                                    "0ma": {
+                                      "fields": {
+                                        "value": "0ma0"
+                                      },
+                                      "kind": "row"
+                                    },
+                                    "0mb": {
+                                      "fields": {
+                                        "value": "0ma1"
+                                      },
+                                      "kind": "row"
+                                    }
+                                  },
+                                  "kind": "row"
+                                },
+                                "nestLevOneVal": "abc"
+                              },
+                              "kind": "row"
+                            },
+                            {
+                              "fields": {
+                                "mapprop": {
+                                  "fields": {
+                                    "1ma": {
+                                      "fields": {
+                                        "value": "1ma0"
+                                      },
+                                      "kind": "row"
+                                    },
+                                    "1mb": {
+                                      "fields": {
+                                        "value": "1ma1"
+                                      },
+                                      "kind": "row"
+                                    }
+                                  },
+                                  "kind": "row"
+                                },
+                                "nestLevOneVal": "abc"
+                              },
+                              "kind": "row"
+                            },
+                            {
+                              "fields": {
+                                "mapprop": {
+                                  "fields": {
+                                    "2ma": {
+                                      "fields": {
+                                        "value": "valueOne"
+                                      },
+                                      "kind": "row"
+                                    },
+                                    "2mb": {
+                                      "fields": {
+                                        "value": "2ma1"
+                                      },
+                                      "kind": "row"
+                                    }
+                                  },
+                                  "kind": "row"
+                                },
+                                "nestLevOneVal": "abc"
+                              },
+                              "kind": "row"
+                            },
+                            {
+                              "state": "null"
+                            }
+                          ]
+                        },
+                        "kind": "row"
+                      }
+                    },
+                    "kind": "row"
+                  },
+                  "objectOne": {
+                    "state": "null"
+                  },
+                  "simpleOne": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              },
+              "nodefmap": {
+                "fields": {
+                  "key1": "val1"
+                },
+                "kind": "row"
+              },
+              "object": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "simple": "abc"
+            }
+          }
+        ]
+      },
+      {
+        "case": "is-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": true,
+              "b": false,
+              "c": true,
+              "d": true,
+              "e": true,
+              "f": true,
+              "g": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "is-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": true,
+              "b": false,
+              "c": false,
+              "d": true,
+              "e": true,
+              "f": true,
+              "g": false
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "event-map-nested-547",
+    "records": [
+      {
+        "case": "insert-into",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "mapTwo": {
+                    "fields": {
+                      "objectThree": {
+                        "fields": {
+                          "id": "B1"
+                        },
+                        "kind": "row"
+                      },
+                      "simpleThree": 4000
+                    },
+                    "kind": "row"
+                  },
+                  "nodefmapTwo": {
+                    "fields": {
+                      "key3": "val3"
+                    },
+                    "kind": "row"
+                  },
+                  "objectTwo": {
+                    "fields": {
+                      "array": [
+                        {
+                          "fields": {
+                            "mapprop": {
+                              "fields": {
+                                "0ma": {
+                                  "fields": {
+                                    "value": "0ma0"
+                                  },
+                                  "kind": "row"
+                                },
+                                "0mb": {
+                                  "fields": {
+                                    "value": "0ma1"
+                                  },
+                                  "kind": "row"
+                                }
+                              },
+                              "kind": "row"
+                            },
+                            "nestLevOneVal": "abc"
+                          },
+                          "kind": "row"
+                        },
+                        {
+                          "fields": {
+                            "mapprop": {
+                              "fields": {
+                                "1ma": {
+                                  "fields": {
+                                    "value": "1ma0"
+                                  },
+                                  "kind": "row"
+                                },
+                                "1mb": {
+                                  "fields": {
+                                    "value": "1ma1"
+                                  },
+                                  "kind": "row"
+                                }
+                              },
+                              "kind": "row"
+                            },
+                            "nestLevOneVal": "abc"
+                          },
+                          "kind": "row"
+                        },
+                        {
+                          "fields": {
+                            "mapprop": {
+                              "fields": {
+                                "2ma": {
+                                  "fields": {
+                                    "value": "valueOne"
+                                  },
+                                  "kind": "row"
+                                },
+                                "2mb": {
+                                  "fields": {
+                                    "value": "2ma1"
+                                  },
+                                  "kind": "row"
+                                }
+                              },
+                              "kind": "row"
+                            },
+                            "nestLevOneVal": "abc"
+                          },
+                          "kind": "row"
+                        },
+                        {
+                          "state": "null"
+                        }
+                      ],
+                      "indexed": [
+                        {
+                          "fields": {
+                            "mapprop": {
+                              "fields": {
+                                "0ma": {
+                                  "fields": {
+                                    "value": "0ma0"
+                                  },
+                                  "kind": "row"
+                                },
+                                "0mb": {
+                                  "fields": {
+                                    "value": "0ma1"
+                                  },
+                                  "kind": "row"
+                                }
+                              },
+                              "kind": "row"
+                            },
+                            "nestLevOneVal": "abc"
+                          },
+                          "kind": "row"
+                        },
+                        {
+                          "fields": {
+                            "mapprop": {
+                              "fields": {
+                                "1ma": {
+                                  "fields": {
+                                    "value": "1ma0"
+                                  },
+                                  "kind": "row"
+                                },
+                                "1mb": {
+                                  "fields": {
+                                    "value": "1ma1"
+                                  },
+                                  "kind": "row"
+                                }
+                              },
+                              "kind": "row"
+                            },
+                            "nestLevOneVal": "abc"
+                          },
+                          "kind": "row"
+                        },
+                        {
+                          "fields": {
+                            "mapprop": {
+                              "fields": {
+                                "2ma": {
+                                  "fields": {
+                                    "value": "valueOne"
+                                  },
+                                  "kind": "row"
+                                },
+                                "2mb": {
+                                  "fields": {
+                                    "value": "2ma1"
+                                  },
+                                  "kind": "row"
+                                }
+                              },
+                              "kind": "row"
+                            },
+                            "nestLevOneVal": "abc"
+                          },
+                          "kind": "row"
+                        },
+                        {
+                          "state": "null"
+                        }
+                      ]
+                    },
+                    "kind": "row"
+                  },
+                  "simpleTwo": 300
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "event-type",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nested-pojo",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "A1",
+              "a2": "val1",
+              "a3": {
+                "state": "null"
+              },
+              "a4": {
+                "state": "null"
+              },
+              "b1": {
+                "fields": {
+                  "arrayProperty": [
+                    10,
+                    20,
+                    30
+                  ],
+                  "indexed": [
+                    1,
+                    2
+                  ],
+                  "mapProperty": {
+                    "fields": {
+                      "xOne": "yOne",
+                      "xTwo": "yTwo"
+                    },
+                    "kind": "row"
+                  },
+                  "nested": {
+                    "fields": {
+                      "nestedNested": {
+                        "fields": {
+                          "nestedNestedValue": "nestedNestedValue"
+                        },
+                        "kind": "row"
+                      },
+                      "nestedValue": "nestedValue"
+                    },
+                    "kind": "row"
+                  },
+                  "simpleProperty": "simple"
+                },
+                "kind": "row"
+              },
+              "b2": 10,
+              "b3": "val2",
+              "b4": 300,
+              "c1": 2,
+              "c2": "nestedValue",
+              "d1": 300,
+              "d2": {
+                "fields": {
+                  "array": [
+                    {
+                      "fields": {
+                        "mapprop": {
+                          "fields": {
+                            "0ma": {
+                              "fields": {
+                                "value": "0ma0"
+                              },
+                              "kind": "row"
+                            },
+                            "0mb": {
+                              "fields": {
+                                "value": "0ma1"
+                              },
+                              "kind": "row"
+                            }
+                          },
+                          "kind": "row"
+                        },
+                        "nestLevOneVal": "abc"
+                      },
+                      "kind": "row"
+                    },
+                    {
+                      "fields": {
+                        "mapprop": {
+                          "fields": {
+                            "1ma": {
+                              "fields": {
+                                "value": "1ma0"
+                              },
+                              "kind": "row"
+                            },
+                            "1mb": {
+                              "fields": {
+                                "value": "1ma1"
+                              },
+                              "kind": "row"
+                            }
+                          },
+                          "kind": "row"
+                        },
+                        "nestLevOneVal": "abc"
+                      },
+                      "kind": "row"
+                    },
+                    {
+                      "fields": {
+                        "mapprop": {
+                          "fields": {
+                            "2ma": {
+                              "fields": {
+                                "value": "valueOne"
+                              },
+                              "kind": "row"
+                            },
+                            "2mb": {
+                              "fields": {
+                                "value": "2ma1"
+                              },
+                              "kind": "row"
+                            }
+                          },
+                          "kind": "row"
+                        },
+                        "nestLevOneVal": "abc"
+                      },
+                      "kind": "row"
+                    },
+                    {
+                      "state": "null"
+                    }
+                  ],
+                  "indexed": [
+                    {
+                      "fields": {
+                        "mapprop": {
+                          "fields": {
+                            "0ma": {
+                              "fields": {
+                                "value": "0ma0"
+                              },
+                              "kind": "row"
+                            },
+                            "0mb": {
+                              "fields": {
+                                "value": "0ma1"
+                              },
+                              "kind": "row"
+                            }
+                          },
+                          "kind": "row"
+                        },
+                        "nestLevOneVal": "abc"
+                      },
+                      "kind": "row"
+                    },
+                    {
+                      "fields": {
+                        "mapprop": {
+                          "fields": {
+                            "1ma": {
+                              "fields": {
+                                "value": "1ma0"
+                              },
+                              "kind": "row"
+                            },
+                            "1mb": {
+                              "fields": {
+                                "value": "1ma1"
+                              },
+                              "kind": "row"
+                            }
+                          },
+                          "kind": "row"
+                        },
+                        "nestLevOneVal": "abc"
+                      },
+                      "kind": "row"
+                    },
+                    {
+                      "fields": {
+                        "mapprop": {
+                          "fields": {
+                            "2ma": {
+                              "fields": {
+                                "value": "valueOne"
+                              },
+                              "kind": "row"
+                            },
+                            "2mb": {
+                              "fields": {
+                                "value": "2ma1"
+                              },
+                              "kind": "row"
+                            }
+                          },
+                          "kind": "row"
+                        },
+                        "nestLevOneVal": "abc"
+                      },
+                      "kind": "row"
+                    },
+                    {
+                      "state": "null"
+                    }
+                  ]
+                },
+                "kind": "row"
+              },
+              "d3": {
+                "fields": {
+                  "key3": "val3"
+                },
+                "kind": "row"
+              },
+              "e1": {
+                "fields": {
+                  "objectThree": {
+                    "fields": {
+                      "id": "B1"
+                    },
+                    "kind": "row"
+                  },
+                  "simpleThree": 4000
+                },
+                "kind": "row"
+              },
+              "e2": 4000,
+              "e3": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "f1": "1ma0",
+              "f2": "B1",
+              "map": {
+                "fields": {
+                  "mapOne": {
+                    "fields": {
+                      "mapTwo": {
+                        "fields": {
+                          "objectThree": {
+                            "fields": {
+                              "id": "B1"
+                            },
+                            "kind": "row"
+                          },
+                          "simpleThree": 4000
+                        },
+                        "kind": "row"
+                      },
+                      "nodefmapTwo": {
+                        "fields": {
+                          "key3": "val3"
+                        },
+                        "kind": "row"
+                      },
+                      "objectTwo": {
+                        "fields": {
+                          "array": [
+                            {
+                              "fields": {
+                                "mapprop": {
+                                  "fields": {
+                                    "0ma": {
+                                      "fields": {
+                                        "value": "0ma0"
+                                      },
+                                      "kind": "row"
+                                    },
+                                    "0mb": {
+                                      "fields": {
+                                        "value": "0ma1"
+                                      },
+                                      "kind": "row"
+                                    }
+                                  },
+                                  "kind": "row"
+                                },
+                                "nestLevOneVal": "abc"
+                              },
+                              "kind": "row"
+                            },
+                            {
+                              "fields": {
+                                "mapprop": {
+                                  "fields": {
+                                    "1ma": {
+                                      "fields": {
+                                        "value": "1ma0"
+                                      },
+                                      "kind": "row"
+                                    },
+                                    "1mb": {
+                                      "fields": {
+                                        "value": "1ma1"
+                                      },
+                                      "kind": "row"
+                                    }
+                                  },
+                                  "kind": "row"
+                                },
+                                "nestLevOneVal": "abc"
+                              },
+                              "kind": "row"
+                            },
+                            {
+                              "fields": {
+                                "mapprop": {
+                                  "fields": {
+                                    "2ma": {
+                                      "fields": {
+                                        "value": "valueOne"
+                                      },
+                                      "kind": "row"
+                                    },
+                                    "2mb": {
+                                      "fields": {
+                                        "value": "2ma1"
+                                      },
+                                      "kind": "row"
+                                    }
+                                  },
+                                  "kind": "row"
+                                },
+                                "nestLevOneVal": "abc"
+                              },
+                              "kind": "row"
+                            },
+                            {
+                              "state": "null"
+                            }
+                          ],
+                          "indexed": [
+                            {
+                              "fields": {
+                                "mapprop": {
+                                  "fields": {
+                                    "0ma": {
+                                      "fields": {
+                                        "value": "0ma0"
+                                      },
+                                      "kind": "row"
+                                    },
+                                    "0mb": {
+                                      "fields": {
+                                        "value": "0ma1"
+                                      },
+                                      "kind": "row"
+                                    }
+                                  },
+                                  "kind": "row"
+                                },
+                                "nestLevOneVal": "abc"
+                              },
+                              "kind": "row"
+                            },
+                            {
+                              "fields": {
+                                "mapprop": {
+                                  "fields": {
+                                    "1ma": {
+                                      "fields": {
+                                        "value": "1ma0"
+                                      },
+                                      "kind": "row"
+                                    },
+                                    "1mb": {
+                                      "fields": {
+                                        "value": "1ma1"
+                                      },
+                                      "kind": "row"
+                                    }
+                                  },
+                                  "kind": "row"
+                                },
+                                "nestLevOneVal": "abc"
+                              },
+                              "kind": "row"
+                            },
+                            {
+                              "fields": {
+                                "mapprop": {
+                                  "fields": {
+                                    "2ma": {
+                                      "fields": {
+                                        "value": "valueOne"
+                                      },
+                                      "kind": "row"
+                                    },
+                                    "2mb": {
+                                      "fields": {
+                                        "value": "2ma1"
+                                      },
+                                      "kind": "row"
+                                    }
+                                  },
+                                  "kind": "row"
+                                },
+                                "nestLevOneVal": "abc"
+                              },
+                              "kind": "row"
+                            },
+                            {
+                              "state": "null"
+                            }
+                          ]
+                        },
+                        "kind": "row"
+                      },
+                      "simpleTwo": 300
+                    },
+                    "kind": "row"
+                  },
+                  "nodefmapOne": {
+                    "fields": {
+                      "key2": "val2"
+                    },
+                    "kind": "row"
+                  },
+                  "objectOne": {
+                    "fields": {
+                      "arrayProperty": [
+                        10,
+                        20,
+                        30
+                      ],
+                      "indexed": [
+                        1,
+                        2
+                      ],
+                      "mapProperty": {
+                        "fields": {
+                          "xOne": "yOne",
+                          "xTwo": "yTwo"
+                        },
+                        "kind": "row"
+                      },
+                      "nested": {
+                        "fields": {
+                          "nestedNested": {
+                            "fields": {
+                              "nestedNestedValue": "nestedNestedValue"
+                            },
+                            "kind": "row"
+                          },
+                          "nestedValue": "nestedValue"
+                        },
+                        "kind": "row"
+                      },
+                      "simpleProperty": "simple"
+                    },
+                    "kind": "row"
+                  },
+                  "simpleOne": 10
+                },
+                "kind": "row"
+              },
+              "nodefmap": {
+                "fields": {
+                  "key1": "val1"
+                },
+                "kind": "row"
+              },
+              "object": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "simple": "abc"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nested-pojo",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "A1",
+              "a2": "val1",
+              "a3": {
+                "state": "null"
+              },
+              "a4": {
+                "state": "null"
+              },
+              "b1": {
+                "state": "null"
+              },
+              "b2": {
+                "state": "null"
+              },
+              "b3": {
+                "state": "null"
+              },
+              "b4": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "d1": {
+                "state": "null"
+              },
+              "d2": {
+                "fields": {
+                  "array": [
+                    {
+                      "fields": {
+                        "mapprop": {
+                          "fields": {
+                            "0ma": {
+                              "fields": {
+                                "value": "0ma0"
+                              },
+                              "kind": "row"
+                            },
+                            "0mb": {
+                              "fields": {
+                                "value": "0ma1"
+                              },
+                              "kind": "row"
+                            }
+                          },
+                          "kind": "row"
+                        },
+                        "nestLevOneVal": "abc"
+                      },
+                      "kind": "row"
+                    },
+                    {
+                      "fields": {
+                        "mapprop": {
+                          "fields": {
+                            "1ma": {
+                              "fields": {
+                                "value": "1ma0"
+                              },
+                              "kind": "row"
+                            },
+                            "1mb": {
+                              "fields": {
+                                "value": "1ma1"
+                              },
+                              "kind": "row"
+                            }
+                          },
+                          "kind": "row"
+                        },
+                        "nestLevOneVal": "abc"
+                      },
+                      "kind": "row"
+                    },
+                    {
+                      "fields": {
+                        "mapprop": {
+                          "fields": {
+                            "2ma": {
+                              "fields": {
+                                "value": "valueOne"
+                              },
+                              "kind": "row"
+                            },
+                            "2mb": {
+                              "fields": {
+                                "value": "2ma1"
+                              },
+                              "kind": "row"
+                            }
+                          },
+                          "kind": "row"
+                        },
+                        "nestLevOneVal": "abc"
+                      },
+                      "kind": "row"
+                    },
+                    {
+                      "state": "null"
+                    }
+                  ],
+                  "indexed": [
+                    {
+                      "fields": {
+                        "mapprop": {
+                          "fields": {
+                            "0ma": {
+                              "fields": {
+                                "value": "0ma0"
+                              },
+                              "kind": "row"
+                            },
+                            "0mb": {
+                              "fields": {
+                                "value": "0ma1"
+                              },
+                              "kind": "row"
+                            }
+                          },
+                          "kind": "row"
+                        },
+                        "nestLevOneVal": "abc"
+                      },
+                      "kind": "row"
+                    },
+                    {
+                      "fields": {
+                        "mapprop": {
+                          "fields": {
+                            "1ma": {
+                              "fields": {
+                                "value": "1ma0"
+                              },
+                              "kind": "row"
+                            },
+                            "1mb": {
+                              "fields": {
+                                "value": "1ma1"
+                              },
+                              "kind": "row"
+                            }
+                          },
+                          "kind": "row"
+                        },
+                        "nestLevOneVal": "abc"
+                      },
+                      "kind": "row"
+                    },
+                    {
+                      "fields": {
+                        "mapprop": {
+                          "fields": {
+                            "2ma": {
+                              "fields": {
+                                "value": "valueOne"
+                              },
+                              "kind": "row"
+                            },
+                            "2mb": {
+                              "fields": {
+                                "value": "2ma1"
+                              },
+                              "kind": "row"
+                            }
+                          },
+                          "kind": "row"
+                        },
+                        "nestLevOneVal": "abc"
+                      },
+                      "kind": "row"
+                    },
+                    {
+                      "state": "null"
+                    }
+                  ]
+                },
+                "kind": "row"
+              },
+              "d3": {
+                "fields": {
+                  "key3": "val3"
+                },
+                "kind": "row"
+              },
+              "e1": {
+                "fields": {
+                  "simpleThree": 4000
+                },
+                "kind": "row"
+              },
+              "e2": 4000,
+              "e3": {
+                "state": "null"
+              },
+              "f1": "1ma0",
+              "f2": {
+                "state": "null"
+              },
+              "map": {
+                "fields": {
+                  "mapOne": {
+                    "fields": {
+                      "mapTwo": {
+                        "fields": {
+                          "simpleThree": 4000
+                        },
+                        "kind": "row"
+                      },
+                      "nodefmapTwo": {
+                        "fields": {
+                          "key3": "val3"
+                        },
+                        "kind": "row"
+                      },
+                      "objectTwo": {
+                        "fields": {
+                          "array": [
+                            {
+                              "fields": {
+                                "mapprop": {
+                                  "fields": {
+                                    "0ma": {
+                                      "fields": {
+                                        "value": "0ma0"
+                                      },
+                                      "kind": "row"
+                                    },
+                                    "0mb": {
+                                      "fields": {
+                                        "value": "0ma1"
+                                      },
+                                      "kind": "row"
+                                    }
+                                  },
+                                  "kind": "row"
+                                },
+                                "nestLevOneVal": "abc"
+                              },
+                              "kind": "row"
+                            },
+                            {
+                              "fields": {
+                                "mapprop": {
+                                  "fields": {
+                                    "1ma": {
+                                      "fields": {
+                                        "value": "1ma0"
+                                      },
+                                      "kind": "row"
+                                    },
+                                    "1mb": {
+                                      "fields": {
+                                        "value": "1ma1"
+                                      },
+                                      "kind": "row"
+                                    }
+                                  },
+                                  "kind": "row"
+                                },
+                                "nestLevOneVal": "abc"
+                              },
+                              "kind": "row"
+                            },
+                            {
+                              "fields": {
+                                "mapprop": {
+                                  "fields": {
+                                    "2ma": {
+                                      "fields": {
+                                        "value": "valueOne"
+                                      },
+                                      "kind": "row"
+                                    },
+                                    "2mb": {
+                                      "fields": {
+                                        "value": "2ma1"
+                                      },
+                                      "kind": "row"
+                                    }
+                                  },
+                                  "kind": "row"
+                                },
+                                "nestLevOneVal": "abc"
+                              },
+                              "kind": "row"
+                            },
+                            {
+                              "state": "null"
+                            }
+                          ],
+                          "indexed": [
+                            {
+                              "fields": {
+                                "mapprop": {
+                                  "fields": {
+                                    "0ma": {
+                                      "fields": {
+                                        "value": "0ma0"
+                                      },
+                                      "kind": "row"
+                                    },
+                                    "0mb": {
+                                      "fields": {
+                                        "value": "0ma1"
+                                      },
+                                      "kind": "row"
+                                    }
+                                  },
+                                  "kind": "row"
+                                },
+                                "nestLevOneVal": "abc"
+                              },
+                              "kind": "row"
+                            },
+                            {
+                              "fields": {
+                                "mapprop": {
+                                  "fields": {
+                                    "1ma": {
+                                      "fields": {
+                                        "value": "1ma0"
+                                      },
+                                      "kind": "row"
+                                    },
+                                    "1mb": {
+                                      "fields": {
+                                        "value": "1ma1"
+                                      },
+                                      "kind": "row"
+                                    }
+                                  },
+                                  "kind": "row"
+                                },
+                                "nestLevOneVal": "abc"
+                              },
+                              "kind": "row"
+                            },
+                            {
+                              "fields": {
+                                "mapprop": {
+                                  "fields": {
+                                    "2ma": {
+                                      "fields": {
+                                        "value": "valueOne"
+                                      },
+                                      "kind": "row"
+                                    },
+                                    "2mb": {
+                                      "fields": {
+                                        "value": "2ma1"
+                                      },
+                                      "kind": "row"
+                                    }
+                                  },
+                                  "kind": "row"
+                                },
+                                "nestLevOneVal": "abc"
+                              },
+                              "kind": "row"
+                            },
+                            {
+                              "state": "null"
+                            }
+                          ]
+                        },
+                        "kind": "row"
+                      }
+                    },
+                    "kind": "row"
+                  },
+                  "objectOne": {
+                    "state": "null"
+                  },
+                  "simpleOne": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              },
+              "nodefmap": {
+                "fields": {
+                  "key1": "val1"
+                },
+                "kind": "row"
+              },
+              "object": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "simple": "abc"
+            }
+          }
+        ]
+      },
+      {
+        "case": "is-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": true,
+              "b": false,
+              "c": true,
+              "d": true,
+              "e": true,
+              "f": true,
+              "g": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "is-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": true,
+              "b": false,
+              "c": false,
+              "d": true,
+              "e": true,
+              "f": true,
+              "g": false
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

@@ -5616,13 +5616,18 @@
    "summary": "Preconfigured Map event types: three-level map-of-maps navigation into a bean payload, type metadata introspection, bean fragment navigation (nested/indexed/nestednested) over a Map window, and raw extra-key-free HashMap sends against the declared type",
    "javaRefs": [
     "EventMapCore",
-    "EventMapProperties"
+    "EventMapProperties",
+    "EventMapNestedInsertInto",
+    "EventMapNestedEventType",
+    "EventMapNestedNestedPojo",
+    "EventMapNestedIsExists"
    ],
    "goRefs": [
     "internal/app/parity/event_map_core.go",
     "internal/app/parity/event_map_properties.go",
     "internal/app/parity/run_test.go",
-    "internal/esper/runtime.go"
+    "internal/esper/runtime.go",
+    "internal/app/parity/event_map_nested_547.go"
    ],
    "phase": 3,
    "status": "differential-verified",
@@ -5643,7 +5648,11 @@
     "java-runtime-b9ad55d94a0fae4f6aef",
     "java-runtime-baefe25be71d54724d17",
     "java-runtime-cb09bcf76eee12b3c551",
-    "java-runtime-cec11239155e518fa819"
+    "java-runtime-cec11239155e518fa819",
+    "java-runtime-7eef27d1a8de16f61ff7",
+    "java-runtime-17f60eacc6ec6d23d967",
+    "java-runtime-cf3abd23bf728441a001",
+    "java-runtime-68a5f852752eba589f5b"
    ]
   },
   {
@@ -50461,6 +50470,68 @@
     "java-runtime-f47d81ef0d1a48b66476",
     "java-runtime-539c60ae3344b3001b44"
    ]
+  },
+  {
+   "id": "case.event-map-nested",
+   "javaRuntimeIds": [
+    "java-runtime-7eef27d1a8de16f61ff7",
+    "java-runtime-17f60eacc6ec6d23d967",
+    "java-runtime-cf3abd23bf728441a001",
+    "java-runtime-68a5f852752eba589f5b"
+   ],
+   "javaStaticIds": [
+    "java-26557b255ea0dcbd9d2a",
+    "java-26557b255ea0dcbd9d2a",
+    "java-26557b255ea0dcbd9d2a",
+    "java-26557b255ea0dcbd9d2a"
+   ],
+   "javaNames": [
+    "EventMapNestedInsertInto",
+    "EventMapNestedEventType",
+    "EventMapNestedNestedPojo",
+    "EventMapNestedIsExists"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/map/EventMapNested.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/map/EventMapNested.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/map/EventMapNested.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/map/EventMapNested.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunEventMapNested547DirectReplay",
+    "internal/app/parity/run_test.go:TestRunEventMapNested547DiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunEventMapNested547CheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunEventMapNested547DiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunEventMapNested547RejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunEventMapNested547RuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "event",
+    "map",
+    "nested",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/event-map-nested-547.json",
+    "testdata/parity/event-map-nested-547.trace.json",
+    "testdata/parity/event-map-nested-547.go.trace.json",
+    "testdata/parity/event-map-nested-547.evidence.json",
+    "tools/java-oracle/EventMapNested547ScenarioOracle.java",
+    "tools/java-oracle/run-event-map-nested-547.sh"
+   ],
+   "notes": "EventMapNested.java complete born-differential (4/4 executions, all SERDEREQUIRED, static java-26557b255ea0dcbd9d2a): pre-registered NestedMap type mirroring TestSuiteEventMap.configure (nested map L1/L2/L3 + bean fragments SupportBean_A/ComplexProps/CombinedProps/B). InsertInto: @public path-scoped insert into MyStream + length(5) + fragment identity. EventType: metadata marker (PropertyNames any-order, per-prop types, dotted getPropertyType null). NestedPojo: 22-column projection (dotted/?-optional/indexed[1]/nested.nestedValue/mapped('1ma').value/fragment cols) over full+partial sends \u2014 `?` never throws, f1 '1ma0' survives partial, 4000 stays long. IsExists: exists() truth matrix {t,f,t,t,t,t,t} then {t,f,f,t,t,t,f}. Java/Go 6 records each, 0 differences. Scenario testdata/parity/event-map-nested-547.json; Java trace via tools/java-oracle/run-event-map-nested-547.sh at commit 9e1b9f1cc9117fea4bf33ab043762c045d73839c.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-7eef27d1a8de16f61ff7",
+    "java-runtime-17f60eacc6ec6d23d967",
+    "java-runtime-cf3abd23bf728441a001",
+    "java-runtime-68a5f852752eba589f5b"
+   ]
   }
  ],
  "mappings": [
@@ -53919,13 +53990,17 @@
   {
    "capabilityId": "event.property-access-render",
    "caseId": "case.event-render"
+  },
+  {
+   "capabilityId": "event.map-core",
+   "caseId": "case.event-map-nested"
   }
  ],
  "summary": {
-  "inventoriedCases": 777,
-  "implementedCases": 775,
-  "differentialVerifiedCases": 400,
-  "differentialVerifiedRuntimeIds": 1597,
+  "inventoriedCases": 778,
+  "implementedCases": 776,
+  "differentialVerifiedCases": 401,
+  "differentialVerifiedRuntimeIds": 1601,
   "intentionallyDifferentCases": 36,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -53935,13 +54010,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4135,
-  "referencedJavaRuntimeIds": 3695,
+  "runtimeAssociationCount": 4139,
+  "referencedJavaRuntimeIds": 3699,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 441,
+  "unreferencedJavaRuntimeIds": 437,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 777,
+  "totalCases": 778,
   "totalCapabilities": 126
  }
 }

@@ -91,6 +91,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include event-infra-getter-nested and event-infra-getter-nested-diff")
 		fmt.Fprintln(stderr, "runner modes include event-infra-545 and event-infra-545-diff")
 		fmt.Fprintln(stderr, "runner modes include event-render-546 and event-render-546-diff")
+		fmt.Fprintln(stderr, "runner modes include event-map-nested-547 and event-map-nested-547-diff")
 		fmt.Fprintln(stderr, "runner modes include event-infra-property-dynamic and event-infra-property-dynamic-diff")
 		fmt.Fprintln(stderr, "runner modes include event-infra-property-non-dynamic and event-infra-property-non-dynamic-diff")
 		fmt.Fprintln(stderr, "runner modes include epl-other-istream-rstream-keywords and epl-other-istream-rstream-keywords-diff")
@@ -484,6 +485,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadEventInfra545Scenario(file)
 	} else if *mode == "event-render-546" || *mode == "event-render-546-diff" {
 		scenario, err = loadEventRender546Scenario(file)
+	} else if *mode == "event-map-nested-547" || *mode == "event-map-nested-547-diff" {
+		scenario, err = loadEventMapNested547Scenario(file)
 	} else if *mode == "event-infra-property-dynamic" || *mode == "event-infra-property-dynamic-diff" {
 		scenario, err = loadEventInfraPropertyDynamicScenario(file)
 	} else if *mode == "event-infra-property-non-dynamic" || *mode == "event-infra-property-non-dynamic-diff" {
@@ -4890,6 +4893,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, eventRender546JavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, eventRender546JavaSources),
 				splitMetadata(*javaExecutions, eventRender546JavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "event-map-nested-547" || *mode == "event-map-nested-547-diff" {
+		trace, err := runEventMapNested547Scenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "event-map-nested-547-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, eventMapNested547JavaCommit,
+				splitMetadata(*javaRuntimeIDs, eventMapNested547JavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, eventMapNested547JavaSources),
+				splitMetadata(*javaExecutions, eventMapNested547JavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
