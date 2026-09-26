@@ -1,0 +1,3647 @@
+{
+  "cases": [
+    {
+      "case": "indexed-key-expr",
+      "epl": "@name('s0') select * from MyIndexMappedSamplerBean",
+      "executionName": "EventInfraPropertyIndexedKeyExpr",
+      "flags": [],
+      "observation": "six iterations incl. SupportBean {1,2}-wrapper and mapinner/oainner nested-array elements; getGetterIndexed/getGetterMapped probes pin 2 / mapinner[1] / oainner[1] and assertNull on undeclared getters",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-f5d82c0cf0cf2516d0ef"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "epl": "create constant variable int offsetNum = 0;@name('s0') select indexed(offsetNum+0) as c0, indexed(offsetNum+1) as c1 from LocalEvent as e;\n",
+      "executionName": "EventInfraPropertyIndexedRuntimeIndex",
+      "flags": [],
+      "observation": "select indexed(offsetNum+0)/(offsetNum+1) with compile-time constant over six underlyings; sends a,b string arrays",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-10ce593e8d5ae6a9dd89"
+    },
+    {
+      "case": "mapped-indexed",
+      "epl": "@name('s0') select * from MyIMEvent",
+      "executionName": "EventInfraPropertyMappedIndexed",
+      "flags": [],
+      "observation": "select-* plus event-type valid/invalid property assertions and mapped('k1')/indexed[1] getter probes over six underlyings; mapped('a') is Object on untyped-map underlyings, String on bean/avro",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-b25d2dc5c7eb2c968105"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "epl": "create constant variable string keyChar = 'a';@name('s0') select mapped(keyChar||'1') as c0, mapped(keyChar||'2') as c1 from LocalEvent as e;\n",
+      "executionName": "EventInfraPropertyMappedRuntimeKey",
+      "flags": [],
+      "observation": "select mapped(keyChar||'1'/'2') with compile-time constant over six underlyings; sends a1:x a2:y maps",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-c4f7fe6163eff7d35461"
+    },
+    {
+      "case": "nested-indexed",
+      "epl": "@name('s0') select l1[0].lvl1 as c0, exists(l1[0].lvl1) as exists_c0, l1[0].l2[0].lvl2 as c1, exists(l1[0].l2[0].lvl2) as exists_c1, l1[0].l2[0].l3[0].lvl3 as c2, exists(l1[0].l2[0].l3[0].lvl3) as exists_c2, l1[0].l2[0].l3[0].l4[0].lvl4 as c3, exists(l1[0].l2[0].l3[0].l4[0].lvl4) as exists_c3 from InfraNestedIndexPropTop",
+      "executionName": "EventInfraPropertyNestedIndexed",
+      "flags": [],
+      "observation": "four-level l1[0]..l4[0].lvl4 indexed projections plus beanNav value/fragment/invalid probes over seven underlyings; XML sends the myevent attribute document; types persist between underlyings",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-594a57ed26499f1ccd30"
+    },
+    {
+      "case": "nested-escaped",
+      "epl": "@name('s0') select lvl1.lvl2.`vlvl2` as c0, lvl1.lvl2.lvl3.`vlvl3` as c1, `lvl1`.`lvl2`.`lvl3`.`vlvl3` as c2, lvl1.lvl2.`vlvl2dyn`? as c3  from BeanLvl0",
+      "executionName": "EventInfraPropertyNestedNestedEscaped",
+      "flags": [],
+      "observation": "one five-type schema module then per-type select-* getter probes (incl. escaped backtick paths and dynamic lvl1.lvl2.`vlvl2dyn`?) and the escaped c0..c3 projection",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-0b17042e1ee4d75b7007"
+    },
+    {
+      "case": "nested-simple",
+      "epl": "@name('s0') select l1.lvl1 as c0, exists(l1.lvl1) as exists_c0, l1.l2.lvl2 as c1, exists(l1.l2.lvl2) as exists_c1, l1.l2.l3.lvl3 as c2, exists(l1.l2.l3.lvl3) as exists_c2, l1.l2.l3.l4.lvl4 as c3, exists(l1.l2.l3.l4.lvl4) as exists_c3 from InfraNestedSimplePropTop",
+      "executionName": "EventInfraPropertyNestedSimple",
+      "flags": [],
+      "observation": "four-level l1..l4 nested-object projections plus beanNav probes (l1.l2 fragment asserted twice per Java) over seven underlyings; types persist between underlyings",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-848063976a9d6485ec20"
+    }
+  ],
+  "description": "EventInfraProperty* non-dynamic property slice (all ord 0, no flags): indexed-key-expr replays getGetterIndexed/getGetterMapped probes over six iterations including a select-{1,2}-wrapper SupportBean and a mapinner/oainner nested-array element; indexed-runtime-index selects indexed(offsetNum+0)/(offsetNum+1) with a compile-time constant; mapped-indexed probes mapped('k1') and indexed[1] plus event-type assertions over six underlyings; mapped-runtime-key selects mapped(keyChar||'1'/'2') with a compile-time constant; nested-indexed and nested-simple replay four-level l1..l4 indexed/nested projections with exists() columns and beanNav fragment/invalid probes over seven underlyings (XML sends the myevent document); nested-escaped deploys one five-type schema module then replays select-* getter probes and the backtick-escaped projection incl. the dynamic lvl1.lvl2.`vlvl2dyn`? tail per underlying. Java sources are the seven sibling files under suite/event/infra (pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c).",
+  "id": "event-infra-property-non-dynamic",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaFlags": null,
+  "javaNames": [
+    "EventInfraPropertyIndexedKeyExpr",
+    "EventInfraPropertyIndexedRuntimeIndex",
+    "EventInfraPropertyMappedIndexed",
+    "EventInfraPropertyMappedRuntimeKey",
+    "EventInfraPropertyNestedIndexed",
+    "EventInfraPropertyNestedNestedEscaped",
+    "EventInfraPropertyNestedSimple"
+  ],
+  "javaRuntimes": [
+    "java-runtime-f5d82c0cf0cf2516d0ef",
+    "java-runtime-10ce593e8d5ae6a9dd89",
+    "java-runtime-b25d2dc5c7eb2c968105",
+    "java-runtime-c4f7fe6163eff7d35461",
+    "java-runtime-594a57ed26499f1ccd30",
+    "java-runtime-0b17042e1ee4d75b7007",
+    "java-runtime-848063976a9d6485ec20"
+  ],
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra",
+  "javaStaticIds": [
+    "java-461ebcf502cbdf9ba15c",
+    "java-ed0cc8c7b0867c0cd502",
+    "java-287c4bf86e9464e7b595",
+    "java-899877f666cfc36adcb1",
+    "java-ff678fbbd673309b12b2",
+    "java-2d629e45d1948a6770ee",
+    "java-eb62cc47423e42ec7671"
+  ],
+  "steps": [
+    {
+      "case": "indexed-key-expr",
+      "op": "case"
+    },
+    {
+      "case": "indexed-key-expr",
+      "epl": "@public create objectarray schema OAEventInner(p0 string);\n@buseventtype @public create objectarray schema OAEvent(intarray int[], oainner OAEventInner[]);\n",
+      "eventType": "OAEvent",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "indexed-key-expr",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "indexed-key-expr",
+      "epl": "@name('s0') select * from OAEvent;\n",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "indexed-key-expr",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "indexed-key-expr",
+      "eventType": "OAEvent",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          [
+            1,
+            2
+          ],
+          [
+            [
+              "A"
+            ],
+            [
+              "B"
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "case": "indexed-key-expr",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "indexed-key-expr",
+      "epl": "create schema MapEventInner(p0 string);\n@public @buseventtype create schema MapEvent(intarray int[], mapinner MapEventInner[]);\n",
+      "eventType": "MapEvent",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "indexed-key-expr",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "indexed-key-expr",
+      "epl": "@name('s0') select * from MapEvent;\n",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "indexed-key-expr",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "indexed-key-expr",
+      "eventType": "MapEvent",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "intarray": [
+          1,
+          2
+        ],
+        "mapinner": [
+          {
+            "p0": "A"
+          },
+          {
+            "p0": "B"
+          }
+        ]
+      }
+    },
+    {
+      "case": "indexed-key-expr",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "indexed-key-expr",
+      "epl": "",
+      "eventType": "SupportBean",
+      "mode": "wrapper",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "indexed-key-expr",
+      "epl": "@name('s0') select {1, 2} as arr, *, Collections.singletonMap('A', 2) as mapped from SupportBean",
+      "mode": "wrapper",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "indexed-key-expr",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "indexed-key-expr",
+      "eventType": "SupportBean",
+      "mode": "wrapper",
+      "op": "send",
+      "payload": {
+        "variant": "default"
+      }
+    },
+    {
+      "case": "indexed-key-expr",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "indexed-key-expr",
+      "epl": "@public @buseventtype create schema MyIndexMappedSamplerBean as com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyIndexedKeyExpr$MyIndexMappedSamplerBean",
+      "eventType": "MyIndexMappedSamplerBean",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "indexed-key-expr",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "indexed-key-expr",
+      "epl": "@name('s0') select * from MyIndexMappedSamplerBean",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "indexed-key-expr",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "indexed-key-expr",
+      "eventType": "MyIndexMappedSamplerBean",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "default"
+      }
+    },
+    {
+      "case": "indexed-key-expr",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "indexed-key-expr",
+      "epl": "@public @buseventtype create json schema JsonSchema(indexed int[], mapped java.util.Map);\n",
+      "eventType": "JsonSchema",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "indexed-key-expr",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "indexed-key-expr",
+      "epl": "@name('s0') select * from JsonSchema;\n",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "indexed-key-expr",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "indexed-key-expr",
+      "eventType": "JsonSchema",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "indexed": [
+          1,
+          2
+        ],
+        "mapped": {
+          "keyOne": 20
+        }
+      }
+    },
+    {
+      "case": "indexed-key-expr",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "indexed-key-expr",
+      "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyIndexedKeyExpr$MyLocalJsonProvided') @public @buseventtype create json schema JsonSchema();\n",
+      "eventType": "JsonSchema",
+      "mode": "json-provided",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "indexed-key-expr",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "indexed-key-expr",
+      "epl": "@name('s0') select * from JsonSchema;\n",
+      "mode": "json-provided",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "indexed-key-expr",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "indexed-key-expr",
+      "eventType": "JsonSchema",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "indexed": [
+          1,
+          2
+        ],
+        "mapped": {
+          "keyOne": 20
+        }
+      }
+    },
+    {
+      "case": "indexed-key-expr",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "op": "case"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "epl": "@public @buseventtype create schema LocalEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyIndexedRuntimeIndex$LocalEvent;\n",
+      "eventType": "LocalEvent",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "epl": "create constant variable int offsetNum = 0;@name('s0') select indexed(offsetNum+0) as c0, indexed(offsetNum+1) as c1 from LocalEvent as e;\n",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "eventType": "LocalEvent",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "indexed": [
+          "a",
+          "b"
+        ]
+      }
+    },
+    {
+      "case": "indexed-runtime-index",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "epl": "@public @buseventtype create schema LocalEvent(indexed string[]);\n",
+      "eventType": "LocalEvent",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "epl": "create constant variable int offsetNum = 0;@name('s0') select indexed(offsetNum+0) as c0, indexed(offsetNum+1) as c1 from LocalEvent as e;\n",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "eventType": "LocalEvent",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "indexed": [
+          "a",
+          "b"
+        ]
+      }
+    },
+    {
+      "case": "indexed-runtime-index",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "epl": "@public @buseventtype create objectarray schema LocalEvent(indexed string[]);\n",
+      "eventType": "LocalEvent",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "epl": "create constant variable int offsetNum = 0;@name('s0') select indexed(offsetNum+0) as c0, indexed(offsetNum+1) as c1 from LocalEvent as e;\n",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "eventType": "LocalEvent",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          [
+            "a",
+            "b"
+          ]
+        ]
+      }
+    },
+    {
+      "case": "indexed-runtime-index",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "epl": "@public @buseventtype create json schema LocalEvent(indexed string[]);\n",
+      "eventType": "LocalEvent",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "epl": "create constant variable int offsetNum = 0;@name('s0') select indexed(offsetNum+0) as c0, indexed(offsetNum+1) as c1 from LocalEvent as e;\n",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "eventType": "LocalEvent",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "indexed": [
+          "a",
+          "b"
+        ]
+      }
+    },
+    {
+      "case": "indexed-runtime-index",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyIndexedRuntimeIndex$MyLocalJsonProvided') @public @buseventtype create json schema LocalEvent();\n",
+      "eventType": "LocalEvent",
+      "mode": "json-provided",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "epl": "create constant variable int offsetNum = 0;@name('s0') select indexed(offsetNum+0) as c0, indexed(offsetNum+1) as c1 from LocalEvent as e;\n",
+      "mode": "json-provided",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "eventType": "LocalEvent",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "indexed": [
+          "a",
+          "b"
+        ]
+      }
+    },
+    {
+      "case": "indexed-runtime-index",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "epl": "@name('schema') @public @buseventtype create avro schema LocalEvent(indexed string[]);\n",
+      "eventType": "LocalEvent",
+      "mode": "avro",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "epl": "create constant variable int offsetNum = 0;@name('s0') select indexed(offsetNum+0) as c0, indexed(offsetNum+1) as c1 from LocalEvent as e;\n",
+      "mode": "avro",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "indexed-runtime-index",
+      "eventType": "LocalEvent",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "indexed": [
+          "a",
+          "b"
+        ]
+      }
+    },
+    {
+      "case": "indexed-runtime-index",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "mapped-indexed",
+      "op": "case"
+    },
+    {
+      "case": "mapped-indexed",
+      "epl": "",
+      "eventType": "MyIMEvent",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "mapped-indexed",
+      "eventType": "MyIMEvent",
+      "op": "types",
+      "propertyOrder": [
+        "indexed",
+        "indexed[0]",
+        "mapped",
+        "mapped('a')",
+        "xxxx",
+        "myString[0]",
+        "indexed('a')",
+        "indexed.x",
+        "mapped[0]",
+        "mapped.x"
+      ],
+      "propertyTypes": {
+        "indexed": "String[]",
+        "indexed('a')": "\u003cinvalid\u003e",
+        "indexed.x": "\u003cinvalid\u003e",
+        "indexed[0]": "String",
+        "mapped": "Map",
+        "mapped('a')": "String",
+        "mapped.x": "\u003cinvalid\u003e",
+        "mapped[0]": "\u003cinvalid\u003e",
+        "myString[0]": "\u003cinvalid\u003e",
+        "xxxx": "\u003cinvalid\u003e"
+      },
+      "statement": "types"
+    },
+    {
+      "case": "mapped-indexed",
+      "epl": "@name('s0') select * from MyIMEvent",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-indexed",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-indexed",
+      "op": "types",
+      "propertyOrder": [
+        "indexed",
+        "indexed[0]",
+        "mapped",
+        "mapped('a')"
+      ],
+      "propertyTypes": {
+        "indexed": "String[]",
+        "indexed[0]": "String",
+        "mapped": "Map",
+        "mapped('a')": "String"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-indexed",
+      "eventType": "MyIMEvent",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "default"
+      }
+    },
+    {
+      "case": "mapped-indexed",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "mapped-indexed",
+      "epl": "",
+      "eventType": "EventInfraPropertyMappedIndexedMap",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "mapped-indexed",
+      "eventType": "EventInfraPropertyMappedIndexedMap",
+      "op": "types",
+      "propertyOrder": [
+        "indexed",
+        "indexed[0]",
+        "mapped",
+        "mapped('a')",
+        "xxxx",
+        "myString[0]",
+        "indexed('a')",
+        "indexed.x",
+        "mapped[0]",
+        "mapped.x"
+      ],
+      "propertyTypes": {
+        "indexed": "String[]",
+        "indexed('a')": "\u003cinvalid\u003e",
+        "indexed.x": "\u003cinvalid\u003e",
+        "indexed[0]": "String",
+        "mapped": "Map",
+        "mapped('a')": "Object",
+        "mapped.x": "\u003cinvalid\u003e",
+        "mapped[0]": "\u003cinvalid\u003e",
+        "myString[0]": "\u003cinvalid\u003e",
+        "xxxx": "\u003cinvalid\u003e"
+      },
+      "statement": "types"
+    },
+    {
+      "case": "mapped-indexed",
+      "epl": "@name('s0') select * from EventInfraPropertyMappedIndexedMap",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-indexed",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-indexed",
+      "op": "types",
+      "propertyOrder": [
+        "indexed",
+        "indexed[0]",
+        "mapped",
+        "mapped('a')"
+      ],
+      "propertyTypes": {
+        "indexed": "String[]",
+        "indexed[0]": "String",
+        "mapped": "Map",
+        "mapped('a')": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-indexed",
+      "eventType": "EventInfraPropertyMappedIndexedMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "indexed": [
+          "v1",
+          "v2"
+        ],
+        "mapped": {
+          "k1": "v1"
+        }
+      }
+    },
+    {
+      "case": "mapped-indexed",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "mapped-indexed",
+      "epl": "",
+      "eventType": "EventInfraPropertyMappedIndexedOA",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "mapped-indexed",
+      "eventType": "EventInfraPropertyMappedIndexedOA",
+      "op": "types",
+      "propertyOrder": [
+        "indexed",
+        "indexed[0]",
+        "mapped",
+        "mapped('a')",
+        "xxxx",
+        "myString[0]",
+        "indexed('a')",
+        "indexed.x",
+        "mapped[0]",
+        "mapped.x"
+      ],
+      "propertyTypes": {
+        "indexed": "String[]",
+        "indexed('a')": "\u003cinvalid\u003e",
+        "indexed.x": "\u003cinvalid\u003e",
+        "indexed[0]": "String",
+        "mapped": "Map",
+        "mapped('a')": "Object",
+        "mapped.x": "\u003cinvalid\u003e",
+        "mapped[0]": "\u003cinvalid\u003e",
+        "myString[0]": "\u003cinvalid\u003e",
+        "xxxx": "\u003cinvalid\u003e"
+      },
+      "statement": "types"
+    },
+    {
+      "case": "mapped-indexed",
+      "epl": "@name('s0') select * from EventInfraPropertyMappedIndexedOA",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-indexed",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-indexed",
+      "op": "types",
+      "propertyOrder": [
+        "indexed",
+        "indexed[0]",
+        "mapped",
+        "mapped('a')"
+      ],
+      "propertyTypes": {
+        "indexed": "String[]",
+        "indexed[0]": "String",
+        "mapped": "Map",
+        "mapped('a')": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-indexed",
+      "eventType": "EventInfraPropertyMappedIndexedOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          [
+            "v1",
+            "v2"
+          ],
+          {
+            "k1": "v1"
+          }
+        ]
+      }
+    },
+    {
+      "case": "mapped-indexed",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "mapped-indexed",
+      "epl": "",
+      "eventType": "EventInfraPropertyMappedIndexedAvro",
+      "mode": "avro",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "mapped-indexed",
+      "eventType": "EventInfraPropertyMappedIndexedAvro",
+      "op": "types",
+      "propertyOrder": [
+        "indexed",
+        "indexed[0]",
+        "mapped",
+        "mapped('a')",
+        "xxxx",
+        "myString[0]",
+        "indexed('a')",
+        "indexed.x",
+        "mapped[0]",
+        "mapped.x"
+      ],
+      "propertyTypes": {
+        "indexed": "Collection",
+        "indexed('a')": "\u003cinvalid\u003e",
+        "indexed.x": "\u003cinvalid\u003e",
+        "indexed[0]": "String",
+        "mapped": "Map",
+        "mapped('a')": "String",
+        "mapped.x": "\u003cinvalid\u003e",
+        "mapped[0]": "\u003cinvalid\u003e",
+        "myString[0]": "\u003cinvalid\u003e",
+        "xxxx": "\u003cinvalid\u003e"
+      },
+      "statement": "types"
+    },
+    {
+      "case": "mapped-indexed",
+      "epl": "@name('s0') select * from EventInfraPropertyMappedIndexedAvro",
+      "mode": "avro",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-indexed",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-indexed",
+      "op": "types",
+      "propertyOrder": [
+        "indexed",
+        "indexed[0]",
+        "mapped",
+        "mapped('a')"
+      ],
+      "propertyTypes": {
+        "indexed": "Collection",
+        "indexed[0]": "String",
+        "mapped": "Map",
+        "mapped('a')": "String"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-indexed",
+      "eventType": "EventInfraPropertyMappedIndexedAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "indexed": [
+          "v1",
+          "v2"
+        ],
+        "mapped": {
+          "k1": "v1"
+        }
+      }
+    },
+    {
+      "case": "mapped-indexed",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "mapped-indexed",
+      "epl": "@public @buseventtype @name('schema') create json schema EventInfraPropertyMappedIndexedJson(indexed string[], mapped java.util.Map)",
+      "eventType": "EventInfraPropertyMappedIndexedJson",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "mapped-indexed",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "mapped-indexed",
+      "eventType": "EventInfraPropertyMappedIndexedJson",
+      "op": "types",
+      "propertyOrder": [
+        "indexed",
+        "indexed[0]",
+        "mapped",
+        "mapped('a')",
+        "xxxx",
+        "myString[0]",
+        "indexed('a')",
+        "indexed.x",
+        "mapped[0]",
+        "mapped.x"
+      ],
+      "propertyTypes": {
+        "indexed": "String[]",
+        "indexed('a')": "\u003cinvalid\u003e",
+        "indexed.x": "\u003cinvalid\u003e",
+        "indexed[0]": "String",
+        "mapped": "Map",
+        "mapped('a')": "Object",
+        "mapped.x": "\u003cinvalid\u003e",
+        "mapped[0]": "\u003cinvalid\u003e",
+        "myString[0]": "\u003cinvalid\u003e",
+        "xxxx": "\u003cinvalid\u003e"
+      },
+      "statement": "types"
+    },
+    {
+      "case": "mapped-indexed",
+      "epl": "@name('s0') select * from EventInfraPropertyMappedIndexedJson",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-indexed",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-indexed",
+      "op": "types",
+      "propertyOrder": [
+        "indexed",
+        "indexed[0]",
+        "mapped",
+        "mapped('a')"
+      ],
+      "propertyTypes": {
+        "indexed": "String[]",
+        "indexed[0]": "String",
+        "mapped": "Map",
+        "mapped('a')": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-indexed",
+      "eventType": "EventInfraPropertyMappedIndexedJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "indexed": [
+          "v1",
+          "v2"
+        ],
+        "mapped": {
+          "k1": "v1"
+        }
+      }
+    },
+    {
+      "case": "mapped-indexed",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "mapped-indexed",
+      "epl": "@public @buseventtype @name('schema') @JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyMappedIndexed$MyLocalJsonProvided') create json schema EventInfraPropertyMappedIndexedJsonProvided()",
+      "eventType": "EventInfraPropertyMappedIndexedJsonProvided",
+      "mode": "json-provided",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "mapped-indexed",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "mapped-indexed",
+      "eventType": "EventInfraPropertyMappedIndexedJsonProvided",
+      "op": "types",
+      "propertyOrder": [
+        "indexed",
+        "indexed[0]",
+        "mapped",
+        "mapped('a')",
+        "xxxx",
+        "myString[0]",
+        "indexed('a')",
+        "indexed.x",
+        "mapped[0]",
+        "mapped.x"
+      ],
+      "propertyTypes": {
+        "indexed": "String[]",
+        "indexed('a')": "\u003cinvalid\u003e",
+        "indexed.x": "\u003cinvalid\u003e",
+        "indexed[0]": "String",
+        "mapped": "Map",
+        "mapped('a')": "Object",
+        "mapped.x": "\u003cinvalid\u003e",
+        "mapped[0]": "\u003cinvalid\u003e",
+        "myString[0]": "\u003cinvalid\u003e",
+        "xxxx": "\u003cinvalid\u003e"
+      },
+      "statement": "types"
+    },
+    {
+      "case": "mapped-indexed",
+      "epl": "@name('s0') select * from EventInfraPropertyMappedIndexedJsonProvided",
+      "mode": "json-provided",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-indexed",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-indexed",
+      "op": "types",
+      "propertyOrder": [
+        "indexed",
+        "indexed[0]",
+        "mapped",
+        "mapped('a')"
+      ],
+      "propertyTypes": {
+        "indexed": "String[]",
+        "indexed[0]": "String",
+        "mapped": "Map",
+        "mapped('a')": "Object"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-indexed",
+      "eventType": "EventInfraPropertyMappedIndexedJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "indexed": [
+          "v1",
+          "v2"
+        ],
+        "mapped": {
+          "k1": "v1"
+        }
+      }
+    },
+    {
+      "case": "mapped-indexed",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "op": "case"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "epl": "@public @buseventtype create schema LocalEvent as com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyMappedRuntimeKey$LocalEvent;\n",
+      "eventType": "LocalEvent",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "epl": "create constant variable string keyChar = 'a';@name('s0') select mapped(keyChar||'1') as c0, mapped(keyChar||'2') as c1 from LocalEvent as e;\n",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "eventType": "LocalEvent",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "variant": "default"
+      }
+    },
+    {
+      "case": "mapped-runtime-key",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "epl": "@public @buseventtype create schema LocalEvent(mapped java.util.Map);\n",
+      "eventType": "LocalEvent",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "epl": "create constant variable string keyChar = 'a';@name('s0') select mapped(keyChar||'1') as c0, mapped(keyChar||'2') as c1 from LocalEvent as e;\n",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "eventType": "LocalEvent",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "mapped": {
+          "a1": "x",
+          "a2": "y"
+        }
+      }
+    },
+    {
+      "case": "mapped-runtime-key",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "epl": "@public @buseventtype create objectarray schema LocalEvent(mapped java.util.Map);\n",
+      "eventType": "LocalEvent",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "epl": "create constant variable string keyChar = 'a';@name('s0') select mapped(keyChar||'1') as c0, mapped(keyChar||'2') as c1 from LocalEvent as e;\n",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "eventType": "LocalEvent",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "values": [
+          {
+            "a1": "x",
+            "a2": "y"
+          }
+        ]
+      }
+    },
+    {
+      "case": "mapped-runtime-key",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "epl": "@public @buseventtype create json schema LocalEvent(mapped java.util.Map);\n",
+      "eventType": "LocalEvent",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "epl": "create constant variable string keyChar = 'a';@name('s0') select mapped(keyChar||'1') as c0, mapped(keyChar||'2') as c1 from LocalEvent as e;\n",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "eventType": "LocalEvent",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "mapped": {
+          "a1": "x",
+          "a2": "y"
+        }
+      }
+    },
+    {
+      "case": "mapped-runtime-key",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyMappedRuntimeKey$MyLocalJsonProvided') @public @buseventtype create json schema LocalEvent();\n",
+      "eventType": "LocalEvent",
+      "mode": "json-provided",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "epl": "create constant variable string keyChar = 'a';@name('s0') select mapped(keyChar||'1') as c0, mapped(keyChar||'2') as c1 from LocalEvent as e;\n",
+      "mode": "json-provided",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "eventType": "LocalEvent",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "mapped": {
+          "a1": "x",
+          "a2": "y"
+        }
+      }
+    },
+    {
+      "case": "mapped-runtime-key",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "epl": "@name('schema') @public @buseventtype create avro schema LocalEvent(mapped java.util.Map);\n",
+      "eventType": "LocalEvent",
+      "mode": "avro",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "epl": "create constant variable string keyChar = 'a';@name('s0') select mapped(keyChar||'1') as c0, mapped(keyChar||'2') as c1 from LocalEvent as e;\n",
+      "mode": "avro",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "mapped-runtime-key",
+      "eventType": "LocalEvent",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "mapped": {
+          "a1": "x",
+          "a2": "y"
+        }
+      }
+    },
+    {
+      "case": "mapped-runtime-key",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "nested-indexed",
+      "op": "case"
+    },
+    {
+      "case": "nested-indexed",
+      "epl": "",
+      "eventType": "InfraNestedIndexPropTop",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-indexed",
+      "epl": "@name('s0') select l1[0].lvl1 as c0, exists(l1[0].lvl1) as exists_c0, l1[0].l2[0].lvl2 as c1, exists(l1[0].l2[0].lvl2) as exists_c1, l1[0].l2[0].l3[0].lvl3 as c2, exists(l1[0].l2[0].l3[0].lvl3) as exists_c2, l1[0].l2[0].l3[0].l4[0].lvl4 as c3, exists(l1[0].l2[0].l3[0].l4[0].lvl4) as exists_c3 from InfraNestedIndexPropTop",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "op": "types",
+      "propertyOrder": [
+        "c0",
+        "exists_c0",
+        "c1",
+        "exists_c1",
+        "c2",
+        "exists_c2",
+        "c3",
+        "exists_c3"
+      ],
+      "propertyTypes": {
+        "c0": "Integer",
+        "c1": "Integer",
+        "c2": "Integer",
+        "c3": "Integer",
+        "exists_c0": "Boolean",
+        "exists_c1": "Boolean",
+        "exists_c2": "Boolean",
+        "exists_c3": "Boolean"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "InfraNestedIndexPropTop",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "InfraNestedIndexPropTop",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "lvl1": 10,
+        "lvl2": 5,
+        "lvl3": 50,
+        "lvl4": 400
+      }
+    },
+    {
+      "case": "nested-indexed",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "epl": "@name('s0') select * from InfraNestedIndexPropTop",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "InfraNestedIndexPropTop",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-indexed",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "InfraNestedIndexPropTop",
+      "op": "types",
+      "propertyOrder": [
+        "l1",
+        "l1[0]",
+        "l1[0].lvl1",
+        "l1[0].l2",
+        "l1[0].l2[0]",
+        "l1[0].l2[0].lvl2",
+        "l1[0].l2[0].l3[0].lvl3",
+        "l2[0]",
+        "l1[0].l3",
+        "l1[0].lvl1.lvl1",
+        "l1[0].l2.l4",
+        "l1[0].l2[0].xx",
+        "l1[0].l2[0].l3[0].lvl5"
+      ],
+      "propertyTypes": {
+        "l1": "com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyNestedIndexed$InfraNestedIndexedPropLvl1[]",
+        "l1[0]": "exists",
+        "l1[0].l2": "exists",
+        "l1[0].l2.l4": "\u003cinvalid\u003e",
+        "l1[0].l2[0]": "exists",
+        "l1[0].l2[0].l3[0].lvl3": "Integer",
+        "l1[0].l2[0].l3[0].lvl5": "\u003cinvalid\u003e",
+        "l1[0].l2[0].lvl2": "Integer",
+        "l1[0].l2[0].xx": "\u003cinvalid\u003e",
+        "l1[0].l3": "\u003cinvalid\u003e",
+        "l1[0].lvl1": "Integer",
+        "l1[0].lvl1.lvl1": "\u003cinvalid\u003e",
+        "l2[0]": "\u003cinvalid\u003e"
+      },
+      "statement": "types"
+    },
+    {
+      "case": "nested-indexed",
+      "epl": "",
+      "eventType": "EventInfraPropertyNestedIndexedMap",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-indexed",
+      "epl": "@name('s0') select l1[0].lvl1 as c0, exists(l1[0].lvl1) as exists_c0, l1[0].l2[0].lvl2 as c1, exists(l1[0].l2[0].lvl2) as exists_c1, l1[0].l2[0].l3[0].lvl3 as c2, exists(l1[0].l2[0].l3[0].lvl3) as exists_c2, l1[0].l2[0].l3[0].l4[0].lvl4 as c3, exists(l1[0].l2[0].l3[0].l4[0].lvl4) as exists_c3 from EventInfraPropertyNestedIndexedMap",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "op": "types",
+      "propertyOrder": [
+        "c0",
+        "exists_c0",
+        "c1",
+        "exists_c1",
+        "c2",
+        "exists_c2",
+        "c3",
+        "exists_c3"
+      ],
+      "propertyTypes": {
+        "c0": "Integer",
+        "c1": "Integer",
+        "c2": "Integer",
+        "c3": "Integer",
+        "exists_c0": "Boolean",
+        "exists_c1": "Boolean",
+        "exists_c2": "Boolean",
+        "exists_c3": "Boolean"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "EventInfraPropertyNestedIndexedMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "EventInfraPropertyNestedIndexedMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "lvl1": 10,
+        "lvl2": 5,
+        "lvl3": 50,
+        "lvl4": 400
+      }
+    },
+    {
+      "case": "nested-indexed",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "epl": "@name('s0') select * from EventInfraPropertyNestedIndexedMap",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "EventInfraPropertyNestedIndexedMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-indexed",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "EventInfraPropertyNestedIndexedMap",
+      "op": "types",
+      "propertyOrder": [
+        "l1",
+        "l1[0]",
+        "l1[0].lvl1",
+        "l1[0].l2",
+        "l1[0].l2[0]",
+        "l1[0].l2[0].lvl2",
+        "l1[0].l2[0].l3[0].lvl3",
+        "l2[0]",
+        "l1[0].l3",
+        "l1[0].lvl1.lvl1",
+        "l1[0].l2.l4",
+        "l1[0].l2[0].xx",
+        "l1[0].l2[0].l3[0].lvl5"
+      ],
+      "propertyTypes": {
+        "l1": "EventInfraPropertyNestedIndexedMap_1[]",
+        "l1[0]": "exists",
+        "l1[0].l2": "exists",
+        "l1[0].l2.l4": "\u003cinvalid\u003e",
+        "l1[0].l2[0]": "exists",
+        "l1[0].l2[0].l3[0].lvl3": "Integer",
+        "l1[0].l2[0].l3[0].lvl5": "\u003cinvalid\u003e",
+        "l1[0].l2[0].lvl2": "Integer",
+        "l1[0].l2[0].xx": "\u003cinvalid\u003e",
+        "l1[0].l3": "\u003cinvalid\u003e",
+        "l1[0].lvl1": "Integer",
+        "l1[0].lvl1.lvl1": "\u003cinvalid\u003e",
+        "l2[0]": "\u003cinvalid\u003e"
+      },
+      "statement": "types"
+    },
+    {
+      "case": "nested-indexed",
+      "epl": "",
+      "eventType": "EventInfraPropertyNestedIndexedOA",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-indexed",
+      "epl": "@name('s0') select l1[0].lvl1 as c0, exists(l1[0].lvl1) as exists_c0, l1[0].l2[0].lvl2 as c1, exists(l1[0].l2[0].lvl2) as exists_c1, l1[0].l2[0].l3[0].lvl3 as c2, exists(l1[0].l2[0].l3[0].lvl3) as exists_c2, l1[0].l2[0].l3[0].l4[0].lvl4 as c3, exists(l1[0].l2[0].l3[0].l4[0].lvl4) as exists_c3 from EventInfraPropertyNestedIndexedOA",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "op": "types",
+      "propertyOrder": [
+        "c0",
+        "exists_c0",
+        "c1",
+        "exists_c1",
+        "c2",
+        "exists_c2",
+        "c3",
+        "exists_c3"
+      ],
+      "propertyTypes": {
+        "c0": "Integer",
+        "c1": "Integer",
+        "c2": "Integer",
+        "c3": "Integer",
+        "exists_c0": "Boolean",
+        "exists_c1": "Boolean",
+        "exists_c2": "Boolean",
+        "exists_c3": "Boolean"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "EventInfraPropertyNestedIndexedOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "EventInfraPropertyNestedIndexedOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "lvl1": 10,
+        "lvl2": 5,
+        "lvl3": 50,
+        "lvl4": 400
+      }
+    },
+    {
+      "case": "nested-indexed",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "epl": "@name('s0') select * from EventInfraPropertyNestedIndexedOA",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "EventInfraPropertyNestedIndexedOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-indexed",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "EventInfraPropertyNestedIndexedOA",
+      "op": "types",
+      "propertyOrder": [
+        "l1",
+        "l1[0]",
+        "l1[0].lvl1",
+        "l1[0].l2",
+        "l1[0].l2[0]",
+        "l1[0].l2[0].lvl2",
+        "l1[0].l2[0].l3[0].lvl3",
+        "l2[0]",
+        "l1[0].l3",
+        "l1[0].lvl1.lvl1",
+        "l1[0].l2.l4",
+        "l1[0].l2[0].xx",
+        "l1[0].l2[0].l3[0].lvl5"
+      ],
+      "propertyTypes": {
+        "l1": "EventInfraPropertyNestedIndexedOA_1[]",
+        "l1[0]": "exists",
+        "l1[0].l2": "exists",
+        "l1[0].l2.l4": "\u003cinvalid\u003e",
+        "l1[0].l2[0]": "exists",
+        "l1[0].l2[0].l3[0].lvl3": "Integer",
+        "l1[0].l2[0].l3[0].lvl5": "\u003cinvalid\u003e",
+        "l1[0].l2[0].lvl2": "Integer",
+        "l1[0].l2[0].xx": "\u003cinvalid\u003e",
+        "l1[0].l3": "\u003cinvalid\u003e",
+        "l1[0].lvl1": "Integer",
+        "l1[0].lvl1.lvl1": "\u003cinvalid\u003e",
+        "l2[0]": "\u003cinvalid\u003e"
+      },
+      "statement": "types"
+    },
+    {
+      "case": "nested-indexed",
+      "epl": "",
+      "eventType": "EventInfraPropertyNestedIndexedXML",
+      "mode": "xml",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-indexed",
+      "epl": "@name('s0') select l1[0].lvl1 as c0, exists(l1[0].lvl1) as exists_c0, l1[0].l2[0].lvl2 as c1, exists(l1[0].l2[0].lvl2) as exists_c1, l1[0].l2[0].l3[0].lvl3 as c2, exists(l1[0].l2[0].l3[0].lvl3) as exists_c2, l1[0].l2[0].l3[0].l4[0].lvl4 as c3, exists(l1[0].l2[0].l3[0].l4[0].lvl4) as exists_c3 from EventInfraPropertyNestedIndexedXML",
+      "mode": "xml",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "op": "types",
+      "propertyOrder": [
+        "c0",
+        "exists_c0",
+        "c1",
+        "exists_c1",
+        "c2",
+        "exists_c2",
+        "c3",
+        "exists_c3"
+      ],
+      "propertyTypes": {
+        "c0": "Integer",
+        "c1": "Integer",
+        "c2": "Integer",
+        "c3": "Integer",
+        "exists_c0": "Boolean",
+        "exists_c1": "Boolean",
+        "exists_c2": "Boolean",
+        "exists_c3": "Boolean"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "EventInfraPropertyNestedIndexedXML",
+      "mode": "xml",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "EventInfraPropertyNestedIndexedXML",
+      "mode": "xml",
+      "op": "send",
+      "payload": {
+        "lvl1": 10,
+        "lvl2": 5,
+        "lvl3": 50,
+        "lvl4": 400
+      }
+    },
+    {
+      "case": "nested-indexed",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "epl": "@name('s0') select * from EventInfraPropertyNestedIndexedXML",
+      "mode": "xml",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "EventInfraPropertyNestedIndexedXML",
+      "mode": "xml",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-indexed",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "EventInfraPropertyNestedIndexedXML",
+      "op": "types",
+      "propertyOrder": [
+        "l1",
+        "l1[0]",
+        "l1[0].lvl1",
+        "l1[0].l2",
+        "l1[0].l2[0]",
+        "l1[0].l2[0].lvl2",
+        "l1[0].l2[0].l3[0].lvl3",
+        "l2[0]",
+        "l1[0].l3",
+        "l1[0].lvl1.lvl1",
+        "l1[0].l2.l4",
+        "l1[0].l2[0].xx",
+        "l1[0].l2[0].l3[0].lvl5"
+      ],
+      "propertyTypes": {
+        "l1": "Node[]",
+        "l1[0]": "exists",
+        "l1[0].l2": "exists",
+        "l1[0].l2.l4": "\u003cinvalid\u003e",
+        "l1[0].l2[0]": "exists",
+        "l1[0].l2[0].l3[0].lvl3": "Integer",
+        "l1[0].l2[0].l3[0].lvl5": "\u003cinvalid\u003e",
+        "l1[0].l2[0].lvl2": "Integer",
+        "l1[0].l2[0].xx": "\u003cinvalid\u003e",
+        "l1[0].l3": "\u003cinvalid\u003e",
+        "l1[0].lvl1": "Integer",
+        "l1[0].lvl1.lvl1": "\u003cinvalid\u003e",
+        "l2[0]": "\u003cinvalid\u003e"
+      },
+      "statement": "types"
+    },
+    {
+      "case": "nested-indexed",
+      "epl": "",
+      "eventType": "EventInfraPropertyNestedIndexedAvro",
+      "mode": "avro",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-indexed",
+      "epl": "@name('s0') select l1[0].lvl1 as c0, exists(l1[0].lvl1) as exists_c0, l1[0].l2[0].lvl2 as c1, exists(l1[0].l2[0].lvl2) as exists_c1, l1[0].l2[0].l3[0].lvl3 as c2, exists(l1[0].l2[0].l3[0].lvl3) as exists_c2, l1[0].l2[0].l3[0].l4[0].lvl4 as c3, exists(l1[0].l2[0].l3[0].l4[0].lvl4) as exists_c3 from EventInfraPropertyNestedIndexedAvro",
+      "mode": "avro",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "op": "types",
+      "propertyOrder": [
+        "c0",
+        "exists_c0",
+        "c1",
+        "exists_c1",
+        "c2",
+        "exists_c2",
+        "c3",
+        "exists_c3"
+      ],
+      "propertyTypes": {
+        "c0": "Integer",
+        "c1": "Integer",
+        "c2": "Integer",
+        "c3": "Integer",
+        "exists_c0": "Boolean",
+        "exists_c1": "Boolean",
+        "exists_c2": "Boolean",
+        "exists_c3": "Boolean"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "EventInfraPropertyNestedIndexedAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "EventInfraPropertyNestedIndexedAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "lvl1": 10,
+        "lvl2": 5,
+        "lvl3": 50,
+        "lvl4": 400
+      }
+    },
+    {
+      "case": "nested-indexed",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "epl": "@name('s0') select * from EventInfraPropertyNestedIndexedAvro",
+      "mode": "avro",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "EventInfraPropertyNestedIndexedAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-indexed",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "EventInfraPropertyNestedIndexedAvro",
+      "op": "types",
+      "propertyOrder": [
+        "l1",
+        "l1[0]",
+        "l1[0].lvl1",
+        "l1[0].l2",
+        "l1[0].l2[0]",
+        "l1[0].l2[0].lvl2",
+        "l1[0].l2[0].l3[0].lvl3",
+        "l2[0]",
+        "l1[0].l3",
+        "l1[0].lvl1.lvl1",
+        "l1[0].l2.l4",
+        "l1[0].l2[0].xx",
+        "l1[0].l2[0].l3[0].lvl5"
+      ],
+      "propertyTypes": {
+        "l1": "EventInfraPropertyNestedIndexedAvro_1[]",
+        "l1[0]": "exists",
+        "l1[0].l2": "exists",
+        "l1[0].l2.l4": "\u003cinvalid\u003e",
+        "l1[0].l2[0]": "exists",
+        "l1[0].l2[0].l3[0].lvl3": "Integer",
+        "l1[0].l2[0].l3[0].lvl5": "\u003cinvalid\u003e",
+        "l1[0].l2[0].lvl2": "Integer",
+        "l1[0].l2[0].xx": "\u003cinvalid\u003e",
+        "l1[0].l3": "\u003cinvalid\u003e",
+        "l1[0].lvl1": "Integer",
+        "l1[0].lvl1.lvl1": "\u003cinvalid\u003e",
+        "l2[0]": "\u003cinvalid\u003e"
+      },
+      "statement": "types"
+    },
+    {
+      "case": "nested-indexed",
+      "epl": "create json schema EventInfraPropertyNestedIndexedJson_4(lvl4 int);\ncreate json schema EventInfraPropertyNestedIndexedJson_3(lvl3 int, l4 EventInfraPropertyNestedIndexedJson_4[]);\ncreate json schema EventInfraPropertyNestedIndexedJson_2(lvl2 int, l3 EventInfraPropertyNestedIndexedJson_3[]);\ncreate json schema EventInfraPropertyNestedIndexedJson_1(lvl1 int, l2 EventInfraPropertyNestedIndexedJson_2[]);\n@name('types') @public @buseventtype create json schema EventInfraPropertyNestedIndexedJson(l1 EventInfraPropertyNestedIndexedJson_1[]);\n",
+      "eventType": "EventInfraPropertyNestedIndexedJson",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-indexed",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-indexed",
+      "epl": "@name('s0') select l1[0].lvl1 as c0, exists(l1[0].lvl1) as exists_c0, l1[0].l2[0].lvl2 as c1, exists(l1[0].l2[0].lvl2) as exists_c1, l1[0].l2[0].l3[0].lvl3 as c2, exists(l1[0].l2[0].l3[0].lvl3) as exists_c2, l1[0].l2[0].l3[0].l4[0].lvl4 as c3, exists(l1[0].l2[0].l3[0].l4[0].lvl4) as exists_c3 from EventInfraPropertyNestedIndexedJson",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "op": "types",
+      "propertyOrder": [
+        "c0",
+        "exists_c0",
+        "c1",
+        "exists_c1",
+        "c2",
+        "exists_c2",
+        "c3",
+        "exists_c3"
+      ],
+      "propertyTypes": {
+        "c0": "Integer",
+        "c1": "Integer",
+        "c2": "Integer",
+        "c3": "Integer",
+        "exists_c0": "Boolean",
+        "exists_c1": "Boolean",
+        "exists_c2": "Boolean",
+        "exists_c3": "Boolean"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "EventInfraPropertyNestedIndexedJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "EventInfraPropertyNestedIndexedJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "lvl1": 10,
+        "lvl2": 5,
+        "lvl3": 50,
+        "lvl4": 400
+      }
+    },
+    {
+      "case": "nested-indexed",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "epl": "@name('s0') select * from EventInfraPropertyNestedIndexedJson",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "EventInfraPropertyNestedIndexedJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-indexed",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "EventInfraPropertyNestedIndexedJson",
+      "op": "types",
+      "propertyOrder": [
+        "l1",
+        "l1[0]",
+        "l1[0].lvl1",
+        "l1[0].l2",
+        "l1[0].l2[0]",
+        "l1[0].l2[0].lvl2",
+        "l1[0].l2[0].l3[0].lvl3",
+        "l2[0]",
+        "l1[0].l3",
+        "l1[0].lvl1.lvl1",
+        "l1[0].l2.l4",
+        "l1[0].l2[0].xx",
+        "l1[0].l2[0].l3[0].lvl5"
+      ],
+      "propertyTypes": {
+        "l1": "Object[]",
+        "l1[0]": "exists",
+        "l1[0].l2": "exists",
+        "l1[0].l2.l4": "\u003cinvalid\u003e",
+        "l1[0].l2[0]": "exists",
+        "l1[0].l2[0].l3[0].lvl3": "Integer",
+        "l1[0].l2[0].l3[0].lvl5": "\u003cinvalid\u003e",
+        "l1[0].l2[0].lvl2": "Integer",
+        "l1[0].l2[0].xx": "\u003cinvalid\u003e",
+        "l1[0].l3": "\u003cinvalid\u003e",
+        "l1[0].lvl1": "Integer",
+        "l1[0].lvl1.lvl1": "\u003cinvalid\u003e",
+        "l2[0]": "\u003cinvalid\u003e"
+      },
+      "statement": "types"
+    },
+    {
+      "case": "nested-indexed",
+      "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyNestedIndexed$MyLocalJSONProvidedLvl4') create json schema EventInfraPropertyNestedIndexedJsonProvided_4();\n@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyNestedIndexed$MyLocalJSONProvidedLvl3') create json schema EventInfraPropertyNestedIndexedJsonProvided_3(lvl3 int, l4 EventInfraPropertyNestedIndexedJsonProvided_4[]);\n@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyNestedIndexed$MyLocalJSONProvidedLvl2') create json schema EventInfraPropertyNestedIndexedJsonProvided_2(lvl2 int, l3 EventInfraPropertyNestedIndexedJsonProvided_3[]);\n@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyNestedIndexed$MyLocalJSONProvidedLvl1') create json schema EventInfraPropertyNestedIndexedJsonProvided_1(lvl1 int, l2 EventInfraPropertyNestedIndexedJsonProvided_2[]);\n@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyNestedIndexed$MyLocalJSONProvidedTop') @name('types') @public @buseventtype create json schema EventInfraPropertyNestedIndexedJsonProvided(l1 EventInfraPropertyNestedIndexedJsonProvided_1[]);\n",
+      "eventType": "EventInfraPropertyNestedIndexedJsonProvided",
+      "mode": "json-provided",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-indexed",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-indexed",
+      "epl": "@name('s0') select l1[0].lvl1 as c0, exists(l1[0].lvl1) as exists_c0, l1[0].l2[0].lvl2 as c1, exists(l1[0].l2[0].lvl2) as exists_c1, l1[0].l2[0].l3[0].lvl3 as c2, exists(l1[0].l2[0].l3[0].lvl3) as exists_c2, l1[0].l2[0].l3[0].l4[0].lvl4 as c3, exists(l1[0].l2[0].l3[0].l4[0].lvl4) as exists_c3 from EventInfraPropertyNestedIndexedJsonProvided",
+      "mode": "json-provided",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "op": "types",
+      "propertyOrder": [
+        "c0",
+        "exists_c0",
+        "c1",
+        "exists_c1",
+        "c2",
+        "exists_c2",
+        "c3",
+        "exists_c3"
+      ],
+      "propertyTypes": {
+        "c0": "Integer",
+        "c1": "Integer",
+        "c2": "Integer",
+        "c3": "Integer",
+        "exists_c0": "Boolean",
+        "exists_c1": "Boolean",
+        "exists_c2": "Boolean",
+        "exists_c3": "Boolean"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "EventInfraPropertyNestedIndexedJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "EventInfraPropertyNestedIndexedJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "lvl1": 10,
+        "lvl2": 5,
+        "lvl3": 50,
+        "lvl4": 400
+      }
+    },
+    {
+      "case": "nested-indexed",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "epl": "@name('s0') select * from EventInfraPropertyNestedIndexedJsonProvided",
+      "mode": "json-provided",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "EventInfraPropertyNestedIndexedJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-indexed",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-indexed",
+      "eventType": "EventInfraPropertyNestedIndexedJsonProvided",
+      "op": "types",
+      "propertyOrder": [
+        "l1",
+        "l1[0]",
+        "l1[0].lvl1",
+        "l1[0].l2",
+        "l1[0].l2[0]",
+        "l1[0].l2[0].lvl2",
+        "l1[0].l2[0].l3[0].lvl3",
+        "l2[0]",
+        "l1[0].l3",
+        "l1[0].lvl1.lvl1",
+        "l1[0].l2.l4",
+        "l1[0].l2[0].xx",
+        "l1[0].l2[0].l3[0].lvl5"
+      ],
+      "propertyTypes": {
+        "l1": "EventInfraPropertyNestedIndexedJsonProvided_1",
+        "l1[0]": "exists",
+        "l1[0].l2": "exists",
+        "l1[0].l2.l4": "\u003cinvalid\u003e",
+        "l1[0].l2[0]": "exists",
+        "l1[0].l2[0].l3[0].lvl3": "Integer",
+        "l1[0].l2[0].l3[0].lvl5": "\u003cinvalid\u003e",
+        "l1[0].l2[0].lvl2": "Integer",
+        "l1[0].l2[0].xx": "\u003cinvalid\u003e",
+        "l1[0].l3": "\u003cinvalid\u003e",
+        "l1[0].lvl1": "Integer",
+        "l1[0].lvl1.lvl1": "\u003cinvalid\u003e",
+        "l2[0]": "\u003cinvalid\u003e"
+      },
+      "statement": "types"
+    },
+    {
+      "case": "nested-indexed",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "nested-escaped",
+      "op": "case"
+    },
+    {
+      "case": "nested-escaped",
+      "epl": "@name('types') @public @buseventtype create schema BeanLvl0 as com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyNestedNestedEscaped$SupportLvl0;\n\ncreate schema MapLvl3(vlvl3 string);\ncreate schema MapLvl2(vlvl2 string, lvl3 MapLvl3);\ncreate schema MapLvl1(lvl2 MapLvl2);\n@public @buseventtype create schema MapLvl0(lvl1 MapLvl1);\n\ncreate objectarray schema OALvl3(vlvl3 string);\ncreate objectarray schema OALvl2(vlvl2 string, vlvl2dyn string, lvl3 OALvl3);\ncreate objectarray schema OALvl1(lvl2 OALvl2);\n@public @buseventtype create objectarray schema OALvl0(lvl1 OALvl1);\n\n@JsonSchema(dynamic=true) create json schema JSONLvl3(vlvl3 string);\n@JsonSchema(dynamic=true) create json schema JSONLvl2(vlvl2 string, lvl3 JSONLvl3);\ncreate json schema JSONLvl1(lvl2 JSONLvl2);\n@public @buseventtype create json schema JSONLvl0(lvl1 JSONLvl1);\n\ncreate avro schema AvroLvl3(vlvl3 string);\ncreate avro schema AvroLvl2(vlvl2 string, vlvl2dyn string, lvl3 AvroLvl3);\ncreate avro schema AvroLvl1(lvl2 AvroLvl2);\n@public @buseventtype create avro schema AvroLvl0(lvl1 AvroLvl1);\n",
+      "eventType": "",
+      "mode": "types",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-escaped",
+      "op": "deployed",
+      "statement": "types"
+    },
+    {
+      "case": "nested-escaped",
+      "epl": "@name('s0') select * from BeanLvl0",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "eventType": "BeanLvl0",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "vlvl2": "v2",
+        "vlvl2dyn": "v2dyn",
+        "vlvl3": "v3"
+      }
+    },
+    {
+      "case": "nested-escaped",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "epl": "@name('s0') select lvl1.lvl2.`vlvl2` as c0, lvl1.lvl2.lvl3.`vlvl3` as c1, `lvl1`.`lvl2`.`lvl3`.`vlvl3` as c2, lvl1.lvl2.`vlvl2dyn`? as c3  from BeanLvl0",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "eventType": "BeanLvl0",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "vlvl2": "v2",
+        "vlvl2dyn": "v2dyn",
+        "vlvl3": "v3"
+      }
+    },
+    {
+      "case": "nested-escaped",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "epl": "@name('s0') select * from MapLvl0",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "eventType": "MapLvl0",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "vlvl2": "v2",
+        "vlvl2dyn": "v2dyn",
+        "vlvl3": "v3"
+      }
+    },
+    {
+      "case": "nested-escaped",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "epl": "@name('s0') select lvl1.lvl2.`vlvl2` as c0, lvl1.lvl2.lvl3.`vlvl3` as c1, `lvl1`.`lvl2`.`lvl3`.`vlvl3` as c2, lvl1.lvl2.`vlvl2dyn`? as c3  from MapLvl0",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "eventType": "MapLvl0",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "vlvl2": "v2",
+        "vlvl2dyn": "v2dyn",
+        "vlvl3": "v3"
+      }
+    },
+    {
+      "case": "nested-escaped",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "epl": "@name('s0') select * from OALvl0",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "eventType": "OALvl0",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "vlvl2": "v2",
+        "vlvl2dyn": "v2dyn",
+        "vlvl3": "v3"
+      }
+    },
+    {
+      "case": "nested-escaped",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "epl": "@name('s0') select lvl1.lvl2.`vlvl2` as c0, lvl1.lvl2.lvl3.`vlvl3` as c1, `lvl1`.`lvl2`.`lvl3`.`vlvl3` as c2, lvl1.lvl2.`vlvl2dyn`? as c3  from OALvl0",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "eventType": "OALvl0",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "vlvl2": "v2",
+        "vlvl2dyn": "v2dyn",
+        "vlvl3": "v3"
+      }
+    },
+    {
+      "case": "nested-escaped",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "epl": "@name('s0') select * from JSONLvl0",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "eventType": "JSONLvl0",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "vlvl2": "v2",
+        "vlvl2dyn": "v2dyn",
+        "vlvl3": "v3"
+      }
+    },
+    {
+      "case": "nested-escaped",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "epl": "@name('s0') select lvl1.lvl2.`vlvl2` as c0, lvl1.lvl2.lvl3.`vlvl3` as c1, `lvl1`.`lvl2`.`lvl3`.`vlvl3` as c2, lvl1.lvl2.`vlvl2dyn`? as c3  from JSONLvl0",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "eventType": "JSONLvl0",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "vlvl2": "v2",
+        "vlvl2dyn": "v2dyn",
+        "vlvl3": "v3"
+      }
+    },
+    {
+      "case": "nested-escaped",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "epl": "@name('s0') select * from AvroLvl0",
+      "mode": "avro",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "eventType": "AvroLvl0",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "vlvl2": "v2",
+        "vlvl2dyn": "v2dyn",
+        "vlvl3": "v3"
+      }
+    },
+    {
+      "case": "nested-escaped",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "epl": "@name('s0') select lvl1.lvl2.`vlvl2` as c0, lvl1.lvl2.lvl3.`vlvl3` as c1, `lvl1`.`lvl2`.`lvl3`.`vlvl3` as c2, lvl1.lvl2.`vlvl2dyn`? as c3  from AvroLvl0",
+      "mode": "avro",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "eventType": "AvroLvl0",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "vlvl2": "v2",
+        "vlvl2dyn": "v2dyn",
+        "vlvl3": "v3"
+      }
+    },
+    {
+      "case": "nested-escaped",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-escaped",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "nested-simple",
+      "op": "case"
+    },
+    {
+      "case": "nested-simple",
+      "epl": "",
+      "eventType": "InfraNestedSimplePropTop",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-simple",
+      "epl": "@name('s0') select l1.lvl1 as c0, exists(l1.lvl1) as exists_c0, l1.l2.lvl2 as c1, exists(l1.l2.lvl2) as exists_c1, l1.l2.l3.lvl3 as c2, exists(l1.l2.l3.lvl3) as exists_c2, l1.l2.l3.l4.lvl4 as c3, exists(l1.l2.l3.l4.lvl4) as exists_c3 from InfraNestedSimplePropTop",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "op": "types",
+      "propertyOrder": [
+        "c0",
+        "exists_c0",
+        "c1",
+        "exists_c1",
+        "c2",
+        "exists_c2",
+        "c3",
+        "exists_c3"
+      ],
+      "propertyTypes": {
+        "c0": "Integer",
+        "c1": "Integer",
+        "c2": "Integer",
+        "c3": "Integer",
+        "exists_c0": "Boolean",
+        "exists_c1": "Boolean",
+        "exists_c2": "Boolean",
+        "exists_c3": "Boolean"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "InfraNestedSimplePropTop",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "InfraNestedSimplePropTop",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "lvl1": 10,
+        "lvl2": 5,
+        "lvl3": 50,
+        "lvl4": 400
+      }
+    },
+    {
+      "case": "nested-simple",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "epl": "@name('s0') select * from InfraNestedSimplePropTop",
+      "mode": "bean",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "InfraNestedSimplePropTop",
+      "mode": "bean",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-simple",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "InfraNestedSimplePropTop",
+      "op": "types",
+      "propertyOrder": [
+        "l1",
+        "l1.lvl1",
+        "l1.l2",
+        "l1.l2.lvl2",
+        "l1.l2.l3.lvl3",
+        "l2",
+        "l1.l3",
+        "l1.lvl1.lvl1",
+        "l1.l2.l4",
+        "l1.l2.xx",
+        "l1.l2.l3.lvl5"
+      ],
+      "propertyTypes": {
+        "l1": "com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyNestedSimple$InfraNestedSimplePropLvl1",
+        "l1.l2": "exists",
+        "l1.l2.l3.lvl3": "Integer",
+        "l1.l2.l3.lvl5": "\u003cinvalid\u003e",
+        "l1.l2.l4": "\u003cinvalid\u003e",
+        "l1.l2.lvl2": "Integer",
+        "l1.l2.xx": "\u003cinvalid\u003e",
+        "l1.l3": "\u003cinvalid\u003e",
+        "l1.lvl1": "Integer",
+        "l1.lvl1.lvl1": "\u003cinvalid\u003e",
+        "l2": "\u003cinvalid\u003e"
+      },
+      "statement": "types"
+    },
+    {
+      "case": "nested-simple",
+      "epl": "",
+      "eventType": "EventInfraPropertyNestedSimpleMap",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-simple",
+      "epl": "@name('s0') select l1.lvl1 as c0, exists(l1.lvl1) as exists_c0, l1.l2.lvl2 as c1, exists(l1.l2.lvl2) as exists_c1, l1.l2.l3.lvl3 as c2, exists(l1.l2.l3.lvl3) as exists_c2, l1.l2.l3.l4.lvl4 as c3, exists(l1.l2.l3.l4.lvl4) as exists_c3 from EventInfraPropertyNestedSimpleMap",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "op": "types",
+      "propertyOrder": [
+        "c0",
+        "exists_c0",
+        "c1",
+        "exists_c1",
+        "c2",
+        "exists_c2",
+        "c3",
+        "exists_c3"
+      ],
+      "propertyTypes": {
+        "c0": "Integer",
+        "c1": "Integer",
+        "c2": "Integer",
+        "c3": "Integer",
+        "exists_c0": "Boolean",
+        "exists_c1": "Boolean",
+        "exists_c2": "Boolean",
+        "exists_c3": "Boolean"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "EventInfraPropertyNestedSimpleMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "EventInfraPropertyNestedSimpleMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "lvl1": 10,
+        "lvl2": 5,
+        "lvl3": 50,
+        "lvl4": 400
+      }
+    },
+    {
+      "case": "nested-simple",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "epl": "@name('s0') select * from EventInfraPropertyNestedSimpleMap",
+      "mode": "map",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "EventInfraPropertyNestedSimpleMap",
+      "mode": "map",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-simple",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "EventInfraPropertyNestedSimpleMap",
+      "op": "types",
+      "propertyOrder": [
+        "l1",
+        "l1.lvl1",
+        "l1.l2",
+        "l1.l2.lvl2",
+        "l1.l2.l3.lvl3",
+        "l2",
+        "l1.l3",
+        "l1.lvl1.lvl1",
+        "l1.l2.l4",
+        "l1.l2.xx",
+        "l1.l2.l3.lvl5"
+      ],
+      "propertyTypes": {
+        "l1": "Map",
+        "l1.l2": "exists",
+        "l1.l2.l3.lvl3": "Integer",
+        "l1.l2.l3.lvl5": "\u003cinvalid\u003e",
+        "l1.l2.l4": "\u003cinvalid\u003e",
+        "l1.l2.lvl2": "Integer",
+        "l1.l2.xx": "\u003cinvalid\u003e",
+        "l1.l3": "\u003cinvalid\u003e",
+        "l1.lvl1": "Integer",
+        "l1.lvl1.lvl1": "\u003cinvalid\u003e",
+        "l2": "\u003cinvalid\u003e"
+      },
+      "statement": "types"
+    },
+    {
+      "case": "nested-simple",
+      "epl": "",
+      "eventType": "EventInfraPropertyNestedSimpleOA",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-simple",
+      "epl": "@name('s0') select l1.lvl1 as c0, exists(l1.lvl1) as exists_c0, l1.l2.lvl2 as c1, exists(l1.l2.lvl2) as exists_c1, l1.l2.l3.lvl3 as c2, exists(l1.l2.l3.lvl3) as exists_c2, l1.l2.l3.l4.lvl4 as c3, exists(l1.l2.l3.l4.lvl4) as exists_c3 from EventInfraPropertyNestedSimpleOA",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "op": "types",
+      "propertyOrder": [
+        "c0",
+        "exists_c0",
+        "c1",
+        "exists_c1",
+        "c2",
+        "exists_c2",
+        "c3",
+        "exists_c3"
+      ],
+      "propertyTypes": {
+        "c0": "Integer",
+        "c1": "Integer",
+        "c2": "Integer",
+        "c3": "Integer",
+        "exists_c0": "Boolean",
+        "exists_c1": "Boolean",
+        "exists_c2": "Boolean",
+        "exists_c3": "Boolean"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "EventInfraPropertyNestedSimpleOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "EventInfraPropertyNestedSimpleOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "lvl1": 10,
+        "lvl2": 5,
+        "lvl3": 50,
+        "lvl4": 400
+      }
+    },
+    {
+      "case": "nested-simple",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "epl": "@name('s0') select * from EventInfraPropertyNestedSimpleOA",
+      "mode": "objectarray",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "EventInfraPropertyNestedSimpleOA",
+      "mode": "objectarray",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-simple",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "EventInfraPropertyNestedSimpleOA",
+      "op": "types",
+      "propertyOrder": [
+        "l1",
+        "l1.lvl1",
+        "l1.l2",
+        "l1.l2.lvl2",
+        "l1.l2.l3.lvl3",
+        "l2",
+        "l1.l3",
+        "l1.lvl1.lvl1",
+        "l1.l2.l4",
+        "l1.l2.xx",
+        "l1.l2.l3.lvl5"
+      ],
+      "propertyTypes": {
+        "l1": "Object[]",
+        "l1.l2": "exists",
+        "l1.l2.l3.lvl3": "Integer",
+        "l1.l2.l3.lvl5": "\u003cinvalid\u003e",
+        "l1.l2.l4": "\u003cinvalid\u003e",
+        "l1.l2.lvl2": "Integer",
+        "l1.l2.xx": "\u003cinvalid\u003e",
+        "l1.l3": "\u003cinvalid\u003e",
+        "l1.lvl1": "Integer",
+        "l1.lvl1.lvl1": "\u003cinvalid\u003e",
+        "l2": "\u003cinvalid\u003e"
+      },
+      "statement": "types"
+    },
+    {
+      "case": "nested-simple",
+      "epl": "",
+      "eventType": "EventInfraPropertyNestedSimpleXML",
+      "mode": "xml",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-simple",
+      "epl": "@name('s0') select l1.lvl1 as c0, exists(l1.lvl1) as exists_c0, l1.l2.lvl2 as c1, exists(l1.l2.lvl2) as exists_c1, l1.l2.l3.lvl3 as c2, exists(l1.l2.l3.lvl3) as exists_c2, l1.l2.l3.l4.lvl4 as c3, exists(l1.l2.l3.l4.lvl4) as exists_c3 from EventInfraPropertyNestedSimpleXML",
+      "mode": "xml",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "op": "types",
+      "propertyOrder": [
+        "c0",
+        "exists_c0",
+        "c1",
+        "exists_c1",
+        "c2",
+        "exists_c2",
+        "c3",
+        "exists_c3"
+      ],
+      "propertyTypes": {
+        "c0": "Integer",
+        "c1": "Integer",
+        "c2": "Integer",
+        "c3": "Integer",
+        "exists_c0": "Boolean",
+        "exists_c1": "Boolean",
+        "exists_c2": "Boolean",
+        "exists_c3": "Boolean"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "EventInfraPropertyNestedSimpleXML",
+      "mode": "xml",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "EventInfraPropertyNestedSimpleXML",
+      "mode": "xml",
+      "op": "send",
+      "payload": {
+        "lvl1": 10,
+        "lvl2": 5,
+        "lvl3": 50,
+        "lvl4": 400
+      }
+    },
+    {
+      "case": "nested-simple",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "epl": "@name('s0') select * from EventInfraPropertyNestedSimpleXML",
+      "mode": "xml",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "EventInfraPropertyNestedSimpleXML",
+      "mode": "xml",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-simple",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "EventInfraPropertyNestedSimpleXML",
+      "op": "types",
+      "propertyOrder": [
+        "l1",
+        "l1.lvl1",
+        "l1.l2",
+        "l1.l2.lvl2",
+        "l1.l2.l3.lvl3",
+        "l2",
+        "l1.l3",
+        "l1.lvl1.lvl1",
+        "l1.l2.l4",
+        "l1.l2.xx",
+        "l1.l2.l3.lvl5"
+      ],
+      "propertyTypes": {
+        "l1": "Node",
+        "l1.l2": "exists",
+        "l1.l2.l3.lvl3": "Integer",
+        "l1.l2.l3.lvl5": "\u003cinvalid\u003e",
+        "l1.l2.l4": "\u003cinvalid\u003e",
+        "l1.l2.lvl2": "Integer",
+        "l1.l2.xx": "\u003cinvalid\u003e",
+        "l1.l3": "\u003cinvalid\u003e",
+        "l1.lvl1": "Integer",
+        "l1.lvl1.lvl1": "\u003cinvalid\u003e",
+        "l2": "\u003cinvalid\u003e"
+      },
+      "statement": "types"
+    },
+    {
+      "case": "nested-simple",
+      "epl": "",
+      "eventType": "EventInfraPropertyNestedSimpleAvro",
+      "mode": "avro",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-simple",
+      "epl": "@name('s0') select l1.lvl1 as c0, exists(l1.lvl1) as exists_c0, l1.l2.lvl2 as c1, exists(l1.l2.lvl2) as exists_c1, l1.l2.l3.lvl3 as c2, exists(l1.l2.l3.lvl3) as exists_c2, l1.l2.l3.l4.lvl4 as c3, exists(l1.l2.l3.l4.lvl4) as exists_c3 from EventInfraPropertyNestedSimpleAvro",
+      "mode": "avro",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "op": "types",
+      "propertyOrder": [
+        "c0",
+        "exists_c0",
+        "c1",
+        "exists_c1",
+        "c2",
+        "exists_c2",
+        "c3",
+        "exists_c3"
+      ],
+      "propertyTypes": {
+        "c0": "Integer",
+        "c1": "Integer",
+        "c2": "Integer",
+        "c3": "Integer",
+        "exists_c0": "Boolean",
+        "exists_c1": "Boolean",
+        "exists_c2": "Boolean",
+        "exists_c3": "Boolean"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "EventInfraPropertyNestedSimpleAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "EventInfraPropertyNestedSimpleAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "lvl1": 10,
+        "lvl2": 5,
+        "lvl3": 50,
+        "lvl4": 400
+      }
+    },
+    {
+      "case": "nested-simple",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "epl": "@name('s0') select * from EventInfraPropertyNestedSimpleAvro",
+      "mode": "avro",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "EventInfraPropertyNestedSimpleAvro",
+      "mode": "avro",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-simple",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "EventInfraPropertyNestedSimpleAvro",
+      "op": "types",
+      "propertyOrder": [
+        "l1",
+        "l1.lvl1",
+        "l1.l2",
+        "l1.l2.lvl2",
+        "l1.l2.l3.lvl3",
+        "l2",
+        "l1.l3",
+        "l1.lvl1.lvl1",
+        "l1.l2.l4",
+        "l1.l2.xx",
+        "l1.l2.l3.lvl5"
+      ],
+      "propertyTypes": {
+        "l1": "GenericData.Record",
+        "l1.l2": "exists",
+        "l1.l2.l3.lvl3": "Integer",
+        "l1.l2.l3.lvl5": "\u003cinvalid\u003e",
+        "l1.l2.l4": "\u003cinvalid\u003e",
+        "l1.l2.lvl2": "Integer",
+        "l1.l2.xx": "\u003cinvalid\u003e",
+        "l1.l3": "\u003cinvalid\u003e",
+        "l1.lvl1": "Integer",
+        "l1.lvl1.lvl1": "\u003cinvalid\u003e",
+        "l2": "\u003cinvalid\u003e"
+      },
+      "statement": "types"
+    },
+    {
+      "case": "nested-simple",
+      "epl": "@public create json schema EventInfraPropertyNestedSimpleJson_4(lvl4 int);\n@public create json schema EventInfraPropertyNestedSimpleJson_3(lvl3 int, l4 EventInfraPropertyNestedSimpleJson_4);\n@public create json schema EventInfraPropertyNestedSimpleJson_2(lvl2 int, l3 EventInfraPropertyNestedSimpleJson_3);\n@public create json schema EventInfraPropertyNestedSimpleJson_1(lvl1 int, l2 EventInfraPropertyNestedSimpleJson_2);\n@name('types') @public @buseventtype create json schema EventInfraPropertyNestedSimpleJson(l1 EventInfraPropertyNestedSimpleJson_1);\n",
+      "eventType": "EventInfraPropertyNestedSimpleJson",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-simple",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-simple",
+      "epl": "@name('s0') select l1.lvl1 as c0, exists(l1.lvl1) as exists_c0, l1.l2.lvl2 as c1, exists(l1.l2.lvl2) as exists_c1, l1.l2.l3.lvl3 as c2, exists(l1.l2.l3.lvl3) as exists_c2, l1.l2.l3.l4.lvl4 as c3, exists(l1.l2.l3.l4.lvl4) as exists_c3 from EventInfraPropertyNestedSimpleJson",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "op": "types",
+      "propertyOrder": [
+        "c0",
+        "exists_c0",
+        "c1",
+        "exists_c1",
+        "c2",
+        "exists_c2",
+        "c3",
+        "exists_c3"
+      ],
+      "propertyTypes": {
+        "c0": "Integer",
+        "c1": "Integer",
+        "c2": "Integer",
+        "c3": "Integer",
+        "exists_c0": "Boolean",
+        "exists_c1": "Boolean",
+        "exists_c2": "Boolean",
+        "exists_c3": "Boolean"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "EventInfraPropertyNestedSimpleJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "EventInfraPropertyNestedSimpleJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "lvl1": 10,
+        "lvl2": 5,
+        "lvl3": 50,
+        "lvl4": 400
+      }
+    },
+    {
+      "case": "nested-simple",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "epl": "@name('s0') select * from EventInfraPropertyNestedSimpleJson",
+      "mode": "json",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "EventInfraPropertyNestedSimpleJson",
+      "mode": "json",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-simple",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "EventInfraPropertyNestedSimpleJson",
+      "op": "types",
+      "propertyOrder": [
+        "l1",
+        "l1.lvl1",
+        "l1.l2",
+        "l1.l2.lvl2",
+        "l1.l2.l3.lvl3",
+        "l2",
+        "l1.l3",
+        "l1.lvl1.lvl1",
+        "l1.l2.l4",
+        "l1.l2.xx",
+        "l1.l2.l3.lvl5"
+      ],
+      "propertyTypes": {
+        "l1": "Object",
+        "l1.l2": "exists",
+        "l1.l2.l3.lvl3": "Integer",
+        "l1.l2.l3.lvl5": "\u003cinvalid\u003e",
+        "l1.l2.l4": "\u003cinvalid\u003e",
+        "l1.l2.lvl2": "Integer",
+        "l1.l2.xx": "\u003cinvalid\u003e",
+        "l1.l3": "\u003cinvalid\u003e",
+        "l1.lvl1": "Integer",
+        "l1.lvl1.lvl1": "\u003cinvalid\u003e",
+        "l2": "\u003cinvalid\u003e"
+      },
+      "statement": "types"
+    },
+    {
+      "case": "nested-simple",
+      "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyNestedSimple$MyLocalJSONProvidedTop') @name('types') @public @buseventtype create json schema EventInfraPropertyNestedSimpleJsonProvided();\n",
+      "eventType": "EventInfraPropertyNestedSimpleJsonProvided",
+      "mode": "json-provided",
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-simple",
+      "op": "deployed",
+      "statement": "schema"
+    },
+    {
+      "case": "nested-simple",
+      "epl": "@name('s0') select l1.lvl1 as c0, exists(l1.lvl1) as exists_c0, l1.l2.lvl2 as c1, exists(l1.l2.lvl2) as exists_c1, l1.l2.l3.lvl3 as c2, exists(l1.l2.l3.lvl3) as exists_c2, l1.l2.l3.l4.lvl4 as c3, exists(l1.l2.l3.l4.lvl4) as exists_c3 from EventInfraPropertyNestedSimpleJsonProvided",
+      "mode": "json-provided",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "op": "types",
+      "propertyOrder": [
+        "c0",
+        "exists_c0",
+        "c1",
+        "exists_c1",
+        "c2",
+        "exists_c2",
+        "c3",
+        "exists_c3"
+      ],
+      "propertyTypes": {
+        "c0": "Integer",
+        "c1": "Integer",
+        "c2": "Integer",
+        "c3": "Integer",
+        "exists_c0": "Boolean",
+        "exists_c1": "Boolean",
+        "exists_c2": "Boolean",
+        "exists_c3": "Boolean"
+      },
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "EventInfraPropertyNestedSimpleJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "EventInfraPropertyNestedSimpleJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "lvl1": 10,
+        "lvl2": 5,
+        "lvl3": 50,
+        "lvl4": 400
+      }
+    },
+    {
+      "case": "nested-simple",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "epl": "@name('s0') select * from EventInfraPropertyNestedSimpleJsonProvided",
+      "mode": "json-provided",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "op": "deployed",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "EventInfraPropertyNestedSimpleJsonProvided",
+      "mode": "json-provided",
+      "op": "send",
+      "payload": {
+        "lvl1": 1,
+        "lvl2": 2,
+        "lvl3": 3,
+        "lvl4": 4
+      }
+    },
+    {
+      "case": "nested-simple",
+      "op": "undeploy",
+      "statement": "s0"
+    },
+    {
+      "case": "nested-simple",
+      "eventType": "EventInfraPropertyNestedSimpleJsonProvided",
+      "op": "types",
+      "propertyOrder": [
+        "l1",
+        "l1.lvl1",
+        "l1.l2",
+        "l1.l2.lvl2",
+        "l1.l2.l3.lvl3",
+        "l2",
+        "l1.l3",
+        "l1.lvl1.lvl1",
+        "l1.l2.l4",
+        "l1.l2.xx",
+        "l1.l2.l3.lvl5"
+      ],
+      "propertyTypes": {
+        "l1": "com.espertech.esper.regressionlib.suite.event.infra.EventInfraPropertyNestedSimple$MyLocalJSONProvidedLvl1",
+        "l1.l2": "exists",
+        "l1.l2.l3.lvl3": "Integer",
+        "l1.l2.l3.lvl5": "\u003cinvalid\u003e",
+        "l1.l2.l4": "\u003cinvalid\u003e",
+        "l1.l2.lvl2": "Integer",
+        "l1.l2.xx": "\u003cinvalid\u003e",
+        "l1.l3": "\u003cinvalid\u003e",
+        "l1.lvl1": "Integer",
+        "l1.lvl1.lvl1": "\u003cinvalid\u003e",
+        "l2": "\u003cinvalid\u003e"
+      },
+      "statement": "types"
+    },
+    {
+      "case": "nested-simple",
+      "op": "undeploy-all"
+    }
+  ],
+  "version": "esper-parity/v1"
+}

@@ -97,7 +97,14 @@
     "EventInfraPropertyDynamicNestedDeep",
     "EventInfraPropertyDynamicNestedRootedNonSimple",
     "EventInfraPropertyDynamicNestedRootedSimple",
-    "EventInfraPropertyDynamicNonSimple"
+    "EventInfraPropertyDynamicNonSimple",
+    "EventInfraPropertyIndexedKeyExpr",
+    "EventInfraPropertyIndexedRuntimeIndex",
+    "EventInfraPropertyMappedIndexed",
+    "EventInfraPropertyMappedRuntimeKey",
+    "EventInfraPropertyNestedIndexed",
+    "EventInfraPropertyNestedNestedEscaped",
+    "EventInfraPropertyNestedSimple"
    ],
    "goRefs": [
     "internal/esper/schema.go",
@@ -107,7 +114,8 @@
     "internal/esper/event_render_test.go",
     "internal/app/parity/event_infra_getter_dynamic.go",
     "internal/app/parity/event_infra_getter_nested.go",
-    "internal/app/parity/event_infra_property_dynamic.go"
+    "internal/app/parity/event_infra_property_dynamic.go",
+    "internal/app/parity/event_infra_property_non_dynamic.go"
    ],
    "phase": 1,
    "status": "differential-verified",
@@ -153,7 +161,14 @@
     "java-runtime-0285612baa5f5321fae2",
     "java-runtime-a1c916427bb1c85757f8",
     "java-runtime-4cd646a570fcd69e826a",
-    "java-runtime-d6c08cf3d40f13126684"
+    "java-runtime-d6c08cf3d40f13126684",
+    "java-runtime-f5d82c0cf0cf2516d0ef",
+    "java-runtime-10ce593e8d5ae6a9dd89",
+    "java-runtime-b25d2dc5c7eb2c968105",
+    "java-runtime-c4f7fe6163eff7d35461",
+    "java-runtime-594a57ed26499f1ccd30",
+    "java-runtime-0b17042e1ee4d75b7007",
+    "java-runtime-848063976a9d6485ec20"
    ]
   },
   {
@@ -50178,6 +50193,85 @@
     "java-runtime-4cd646a570fcd69e826a",
     "java-runtime-d6c08cf3d40f13126684"
    ]
+  },
+  {
+   "id": "case.event-infra-property-non-dynamic",
+   "javaRuntimeIds": [
+    "java-runtime-f5d82c0cf0cf2516d0ef",
+    "java-runtime-10ce593e8d5ae6a9dd89",
+    "java-runtime-b25d2dc5c7eb2c968105",
+    "java-runtime-c4f7fe6163eff7d35461",
+    "java-runtime-594a57ed26499f1ccd30",
+    "java-runtime-0b17042e1ee4d75b7007",
+    "java-runtime-848063976a9d6485ec20"
+   ],
+   "javaStaticIds": [
+    "java-461ebcf502cbdf9ba15c",
+    "java-ed0cc8c7b0867c0cd502",
+    "java-287c4bf86e9464e7b595",
+    "java-899877f666cfc36adcb1",
+    "java-ff678fbbd673309b12b2",
+    "java-2d629e45d1948a6770ee",
+    "java-eb62cc47423e42ec7671"
+   ],
+   "javaNames": [
+    "EventInfraPropertyIndexedKeyExpr",
+    "EventInfraPropertyIndexedRuntimeIndex",
+    "EventInfraPropertyMappedIndexed",
+    "EventInfraPropertyMappedRuntimeKey",
+    "EventInfraPropertyNestedIndexed",
+    "EventInfraPropertyNestedNestedEscaped",
+    "EventInfraPropertyNestedSimple"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraPropertyIndexedKeyExpr.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraPropertyIndexedRuntimeIndex.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraPropertyMappedIndexed.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraPropertyMappedRuntimeKey.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraPropertyNestedIndexed.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraPropertyNestedNestedEscaped.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/infra/EventInfraPropertyNestedSimple.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunEventInfraPropertyNonDynamicDirectReplay",
+    "internal/app/parity/run_test.go:TestRunEventInfraPropertyNonDynamicDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunEventInfraPropertyNonDynamicCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunEventInfraPropertyNonDynamicDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunEventInfraPropertyNonDynamicRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunEventInfraPropertyNonDynamicRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "event",
+    "property-access",
+    "indexed",
+    "mapped",
+    "nested",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/event-infra-property-non-dynamic.json",
+    "testdata/parity/event-infra-property-non-dynamic.trace.json",
+    "testdata/parity/event-infra-property-non-dynamic.go.trace.json",
+    "testdata/parity/event-infra-property-non-dynamic.evidence.json",
+    "tools/java-oracle/EventInfraPropertyNonDynamicScenarioOracle.java",
+    "tools/java-oracle/run-event-infra-property-non-dynamic.sh"
+   ],
+   "notes": "EventInfraProperty* non-dynamic cluster born-differential: all 7 executions (ord 0, no flags) over bean/map/objectarray/json/json-provided/avro (+ xml for nested-indexed/nested-simple). Static property paths: indexed[i], mapped('key'), runtime-expression indices/keys (indexed(offsetNum+0), mapped(keyChar||'1') with constant variables), nested chains l1.l2.l3.l4.lvlN, nested indexed l1[0].l2[0].l3[0].l4[0].lvlN, escaped identifiers .`vlvl2` and fully-escaped `lvl1`.`lvl2`.`lvl3`.`vlvl3`, dynamic leaf `?` (vlvl2dyn?). Listener rows pin c*/exists_* columns; getter probes pin indexed/mapped accessors incl. invalid-property probes. Java/Go 824 records each, 0 differences. Scenario testdata/parity/event-infra-property-non-dynamic.json; Java trace via tools/java-oracle/run-event-infra-property-non-dynamic.sh at commit 9e1b9f1cc9117fea4bf33ab043762c045d73839c.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-f5d82c0cf0cf2516d0ef",
+    "java-runtime-10ce593e8d5ae6a9dd89",
+    "java-runtime-b25d2dc5c7eb2c968105",
+    "java-runtime-c4f7fe6163eff7d35461",
+    "java-runtime-594a57ed26499f1ccd30",
+    "java-runtime-0b17042e1ee4d75b7007",
+    "java-runtime-848063976a9d6485ec20"
+   ]
   }
  ],
  "mappings": [
@@ -53620,13 +53714,17 @@
   {
    "capabilityId": "event.property-access-render",
    "caseId": "case.event-infra-property-dynamic"
+  },
+  {
+   "capabilityId": "event.property-access-render",
+   "caseId": "case.event-infra-property-non-dynamic"
   }
  ],
  "summary": {
-  "inventoriedCases": 774,
-  "implementedCases": 772,
-  "differentialVerifiedCases": 397,
-  "differentialVerifiedRuntimeIds": 1575,
+  "inventoriedCases": 775,
+  "implementedCases": 773,
+  "differentialVerifiedCases": 398,
+  "differentialVerifiedRuntimeIds": 1582,
   "intentionallyDifferentCases": 36,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -53636,13 +53734,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4113,
-  "referencedJavaRuntimeIds": 3673,
+  "runtimeAssociationCount": 4120,
+  "referencedJavaRuntimeIds": 3680,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 463,
+  "unreferencedJavaRuntimeIds": 456,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 774,
+  "totalCases": 775,
   "totalCapabilities": 126
  }
 }
