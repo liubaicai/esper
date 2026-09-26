@@ -84753,3 +84753,288 @@ func TestRunEventAvroHook548CheckedInEvidenceMatchesTraceAndReplay(t *testing.T)
 	assertEAH548Trace(t, javaTrace)
 	assertEAH548Trace(t, goTrace)
 }
+
+func TestRunExprDTWithMinMax549DirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", exprDTWithMinMax549ID,
+		"-scenario", filepath.Join(root, exprDTWithMinMax549ID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertExprDTWithMinMax549Trace(t, trace)
+}
+
+func assertExprDTWithMinMax549Trace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != exprDTWithMinMax549ID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	counts := map[string]map[string]int{}
+	for _, record := range trace.Records {
+		if counts[record.Case] == nil {
+			counts[record.Case] = map[string]int{}
+		}
+		counts[record.Case][record.Operation]++
+	}
+	want := map[string]map[string]int{
+		"with-max-input":  {"listener": 1, "types": 1},
+		"with-max-fields": {"listener": 1, "types": 1},
+		"with-min-input":  {"listener": 1, "types": 1},
+		"with-min-fields": {"listener": 1, "types": 1},
+	}
+	if !reflect.DeepEqual(counts, want) {
+		t.Fatalf("record counts = %#v, want %#v", counts, want)
+	}
+}
+
+func TestRunExprDTWithMinMax549RejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, exprDTWithMinMax549ID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "expr-dt-with-minmax-549"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "expr-dt-with-minmax-549"`)...), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-8ca773479bf038c94597"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "case-ordinal-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "with-max-fields",
+      "ordinal": 1`), []byte(`"case": "with-max-fields",
+      "ordinal": 0`), 1)
+		}},
+		{name: "deploy-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`utildate.withMin('week') as val7`), []byte(`utildate.withMin('day') as val7`), 1)
+		}},
+		{name: "step-op-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "types",
+      "case": "with-max-fields"`), []byte(`"op": "typecheck",
+      "case": "with-max-fields"`), 1)
+		}},
+		{name: "description-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`9223372030035600000`), []byte(`9223372036854775807`), 1)
+		}},
+		{name: "send-type-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportDateTime"`), []byte(`"eventType": "SupportBean"`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", exprDTWithMinMax549ID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunExprDTWithMinMax549RuntimeIDMappingMatchesScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, exprDTWithMinMax549ID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenario struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &scenario); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenario.JavaRuntimes, exprDTWithMinMax549JavaRuntimeIDs) {
+		t.Fatalf("javaRuntimes = %#v", scenario.JavaRuntimes)
+	}
+	if !reflect.DeepEqual(scenario.JavaNames, exprDTWithMinMax549JavaExecutions) {
+		t.Fatalf("javaNames = %#v", scenario.JavaNames)
+	}
+	for index, definition := range scenario.Cases {
+		if definition.RuntimeID != exprDTWithMinMax549JavaRuntimeIDs[index] {
+			t.Fatalf("case %q runtimeId = %q, want %q", definition.Case, definition.RuntimeID, exprDTWithMinMax549JavaRuntimeIDs[index])
+		}
+	}
+}
+
+func TestRunExprDTWithMinMax549DiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), exprDTWithMinMax549ID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", exprDTWithMinMax549ID + "-diff",
+		"-scenario", filepath.Join(root, exprDTWithMinMax549ID+".json"),
+		"-java-trace", filepath.Join(root, exprDTWithMinMax549ID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != exprDTWithMinMax549JavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, exprDTWithMinMax549JavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, exprDTWithMinMax549JavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, exprDTWithMinMax549JavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertExprDTWithMinMax549Trace(t, evidence.JavaTrace)
+	assertExprDTWithMinMax549Trace(t, evidence.GoTrace)
+}
+
+func TestRunExprDTWithMinMax549DiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "year-wrap-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "with-max-fields" && rec.Operation == "listener" {
+						rec.New[0].Fields["val6"] = json.Number("9223372036854775807")
+						return
+					}
+				}
+				panic("no with-max-fields listener record")
+			},
+		},
+		{
+			name: "week-clamp-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "with-min-fields" && rec.Operation == "listener" {
+						rec.New[0].Fields["val7"] = json.Number("1009786862003")
+						return
+					}
+				}
+				panic("no with-min-fields listener record")
+			},
+		},
+		{
+			name: "types-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "with-max-input" && rec.Operation == "types" {
+						if properties, ok := rec.Value.(map[string]any)["properties"].(map[string]any); ok {
+							properties["val1"] = "Date"
+							return
+						}
+						panic("no properties map")
+					}
+				}
+				panic("no with-max-input types record")
+			},
+		},
+		{
+			name: "missing-record",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+		{
+			name: "record-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0], trace.Records[1] = trace.Records[1], trace.Records[0]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join(root, exprDTWithMinMax549ID+".trace.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), exprDTWithMinMax549ID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", exprDTWithMinMax549ID + "-diff",
+				"-scenario", filepath.Join(root, exprDTWithMinMax549ID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunExprDTWithMinMax549CheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, exprDTWithMinMax549ID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, exprDTWithMinMax549ID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, exprDTWithMinMax549ID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if evidence.JavaCommit != exprDTWithMinMax549JavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, exprDTWithMinMax549JavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, exprDTWithMinMax549JavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, exprDTWithMinMax549JavaExecutions) {
+		t.Fatalf("checked-in Java metadata = %#v", evidence)
+	}
+	assertExprDTWithMinMax549Trace(t, javaTrace)
+	assertExprDTWithMinMax549Trace(t, goTrace)
+}

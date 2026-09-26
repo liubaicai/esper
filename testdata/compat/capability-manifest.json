@@ -683,7 +683,11 @@
     "ExprCoreTypeOf",
     "ExprDTBetween",
     "ExprDTIntervalOps",
-    "TestExprCaseNode"
+    "TestExprCaseNode",
+    "ExprDTWithMaxInput",
+    "ExprDTWithMaxFields",
+    "ExprDTWithMinInput",
+    "ExprDTWithMinFields"
    ],
    "goRefs": [
     "internal/app/parity/expr_class_class_dependency.go",
@@ -762,7 +766,8 @@
     "internal/esper/stream.go",
     "internal/esper/subquery.go",
     "internal/app/parity/epl_other_invalid.go",
-    "internal/app/parity/expr_filter_optimizable_lookupable_limited.go"
+    "internal/app/parity/expr_filter_optimizable_lookupable_limited.go",
+    "internal/app/parity/expr_dt_with_minmax_549.go"
    ],
    "phase": 1,
    "status": "differential-verified",
@@ -891,7 +896,11 @@
     "java-runtime-bfeb8b79de810cba8674",
     "java-runtime-2d0d6df65e1884579f65",
     "java-runtime-20e9b043737a1b6b2c0d",
-    "java-runtime-0cd68bf813f2dd238a93"
+    "java-runtime-0cd68bf813f2dd238a93",
+    "java-runtime-097a5db3742ae25c3b0b",
+    "java-runtime-c6bba43af400a7375075",
+    "java-runtime-3f79b4bf903cca74fe6a",
+    "java-runtime-8ca773479bf038c94597"
    ]
   },
   {
@@ -50606,6 +50615,68 @@
     "java-runtime-20190c427227521c092b",
     "java-runtime-85c9c44d4baae883febe"
    ]
+  },
+  {
+   "id": "case.expr-dt-with-minmax",
+   "javaRuntimeIds": [
+    "java-runtime-097a5db3742ae25c3b0b",
+    "java-runtime-c6bba43af400a7375075",
+    "java-runtime-3f79b4bf903cca74fe6a",
+    "java-runtime-8ca773479bf038c94597"
+   ],
+   "javaStaticIds": [
+    "java-d4afe3864ba41bfd7918",
+    "java-d87f60ced41e2a52719f",
+    "java-2224592eef4aca9b4e7b",
+    "java-f3bf884f776301d91900"
+   ],
+   "javaNames": [
+    "ExprDTWithMaxInput",
+    "ExprDTWithMaxFields",
+    "ExprDTWithMinInput",
+    "ExprDTWithMinFields"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTWithMax.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTWithMax.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTWithMin.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTWithMin.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunExprDTWithMinMax549DirectReplay",
+    "internal/app/parity/run_test.go:TestRunExprDTWithMinMax549DiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunExprDTWithMinMax549CheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunExprDTWithMinMax549DiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunExprDTWithMinMax549RejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunExprDTWithMinMax549RuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "expr",
+    "datetime",
+    "calop",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/expr-dt-with-minmax-549.json",
+    "testdata/parity/expr-dt-with-minmax-549.trace.json",
+    "testdata/parity/expr-dt-with-minmax-549.go.trace.json",
+    "testdata/parity/expr-dt-with-minmax-549.evidence.json",
+    "tools/java-oracle/ExprDTWithMinMax549ScenarioOracle.java",
+    "tools/java-oracle/run-expr-dt-with-minmax-549.sh"
+   ],
+   "notes": "ExprDTWithMax + ExprDTWithMin complete born-differential (4/4 executions, 2 files). Shared-core additions: DateTimeWithMax/DateTimeWithMin[V int64|time.Time] in expr_dt_calops.go (rep-preserving); 'week' clamps use Java WEEK_OF_YEAR (Sunday-start, minDays 1) keeping day-of-week; 'year' uses GregorianCalendar actual bounds (max 292278994 -> int64-wrapped millis 9223372030035600000 replayed raw; min year-1 resolves pre-cutover on the Julian calendar via JDN emulation in dateTimeJavaToMillis \u2014 Java truth -62122863537997, surfaced as a real divergence during oracle verification and fixed in shared core). All 8 withMax/withMin field clamps byte-exact (msec/sec/minutes/hour/day/month/year/week, 'minutes'/'msec'/'sec' aliases); stmt-type pins map to assertStmtTypes simple names. Java/Go 8 records each, 0 differences. Scenario testdata/parity/expr-dt-with-minmax-549.json; Java trace via tools/java-oracle/run-expr-dt-with-minmax-549.sh at commit 9e1b9f1cc9117fea4bf33ab043762c045d73839c.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-097a5db3742ae25c3b0b",
+    "java-runtime-c6bba43af400a7375075",
+    "java-runtime-3f79b4bf903cca74fe6a",
+    "java-runtime-8ca773479bf038c94597"
+   ]
   }
  ],
  "mappings": [
@@ -54072,13 +54143,17 @@
   {
    "capabilityId": "event.avro-record",
    "caseId": "case.event-avro-hook"
+  },
+  {
+   "capabilityId": "expr.core",
+   "caseId": "case.expr-dt-with-minmax"
   }
  ],
  "summary": {
-  "inventoriedCases": 779,
-  "implementedCases": 777,
-  "differentialVerifiedCases": 402,
-  "differentialVerifiedRuntimeIds": 1605,
+  "inventoriedCases": 780,
+  "implementedCases": 778,
+  "differentialVerifiedCases": 403,
+  "differentialVerifiedRuntimeIds": 1609,
   "intentionallyDifferentCases": 36,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -54088,13 +54163,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4143,
-  "referencedJavaRuntimeIds": 3703,
+  "runtimeAssociationCount": 4147,
+  "referencedJavaRuntimeIds": 3707,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 433,
+  "unreferencedJavaRuntimeIds": 429,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 779,
+  "totalCases": 780,
   "totalCapabilities": 126
  }
 }

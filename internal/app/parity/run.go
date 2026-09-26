@@ -103,6 +103,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include expr-dt-interval-ops and expr-dt-interval-ops-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-dt-resolution and expr-dt-resolution-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-dt-data-sources and expr-dt-data-sources-diff")
+		fmt.Fprintln(stderr, "runner modes include expr-dt-with-minmax-549 and expr-dt-with-minmax-549-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-enum-select-from and expr-enum-select-from-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-type-use and expr-class-type-use-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-for-epl-objects and expr-class-for-epl-objects-diff")
@@ -240,6 +241,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadExprDTResolutionScenario(file)
 	} else if *mode == "expr-dt-data-sources" || *mode == "expr-dt-data-sources-diff" {
 		scenario, err = loadExprDTDataSourcesScenario(file)
+	} else if *mode == "expr-dt-with-minmax-549" || *mode == "expr-dt-with-minmax-549-diff" {
+		scenario, err = loadExprDTWithMinMax549Scenario(file)
 	} else if *mode == "context-key-segmented-infra-prioritized" || *mode == "context-key-segmented-infra-prioritized-diff" {
 		scenario, err = loadContextKeySegmentedInfraPrioritizedScenario(file)
 	} else if *mode == "context-key-segmented-named-window" || *mode == "context-key-segmented-named-window-diff" {
@@ -4928,6 +4931,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, eventAvroHook548JavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, eventAvroHook548JavaSources),
 				splitMetadata(*javaExecutions, eventAvroHook548JavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "expr-dt-with-minmax-549" || *mode == "expr-dt-with-minmax-549-diff" {
+		trace, err := runExprDTWithMinMax549Scenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "expr-dt-with-minmax-549-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, exprDTWithMinMax549JavaCommit,
+				splitMetadata(*javaRuntimeIDs, exprDTWithMinMax549JavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, exprDTWithMinMax549JavaSources),
+				splitMetadata(*javaExecutions, exprDTWithMinMax549JavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

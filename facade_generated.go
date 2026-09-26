@@ -1795,7 +1795,7 @@ func DateTimeRoundHalf[T int64 | time.Time](value Expression[T], unit string) Ex
 // expression. The input representation is preserved: int64 epoch-millis
 // stays int64, time.Time stays time.Time. Field names follow Java's
 // CalendarFieldEnum aliases (year,month,dayofmonth,hour,minute,second,
-// millisecond plus plural/short forms); the month value is 1-based. An
+// millisecond,week plus plural/short forms); the month value is 1-based. An
 // unknown field is a build-time configuration error; null or missing input
 // produces Null.
 func DateTimeSet[V int64 | time.Time](value Expression[V], field string, n int) Expression[V] {
@@ -1817,6 +1817,28 @@ func DateTimeToTime[V int64 | time.Time](value Expression[V]) Expression[time.Ti
 // missing input produces Null.
 func DateTimeWithDate[V int64 | time.Time](value Expression[V], year, month, day int) Expression[V] {
 	return internalengine.DateTimeWithDate[V](value, year, month, day)
+}
+
+// DateTimeWithMax applies Esper's withMax(field) calendar operation: the
+// field is set to its actual maximum while every other component stays put
+// (withMax('month') keeps the day, withMax('week') keeps the day-of-week).
+// Field names follow Java's CalendarFieldEnum aliases including 'week';
+// the input representation is preserved; null or missing input produces
+// Null. Calendar evaluation follows Java's GregorianCalendar hybrid rules:
+// pre-1582-10-15 instants resolve on the Julian calendar.
+func DateTimeWithMax[V int64 | time.Time](value Expression[V], field string) Expression[V] {
+	return internalengine.DateTimeWithMax[V](value, field)
+}
+
+// DateTimeWithMin applies Esper's withMin(field) calendar operation: the
+// field is set to its actual minimum while every other component stays put
+// (withMin('week') keeps the day-of-week). Field names follow Java's
+// CalendarFieldEnum aliases including 'week'; the input representation is
+// preserved; null or missing input produces Null. Calendar evaluation
+// follows Java's GregorianCalendar hybrid rules: pre-1582-10-15 instants
+// resolve on the Julian calendar.
+func DateTimeWithMin[V int64 | time.Time](value Expression[V], field string) Expression[V] {
+	return internalengine.DateTimeWithMin[V](value, field)
 }
 
 // DateTimeWithTime applies Esper's withTime(hour,minute,second,millis)

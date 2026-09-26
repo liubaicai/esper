@@ -80,6 +80,113 @@ func TestDateTimeCalOpsTransforms(t *testing.T) {
 	}
 }
 
+// TestDateTimeWithMinMaxTransforms checks the withMax/withMin clamps on both
+// representations against the pinned ExprDTWithMax/ExprDTWithMin oracle
+// values: 'week' keeps the day-of-week under Java WEEK_OF_YEAR semantics,
+// 'year' hits GregorianCalendar's actual bounds, and null/missing inputs
+// produce Null cells.
+func TestDateTimeWithMinMaxTransforms(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterMap(env, "DT", []FieldSpec{
+		{Name: "l", Type: reflect.TypeOf(int64(0))},
+		{Name: "t", Type: reflect.TypeOf(time.Time{})},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(FromAny(env, "DT").Select(
+		Alias("maxMonth", DateTimeWithMax[int64](Field[map[string]any, int64]("l"), "month")),
+		Alias("minMonth", DateTimeWithMin[time.Time](Field[map[string]any, time.Time]("t"), "month")),
+		Alias("maxWeek", DateTimeWithMax[int64](Field[map[string]any, int64]("l"), "week")),
+		Alias("minWeek", DateTimeWithMin[int64](Field[map[string]any, int64]("l"), "week")),
+		Alias("maxYear", DateTimeWithMax[int64](Field[map[string]any, int64]("l"), "year")),
+		Alias("minYear", DateTimeWithMin[int64](Field[map[string]any, int64]("l"), "year")),
+		Alias("maxDay", DateTimeWithMax[time.Time](Field[map[string]any, time.Time]("t"), "day")),
+	).Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+	rows := subscribeRows(t, engine, plan)
+
+	base := time.Date(2002, 5, 30, 9, 0, 0, 0, time.UTC)
+	if err := engine.SendRecord(context.Background(), "DT", map[string]any{"l": base.UnixMilli(), "t": base}); err != nil {
+		t.Fatal(err)
+	}
+	got := rows()
+	if len(got) != 1 {
+		t.Fatalf("rows = %d, want 1", len(got))
+	}
+	want := map[string]int64{
+		"maxMonth": time.Date(2002, 12, 30, 9, 0, 0, 0, time.UTC).UnixMilli(),
+		"minMonth": time.Date(2002, 1, 30, 9, 0, 0, 0, time.UTC).UnixMilli(),
+		"maxWeek":  time.Date(2002, 12, 26, 9, 0, 0, 0, time.UTC).UnixMilli(),
+		"minWeek":  time.Date(2002, 1, 3, 9, 0, 0, 0, time.UTC).UnixMilli(),
+		// Java GregorianCalendar resolves year-1 dates on the Julian
+		// calendar (pre-1582-10-15 cutover), not Go's proleptic Gregorian:
+		// 0001-05-30T09:00 Julian = epoch-millis -62122863600000.
+		"minYear": -62122863600000,
+		"maxDay":  time.Date(2002, 5, 31, 9, 0, 0, 0, time.UTC).UnixMilli(),
+	}
+	row := got[0]
+	for column, millis := range want {
+		var v int64
+		switch value := row.Get(column).Any().(type) {
+		case int64:
+			v = value
+		case time.Time:
+			v = value.UnixMilli()
+		default:
+			t.Fatalf("%s = %#v, want date-time cell", column, row.Get(column).Any())
+		}
+		if v != millis {
+			t.Fatalf("%s = %d, want %d", column, v, millis)
+		}
+	}
+	// withMax('year') reaches GregorianCalendar's actual-maximum year
+	// 292278994; the epoch-millis result is the int64-wrapped value the
+	// oracle's getTime() yields for the same instant.
+	if v, ok := row.Get("maxYear").Any().(int64); !ok || v != 9223372030035600000 {
+		t.Fatalf("maxYear = %#v, want wrapped int64 9223372030035600000", row.Get("maxYear").Any())
+	}
+	// Null and missing inputs produce Null cells.
+	if err := engine.SendRecord(context.Background(), "DT", map[string]any{"l": nil, "t": nil}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendRecord(context.Background(), "DT", map[string]any{}); err != nil {
+		t.Fatal(err)
+	}
+	got = rows()
+	if len(got) != 3 {
+		t.Fatalf("rows = %d, want 3", len(got))
+	}
+	for index := 1; index <= 2; index++ {
+		for _, column := range []string{"maxMonth", "minMonth", "maxWeek", "minWeek", "maxYear", "minYear", "maxDay"} {
+			if got[index].Get(column).IsPresent() {
+				t.Fatalf("row %d %s = %#v, want null", index, column, got[index].Get(column).Any())
+			}
+		}
+	}
+
+	// Pre-cutover instants decompose on the Julian calendar (JDK-verified
+	// oracle values): Julian 1500-06-15T12:00 -> withMin('week') /
+	// withMax('week') under WEEK_OF_YEAR semantics.
+	pre := int64(-14816606400000)
+	if err := engine.SendRecord(context.Background(), "DT", map[string]any{"l": pre, "t": nil}); err != nil {
+		t.Fatal(err)
+	}
+	got = rows()
+	if len(got) != 4 {
+		t.Fatalf("rows = %d, want 4", len(got))
+	}
+	if v, ok := got[3].Get("minWeek").Any().(int64); !ok || v != -14831121600000 {
+		t.Fatalf("pre-cutover minWeek = %#v, want -14831121600000", got[3].Get("minWeek").Any())
+	}
+	if v, ok := got[3].Get("maxWeek").Any().(int64); !ok || v != -14800276800000 {
+		t.Fatalf("pre-cutover maxWeek = %#v, want -14800276800000", got[3].Get("maxWeek").Any())
+	}
+}
+
 // TestDateTimeBeforePoint checks the strict point-in-time before: true iff
 // threshold - value >= 1ms; null and missing operands produce Null.
 func TestDateTimeBeforePoint(t *testing.T) {
@@ -249,10 +356,10 @@ func TestDateTimeCalOpsInvalidField(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := env.Build(FromAny(env, "DT").Select(
-		Alias("c0", DateTimeSet[int64](Field[map[string]any, int64]("l"), "week", 1)),
+		Alias("c0", DateTimeSet[int64](Field[map[string]any, int64]("l"), "nope", 1)),
 	).Query(StatementName("s0"))); err == nil || !errors.Is(err, ErrorInvalidRule) ||
 		!strings.Contains(err.Error(), "unknown date-time calendar field") {
-		t.Fatalf("DateTimeSet week build error = %v", err)
+		t.Fatalf("DateTimeSet unknown-field build error = %v", err)
 	}
 
 	bounds := IntervalBounds{

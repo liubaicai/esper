@@ -1,0 +1,486 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-097a5db3742ae25c3b0b",
+    "java-runtime-c6bba43af400a7375075",
+    "java-runtime-3f79b4bf903cca74fe6a",
+    "java-runtime-8ca773479bf038c94597"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTWithMax.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTWithMin.java"
+  ],
+  "javaExecutions": [
+    "ExprDTWithMaxInput",
+    "ExprDTWithMaxFields",
+    "ExprDTWithMinInput",
+    "ExprDTWithMinFields"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "expr-dt-with-minmax-549",
+    "steps": [
+      {
+        "op": "case",
+        "case": "with-max-input"
+      },
+      {
+        "op": "deploy",
+        "case": "with-max-input",
+        "statement": "s0",
+        "epl": "@name('s0') select utildate.withMax('month') as val0,longdate.withMax('month') as val1,caldate.withMax('month') as val2,localdate.withMax('month') as val3,zoneddate.withMax('month') as val4 from SupportDateTime"
+      },
+      {
+        "op": "types",
+        "case": "with-max-input",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "with-max-input",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": "2002-05-30T09:00:00.000Z",
+          "expected": [
+            1041238800000,
+            1041238800000,
+            1041238800000,
+            1041238800000,
+            1041238800000
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "with-max-input"
+      },
+      {
+        "op": "case",
+        "case": "with-max-fields"
+      },
+      {
+        "op": "deploy",
+        "case": "with-max-fields",
+        "statement": "s0",
+        "epl": "@name('s0') select utildate.withMax('msec') as val0,utildate.withMax('sec') as val1,utildate.withMax('minutes') as val2,utildate.withMax('hour') as val3,utildate.withMax('day') as val4,utildate.withMax('month') as val5,utildate.withMax('year') as val6,utildate.withMax('week') as val7 from SupportDateTime"
+      },
+      {
+        "op": "types",
+        "case": "with-max-fields",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "with-max-fields",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": "2002-05-30T09:00:00.000Z",
+          "expected": [
+            1022749200999,
+            1022749259000,
+            1022752740000,
+            1022799600000,
+            1022835600000,
+            1041238800000,
+            9223372030035600000,
+            1040893200000
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "with-max-fields"
+      },
+      {
+        "op": "case",
+        "case": "with-min-input"
+      },
+      {
+        "op": "deploy",
+        "case": "with-min-input",
+        "statement": "s0",
+        "epl": "@name('s0') select utildate.withMin('month') as val0,longdate.withMin('month') as val1,caldate.withMin('month') as val2,localdate.withMin('month') as val3,zoneddate.withMin('month') as val4 from SupportDateTime"
+      },
+      {
+        "op": "types",
+        "case": "with-min-input",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "with-min-input",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": "2002-05-30T09:00:00.000Z",
+          "expected": [
+            1012381200000,
+            1012381200000,
+            1012381200000,
+            1012381200000,
+            1012381200000
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "with-min-input"
+      },
+      {
+        "op": "case",
+        "case": "with-min-fields"
+      },
+      {
+        "op": "deploy",
+        "case": "with-min-fields",
+        "statement": "s0",
+        "epl": "@name('s0') select utildate.withMin('msec') as val0,utildate.withMin('sec') as val1,utildate.withMin('minutes') as val2,utildate.withMin('hour') as val3,utildate.withMin('day') as val4,utildate.withMin('month') as val5,utildate.withMin('year') as val6,utildate.withMin('week') as val7 from SupportDateTime"
+      },
+      {
+        "op": "types",
+        "case": "with-min-fields",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "with-min-fields",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": "2002-05-30T09:01:02.003Z",
+          "expected": [
+            1022749262000,
+            1022749260003,
+            1022749202003,
+            1022716862003,
+            1020243662003,
+            1012381262003,
+            -62122863537997,
+            1010048462003
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "with-min-fields"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-dt-with-minmax-549",
+    "records": [
+      {
+        "case": "with-max-input",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "Date",
+            "val1": "Long",
+            "val2": "Calendar",
+            "val3": "LocalDateTime",
+            "val4": "ZonedDateTime"
+          }
+        }
+      },
+      {
+        "case": "with-max-input",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1041238800000,
+              "val1": 1041238800000,
+              "val2": 1041238800000,
+              "val3": 1041238800000,
+              "val4": 1041238800000
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-max-fields",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "Date",
+            "val1": "Date",
+            "val2": "Date",
+            "val3": "Date",
+            "val4": "Date",
+            "val5": "Date",
+            "val6": "Date",
+            "val7": "Date"
+          }
+        }
+      },
+      {
+        "case": "with-max-fields",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022749200999,
+              "val1": 1022749259000,
+              "val2": 1022752740000,
+              "val3": 1022799600000,
+              "val4": 1022835600000,
+              "val5": 1041238800000,
+              "val6": 9223372030035600000,
+              "val7": 1040893200000
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-min-input",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "Date",
+            "val1": "Long",
+            "val2": "Calendar",
+            "val3": "LocalDateTime",
+            "val4": "ZonedDateTime"
+          }
+        }
+      },
+      {
+        "case": "with-min-input",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1012381200000,
+              "val1": 1012381200000,
+              "val2": 1012381200000,
+              "val3": 1012381200000,
+              "val4": 1012381200000
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-min-fields",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "Date",
+            "val1": "Date",
+            "val2": "Date",
+            "val3": "Date",
+            "val4": "Date",
+            "val5": "Date",
+            "val6": "Date",
+            "val7": "Date"
+          }
+        }
+      },
+      {
+        "case": "with-min-fields",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022749262000,
+              "val1": 1022749260003,
+              "val2": 1022749202003,
+              "val3": 1022716862003,
+              "val4": 1020243662003,
+              "val5": 1012381262003,
+              "val6": -62122863537997,
+              "val7": 1010048462003
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-dt-with-minmax-549",
+    "records": [
+      {
+        "case": "with-max-input",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "Date",
+            "val1": "Long",
+            "val2": "Calendar",
+            "val3": "LocalDateTime",
+            "val4": "ZonedDateTime"
+          }
+        }
+      },
+      {
+        "case": "with-max-input",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1041238800000,
+              "val1": 1041238800000,
+              "val2": 1041238800000,
+              "val3": 1041238800000,
+              "val4": 1041238800000
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-max-fields",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "Date",
+            "val1": "Date",
+            "val2": "Date",
+            "val3": "Date",
+            "val4": "Date",
+            "val5": "Date",
+            "val6": "Date",
+            "val7": "Date"
+          }
+        }
+      },
+      {
+        "case": "with-max-fields",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022749200999,
+              "val1": 1022749259000,
+              "val2": 1022752740000,
+              "val3": 1022799600000,
+              "val4": 1022835600000,
+              "val5": 1041238800000,
+              "val6": 9223372030035600000,
+              "val7": 1040893200000
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-min-input",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "Date",
+            "val1": "Long",
+            "val2": "Calendar",
+            "val3": "LocalDateTime",
+            "val4": "ZonedDateTime"
+          }
+        }
+      },
+      {
+        "case": "with-min-input",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1012381200000,
+              "val1": 1012381200000,
+              "val2": 1012381200000,
+              "val3": 1012381200000,
+              "val4": 1012381200000
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-min-fields",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "Date",
+            "val1": "Date",
+            "val2": "Date",
+            "val3": "Date",
+            "val4": "Date",
+            "val5": "Date",
+            "val6": "Date",
+            "val7": "Date"
+          }
+        }
+      },
+      {
+        "case": "with-min-fields",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022749262000,
+              "val1": 1022749260003,
+              "val2": 1022749202003,
+              "val3": 1022716862003,
+              "val4": 1020243662003,
+              "val5": 1012381262003,
+              "val6": -62122863537997,
+              "val7": 1010048462003
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

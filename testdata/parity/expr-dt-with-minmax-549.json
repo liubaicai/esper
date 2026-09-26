@@ -1,0 +1,174 @@
+{
+  "version": "esper-parity/v1",
+  "id": "expr-dt-with-minmax-549",
+  "description": "ExprDTWithMax/ExprDTWithMin executions: with-max-input replays ExprDTWithMaxInput (withMax('month') over all five SupportDateTime representations of 2002-05-30T09:00:00.000 emits 2002-12-30T09:00:00.000 in val0..val4), with-max-fields replays ExprDTWithMaxFields (withMax over msec,sec,minutes,hour,day,month,year,week on utildate: 'week' keeps the day-of-week -> 2002-12-26, 'year' wraps epoch-millis to 9223372030035600000), with-min-input replays ExprDTWithMinInput (withMin('month') emits 2002-01-30T09:00:00.000), with-min-fields replays ExprDTWithMinFields (withMin at 2002-05-30T09:01:02.003: 'year' -> 0001-05-30 epoch-millis -62122863537997, 'week' -> 2002-01-03).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime",
+  "javaRuntimes": [
+    "java-runtime-097a5db3742ae25c3b0b",
+    "java-runtime-c6bba43af400a7375075",
+    "java-runtime-3f79b4bf903cca74fe6a",
+    "java-runtime-8ca773479bf038c94597"
+  ],
+  "javaNames": [
+    "ExprDTWithMaxInput",
+    "ExprDTWithMaxFields",
+    "ExprDTWithMinInput",
+    "ExprDTWithMinFields"
+  ],
+  "javaStaticIds": [
+    "java-d4afe3864ba41bfd7918",
+    "java-d87f60ced41e2a52719f",
+    "java-2224592eef4aca9b4e7b",
+    "java-f3bf884f776301d91900"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "with-max-input",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-097a5db3742ae25c3b0b",
+      "executionName": "ExprDTWithMaxInput",
+      "observation": "listener+types; deploy s0 withMax('month') over all five representations, types pins {Date,Long,Calendar,LocalDateTime,ZonedDateTime}, send make(2002-05-30T09:00:00.000) emits 2002-12-30T09:00:00.000 epoch-millis in val0..val4",
+      "epl": "@name('s0') select utildate.withMax('month') as val0,longdate.withMax('month') as val1,caldate.withMax('month') as val2,localdate.withMax('month') as val3,zoneddate.withMax('month') as val4 from SupportDateTime"
+    },
+    {
+      "case": "with-max-fields",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-c6bba43af400a7375075",
+      "executionName": "ExprDTWithMaxFields",
+      "observation": "listener+types; deploy s0 withMax over msec,sec,minutes,hour,day,month,year,week on utildate, types pins all-Date, send make(2002-05-30T09:00:00.000) emits {...999, ...59.000, ...59:00, ...23:00, 2002-05-31, 2002-12-30, wrapped-year 9223372030035600000, 2002-12-26}",
+      "epl": "@name('s0') select utildate.withMax('msec') as val0,utildate.withMax('sec') as val1,utildate.withMax('minutes') as val2,utildate.withMax('hour') as val3,utildate.withMax('day') as val4,utildate.withMax('month') as val5,utildate.withMax('year') as val6,utildate.withMax('week') as val7 from SupportDateTime"
+    },
+    {
+      "case": "with-min-input",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-3f79b4bf903cca74fe6a",
+      "executionName": "ExprDTWithMinInput",
+      "observation": "listener+types; deploy s0 withMin('month') over all five representations, types pins {Date,Long,Calendar,LocalDateTime,ZonedDateTime}, send make(2002-05-30T09:00:00.000) emits 2002-01-30T09:00:00.000 epoch-millis in val0..val4",
+      "epl": "@name('s0') select utildate.withMin('month') as val0,longdate.withMin('month') as val1,caldate.withMin('month') as val2,localdate.withMin('month') as val3,zoneddate.withMin('month') as val4 from SupportDateTime"
+    },
+    {
+      "case": "with-min-fields",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-8ca773479bf038c94597",
+      "executionName": "ExprDTWithMinFields",
+      "observation": "listener+types; deploy s0 withMin over msec,sec,minutes,hour,day,month,year,week on utildate, types pins all-Date, send make(2002-05-30T09:01:02.003) emits {...02.000, ...00.003, ...00:02.003, 00:01:02.003, 2002-05-01, 2002-01-30, year-1 -62122863537997, 2002-01-03}",
+      "epl": "@name('s0') select utildate.withMin('msec') as val0,utildate.withMin('sec') as val1,utildate.withMin('minutes') as val2,utildate.withMin('hour') as val3,utildate.withMin('day') as val4,utildate.withMin('month') as val5,utildate.withMin('year') as val6,utildate.withMin('week') as val7 from SupportDateTime"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "with-max-input"
+    },
+    {
+      "op": "deploy",
+      "case": "with-max-input",
+      "statement": "s0",
+      "epl": "@name('s0') select utildate.withMax('month') as val0,longdate.withMax('month') as val1,caldate.withMax('month') as val2,localdate.withMax('month') as val3,zoneddate.withMax('month') as val4 from SupportDateTime"
+    },
+    {
+      "op": "types",
+      "case": "with-max-input",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "with-max-input",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "date": "2002-05-30T09:00:00.000Z",
+        "expected": [1041238800000, 1041238800000, 1041238800000, 1041238800000, 1041238800000]
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "with-max-input"
+    },
+    {
+      "op": "case",
+      "case": "with-max-fields"
+    },
+    {
+      "op": "deploy",
+      "case": "with-max-fields",
+      "statement": "s0",
+      "epl": "@name('s0') select utildate.withMax('msec') as val0,utildate.withMax('sec') as val1,utildate.withMax('minutes') as val2,utildate.withMax('hour') as val3,utildate.withMax('day') as val4,utildate.withMax('month') as val5,utildate.withMax('year') as val6,utildate.withMax('week') as val7 from SupportDateTime"
+    },
+    {
+      "op": "types",
+      "case": "with-max-fields",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "with-max-fields",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "date": "2002-05-30T09:00:00.000Z",
+        "expected": [1022749200999, 1022749259000, 1022752740000, 1022799600000, 1022835600000, 1041238800000, 9223372030035600000, 1040893200000]
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "with-max-fields"
+    },
+    {
+      "op": "case",
+      "case": "with-min-input"
+    },
+    {
+      "op": "deploy",
+      "case": "with-min-input",
+      "statement": "s0",
+      "epl": "@name('s0') select utildate.withMin('month') as val0,longdate.withMin('month') as val1,caldate.withMin('month') as val2,localdate.withMin('month') as val3,zoneddate.withMin('month') as val4 from SupportDateTime"
+    },
+    {
+      "op": "types",
+      "case": "with-min-input",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "with-min-input",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "date": "2002-05-30T09:00:00.000Z",
+        "expected": [1012381200000, 1012381200000, 1012381200000, 1012381200000, 1012381200000]
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "with-min-input"
+    },
+    {
+      "op": "case",
+      "case": "with-min-fields"
+    },
+    {
+      "op": "deploy",
+      "case": "with-min-fields",
+      "statement": "s0",
+      "epl": "@name('s0') select utildate.withMin('msec') as val0,utildate.withMin('sec') as val1,utildate.withMin('minutes') as val2,utildate.withMin('hour') as val3,utildate.withMin('day') as val4,utildate.withMin('month') as val5,utildate.withMin('year') as val6,utildate.withMin('week') as val7 from SupportDateTime"
+    },
+    {
+      "op": "types",
+      "case": "with-min-fields",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "with-min-fields",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "date": "2002-05-30T09:01:02.003Z",
+        "expected": [1022749262000, 1022749260003, 1022749202003, 1022716862003, 1020243662003, 1012381262003, -62122863537997, 1010048462003]
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "with-min-fields"
+    }
+  ]
+}

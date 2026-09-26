@@ -39,15 +39,15 @@ const (
 	dateTimeCalDayOfMonth
 	dateTimeCalMonth
 	dateTimeCalYear
+	dateTimeCalWeek
 )
 
 // dateTimeCalendarField resolves a set(field,n) name to a calendar field.
 // Aliases follow Java's CalendarFieldEnum (case-insensitive, trimmed):
 // msec/millisecond(s), sec/second(s), min/minute(s), hour(s), day(s),
-// month(s), year(s). The contract field name "dayofmonth" maps to Java's
-// Calendar.DATE ("day"). Java's "week" is rejected: WEEK_OF_YEAR is
-// locale-dependent (first-day-of-week/minimal-days-in-first-week) and not
-// part of the frozen contract.
+// month(s), year(s), week(s). The contract field name "dayofmonth" maps to
+// Java's Calendar.DATE ("day"); "week" maps to Java's WEEK_OF_YEAR with the
+// default GregorianCalendar rule (Sunday-start, minimal-days 1).
 func dateTimeCalendarField(field string) (dateTimeCalField, error) {
 	switch strings.ToLower(strings.TrimSpace(field)) {
 	case "msec", "millisecond", "milliseconds":
@@ -64,20 +64,245 @@ func dateTimeCalendarField(field string) (dateTimeCalField, error) {
 		return dateTimeCalMonth, nil
 	case "year", "years":
 		return dateTimeCalYear, nil
+	case "week", "weeks":
+		return dateTimeCalWeek, nil
 	default:
-		return -1, fmt.Errorf("unknown date-time calendar field %q (valid: year,month,dayofmonth,hour,minute,second,millisecond)", field)
+		return -1, fmt.Errorf("unknown date-time calendar field %q (valid: year,month,dayofmonth,hour,minute,second,millisecond,week)", field)
 	}
+}
+
+// dateTimeJavaWeeksInYear returns the number of WEEK_OF_YEAR weeks in a year
+// under Java's default GregorianCalendar rule (52 or 53). The anchor honors
+// the hybrid calendar: pre-cutover years resolve their January 1 on the
+// Julian calendar.
+func dateTimeJavaWeeksInYear(y int) int {
+	weekStart := dateTimeJavaWeekOneSundayMillis(y, time.UTC)
+	nextStart := dateTimeJavaWeekOneSundayMillis(y+1, time.UTC)
+	return int((nextStart - weekStart) / (7 * 86400000))
+}
+
+// dateTimeJavaWeekOneSundayMillis returns the epoch-millis of the Sunday on
+// or before the year's January 1 (Java WEEK_OF_YEAR anchor, minDays 1). For
+// pre-cutover years January 1 is a Julian-calendar date.
+func dateTimeJavaWeekOneSundayMillis(y int, location *time.Location) int64 {
+	jan1Millis := dateTimeJavaToMillis(y, 1, 1, 0, 0, 0, 0, location)
+	jan1 := time.UnixMilli(jan1Millis).In(location)
+	return jan1Millis - int64(jan1.Weekday())*86400000
+}
+
+// dateTimeJavaWeekSetMillis returns the epoch-millis of setting WEEK_OF_YEAR
+// to `target` for the original instant: Java Calendar.set keeps the
+// day-of-week, and a day's weekday is absolute, so it comes from the input
+// instant. The calendar year anchors the week grid (hybrid rules).
+func dateTimeJavaWeekSetMillis(millis int64, target, weekday, h, mi, s, ns int, location *time.Location) int64 {
+	y, _, _ := dateTimeJavaDecompose(millis, location)
+	weekOneSunday := dateTimeJavaWeekOneSundayMillis(y, location)
+	return weekOneSunday + int64(7*(target-1)+weekday)*86400000 +
+		int64(h)*3600000 + int64(mi)*60000 + int64(s)*1000 + int64(ns/int(time.Millisecond))
+}
+
+// dateTimeJavaDecompose converts epoch-millis to local civil fields under
+// Java's GregorianCalendar hybrid rules: post-cutover instants decompose on
+// the proleptic Gregorian calendar; pre-cutover instants decompose on the
+// Julian calendar via the inverse Julian day number.
+func dateTimeJavaDecompose(millis int64, location *time.Location) (int, time.Month, int) {
+	t := time.UnixMilli(millis).In(location)
+	if t.UnixMilli() >= dateTimeJavaCutoverMillis {
+		y, mo, d := t.Date()
+		return y, mo, d
+	}
+	offsetMillis := int64(0)
+	if location != nil {
+		_, offsetSeconds := t.Zone()
+		offsetMillis = int64(offsetSeconds) * 1000
+	}
+	localMillis := millis + offsetMillis
+	// JDN of the local civil day (floor division for negative values).
+	day := localMillis / 86400000
+	if localMillis%86400000 < 0 {
+		day--
+	}
+	jdn := day + 2440588
+	// Inverse JDN -> Julian y/m/d (Fliegel–Van Flandern Julian branch:
+	// c=jdn+32082; verified against the forward JDN used by
+	// dateTimeJavaToMillis, e.g. 0001-05-30 -> JDN 1721573).
+	c := jdn + 32082
+	dq := (4*c + 3) / 1461
+	e := c - (1461*dq)/4
+	mq := (5*e + 2) / 153
+	dayOfMonth := int(e - (153*mq+2)/5 + 1)
+	month := int(mq + 3 - 12*(mq/10))
+	year := int(dq - 4800 + (mq / 10))
+	return year, time.Month(month), dayOfMonth
+}
+
+// dateTimeJavaDaysInMonth returns the civil month length under the hybrid
+// rules: the Julian leap rule (year % 4 == 0) for pre-cutover years, the
+// Gregorian rule otherwise.
+func dateTimeJavaDaysInMonth(y int, mo time.Month) int {
+	switch mo {
+	case time.January, time.March, time.May, time.July, time.August, time.October, time.December:
+		return 31
+	case time.April, time.June, time.September, time.November:
+		return 30
+	}
+	if y >= 1583 {
+		if y%400 == 0 || (y%4 == 0 && y%100 != 0) {
+			return 29
+		}
+		return 28
+	}
+	if y%4 == 0 {
+		return 29
+	}
+	return 28
+}
+
+// dateTimeCalOpWithMinMax returns the transform for withMax(field) /
+// withMin(field): the calendar field is set to its actual maximum/minimum in
+// the value's zone while all other components stay put (Java Calendar.set
+// semantics; day-of-month for 'day', week-of-year keeps the day-of-week).
+// 'year' uses GregorianCalendar's actual maximum 292278994 / minimum 1.
+func dateTimeCalOpWithMinMax(field dateTimeCalField, maximum bool) dateTimeCalOpApply {
+	return func(millis int64, location *time.Location) int64 {
+		t := time.UnixMilli(millis).In(location)
+		y, mo, d := dateTimeJavaDecompose(millis, location)
+		h, mi, s := t.Clock()
+		ns := t.Nanosecond()
+		switch field {
+		case dateTimeCalMillisecond:
+			if maximum {
+				ns = int(999 * time.Millisecond)
+			} else {
+				ns = 0
+			}
+		case dateTimeCalSecond:
+			if maximum {
+				s = 59
+			} else {
+				s = 0
+			}
+		case dateTimeCalMinute:
+			if maximum {
+				mi = 59
+			} else {
+				mi = 0
+			}
+		case dateTimeCalHour:
+			if maximum {
+				h = 23
+			} else {
+				h = 0
+			}
+		case dateTimeCalDayOfMonth:
+			if maximum {
+				d = dateTimeJavaDaysInMonth(y, mo)
+			} else {
+				d = 1
+			}
+		case dateTimeCalMonth:
+			if maximum {
+				mo = time.December
+			} else {
+				mo = time.January
+			}
+		case dateTimeCalYear:
+			if maximum {
+				y = 292278994
+			} else {
+				y = 1
+			}
+		case dateTimeCalWeek:
+			// Java WEEK_OF_YEAR (Sunday-start, minDays 1): set the week
+			// number while keeping the day-of-week, like Calendar.set —
+			// getActualMaximum yields weeks-in-year (52 or 53), minimum 1.
+			target := 1
+			if maximum {
+				target = dateTimeJavaWeeksInYear(y)
+			}
+			return dateTimeJavaWeekSetMillis(millis, target, int(t.Weekday()), h, mi, s, ns, location)
+		}
+		return dateTimeJavaToMillis(y, mo, d, h, mi, s, ns, location)
+	}
+}
+
+// dateTimeJavaCutoverMillis is the epoch-millis of Java GregorianCalendar's
+// Julian-to-Gregorian cutover (1582-10-15 local midnight). Dates before it
+// resolve on the Julian calendar; dates on or after it resolve on the
+// proleptic Gregorian calendar.
+const dateTimeJavaCutoverMillis = int64(-12219292800000)
+
+// dateTimeJavaToMillis converts a calendar field tuple to epoch-millis under
+// Java's GregorianCalendar hybrid rules: post-cutover fields go through the
+// proleptic Gregorian calendar (time.Date), while pre-cutover fields resolve
+// on the Julian calendar via the Julian day number (java.util.GregorianCalendar
+// epochMillis: JDN * 86400000 - 210866803200000 + zone offset). The zone
+// offset is taken from the instant the field tuple would produce on the
+// proleptic calendar — pre-cutover LMT divergences are out of scope.
+func dateTimeJavaToMillis(y int, mo time.Month, d, h, mi, s, ns int, location *time.Location) int64 {
+	proleptic := time.Date(y, mo, d, h, mi, s, ns, location)
+	if proleptic.UnixMilli() >= dateTimeJavaCutoverMillis {
+		return proleptic.UnixMilli()
+	}
+	// Julian day number for a Julian-calendar civil date (a = (14-month)/12).
+	a := (14 - int(mo)) / 12
+	jy := y + 4800 - a
+	jm := int(mo) + 12*a - 3
+	jdn := int64(d) + int64((153*jm+2)/5) + 365*int64(jy) + int64(jy/4) - 32083
+	// Zone offset at the corresponding proleptic instant (pre-cutover LMT
+	// divergence vs Java is out of scope).
+	offset := int64(0)
+	if location != nil {
+		_, offsetSeconds := proleptic.Zone()
+		offset = int64(offsetSeconds)
+	}
+	return jdn*86400000 - 210866803200000 + offset*1000 + int64(h)*3600000 + int64(mi)*60000 + int64(s)*1000 + int64(ns/int(time.Millisecond))
+}
+
+// DateTimeWithMax applies Esper's withMax(field) calendar operation: the
+// field is set to its actual maximum while every other component stays put
+// (withMax('month') keeps the day, withMax('week') keeps the day-of-week).
+// Field names follow Java's CalendarFieldEnum aliases including 'week';
+// the input representation is preserved; null or missing input produces
+// Null. Calendar evaluation follows Java's GregorianCalendar hybrid rules:
+// pre-1582-10-15 instants resolve on the Julian calendar.
+func DateTimeWithMax[V int64 | time.Time](value Expression[V], field string) Expression[V] {
+	resolved, err := dateTimeCalendarField(field)
+	var apply dateTimeCalOpApply
+	if err == nil {
+		apply = dateTimeCalOpWithMinMax(resolved, true)
+	}
+	return dateTimeCalOpExpression[V]("date-time-with-max", value, apply,
+		fmt.Sprintf("'%s'", field), errorMessage(err))
+}
+
+// DateTimeWithMin applies Esper's withMin(field) calendar operation: the
+// field is set to its actual minimum while every other component stays put
+// (withMin('week') keeps the day-of-week). Field names follow Java's
+// CalendarFieldEnum aliases including 'week'; the input representation is
+// preserved; null or missing input produces Null. Calendar evaluation
+// follows Java's GregorianCalendar hybrid rules: pre-1582-10-15 instants
+// resolve on the Julian calendar.
+func DateTimeWithMin[V int64 | time.Time](value Expression[V], field string) Expression[V] {
+	resolved, err := dateTimeCalendarField(field)
+	var apply dateTimeCalOpApply
+	if err == nil {
+		apply = dateTimeCalOpWithMinMax(resolved, false)
+	}
+	return dateTimeCalOpExpression[V]("date-time-with-min", value, apply,
+		fmt.Sprintf("'%s'", field), errorMessage(err))
 }
 
 // dateTimeCalOpApply transforms an epoch-millis instant in the given zone.
 type dateTimeCalOpApply func(millis int64, location *time.Location) int64
 
 // dateTimeCalOpSet returns the transform for set(field,n). The month value
-// is 1-based (LDT convention); time.Date normalizes out-of-range values.
+// is 1-based (LDT convention); out-of-range values normalize like Java's
+// Calendar.set. 'week' sets WEEK_OF_YEAR keeping the day-of-week.
 func dateTimeCalOpSet(field dateTimeCalField, n int) dateTimeCalOpApply {
 	return func(millis int64, location *time.Location) int64 {
 		t := time.UnixMilli(millis).In(location)
-		y, mo, d := t.Date()
+		y, mo, d := dateTimeJavaDecompose(millis, location)
 		h, mi, s := t.Clock()
 		ns := t.Nanosecond()
 		switch field {
@@ -95,8 +320,10 @@ func dateTimeCalOpSet(field dateTimeCalField, n int) dateTimeCalOpApply {
 			mo = time.Month(n)
 		case dateTimeCalYear:
 			y = n
+		case dateTimeCalWeek:
+			return dateTimeJavaWeekSetMillis(millis, n, int(t.Weekday()), h, mi, s, ns, location)
 		}
-		return time.Date(y, mo, d, h, mi, s, ns, location).UnixMilli()
+		return dateTimeJavaToMillis(y, mo, d, h, mi, s, ns, location)
 	}
 }
 
@@ -106,16 +333,15 @@ func dateTimeCalOpWithDate(year, month, day int) dateTimeCalOpApply {
 	return func(millis int64, location *time.Location) int64 {
 		t := time.UnixMilli(millis).In(location)
 		h, mi, s := t.Clock()
-		return time.Date(year, time.Month(month), day, h, mi, s, t.Nanosecond(), location).UnixMilli()
+		return dateTimeJavaToMillis(year, time.Month(month), day, h, mi, s, t.Nanosecond(), location)
 	}
 }
 
 // dateTimeCalOpWithTime returns the withTime(h,mi,s,ms) transform: the
 func dateTimeCalOpWithTime(hour, minute, second, millis int) dateTimeCalOpApply {
 	return func(epoch int64, location *time.Location) int64 {
-		t := time.UnixMilli(epoch).In(location)
-		y, mo, d := t.Date()
-		return time.Date(y, mo, d, hour, minute, second, millis*int(time.Millisecond), location).UnixMilli()
+		y, mo, d := dateTimeJavaDecompose(epoch, location)
+		return dateTimeJavaToMillis(y, mo, d, hour, minute, second, millis*int(time.Millisecond), location)
 	}
 }
 
@@ -123,7 +349,7 @@ func dateTimeCalOpWithTime(hour, minute, second, millis int) dateTimeCalOpApply 
 // expression. The input representation is preserved: int64 epoch-millis
 // stays int64, time.Time stays time.Time. Field names follow Java's
 // CalendarFieldEnum aliases (year,month,dayofmonth,hour,minute,second,
-// millisecond plus plural/short forms); the month value is 1-based. An
+// millisecond,week plus plural/short forms); the month value is 1-based. An
 // unknown field is a build-time configuration error; null or missing input
 // produces Null.
 func DateTimeSet[V int64 | time.Time](value Expression[V], field string, n int) Expression[V] {

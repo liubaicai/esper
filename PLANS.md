@@ -38,38 +38,50 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.539 ('epl-other-invalid') committed and pushed as 3d2dd2720; Git owns identity.
 
 ## Current work unit
-Active: Draft 4.548 ('event-avro-hook').
+Active: Draft 4.549 ('expr-dt-with-minmax').
 
-- Contract frozen (JavaContract548 + GoSurface548): EventAvroHook.java
-  4/4 unreferenced, static java-281ee8b5adc379b62b2c, one harness
-  (TestSuiteEventAvroWConfig). Singleton cluster rejected (4 files /
-  disjoint surfaces / AllowDynamicFields + inherits unrepresentable).
-  ord0 SimpleWriteablePropertyCoerce `java-runtime-34ec4dc8abe4f2443930`:
-  (a) tryInvalidCompile ZonedDateTime→CharSequence msg oracle-only
-  (intentionally-different error kind) + (b) LDT→ISO string via
-  explicit Func1 UDF, exact-match (now captured pre-send).
-  ord1 SchemaFromClass `-c80f13d8b1a53d4ff458`: UDF makeLocalDateTime
-  (now() INSIDE call — shape-only: schema JSON +
-  avroToJson isodate length>10, never exact string).
-  ord2 Populate `-20190c427227521c092b` STATICHOOK: Func1
-  SupportBean→*AvroRecord + InsertInto into predeclared
-  MyEventPopulate; flat avroToJson `{"sb":{"theString":"E1",...}}`.
-  ord3 NamedWindowPropertyAssignment `-85c9c44d4baae883febe`
-  STATICHOOK: create window + on-update set sb=thebean; union-null
-  seed; DOUBLE-NESTED `{"sb":{"SupportBeanSchema":{...}}}` JSON.
-- [x] Assets548 delivered + integrated: Java trace 14 records, Go
-  replay 14, `-diff` passing / 0 differences; evidence + traces
-  checked in. Manifest case.event-avro-hook born-DV →
-  event.avro-record (779 cases / 402 DV / 1605 DV IDs / 433
-  unreferenced / caps 126-125-50-11); capability gained
-  `differential-verified` in verification (precedent
-  event.contained); summary counters recomputed (validator caught
-  stale counts); roadmap + CHANGELOG prepended; `make check` GREEN.
-- [x] ParityRev548 + JavaContract549 + GoSurface549 dispatched.
+- Contract frozen (JavaContract549 + GoSurface549): ExprDTWithMax
+  (ords 0-1) + ExprDTWithMin (ords 0-1), 4 executions, 2 files,
+  expr/datetime — the largest verified single-domain remainder
+  (~20 unreferenced/13 files). Runtime java-runtime-097a5db3742ae25c3b0b
+  / -c6bba43af400a7375075 / -3f79b4bf903cca74fe6a / -8ca773479bf038c94597;
+  static java-d4afe3864ba41bfd7918 / java-d87f60ced41e2a52719f /
+  java-2224592eef4aca9b4e7b / java-f3bf884f776301d91900; flags [] all.
+  SupportDateTime bean (longdate/utildate/caldate/localdate/zoneddate);
+  'week' clamps keep day-of-week (WEEK_OF_YEAR); 'year' hits
+  GregorianCalendar actual-max 292278994 → int64-wrapped millis
+  9223372030035600000, replayed raw.
+- [x] Shared core (primary): dateTimeCalWeek + dateTimeCalOpWithMinMax
+  + DateTimeWithMax/DateTimeWithMin[V int64|time.Time] in
+  expr_dt_calops.go; hybrid GregorianCalendar model
+  (dateTimeJavaDecompose inverse-JDN + dateTimeJavaToMillis forward-JDN
+  + Julian week grid) applied to ALL four applies (set/withDate/
+  withTime/withMinMax); 'week' accepted by the shared resolver —
+  set('week',n) matches Java WEEK_OF_YEAR (needed by the next unit's
+  ExprDTSet contract); facade regenerated; all pinned values
+  JDK-verified incl. pre-cutover -14831121600000 / -14800276800000 and
+  wrapped year-max millis; TestDateTimeWithMinMaxTransforms added.
+- [x] Assets549 dispatched (runner expr_dt_with_minmax_549.go, scenario
+- [x] Assets549 delivered + integrated: Java trace 8 records, Go
+  replay 8, `-diff` passing / 0 differences; evidence + traces
+  checked in. Shared-core fix found by oracle verification:
+  withMin('year') needed Julian-day-number epoch-millis
+  (dateTimeJavaToMillis, JDN*86400000-210866803200000+offset);
+  confirmed -62122863537997 byte-exact. Manifest
+  case.expr-dt-with-minmax born-DV → expr.core (780 cases / 403 DV /
+  1609 DV IDs / 429 unreferenced); `make check` GREEN.
+- [x] ParityRev549 + JavaContract550 + GoSurface550 dispatched.
 - [ ] Review outcome, commit, push.
 
 
+
 ## Previous work units (shipped)
+
+- Shipped: Draft 4.548 ('event-avro-hook') committed and pushed as
+  9c98f57cd; Git owns identity. EventAvroHook 4/4 born-DV (14 records
+  each, 0 differences); review PASS, two P3s fixed (build-error kind
+  check, schema record-name assertion); event.avro-record gained
+  differential-verified.
 
 - Shipped: Draft 4.547 ('event-map-nested') committed and pushed as
   88ee76ee4; Git owns identity. EventMapNested 4/4 born-DV (6 records
