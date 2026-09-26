@@ -38,44 +38,41 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.539 ('epl-other-invalid') committed and pushed as 3d2dd2720; Git owns identity.
 
 ## Current work unit
-Active: Draft 4.549 ('expr-dt-with-minmax').
+Active: Draft 4.550 ('expr-dt-set-nested').
 
-- Contract frozen (JavaContract549 + GoSurface549): ExprDTWithMax
-  (ords 0-1) + ExprDTWithMin (ords 0-1), 4 executions, 2 files,
-  expr/datetime — the largest verified single-domain remainder
-  (~20 unreferenced/13 files). Runtime java-runtime-097a5db3742ae25c3b0b
-  / -c6bba43af400a7375075 / -3f79b4bf903cca74fe6a / -8ca773479bf038c94597;
-  static java-d4afe3864ba41bfd7918 / java-d87f60ced41e2a52719f /
-  java-2224592eef4aca9b4e7b / java-f3bf884f776301d91900; flags [] all.
-  SupportDateTime bean (longdate/utildate/caldate/localdate/zoneddate);
-  'week' clamps keep day-of-week (WEEK_OF_YEAR); 'year' hits
-  GregorianCalendar actual-max 292278994 → int64-wrapped millis
-  9223372030035600000, replayed raw.
-- [x] Shared core (primary): dateTimeCalWeek + dateTimeCalOpWithMinMax
-  + DateTimeWithMax/DateTimeWithMin[V int64|time.Time] in
-  expr_dt_calops.go; hybrid GregorianCalendar model
-  (dateTimeJavaDecompose inverse-JDN + dateTimeJavaToMillis forward-JDN
-  + Julian week grid) applied to ALL four applies (set/withDate/
-  withTime/withMinMax); 'week' accepted by the shared resolver —
-  set('week',n) matches Java WEEK_OF_YEAR (needed by the next unit's
-  ExprDTSet contract); facade regenerated; all pinned values
-  JDK-verified incl. pre-cutover -14831121600000 / -14800276800000 and
-  wrapped year-max millis; TestDateTimeWithMinMaxTransforms added.
-- [x] Assets549 dispatched (runner expr_dt_with_minmax_549.go, scenario
-- [x] Assets549 delivered + integrated: Java trace 8 records, Go
+- Contract frozen (JavaContract550 + GoSurface550): ExprDTSet (ords
+  0-1) + ExprDTNested (ord 0, 2 milestones), 3 executions, 2 files.
+  SetInput/SetFields/Nested all REPRESENTABLE; 'week' already unblocked
+  by the 4.549 hybrid core (set('week',8) → 2002-02-21); Java's 0-based
+  Calendar month args map to Go's 1-based convention per rep;
+  year-7 pre-cutover Julian handled by the hybrid model; milestone 2
+  adds .toCalendar() via DateTimeToTime.
+- [x] Assets550 dispatched (runner expr_dt_set_nested_550.go, scenario
+  expr-dt-set-nested-550.json, oracle ExprDTSetNested550ScenarioOracle,
+  mode expr-dt-set-nested-550).
+- [x] Assets550 delivered + integrated: Java trace 8 records, Go
   replay 8, `-diff` passing / 0 differences; evidence + traces
-  checked in. Shared-core fix found by oracle verification:
-  withMin('year') needed Julian-day-number epoch-millis
-  (dateTimeJavaToMillis, JDN*86400000-210866803200000+offset);
-  confirmed -62122863537997 byte-exact. Manifest
-  case.expr-dt-with-minmax born-DV → expr.core (780 cases / 403 DV /
-  1609 DV IDs / 429 unreferenced); `make check` GREEN.
-- [x] ParityRev549 + JavaContract550 + GoSurface550 dispatched.
+  checked in. year-7 pre-cutover Julian -61933561200000 byte-exact on
+  BOTH sides (hybrid model vindicated); Go month args remapped 1-based.
+- [x] Manifest: NEW case.expr-dt-set-nested born-DV with the 3 IDs
+  (expr.core mapping added); summary → 781 cases / 404 DV / 1612 DV
+  runtime IDs / 426 unreferenced.
+- [x] Gates: `make check` GREEN (after mapping fix).
+- [x] ParityRev550 + JavaContract551 + GoSurface551 dispatched.
 - [ ] Review outcome, commit, push.
 
 
-
 ## Previous work units (shipped)
+
+- Shipped: Draft 4.549 ('expr-dt-with-minmax') committed and pushed as
+  f1c6e7599; Git owns identity. 4 executions born-DV (8 records each,
+  0 differences); review PASS + confirmation PASS — real shared-core
+  fix: hybrid GregorianCalendar (inverse-JDN decompose + forward JDN
+  recompose + Julian week grid) across all calop applies;
+  set('week') accepted.
+
+
+
 
 - Shipped: Draft 4.548 ('event-avro-hook') committed and pushed as
   9c98f57cd; Git owns identity. EventAvroHook 4/4 born-DV (14 records

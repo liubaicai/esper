@@ -50677,6 +50677,63 @@
     "java-runtime-3f79b4bf903cca74fe6a",
     "java-runtime-8ca773479bf038c94597"
    ]
+  },
+  {
+   "id": "case.expr-dt-set-nested",
+   "javaRuntimeIds": [
+    "java-runtime-94b9e2a9baff63289a84",
+    "java-runtime-8eeb0fc84eee8e2f3676",
+    "java-runtime-05ab4e5671dc2fc9e434"
+   ],
+   "javaStaticIds": [
+    "java-295d51f5c010279653b5",
+    "java-295d51f5c010279653b5",
+    "java-cf7184473782469f6840"
+   ],
+   "javaNames": [
+    "ExprDTSetInput",
+    "ExprDTSetFields",
+    "ExprDTNested"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTSet.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTSet.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTNested.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunExprDTSetNested550DirectReplay",
+    "internal/app/parity/run_test.go:TestRunExprDTSetNested550DiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunExprDTSetNested550CheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunExprDTSetNested550DiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunExprDTSetNested550RejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunExprDTSetNested550RuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "expr",
+    "datetime",
+    "calop",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/expr-dt-set-nested-550.json",
+    "testdata/parity/expr-dt-set-nested-550.trace.json",
+    "testdata/parity/expr-dt-set-nested-550.go.trace.json",
+    "testdata/parity/expr-dt-set-nested-550.evidence.json",
+    "tools/java-oracle/ExprDTSetNested550ScenarioOracle.java",
+    "tools/java-oracle/run-expr-dt-set-nested-550.sh"
+   ],
+   "notes": "ExprDTSet (2/2) + ExprDTNested (1/1, both milestones) born-differential across 2 files. DateTimeSet[V int64|time.Time] chains including 'week' (accepted since 4.549's shared resolver widening; week-8 on 2002-05-30 -> 2002-02-21 WEEK_OF_YEAR keeping day-of-week) and year-7 (pre-cutover Julian -61933561200000 via the hybrid GregorianCalendar model). Java's 0-based Calendar month args map to Go's 1-based convention (set-input: Go n=1 for January; set-fields: Go n=7 for Java's month 6/July). ExprDTNested milestone index 0: 5-rep 3-set chains -> 2002-05-30T01:02:03 (1022720523000 x5); milestone index 1 wraps the chain in DateTimeToTime -> Calendar coercion across reps. Java/Go 8 records each, 0 differences.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-94b9e2a9baff63289a84",
+    "java-runtime-8eeb0fc84eee8e2f3676",
+    "java-runtime-05ab4e5671dc2fc9e434"
+   ]
   }
  ],
  "mappings": [
@@ -54147,13 +54204,17 @@
   {
    "capabilityId": "expr.core",
    "caseId": "case.expr-dt-with-minmax"
+  },
+  {
+   "capabilityId": "expr.core",
+   "caseId": "case.expr-dt-set-nested"
   }
  ],
  "summary": {
-  "inventoriedCases": 780,
-  "implementedCases": 778,
-  "differentialVerifiedCases": 403,
-  "differentialVerifiedRuntimeIds": 1609,
+  "inventoriedCases": 781,
+  "implementedCases": 779,
+  "differentialVerifiedCases": 404,
+  "differentialVerifiedRuntimeIds": 1612,
   "intentionallyDifferentCases": 36,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -54163,13 +54224,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4147,
-  "referencedJavaRuntimeIds": 3707,
+  "runtimeAssociationCount": 4150,
+  "referencedJavaRuntimeIds": 3710,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 429,
+  "unreferencedJavaRuntimeIds": 426,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 780,
+  "totalCases": 781,
   "totalCapabilities": 126
  }
 }
