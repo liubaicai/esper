@@ -38,31 +38,42 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.539 ('epl-other-invalid') committed and pushed as 3d2dd2720; Git owns identity.
 
 ## Current work unit
-Active: Draft 4.550 ('expr-dt-set-nested').
+Active: Draft 4.551 ('expr-dt-format').
 
-- Contract frozen (JavaContract550 + GoSurface550): ExprDTSet (ords
-  0-1) + ExprDTNested (ord 0, 2 milestones), 3 executions, 2 files.
-  SetInput/SetFields/Nested all REPRESENTABLE; 'week' already unblocked
-  by the 4.549 hybrid core (set('week',8) → 2002-02-21); Java's 0-based
-  Calendar month args map to Go's 1-based convention per rep;
-  year-7 pre-cutover Julian handled by the hybrid model; milestone 2
-  adds .toCalendar() via DateTimeToTime.
-- [x] Assets550 dispatched (runner expr_dt_set_nested_550.go, scenario
-  expr-dt-set-nested-550.json, oracle ExprDTSetNested550ScenarioOracle,
-  mode expr-dt-set-nested-550).
-- [x] Assets550 delivered + integrated: Java trace 8 records, Go
-  replay 8, `-diff` passing / 0 differences; evidence + traces
-  checked in. year-7 pre-cutover Julian -61933561200000 byte-exact on
-  BOTH sides (hybrid model vindicated); Go month args remapped 1-based.
-- [x] Manifest: NEW case.expr-dt-set-nested born-DV with the 3 IDs
-  (expr.core mapping added); summary → 781 cases / 404 DV / 1612 DV
-  runtime IDs / 426 unreferenced.
-- [x] Gates: `make check` GREEN (after mapping fix).
-- [x] ParityRev550 + JavaContract551 + GoSurface551 dispatched.
+- Contract frozen (JavaContract551 + GoSurface551): ExprDTFormat ords
+  0-1 (runtimeIds 2832950bf0c454ecf2df / 8a27995fa8e41684f6b8, staticId
+  05592d8076a91dd5cbed, flags []). HARNESS-GAP resolved via a new
+  terminal String format surface; JVM locale pin en/US already present
+  in run.sh conventions (SDF-default is locale-dependent).
+- [x] Shared core (primary): NEW internal/esper/expr_dt_format.go —
+  DateTimeFormatDefault (new SimpleDateFormat() en_US "M/d/yy, h:mm a"),
+  DateTimeFormatDateInstance ("MMM d, yyyy"), DateTimeFormatISO /
+  DateTimeFormatISOZoned (LDT/ZDT split; Go's single time.Time needs two
+  builders), DateTimeFormatPattern (Java SDF/DTF pattern -> Go layout
+  translator incl. 'G' era sentinel + 'at' literals; 'k'/'K' unsupported
+  like Java validation). Facade regenerated; TestDateTimeFormatRenders
+  pins JDK17-en_US strings byte-exact (5/30/02, 9:00 AM | May 30, 2002 |
+  2002.05.30 AD at 09:00:00 | 2002-05-30T09:00:00 | ...Z[UTC] | 20020530).
+- [x] Assets551 delivered + integrated: Java trace 6 records, Go
+  replay 6 (4 listener + 2 types pins), `-diff` passing / 0
+  differences; evidence + traces checked in. Null row pins
+  current_timestamp.format() non-null vs 5 nulls; formatter-object
+  EPL args map to documented equivalents (getDateInstance /
+  'yyyyMMdd').
+- [x] Manifest: NEW case.expr-dt-format born-DV with the 2 IDs
+  (expr.core mapping added); summary → 782 cases / 405 DV / 1614 DV
+  runtime IDs / 424 unreferenced.
+- [x] Gates: `make check` GREEN.
+- [x] ParityRev551 + JavaContract552 + GoSurface552 dispatched.
 - [ ] Review outcome, commit, push.
 
-
 ## Previous work units (shipped)
+
+- Shipped: Draft 4.550 ('expr-dt-set-nested') committed and pushed as
+  03e5bc6f1; Git owns identity. ExprDTSet 2/2 + ExprDTNested 1/1
+  born-DV (8 records, 0 differences); review PASS; year-7 Julian
+  -61933561200000 byte-exact on the hybrid model.
+
 
 - Shipped: Draft 4.549 ('expr-dt-with-minmax') committed and pushed as
   f1c6e7599; Git owns identity. 4 executions born-DV (8 records each,

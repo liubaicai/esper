@@ -50734,6 +50734,58 @@
     "java-runtime-8eeb0fc84eee8e2f3676",
     "java-runtime-05ab4e5671dc2fc9e434"
    ]
+  },
+  {
+   "id": "case.expr-dt-format",
+   "javaRuntimeIds": [
+    "java-runtime-2832950bf0c454ecf2df",
+    "java-runtime-8a27995fa8e41684f6b8"
+   ],
+   "javaStaticIds": [
+    "java-05592d8076a91dd5cbed",
+    "java-05592d8076a91dd5cbed"
+   ],
+   "javaNames": [
+    "ExprDTFormatSimple",
+    "ExprDTFormatWString"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTFormat.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTFormat.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunExprDTFormat551DirectReplay",
+    "internal/app/parity/run_test.go:TestRunExprDTFormat551DiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunExprDTFormat551CheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunExprDTFormat551DiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunExprDTFormat551RejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunExprDTFormat551RuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "expr",
+    "datetime",
+    "format",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/expr-dt-format-551.json",
+    "testdata/parity/expr-dt-format-551.trace.json",
+    "testdata/parity/expr-dt-format-551.go.trace.json",
+    "testdata/parity/expr-dt-format-551.evidence.json",
+    "tools/java-oracle/ExprDTFormat551ScenarioOracle.java",
+    "tools/java-oracle/run-expr-dt-format-551.sh"
+   ],
+   "notes": "ExprDTFormat (2/2) born-differential. New terminal String format surface in expr_dt_format.go: DateTimeFormatDefault (SimpleDateFormat en_US default '5/30/02, 9:00 AM' incl. JDK17 comma), DateTimeFormatDateInstance ('May 30, 2002'), DateTimeFormatISO/DateTimeFormatISOZoned (LDT/ZDT split; Go's single time.Time rep needs two builders), DateTimeFormatPattern (Java SDF/DTF pattern -> Go layout translator incl. 'G' era sentinel + 'at' literals, unsupported letters as build-time config errors). format-wstring val5/val6 formatter-OBJECT args map to their documented pattern/getDateInstance equivalents (val6 BASIC_ISO_DATE == 'yyyyMMdd'; val5 getDateInstance == medium date). Null row: current_timestamp.format() non-null on all-null input. Java/Go 6 records each (4 listener + 2 types pins), 0 differences; run.sh pins en/US locale + UTC.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-2832950bf0c454ecf2df",
+    "java-runtime-8a27995fa8e41684f6b8"
+   ]
   }
  ],
  "mappings": [
@@ -54208,13 +54260,17 @@
   {
    "capabilityId": "expr.core",
    "caseId": "case.expr-dt-set-nested"
+  },
+  {
+   "capabilityId": "expr.core",
+   "caseId": "case.expr-dt-format"
   }
  ],
  "summary": {
-  "inventoriedCases": 781,
-  "implementedCases": 779,
-  "differentialVerifiedCases": 404,
-  "differentialVerifiedRuntimeIds": 1612,
+  "inventoriedCases": 782,
+  "implementedCases": 780,
+  "differentialVerifiedCases": 405,
+  "differentialVerifiedRuntimeIds": 1614,
   "intentionallyDifferentCases": 36,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -54224,13 +54280,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4150,
-  "referencedJavaRuntimeIds": 3710,
+  "runtimeAssociationCount": 4152,
+  "referencedJavaRuntimeIds": 3712,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 426,
+  "unreferencedJavaRuntimeIds": 424,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 781,
+  "totalCases": 782,
   "totalCapabilities": 126
  }
 }

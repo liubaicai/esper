@@ -1,0 +1,124 @@
+{
+  "version": "esper-parity/v1",
+  "id": "expr-dt-format-551",
+  "description": "ExprDTFormat executions: format-simple replays ExprDTFormatSimple (no-arg format() over current_timestamp and all five SupportDateTime representations of 2002-05-30T09:00:00.000: the en_US SimpleDateFormat default '5/30/02, 9:00 AM' for the legacy representations, ISO_DATE_TIME '2002-05-30T09:00:00' and ISO_ZONED_DATE_TIME '2002-05-30T09:00:00Z[UTC]' for the Java 8 representations; the all-null send keeps val0 non-null), format-wstring replays ExprDTFormatWString (the pattern \"yyyy.MM.dd G 'at' HH:mm:ss\" renders '2002.05.30 AD at 09:00:00' across all five representations, SimpleDateFormat.getDateInstance() renders 'May 30, 2002', DateTimeFormatter.BASIC_ISO_DATE renders '20020530'; the all-null send emits null in every column).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTFormat.java",
+  "javaRuntimes": [
+    "java-runtime-2832950bf0c454ecf2df",
+    "java-runtime-8a27995fa8e41684f6b8"
+  ],
+  "javaNames": [
+    "ExprDTFormatSimple",
+    "ExprDTFormatWString"
+  ],
+  "javaStaticIds": [
+    "java-05592d8076a91dd5cbed",
+    "java-05592d8076a91dd5cbed"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "format-simple",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-2832950bf0c454ecf2df",
+      "executionName": "ExprDTFormatSimple",
+      "observation": "listener x2+types; advanceTime(2002-05-30T09:00:00.000), deploy s0 no-arg format() over current_timestamp and all five representations, types pins all-String, send make(2002-05-30T09:00:00.000) emits {5/30/02, 9:00 AM x4, 2002-05-30T09:00:00, 2002-05-30T09:00:00Z[UTC]}, send make(null) emits {5/30/02, 9:00 AM, null x5}",
+      "epl": "@name('s0') select current_timestamp.format() as val0,utildate.format() as val1,longdate.format() as val2,caldate.format() as val3,localdate.format() as val4,zoneddate.format() as val5 from SupportDateTime"
+    },
+    {
+      "case": "format-wstring",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-8a27995fa8e41684f6b8",
+      "executionName": "ExprDTFormatWString",
+      "observation": "listener x2+types; advanceTime(2002-05-30T09:00:00.000), deploy s0 pattern/formatter-object format() over all five representations, types pins all-String, send make(2002-05-30T09:00:00.000) emits {2002.05.30 AD at 09:00:00 x5, May 30, 2002, 20020530}, send make(null) emits {null x7}",
+      "epl": "@name('s0') select longdate.format(\"yyyy.MM.dd G 'at' HH:mm:ss\") as val0,utildate.format(\"yyyy.MM.dd G 'at' HH:mm:ss\") as val1,caldate.format(\"yyyy.MM.dd G 'at' HH:mm:ss\") as val2,localdate.format(\"yyyy.MM.dd G 'at' HH:mm:ss\") as val3,zoneddate.format(\"yyyy.MM.dd G 'at' HH:mm:ss\") as val4,utildate.format(SimpleDateFormat.getDateInstance()) as val5,localdate.format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE) as val6 from SupportDateTime"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "format-simple"
+    },
+    {
+      "op": "advance-time",
+      "case": "format-simple",
+      "at": "2002-05-30T09:00:00.000Z"
+    },
+    {
+      "op": "deploy",
+      "case": "format-simple",
+      "statement": "s0",
+      "epl": "@name('s0') select current_timestamp.format() as val0,utildate.format() as val1,longdate.format() as val2,caldate.format() as val3,localdate.format() as val4,zoneddate.format() as val5 from SupportDateTime"
+    },
+    {
+      "op": "types",
+      "case": "format-simple",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "format-simple",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "date": "2002-05-30T09:00:00.000Z",
+        "expected": ["5/30/02, 9:00 AM", "5/30/02, 9:00 AM", "5/30/02, 9:00 AM", "5/30/02, 9:00 AM", "2002-05-30T09:00:00", "2002-05-30T09:00:00Z[UTC]"]
+      }
+    },
+    {
+      "op": "send",
+      "case": "format-simple",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "date": null,
+        "expected": ["5/30/02, 9:00 AM", {"state": "null"}, {"state": "null"}, {"state": "null"}, {"state": "null"}, {"state": "null"}]
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "format-simple"
+    },
+    {
+      "op": "case",
+      "case": "format-wstring"
+    },
+    {
+      "op": "advance-time",
+      "case": "format-wstring",
+      "at": "2002-05-30T09:00:00.000Z"
+    },
+    {
+      "op": "deploy",
+      "case": "format-wstring",
+      "statement": "s0",
+      "epl": "@name('s0') select longdate.format(\"yyyy.MM.dd G 'at' HH:mm:ss\") as val0,utildate.format(\"yyyy.MM.dd G 'at' HH:mm:ss\") as val1,caldate.format(\"yyyy.MM.dd G 'at' HH:mm:ss\") as val2,localdate.format(\"yyyy.MM.dd G 'at' HH:mm:ss\") as val3,zoneddate.format(\"yyyy.MM.dd G 'at' HH:mm:ss\") as val4,utildate.format(SimpleDateFormat.getDateInstance()) as val5,localdate.format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE) as val6 from SupportDateTime"
+    },
+    {
+      "op": "types",
+      "case": "format-wstring",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "format-wstring",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "date": "2002-05-30T09:00:00.000Z",
+        "expected": ["2002.05.30 AD at 09:00:00", "2002.05.30 AD at 09:00:00", "2002.05.30 AD at 09:00:00", "2002.05.30 AD at 09:00:00", "2002.05.30 AD at 09:00:00", "May 30, 2002", "20020530"]
+      }
+    },
+    {
+      "op": "send",
+      "case": "format-wstring",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "date": null,
+        "expected": [{"state": "null"}, {"state": "null"}, {"state": "null"}, {"state": "null"}, {"state": "null"}, {"state": "null"}, {"state": "null"}]
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "format-wstring"
+    }
+  ]
+}

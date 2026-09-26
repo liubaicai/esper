@@ -1,0 +1,455 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-2832950bf0c454ecf2df",
+    "java-runtime-8a27995fa8e41684f6b8"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTFormat.java"
+  ],
+  "javaExecutions": [
+    "ExprDTFormatSimple",
+    "ExprDTFormatWString"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "expr-dt-format-551",
+    "steps": [
+      {
+        "op": "case",
+        "case": "format-simple"
+      },
+      {
+        "op": "advance-time",
+        "case": "format-simple",
+        "at": "2002-05-30T09:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "format-simple",
+        "statement": "s0",
+        "epl": "@name('s0') select current_timestamp.format() as val0,utildate.format() as val1,longdate.format() as val2,caldate.format() as val3,localdate.format() as val4,zoneddate.format() as val5 from SupportDateTime"
+      },
+      {
+        "op": "types",
+        "case": "format-simple",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "format-simple",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": "2002-05-30T09:00:00.000Z",
+          "expected": [
+            "5/30/02, 9:00 AM",
+            "5/30/02, 9:00 AM",
+            "5/30/02, 9:00 AM",
+            "5/30/02, 9:00 AM",
+            "2002-05-30T09:00:00",
+            "2002-05-30T09:00:00Z[UTC]"
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "format-simple",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": null,
+          "expected": [
+            "5/30/02, 9:00 AM",
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            }
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "format-simple"
+      },
+      {
+        "op": "case",
+        "case": "format-wstring"
+      },
+      {
+        "op": "advance-time",
+        "case": "format-wstring",
+        "at": "2002-05-30T09:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "format-wstring",
+        "statement": "s0",
+        "epl": "@name('s0') select longdate.format(\"yyyy.MM.dd G 'at' HH:mm:ss\") as val0,utildate.format(\"yyyy.MM.dd G 'at' HH:mm:ss\") as val1,caldate.format(\"yyyy.MM.dd G 'at' HH:mm:ss\") as val2,localdate.format(\"yyyy.MM.dd G 'at' HH:mm:ss\") as val3,zoneddate.format(\"yyyy.MM.dd G 'at' HH:mm:ss\") as val4,utildate.format(SimpleDateFormat.getDateInstance()) as val5,localdate.format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE) as val6 from SupportDateTime"
+      },
+      {
+        "op": "types",
+        "case": "format-wstring",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "format-wstring",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": "2002-05-30T09:00:00.000Z",
+          "expected": [
+            "2002.05.30 AD at 09:00:00",
+            "2002.05.30 AD at 09:00:00",
+            "2002.05.30 AD at 09:00:00",
+            "2002.05.30 AD at 09:00:00",
+            "2002.05.30 AD at 09:00:00",
+            "May 30, 2002",
+            "20020530"
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "format-wstring",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": null,
+          "expected": [
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            }
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "format-wstring"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-dt-format-551",
+    "records": [
+      {
+        "case": "format-simple",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "2002-05-30T09:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "String",
+            "val1": "String",
+            "val2": "String",
+            "val3": "String",
+            "val4": "String",
+            "val5": "String"
+          }
+        }
+      },
+      {
+        "case": "format-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": "5/30/02, 9:00 AM",
+              "val1": "5/30/02, 9:00 AM",
+              "val2": "5/30/02, 9:00 AM",
+              "val3": "5/30/02, 9:00 AM",
+              "val4": "2002-05-30T09:00:00",
+              "val5": "2002-05-30T09:00:00Z[UTC]"
+            }
+          }
+        ]
+      },
+      {
+        "case": "format-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": "5/30/02, 9:00 AM",
+              "val1": {
+                "state": "null"
+              },
+              "val2": {
+                "state": "null"
+              },
+              "val3": {
+                "state": "null"
+              },
+              "val4": {
+                "state": "null"
+              },
+              "val5": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "format-wstring",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "2002-05-30T09:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "String",
+            "val1": "String",
+            "val2": "String",
+            "val3": "String",
+            "val4": "String",
+            "val5": "String",
+            "val6": "String"
+          }
+        }
+      },
+      {
+        "case": "format-wstring",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": "2002.05.30 AD at 09:00:00",
+              "val1": "2002.05.30 AD at 09:00:00",
+              "val2": "2002.05.30 AD at 09:00:00",
+              "val3": "2002.05.30 AD at 09:00:00",
+              "val4": "2002.05.30 AD at 09:00:00",
+              "val5": "May 30, 2002",
+              "val6": "20020530"
+            }
+          }
+        ]
+      },
+      {
+        "case": "format-wstring",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": {
+                "state": "null"
+              },
+              "val1": {
+                "state": "null"
+              },
+              "val2": {
+                "state": "null"
+              },
+              "val3": {
+                "state": "null"
+              },
+              "val4": {
+                "state": "null"
+              },
+              "val5": {
+                "state": "null"
+              },
+              "val6": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-dt-format-551",
+    "records": [
+      {
+        "case": "format-simple",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "2002-05-30T09:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "String",
+            "val1": "String",
+            "val2": "String",
+            "val3": "String",
+            "val4": "String",
+            "val5": "String"
+          }
+        }
+      },
+      {
+        "case": "format-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": "5/30/02, 9:00 AM",
+              "val1": "5/30/02, 9:00 AM",
+              "val2": "5/30/02, 9:00 AM",
+              "val3": "5/30/02, 9:00 AM",
+              "val4": "2002-05-30T09:00:00",
+              "val5": "2002-05-30T09:00:00Z[UTC]"
+            }
+          }
+        ]
+      },
+      {
+        "case": "format-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": "5/30/02, 9:00 AM",
+              "val1": {
+                "state": "null"
+              },
+              "val2": {
+                "state": "null"
+              },
+              "val3": {
+                "state": "null"
+              },
+              "val4": {
+                "state": "null"
+              },
+              "val5": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "format-wstring",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "2002-05-30T09:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "String",
+            "val1": "String",
+            "val2": "String",
+            "val3": "String",
+            "val4": "String",
+            "val5": "String",
+            "val6": "String"
+          }
+        }
+      },
+      {
+        "case": "format-wstring",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": "2002.05.30 AD at 09:00:00",
+              "val1": "2002.05.30 AD at 09:00:00",
+              "val2": "2002.05.30 AD at 09:00:00",
+              "val3": "2002.05.30 AD at 09:00:00",
+              "val4": "2002.05.30 AD at 09:00:00",
+              "val5": "May 30, 2002",
+              "val6": "20020530"
+            }
+          }
+        ]
+      },
+      {
+        "case": "format-wstring",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": {
+                "state": "null"
+              },
+              "val1": {
+                "state": "null"
+              },
+              "val2": {
+                "state": "null"
+              },
+              "val3": {
+                "state": "null"
+              },
+              "val4": {
+                "state": "null"
+              },
+              "val5": {
+                "state": "null"
+              },
+              "val6": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

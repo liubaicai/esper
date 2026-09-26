@@ -1659,6 +1659,45 @@ func DateTimeBetweenWithEndpoints(value, lower, upper Expr, lowerInclusive, uppe
 	return internalengine.DateTimeBetweenWithEndpoints(value, lower, upper, lowerInclusive, upperInclusive)
 }
 
+// DateTimeFormatDateInstance renders Java SimpleDateFormat.getDateInstance()
+// under the pinned en_US locale (medium date "MMM d, yyyy" with an
+// unpadded day, e.g. "May 5, 2002"). Null or missing input produces Null.
+func DateTimeFormatDateInstance[V int64 | time.Time](value Expression[V]) Expression[string] {
+	return internalengine.DateTimeFormatDateInstance[V](value)
+}
+
+// DateTimeFormatDefault renders the legacy-family default format
+// (SimpleDateFormat's SHORT/SHORT default under the pinned en_US locale,
+// e.g. "5/30/02, 9:00 AM"). Null or missing input produces Null.
+func DateTimeFormatDefault[V int64 | time.Time](value Expression[V]) Expression[string] {
+	return internalengine.DateTimeFormatDefault[V](value)
+}
+
+// DateTimeFormatISO renders the input through the ISO_DATE_TIME formatter
+// (Java LocalDateTime.format(): "2002-05-30T09:00:00", optional fraction).
+// Null or missing input produces Null.
+func DateTimeFormatISO[V int64 | time.Time](value Expression[V]) Expression[string] {
+	return internalengine.DateTimeFormatISO[V](value)
+}
+
+// DateTimeFormatISOZoned renders the input through the ISO_ZONED_DATE_TIME
+// formatter (Java ZonedDateTime.format():
+// "2002-05-30T09:00:00Z[UTC]" in UTC). Null or missing input produces Null.
+func DateTimeFormatISOZoned[V int64 | time.Time](value Expression[V]) Expression[string] {
+	return internalengine.DateTimeFormatISOZoned[V](value)
+}
+
+// DateTimeFormatPattern renders the input through a constant Java
+// SimpleDateFormat/DateTimeFormatter pattern. Supported pattern letters are
+// G y u M d E a h H m s S z Z X x with Java's run-length semantics where Go
+// layouts can express them; single-quoted literals ('at') render verbatim,
+// and ” is an apostrophe. An unknown letter, an unsupported run length, or
+// malformed quoting is a build-time configuration error, matching Java's
+// constant-format validation. Null or missing input produces Null.
+func DateTimeFormatPattern[V int64 | time.Time](value Expression[V], pattern string) Expression[string] {
+	return internalengine.DateTimeFormatPattern[V](value, pattern)
+}
+
 // DateTimeGet applies Esper's get(field) calendar-field extraction to a
 // date-time expression: get('month') returns the 0-based Calendar.MONTH,
 // getMinuteOfHour() maps to field "minute_of_hour" (Calendar.MINUTE).
