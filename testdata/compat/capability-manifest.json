@@ -108,7 +108,13 @@
     "EventInfraEventRenderer",
     "EventInfraEventSender",
     "EventInfraManufacturer",
-    "EventInfraSuperType"
+    "EventInfraSuperType",
+    "EventRenderPropertyCustomRenderer",
+    "EventRenderObjectArray",
+    "EventRenderPOJOMap",
+    "EventRenderEmptyMap",
+    "EventRenderEnquote",
+    "EventRenderSQLDate"
    ],
    "goRefs": [
     "internal/esper/schema.go",
@@ -120,7 +126,8 @@
     "internal/app/parity/event_infra_getter_nested.go",
     "internal/app/parity/event_infra_property_dynamic.go",
     "internal/app/parity/event_infra_property_non_dynamic.go",
-    "internal/app/parity/event_infra_sender_supertype_545.go"
+    "internal/app/parity/event_infra_sender_supertype_545.go",
+    "internal/app/parity/event_render_546.go"
    ],
    "phase": 1,
    "status": "differential-verified",
@@ -177,7 +184,14 @@
     "java-runtime-788241891a0cf2f7b34c",
     "java-runtime-87613a44bc6e8ae3ffa1",
     "java-runtime-70823aef36342bc74b8b",
-    "java-runtime-c176a2422bef1680520b"
+    "java-runtime-c176a2422bef1680520b",
+    "java-runtime-26bb69572227aa67230c",
+    "java-runtime-eacece93880bd4448b7d",
+    "java-runtime-6af1376411de38cffefe",
+    "java-runtime-96f1450787b11db671fd",
+    "java-runtime-8cce94662734d4052c0e",
+    "java-runtime-f47d81ef0d1a48b66476",
+    "java-runtime-539c60ae3344b3001b44"
    ]
   },
   {
@@ -50370,6 +50384,83 @@
     "java-runtime-70823aef36342bc74b8b",
     "java-runtime-c176a2422bef1680520b"
    ]
+  },
+  {
+   "id": "case.event-render",
+   "javaRuntimeIds": [
+    "java-runtime-26bb69572227aa67230c",
+    "java-runtime-eacece93880bd4448b7d",
+    "java-runtime-6af1376411de38cffefe",
+    "java-runtime-96f1450787b11db671fd",
+    "java-runtime-8cce94662734d4052c0e",
+    "java-runtime-f47d81ef0d1a48b66476",
+    "java-runtime-539c60ae3344b3001b44"
+   ],
+   "javaStaticIds": [
+    "java-037e8856e0079705578b",
+    "java-037e8856e0079705578b",
+    "java-037e8856e0079705578b",
+    "java-049ac5adb236d6173921",
+    "java-049ac5adb236d6173921",
+    "java-34444bf4f27c5d12a7a1",
+    "java-34444bf4f27c5d12a7a1"
+   ],
+   "javaNames": [
+    "EventRenderPropertyCustomRenderer",
+    "EventRenderObjectArray",
+    "EventRenderPOJOMap",
+    "EventRenderEmptyMap",
+    "EventRenderEnquote",
+    "EventRenderSQLDate",
+    "EventRenderEnquote"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/render/EventRender.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/render/EventRender.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/render/EventRender.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/render/EventRenderJSON.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/render/EventRenderJSON.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/render/EventRenderXML.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/render/EventRenderXML.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunEventRender546DirectReplay",
+    "internal/app/parity/run_test.go:TestRunEventRender546DiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunEventRender546CheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunEventRender546DiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunEventRender546RejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunEventRender546RuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "event",
+    "render",
+    "renderer",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/event-render-546.json",
+    "testdata/parity/event-render-546.trace.json",
+    "testdata/parity/event-render-546.go.trace.json",
+    "testdata/parity/event-render-546.evidence.json",
+    "tools/java-oracle/EventRender546ScenarioOracle.java",
+    "tools/java-oracle/run-event-render-546.sh"
+   ],
+   "notes": "EventRender* family tail born-differential: all 7 unreferenced executions of EventRender/EventRenderJSON/EventRenderXML. Rendered strings emitted as whitespace-stripped value records (removeNewline semantics: >=2 whitespace runs collapse to one space; XML always carries the <?xml?> header; render title is a free string). Representable: ObjectArray JSON (Go emits fields in Java render order p0,p1,p3,p4,p2; nested bean as materialized Event; 3.0 + explicit nulls byte-exact), POJOMap JSON + element XML (efg null -> JSON null / XML empty element; BeanThree undeclared-map repeat), EmptyMap 3x (nil/empty/{a:b} preserved), SQLDate (fluent Alias+DateOnly; xmlScalar renders 2010-01-31 not RFC3339). Field-level unrepresentable pins: custom-renderer (no JSONRenderingOptions.setRenderer/EventPropertyRenderer SPI in Go; oracle asserts 4 contexts + pinned strings), object-array XML and pojo-map XML-attr (Go renders null bean fields as empty elements/attributes vs Java null-drop + self-closing), enquote-json + enquote-xml (pure OutputValueRendererJSONString.enquote / XMLString.xmlEncode helper loops, no event/EPL boundary). Java/Go 37 records each, 0 differences. Scenario testdata/parity/event-render-546.json; Java trace via tools/java-oracle/run-event-render-546.sh at commit 9e1b9f1cc9117fea4bf33ab043762c045d73839c.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-26bb69572227aa67230c",
+    "java-runtime-eacece93880bd4448b7d",
+    "java-runtime-6af1376411de38cffefe",
+    "java-runtime-96f1450787b11db671fd",
+    "java-runtime-8cce94662734d4052c0e",
+    "java-runtime-f47d81ef0d1a48b66476",
+    "java-runtime-539c60ae3344b3001b44"
+   ]
   }
  ],
  "mappings": [
@@ -53824,13 +53915,17 @@
   {
    "capabilityId": "event.property-access-render",
    "caseId": "case.event-infra-contained-render-sender-supertype"
+  },
+  {
+   "capabilityId": "event.property-access-render",
+   "caseId": "case.event-render"
   }
  ],
  "summary": {
-  "inventoriedCases": 776,
-  "implementedCases": 774,
-  "differentialVerifiedCases": 399,
-  "differentialVerifiedRuntimeIds": 1590,
+  "inventoriedCases": 777,
+  "implementedCases": 775,
+  "differentialVerifiedCases": 400,
+  "differentialVerifiedRuntimeIds": 1597,
   "intentionallyDifferentCases": 36,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -53840,13 +53935,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4128,
-  "referencedJavaRuntimeIds": 3688,
+  "runtimeAssociationCount": 4135,
+  "referencedJavaRuntimeIds": 3695,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 448,
+  "unreferencedJavaRuntimeIds": 441,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 776,
+  "totalCases": 777,
   "totalCapabilities": 126
  }
 }

@@ -1,0 +1,1128 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-26bb69572227aa67230c",
+    "java-runtime-eacece93880bd4448b7d",
+    "java-runtime-6af1376411de38cffefe",
+    "java-runtime-96f1450787b11db671fd",
+    "java-runtime-8cce94662734d4052c0e",
+    "java-runtime-f47d81ef0d1a48b66476",
+    "java-runtime-539c60ae3344b3001b44"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/render/EventRender.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/render/EventRender.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/render/EventRender.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/render/EventRenderJSON.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/render/EventRenderJSON.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/render/EventRenderXML.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/render/EventRenderXML.java"
+  ],
+  "javaExecutions": [
+    "EventRenderPropertyCustomRenderer",
+    "EventRenderObjectArray",
+    "EventRenderPOJOMap",
+    "EventRenderEmptyMap",
+    "EventRenderEnquote",
+    "EventRenderSQLDate",
+    "EventRenderEnquote"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "event-render-546",
+    "steps": [
+      {
+        "op": "case",
+        "case": "custom-renderer"
+      },
+      {
+        "op": "deploy",
+        "case": "custom-renderer",
+        "statement": "s0",
+        "epl": "@name('s0') select * from MyRendererEvent"
+      },
+      {
+        "op": "deployed",
+        "case": "custom-renderer",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "custom-renderer",
+        "eventType": "MyRendererEvent",
+        "payload": {
+          "payload": "custom-renderer"
+        }
+      },
+      {
+        "op": "unrepresentable",
+        "case": "custom-renderer",
+        "statement": "s0",
+        "expectError": "{\"MyEvent\":{\"id\":\"id1\",\"someProperties\":[\"index#0=1;index#1=x\",\"index#0=2;index#1=y\"],\"mappedProperty\":{\"key\":\"value\"}}}",
+        "name": "json"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "custom-renderer",
+        "statement": "s0",
+        "expectError": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003cMyEvent\u003e\u003cid\u003eid1\u003c/id\u003e\u003csomeProperties\u003eindex#0=1;index#1=x\u003c/someProperties\u003e\u003csomeProperties\u003eindex#0=2;index#1=y\u003c/someProperties\u003e\u003cmappedProperty\u003e\u003ckey\u003evalue\u003c/key\u003e\u003c/mappedProperty\u003e\u003c/MyEvent\u003e",
+        "name": "xml"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "custom-renderer"
+      },
+      {
+        "op": "case",
+        "case": "object-array"
+      },
+      {
+        "op": "deploy",
+        "case": "object-array",
+        "statement": "s0",
+        "epl": "@name('s0') select * from MyObjectArrayType"
+      },
+      {
+        "op": "deployed",
+        "case": "object-array",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "object-array",
+        "eventType": "MyObjectArrayType",
+        "payload": {
+          "payload": "object-array"
+        }
+      },
+      {
+        "op": "value",
+        "case": "object-array",
+        "statement": "s0",
+        "name": "json"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "object-array",
+        "statement": "s0",
+        "expectError": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003cMyEvent\u003e\u003cp0\u003eabc\u003c/p0\u003e\u003cp1\u003e1\u003c/p1\u003e\u003cp3\u003e2\u003c/p3\u003e\u003cp4\u003e3.0\u003c/p4\u003e\u003cp2\u003e\u003cid\u003e1\u003c/id\u003e\u003cp00\u003ep00\u003c/p00\u003e\u003c/p2\u003e\u003c/MyEvent\u003e",
+        "name": "xml"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "object-array"
+      },
+      {
+        "op": "case",
+        "case": "pojo-map"
+      },
+      {
+        "op": "deploy",
+        "case": "pojo-map",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportBeanRendererOne",
+        "mode": "one"
+      },
+      {
+        "op": "deployed",
+        "case": "pojo-map",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "pojo-map",
+        "eventType": "SupportBeanRendererOne",
+        "payload": {
+          "payload": "one"
+        },
+        "mode": "one"
+      },
+      {
+        "op": "value",
+        "case": "pojo-map",
+        "statement": "s0",
+        "name": "json"
+      },
+      {
+        "op": "value",
+        "case": "pojo-map",
+        "statement": "s0",
+        "name": "xml"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "pojo-map",
+        "statement": "s0",
+        "expectError": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003cMyEvent\u003e\u003cstringObjectMapabc=\"def\"def=\"123\"/\u003e\u003c/MyEvent\u003e",
+        "name": "xml-attr"
+      },
+      {
+        "op": "undeploy",
+        "case": "pojo-map",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "pojo-map",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportBeanRendererThree",
+        "mode": "three"
+      },
+      {
+        "op": "deployed",
+        "case": "pojo-map",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "pojo-map",
+        "eventType": "SupportBeanRendererThree",
+        "payload": {
+          "payload": "three"
+        },
+        "mode": "three"
+      },
+      {
+        "op": "value",
+        "case": "pojo-map",
+        "statement": "s0",
+        "name": "json"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "pojo-map"
+      },
+      {
+        "op": "case",
+        "case": "empty-map"
+      },
+      {
+        "op": "deploy",
+        "case": "empty-map",
+        "statement": "s0",
+        "epl": "@name('s0') select * from EmptyMapEvent"
+      },
+      {
+        "op": "deployed",
+        "case": "empty-map",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "empty-map",
+        "eventType": "EmptyMapEvent",
+        "payload": {
+          "payload": "null"
+        }
+      },
+      {
+        "op": "value",
+        "case": "empty-map",
+        "statement": "s0",
+        "name": "json"
+      },
+      {
+        "op": "send",
+        "case": "empty-map",
+        "eventType": "EmptyMapEvent",
+        "payload": {
+          "payload": "empty"
+        }
+      },
+      {
+        "op": "value",
+        "case": "empty-map",
+        "statement": "s0",
+        "name": "json"
+      },
+      {
+        "op": "send",
+        "case": "empty-map",
+        "eventType": "EmptyMapEvent",
+        "payload": {
+          "payload": "map"
+        }
+      },
+      {
+        "op": "value",
+        "case": "empty-map",
+        "statement": "s0",
+        "name": "json"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "empty-map"
+      },
+      {
+        "op": "case",
+        "case": "enquote-json"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "enquote-json",
+        "statement": "enquote",
+        "expectError": "enquote(\"\\t\") -\u003e \"\\\"\\\\t\\\"\"",
+        "name": "row0"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "enquote-json",
+        "statement": "enquote",
+        "expectError": "enquote(\"\\n\") -\u003e \"\\\"\\\\n\\\"\"",
+        "name": "row1"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "enquote-json",
+        "statement": "enquote",
+        "expectError": "enquote(\"\\r\") -\u003e \"\\\"\\\\r\\\"\"",
+        "name": "row2"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "enquote-json",
+        "statement": "enquote",
+        "expectError": "enquote(\"\\x00\") -\u003e \"\\\"\\\\u0000\\\"\"",
+        "name": "row3"
+      },
+      {
+        "op": "case",
+        "case": "sqldate"
+      },
+      {
+        "op": "deploy",
+        "case": "sqldate",
+        "statement": "s0",
+        "epl": "@name('s0') select java.sql.Date.valueOf(\"2010-01-31\") as mySqlDate from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "sqldate",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "sqldate",
+        "eventType": "SupportBean",
+        "payload": {
+          "payload": "sqldate"
+        }
+      },
+      {
+        "op": "value",
+        "case": "sqldate",
+        "statement": "s0",
+        "name": "mySqlDate"
+      },
+      {
+        "op": "value",
+        "case": "sqldate",
+        "statement": "s0",
+        "name": "xml"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "sqldate"
+      },
+      {
+        "op": "case",
+        "case": "enquote-xml"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "enquote-xml",
+        "statement": "xmlEncode",
+        "expectError": "xmlEncode(\"\\\"\") -\u003e \"\u0026quot;\"",
+        "name": "row0"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "enquote-xml",
+        "statement": "xmlEncode",
+        "expectError": "xmlEncode(\"'\") -\u003e \"\u0026apos;\"",
+        "name": "row1"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "enquote-xml",
+        "statement": "xmlEncode",
+        "expectError": "xmlEncode(\"\u0026\") -\u003e \"\u0026amp;\"",
+        "name": "row2"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "enquote-xml",
+        "statement": "xmlEncode",
+        "expectError": "xmlEncode(\"\u003c\") -\u003e \"\u0026lt;\"",
+        "name": "row3"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "enquote-xml",
+        "statement": "xmlEncode",
+        "expectError": "xmlEncode(\"\u003e\") -\u003e \"\u0026gt;\"",
+        "name": "row4"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "enquote-xml",
+        "statement": "xmlEncode",
+        "expectError": "xmlEncode(\"\\x00\") -\u003e \"\\\\u0000\"",
+        "name": "row5"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "event-render-546",
+    "records": [
+      {
+        "case": "custom-renderer",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "custom-renderer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "custom-renderer",
+        "operation": "unrepresentable",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"MyEvent\":{\"id\":\"id1\",\"someProperties\":[\"index#0=1;index#1=x\",\"index#0=2;index#1=y\"],\"mappedProperty\":{\"key\":\"value\"}}}"
+      },
+      {
+        "case": "custom-renderer",
+        "operation": "unrepresentable",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "xml",
+        "value": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003cMyEvent\u003e\u003cid\u003eid1\u003c/id\u003e\u003csomeProperties\u003eindex#0=1;index#1=x\u003c/someProperties\u003e\u003csomeProperties\u003eindex#0=2;index#1=y\u003c/someProperties\u003e\u003cmappedProperty\u003e\u003ckey\u003evalue\u003c/key\u003e\u003c/mappedProperty\u003e\u003c/MyEvent\u003e"
+      },
+      {
+        "case": "object-array",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "object-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "object-array",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"MyEvent\":{\"p0\":\"abc\",\"p1\":1,\"p3\":2,\"p4\":3.0,\"p2\":{\"id\":1,\"p00\":\"p00\",\"p01\":null,\"p02\":null,\"p03\":null}}}"
+      },
+      {
+        "case": "object-array",
+        "operation": "unrepresentable",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "xml",
+        "value": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003cMyEvent\u003e\u003cp0\u003eabc\u003c/p0\u003e\u003cp1\u003e1\u003c/p1\u003e\u003cp3\u003e2\u003c/p3\u003e\u003cp4\u003e3.0\u003c/p4\u003e\u003cp2\u003e\u003cid\u003e1\u003c/id\u003e\u003cp00\u003ep00\u003c/p00\u003e\u003c/p2\u003e\u003c/MyEvent\u003e"
+      },
+      {
+        "case": "pojo-map",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "pojo-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "pojo-map",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"MyEvent\":{\"stringObjectMap\":{\"abc\":\"def\",\"def\":123,\"efg\":null}}}"
+      },
+      {
+        "case": "pojo-map",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "xml",
+        "value": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003cMyEvent\u003e\u003cstringObjectMap\u003e\u003cabc\u003edef\u003c/abc\u003e\u003cdef\u003e123\u003c/def\u003e\u003cefg\u003e\u003c/efg\u003e\u003c/stringObjectMap\u003e\u003c/MyEvent\u003e"
+      },
+      {
+        "case": "pojo-map",
+        "operation": "unrepresentable",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "xml-attr",
+        "value": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003cMyEvent\u003e\u003cstringObjectMapabc=\"def\"def=\"123\"/\u003e\u003c/MyEvent\u003e"
+      },
+      {
+        "case": "pojo-map",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "pojo-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "pojo-map",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"MyEvent\":{\"stringObjectMap\":{\"abc\":\"def\",\"def\":123,\"efg\":null}}}"
+      },
+      {
+        "case": "empty-map",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "empty-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "empty-map",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"outer\":{\"props\":null}}"
+      },
+      {
+        "case": "empty-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "empty-map",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"outer\":{\"props\":{}}}"
+      },
+      {
+        "case": "empty-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "empty-map",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"outer\":{\"props\":{\"a\":\"b\"}}}"
+      },
+      {
+        "case": "enquote-json",
+        "operation": "unrepresentable",
+        "statement": "enquote",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "row0",
+        "value": "enquote(\"\\t\") -\u003e \"\\\"\\\\t\\\"\""
+      },
+      {
+        "case": "enquote-json",
+        "operation": "unrepresentable",
+        "statement": "enquote",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "row1",
+        "value": "enquote(\"\\n\") -\u003e \"\\\"\\\\n\\\"\""
+      },
+      {
+        "case": "enquote-json",
+        "operation": "unrepresentable",
+        "statement": "enquote",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "row2",
+        "value": "enquote(\"\\r\") -\u003e \"\\\"\\\\r\\\"\""
+      },
+      {
+        "case": "enquote-json",
+        "operation": "unrepresentable",
+        "statement": "enquote",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "row3",
+        "value": "enquote(\"\\x00\") -\u003e \"\\\"\\\\u0000\\\"\""
+      },
+      {
+        "case": "sqldate",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sqldate",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sqldate",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "mySqlDate",
+        "value": "2010-01-31"
+      },
+      {
+        "case": "sqldate",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "xml",
+        "value": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003ctestsqldate\u003e\u003cmySqlDate\u003e2010-01-31\u003c/mySqlDate\u003e\u003c/testsqldate\u003e"
+      },
+      {
+        "case": "enquote-xml",
+        "operation": "unrepresentable",
+        "statement": "xmlEncode",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "row0",
+        "value": "xmlEncode(\"\\\"\") -\u003e \"\u0026quot;\""
+      },
+      {
+        "case": "enquote-xml",
+        "operation": "unrepresentable",
+        "statement": "xmlEncode",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "row1",
+        "value": "xmlEncode(\"'\") -\u003e \"\u0026apos;\""
+      },
+      {
+        "case": "enquote-xml",
+        "operation": "unrepresentable",
+        "statement": "xmlEncode",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "row2",
+        "value": "xmlEncode(\"\u0026\") -\u003e \"\u0026amp;\""
+      },
+      {
+        "case": "enquote-xml",
+        "operation": "unrepresentable",
+        "statement": "xmlEncode",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "row3",
+        "value": "xmlEncode(\"\u003c\") -\u003e \"\u0026lt;\""
+      },
+      {
+        "case": "enquote-xml",
+        "operation": "unrepresentable",
+        "statement": "xmlEncode",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "row4",
+        "value": "xmlEncode(\"\u003e\") -\u003e \"\u0026gt;\""
+      },
+      {
+        "case": "enquote-xml",
+        "operation": "unrepresentable",
+        "statement": "xmlEncode",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "row5",
+        "value": "xmlEncode(\"\\x00\") -\u003e \"\\\\u0000\""
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "event-render-546",
+    "records": [
+      {
+        "case": "custom-renderer",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "custom-renderer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "custom-renderer",
+        "operation": "unrepresentable",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"MyEvent\":{\"id\":\"id1\",\"someProperties\":[\"index#0=1;index#1=x\",\"index#0=2;index#1=y\"],\"mappedProperty\":{\"key\":\"value\"}}}"
+      },
+      {
+        "case": "custom-renderer",
+        "operation": "unrepresentable",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "xml",
+        "value": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003cMyEvent\u003e\u003cid\u003eid1\u003c/id\u003e\u003csomeProperties\u003eindex#0=1;index#1=x\u003c/someProperties\u003e\u003csomeProperties\u003eindex#0=2;index#1=y\u003c/someProperties\u003e\u003cmappedProperty\u003e\u003ckey\u003evalue\u003c/key\u003e\u003c/mappedProperty\u003e\u003c/MyEvent\u003e"
+      },
+      {
+        "case": "object-array",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "object-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "object-array",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"MyEvent\":{\"p0\":\"abc\",\"p1\":1,\"p3\":2,\"p4\":3.0,\"p2\":{\"id\":1,\"p00\":\"p00\",\"p01\":null,\"p02\":null,\"p03\":null}}}"
+      },
+      {
+        "case": "object-array",
+        "operation": "unrepresentable",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "xml",
+        "value": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003cMyEvent\u003e\u003cp0\u003eabc\u003c/p0\u003e\u003cp1\u003e1\u003c/p1\u003e\u003cp3\u003e2\u003c/p3\u003e\u003cp4\u003e3.0\u003c/p4\u003e\u003cp2\u003e\u003cid\u003e1\u003c/id\u003e\u003cp00\u003ep00\u003c/p00\u003e\u003c/p2\u003e\u003c/MyEvent\u003e"
+      },
+      {
+        "case": "pojo-map",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "pojo-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "pojo-map",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"MyEvent\":{\"stringObjectMap\":{\"abc\":\"def\",\"def\":123,\"efg\":null}}}"
+      },
+      {
+        "case": "pojo-map",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "xml",
+        "value": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003cMyEvent\u003e\u003cstringObjectMap\u003e\u003cabc\u003edef\u003c/abc\u003e\u003cdef\u003e123\u003c/def\u003e\u003cefg\u003e\u003c/efg\u003e\u003c/stringObjectMap\u003e\u003c/MyEvent\u003e"
+      },
+      {
+        "case": "pojo-map",
+        "operation": "unrepresentable",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "xml-attr",
+        "value": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003cMyEvent\u003e\u003cstringObjectMapabc=\"def\"def=\"123\"/\u003e\u003c/MyEvent\u003e"
+      },
+      {
+        "case": "pojo-map",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "pojo-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "pojo-map",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"MyEvent\":{\"stringObjectMap\":{\"abc\":\"def\",\"def\":123,\"efg\":null}}}"
+      },
+      {
+        "case": "empty-map",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "empty-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "empty-map",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"outer\":{\"props\":null}}"
+      },
+      {
+        "case": "empty-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "empty-map",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"outer\":{\"props\":{}}}"
+      },
+      {
+        "case": "empty-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "empty-map",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "json",
+        "value": "{\"outer\":{\"props\":{\"a\":\"b\"}}}"
+      },
+      {
+        "case": "enquote-json",
+        "operation": "unrepresentable",
+        "statement": "enquote",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "row0",
+        "value": "enquote(\"\\t\") -\u003e \"\\\"\\\\t\\\"\""
+      },
+      {
+        "case": "enquote-json",
+        "operation": "unrepresentable",
+        "statement": "enquote",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "row1",
+        "value": "enquote(\"\\n\") -\u003e \"\\\"\\\\n\\\"\""
+      },
+      {
+        "case": "enquote-json",
+        "operation": "unrepresentable",
+        "statement": "enquote",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "row2",
+        "value": "enquote(\"\\r\") -\u003e \"\\\"\\\\r\\\"\""
+      },
+      {
+        "case": "enquote-json",
+        "operation": "unrepresentable",
+        "statement": "enquote",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "row3",
+        "value": "enquote(\"\\x00\") -\u003e \"\\\"\\\\u0000\\\"\""
+      },
+      {
+        "case": "sqldate",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sqldate",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "delivered": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "sqldate",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "mySqlDate",
+        "value": "2010-01-31"
+      },
+      {
+        "case": "sqldate",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "xml",
+        "value": "\u003c?xmlversion=\"1.0\"encoding=\"UTF-8\"?\u003e\u003ctestsqldate\u003e\u003cmySqlDate\u003e2010-01-31\u003c/mySqlDate\u003e\u003c/testsqldate\u003e"
+      },
+      {
+        "case": "enquote-xml",
+        "operation": "unrepresentable",
+        "statement": "xmlEncode",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "row0",
+        "value": "xmlEncode(\"\\\"\") -\u003e \"\u0026quot;\""
+      },
+      {
+        "case": "enquote-xml",
+        "operation": "unrepresentable",
+        "statement": "xmlEncode",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "row1",
+        "value": "xmlEncode(\"'\") -\u003e \"\u0026apos;\""
+      },
+      {
+        "case": "enquote-xml",
+        "operation": "unrepresentable",
+        "statement": "xmlEncode",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "row2",
+        "value": "xmlEncode(\"\u0026\") -\u003e \"\u0026amp;\""
+      },
+      {
+        "case": "enquote-xml",
+        "operation": "unrepresentable",
+        "statement": "xmlEncode",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "row3",
+        "value": "xmlEncode(\"\u003c\") -\u003e \"\u0026lt;\""
+      },
+      {
+        "case": "enquote-xml",
+        "operation": "unrepresentable",
+        "statement": "xmlEncode",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "row4",
+        "value": "xmlEncode(\"\u003e\") -\u003e \"\u0026gt;\""
+      },
+      {
+        "case": "enquote-xml",
+        "operation": "unrepresentable",
+        "statement": "xmlEncode",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "row5",
+        "value": "xmlEncode(\"\\x00\") -\u003e \"\\\\u0000\""
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

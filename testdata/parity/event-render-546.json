@@ -1,0 +1,448 @@
+{
+ "version": "esper-parity/v1",
+ "id": "event-render-546",
+ "description": "Event render parity (7 executions): custom EventPropertyRenderer SPI pinned unrepresentable, object-array nested-last ordering with Double/long lexemes, POJO map JSON/XML/attribute renders, empty-map JSON three-way, JSON/XML enquote helper pins, sql-date XML render.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/render",
+ "javaRuntimes": [
+  "java-runtime-26bb69572227aa67230c",
+  "java-runtime-eacece93880bd4448b7d",
+  "java-runtime-6af1376411de38cffefe",
+  "java-runtime-96f1450787b11db671fd",
+  "java-runtime-8cce94662734d4052c0e",
+  "java-runtime-f47d81ef0d1a48b66476",
+  "java-runtime-539c60ae3344b3001b44"
+ ],
+ "javaNames": [
+  "EventRenderPropertyCustomRenderer",
+  "EventRenderObjectArray",
+  "EventRenderPOJOMap",
+  "EventRenderEmptyMap",
+  "EventRenderEnquote",
+  "EventRenderSQLDate",
+  "EventRenderEnquote"
+ ],
+ "javaStaticIds": [
+  "java-037e8856e0079705578b",
+  "java-037e8856e0079705578b",
+  "java-037e8856e0079705578b",
+  "java-049ac5adb236d6173921",
+  "java-049ac5adb236d6173921",
+  "java-34444bf4f27c5d12a7a1",
+  "java-34444bf4f27c5d12a7a1"
+ ],
+ "javaFlags": [
+  "SERDEREQUIRED",
+  "EXCLUDEWHENINSTRUMENTED"
+ ],
+ "cases": [
+  {
+   "case": "custom-renderer",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-26bb69572227aa67230c",
+   "executionName": "EventRenderPropertyCustomRenderer",
+   "observation": "EventPropertyRenderer SPI pinned JSON+XML output as unrepresentable records",
+   "epl": "@name('s0') select * from MyRendererEvent",
+   "flags": [
+    "SERDEREQUIRED"
+   ]
+  },
+  {
+   "case": "object-array",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-eacece93880bd4448b7d",
+   "executionName": "EventRenderObjectArray",
+   "observation": "object-array select-star JSON render; XML render pinned unrepresentable (nested-bean null omission + 3.0 lexeme)",
+   "epl": "@name('s0') select * from MyObjectArrayType",
+   "flags": []
+  },
+  {
+   "case": "pojo-map",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-6af1376411de38cffefe",
+   "executionName": "EventRenderPOJOMap",
+   "observation": "map-typed bean property JSON/XML renders plus undeclared-map BeanThree JSON repeat; attribute-mode XML pinned unrepresentable",
+   "epl": "@name('s0') select * from SupportBeanRendererOne\n@name('s0') select * from SupportBeanRendererThree",
+   "flags": [
+    "EXCLUDEWHENINSTRUMENTED"
+   ]
+  },
+  {
+   "case": "empty-map",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-96f1450787b11db671fd",
+   "executionName": "EventRenderEmptyMap",
+   "observation": "props null vs {} vs {a:b} JSON renders",
+   "epl": "@name('s0') select * from EmptyMapEvent",
+   "flags": []
+  },
+  {
+   "case": "enquote-json",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-8cce94662734d4052c0e",
+   "executionName": "EventRenderEnquote",
+   "observation": "OutputValueRendererJSONString.enquote rows pinned unrepresentable",
+   "epl": "OutputValueRendererJSONString.enquote(input, buf)",
+   "flags": []
+  },
+  {
+   "case": "sqldate",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-f47d81ef0d1a48b66476",
+   "executionName": "EventRenderSQLDate",
+   "observation": "java.sql.Date valueOf literal select; mySqlDate value + XML render",
+   "epl": "@name('s0') select java.sql.Date.valueOf(\"2010-01-31\") as mySqlDate from SupportBean",
+   "flags": []
+  },
+  {
+   "case": "enquote-xml",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-539c60ae3344b3001b44",
+   "executionName": "EventRenderEnquote",
+   "observation": "OutputValueRendererXMLString.xmlEncode rows pinned unrepresentable",
+   "epl": "OutputValueRendererXMLString.xmlEncode(input, buf, true)",
+   "flags": []
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "custom-renderer"
+  },
+  {
+   "op": "deploy",
+   "case": "custom-renderer",
+   "statement": "s0",
+   "epl": "@name('s0') select * from MyRendererEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "custom-renderer",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "custom-renderer",
+   "eventType": "MyRendererEvent",
+   "payload": {
+    "payload": "custom-renderer"
+   }
+  },
+  {
+   "op": "unrepresentable",
+   "case": "custom-renderer",
+   "statement": "s0",
+   "name": "json",
+   "expectError": "{\"MyEvent\":{\"id\":\"id1\",\"someProperties\":[\"index#0=1;index#1=x\",\"index#0=2;index#1=y\"],\"mappedProperty\":{\"key\":\"value\"}}}"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "custom-renderer",
+   "statement": "s0",
+   "name": "xml",
+   "expectError": "<?xmlversion=\"1.0\"encoding=\"UTF-8\"?><MyEvent><id>id1</id><someProperties>index#0=1;index#1=x</someProperties><someProperties>index#0=2;index#1=y</someProperties><mappedProperty><key>value</key></mappedProperty></MyEvent>"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "custom-renderer"
+  },
+  {
+   "op": "case",
+   "case": "object-array"
+  },
+  {
+   "op": "deploy",
+   "case": "object-array",
+   "statement": "s0",
+   "epl": "@name('s0') select * from MyObjectArrayType"
+  },
+  {
+   "op": "deployed",
+   "case": "object-array",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "object-array",
+   "eventType": "MyObjectArrayType",
+   "payload": {
+    "payload": "object-array"
+   }
+  },
+  {
+   "op": "value",
+   "case": "object-array",
+   "statement": "s0",
+   "name": "json"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "object-array",
+   "statement": "s0",
+   "name": "xml",
+   "expectError": "<?xmlversion=\"1.0\"encoding=\"UTF-8\"?><MyEvent><p0>abc</p0><p1>1</p1><p3>2</p3><p4>3.0</p4><p2><id>1</id><p00>p00</p00></p2></MyEvent>"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "object-array"
+  },
+  {
+   "op": "case",
+   "case": "pojo-map"
+  },
+  {
+   "op": "deploy",
+   "case": "pojo-map",
+   "statement": "s0",
+   "epl": "@name('s0') select * from SupportBeanRendererOne",
+   "mode": "one"
+  },
+  {
+   "op": "deployed",
+   "case": "pojo-map",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "pojo-map",
+   "eventType": "SupportBeanRendererOne",
+   "payload": {
+    "payload": "one"
+   },
+   "mode": "one"
+  },
+  {
+   "op": "value",
+   "case": "pojo-map",
+   "statement": "s0",
+   "name": "json"
+  },
+  {
+   "op": "value",
+   "case": "pojo-map",
+   "statement": "s0",
+   "name": "xml"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "pojo-map",
+   "statement": "s0",
+   "name": "xml-attr",
+   "expectError": "<?xmlversion=\"1.0\"encoding=\"UTF-8\"?><MyEvent><stringObjectMapabc=\"def\"def=\"123\"/></MyEvent>"
+  },
+  {
+   "op": "undeploy",
+   "case": "pojo-map",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "pojo-map",
+   "statement": "s0",
+   "epl": "@name('s0') select * from SupportBeanRendererThree",
+   "mode": "three"
+  },
+  {
+   "op": "deployed",
+   "case": "pojo-map",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "pojo-map",
+   "eventType": "SupportBeanRendererThree",
+   "payload": {
+    "payload": "three"
+   },
+   "mode": "three"
+  },
+  {
+   "op": "value",
+   "case": "pojo-map",
+   "statement": "s0",
+   "name": "json"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "pojo-map"
+  },
+  {
+   "op": "case",
+   "case": "empty-map"
+  },
+  {
+   "op": "deploy",
+   "case": "empty-map",
+   "statement": "s0",
+   "epl": "@name('s0') select * from EmptyMapEvent"
+  },
+  {
+   "op": "deployed",
+   "case": "empty-map",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "empty-map",
+   "eventType": "EmptyMapEvent",
+   "payload": {
+    "payload": "null"
+   }
+  },
+  {
+   "op": "value",
+   "case": "empty-map",
+   "statement": "s0",
+   "name": "json"
+  },
+  {
+   "op": "send",
+   "case": "empty-map",
+   "eventType": "EmptyMapEvent",
+   "payload": {
+    "payload": "empty"
+   }
+  },
+  {
+   "op": "value",
+   "case": "empty-map",
+   "statement": "s0",
+   "name": "json"
+  },
+  {
+   "op": "send",
+   "case": "empty-map",
+   "eventType": "EmptyMapEvent",
+   "payload": {
+    "payload": "map"
+   }
+  },
+  {
+   "op": "value",
+   "case": "empty-map",
+   "statement": "s0",
+   "name": "json"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "empty-map"
+  },
+  {
+   "op": "case",
+   "case": "enquote-json"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "enquote-json",
+   "statement": "enquote",
+   "name": "row0",
+   "expectError": "enquote(\"\\t\") -> \"\\\"\\\\t\\\"\""
+  },
+  {
+   "op": "unrepresentable",
+   "case": "enquote-json",
+   "statement": "enquote",
+   "name": "row1",
+   "expectError": "enquote(\"\\n\") -> \"\\\"\\\\n\\\"\""
+  },
+  {
+   "op": "unrepresentable",
+   "case": "enquote-json",
+   "statement": "enquote",
+   "name": "row2",
+   "expectError": "enquote(\"\\r\") -> \"\\\"\\\\r\\\"\""
+  },
+  {
+   "op": "unrepresentable",
+   "case": "enquote-json",
+   "statement": "enquote",
+   "name": "row3",
+   "expectError": "enquote(\"\\x00\") -> \"\\\"\\\\u0000\\\"\""
+  },
+  {
+   "op": "case",
+   "case": "sqldate"
+  },
+  {
+   "op": "deploy",
+   "case": "sqldate",
+   "statement": "s0",
+   "epl": "@name('s0') select java.sql.Date.valueOf(\"2010-01-31\") as mySqlDate from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "sqldate",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "sqldate",
+   "eventType": "SupportBean",
+   "payload": {
+    "payload": "sqldate"
+   }
+  },
+  {
+   "op": "value",
+   "case": "sqldate",
+   "statement": "s0",
+   "name": "mySqlDate"
+  },
+  {
+   "op": "value",
+   "case": "sqldate",
+   "statement": "s0",
+   "name": "xml"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "sqldate"
+  },
+  {
+   "op": "case",
+   "case": "enquote-xml"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "enquote-xml",
+   "statement": "xmlEncode",
+   "name": "row0",
+   "expectError": "xmlEncode(\"\\\"\") -> \"&quot;\""
+  },
+  {
+   "op": "unrepresentable",
+   "case": "enquote-xml",
+   "statement": "xmlEncode",
+   "name": "row1",
+   "expectError": "xmlEncode(\"'\") -> \"&apos;\""
+  },
+  {
+   "op": "unrepresentable",
+   "case": "enquote-xml",
+   "statement": "xmlEncode",
+   "name": "row2",
+   "expectError": "xmlEncode(\"&\") -> \"&amp;\""
+  },
+  {
+   "op": "unrepresentable",
+   "case": "enquote-xml",
+   "statement": "xmlEncode",
+   "name": "row3",
+   "expectError": "xmlEncode(\"<\") -> \"&lt;\""
+  },
+  {
+   "op": "unrepresentable",
+   "case": "enquote-xml",
+   "statement": "xmlEncode",
+   "name": "row4",
+   "expectError": "xmlEncode(\">\") -> \"&gt;\""
+  },
+  {
+   "op": "unrepresentable",
+   "case": "enquote-xml",
+   "statement": "xmlEncode",
+   "name": "row5",
+   "expectError": "xmlEncode(\"\\x00\") -> \"\\\\u0000\""
+  }
+ ]
+}

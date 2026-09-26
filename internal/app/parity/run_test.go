@@ -83901,3 +83901,287 @@ func TestRunEventInfra545CheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
 	assertEI545Trace(t, javaTrace)
 	assertEI545Trace(t, goTrace)
 }
+
+func TestRunEventRender546DirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", eventRender546ID,
+		"-scenario", filepath.Join(root, eventRender546ID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertER546Trace(t, trace)
+}
+
+func assertER546Trace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != eventRender546ID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	counts := map[string]map[string]int{}
+	for _, record := range trace.Records {
+		if counts[record.Case] == nil {
+			counts[record.Case] = map[string]int{}
+		}
+		counts[record.Case][record.Operation]++
+	}
+	want := map[string]map[string]int{
+		"custom-renderer": {"deployed": 1, "listener": 1, "unrepresentable": 2},
+		"object-array":    {"deployed": 1, "listener": 1, "value": 1, "unrepresentable": 1},
+		"pojo-map":        {"deployed": 2, "listener": 2, "value": 3, "unrepresentable": 1},
+		"empty-map":       {"deployed": 1, "listener": 3, "value": 3},
+		"enquote-json":    {"unrepresentable": 4},
+		"sqldate":         {"deployed": 1, "listener": 1, "value": 2},
+		"enquote-xml":     {"unrepresentable": 6},
+	}
+	if !reflect.DeepEqual(counts, want) {
+		t.Fatalf("record counts = %#v, want %#v", counts, want)
+	}
+}
+
+func TestRunEventRender546RejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, eventRender546ID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "sqldate"`), []byte(`"case": "sqldate", "extra": 0`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-f47d81ef0d1a48b66476"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "sqldate-case-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`java.sql.Date.valueOf(\"2010-01-31\")`), []byte(`java.sql.Date.valueOf(\"2010-02-01\")`), 1)
+		}},
+		{name: "case-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`select * from MyObjectArrayType`), []byte(`select id from MyObjectArrayType`), 1)
+		}},
+		{name: "mode-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"mode": "three"`), []byte(`"mode": "wrongmode"`), 1)
+		}},
+		{name: "flag-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"EXCLUDEWHENINSTRUMENTED"`), []byte(`"WRONGFLAG"`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", eventRender546ID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunEventRender546RuntimeIDMappingMatchesScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, eventRender546ID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenario struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &scenario); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenario.JavaRuntimes, eventRender546JavaRuntimeIDs) {
+		t.Fatalf("javaRuntimes = %#v", scenario.JavaRuntimes)
+	}
+	if !reflect.DeepEqual(scenario.JavaNames, eventRender546JavaExecutions) {
+		t.Fatalf("javaNames = %#v", scenario.JavaNames)
+	}
+	for index, definition := range scenario.Cases {
+		if definition.RuntimeID != eventRender546JavaRuntimeIDs[index] {
+			t.Fatalf("case %q runtimeId = %q, want %q", definition.Case, definition.RuntimeID, eventRender546JavaRuntimeIDs[index])
+		}
+	}
+}
+
+func TestRunEventRender546DiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), eventRender546ID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", eventRender546ID + "-diff",
+		"-scenario", filepath.Join(root, eventRender546ID+".json"),
+		"-java-trace", filepath.Join(root, eventRender546ID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != eventRender546JavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, eventRender546JavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, eventRender546JavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, eventRender546JavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertER546Trace(t, evidence.JavaTrace)
+	assertER546Trace(t, evidence.GoTrace)
+}
+
+func TestRunEventRender546DiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "object-array-json-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "object-array" && rec.Operation == "value" && rec.Name == "json" {
+						rec.Value = `{"MyEvent":{"p0":"abc","p1":2}}`
+						return
+					}
+				}
+				panic("no object-array json record")
+			},
+		},
+		{
+			name: "empty-map-json-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "empty-map" && rec.Operation == "value" && rec.Name == "json" {
+						rec.Value = `{"outer":{"props":{}}}`
+						return
+					}
+				}
+				panic("no empty-map json record")
+			},
+		},
+		{
+			name: "listener-marker-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "sqldate" && rec.Operation == "listener" && rec.Statement == "s0" {
+						rec.New[0].Fields["delivered"] = false
+						return
+					}
+				}
+				panic("no sqldate listener record")
+			},
+		},
+		{
+			name: "enquote-note-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "enquote-xml" && rec.Operation == "unrepresentable" {
+						rec.Value = "xmlEncode drifted"
+						return
+					}
+				}
+				panic("no enquote-xml unrepresentable record")
+			},
+		},
+		{
+			name: "record-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0], trace.Records[1] = trace.Records[1], trace.Records[0]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join(root, eventRender546ID+".trace.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), eventRender546ID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", eventRender546ID + "-diff",
+				"-scenario", filepath.Join(root, eventRender546ID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunEventRender546CheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, eventRender546ID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, eventRender546ID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, eventRender546ID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if evidence.JavaCommit != eventRender546JavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, eventRender546JavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, eventRender546JavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, eventRender546JavaExecutions) {
+		t.Fatalf("checked-in Java metadata = %#v", evidence)
+	}
+	assertER546Trace(t, javaTrace)
+	assertER546Trace(t, goTrace)
+}
