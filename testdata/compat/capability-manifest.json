@@ -51180,6 +51180,52 @@
     "java-runtime-17b5c153a73414b75e24"
    ],
    "notes": "Draft 4.556: 13 records each, 0 differences. Oracle pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c."
+  },
+  {
+   "id": "case.infra-nwtable-comparative",
+   "javaRuntimeIds": [
+    "java-runtime-4c1261f263736d23046c",
+    "java-runtime-5c1fe99c70aaea089285"
+   ],
+   "javaStaticIds": [
+    "java-c261ec96749884cbf192"
+   ],
+   "javaNames": [
+    "InfraNWTableComparativeGroupByTopLevelSingleAgg{named window}",
+    "InfraNWTableComparativeGroupByTopLevelSingleAgg{table}"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableComparative.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go/TestRunInfraNWTableComparative557DirectReplay",
+    "internal/app/parity/run_test.go/TestRunInfraNWTableComparative557PinnedArtifacts",
+    "internal/app/parity/run_test.go/TestRunInfraNWTableComparative557ScenarioLoader",
+    "internal/app/parity/run_test.go/TestRunInfraNWTableComparative557DiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go/TestRunInfraNWTableComparative557DiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go/TestRunInfraNWTableComparative557CheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go/TestRunInfraNWTableComparative557RejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go/TestRunInfraNWTableComparative557RuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "infra",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-nwtable-comparative-557.evidence.json"
+   ],
+   "difference": "Go replays the named-window leg via a unique window + grouped into-table feed + correlated scalar subquery, and the table leg via a keyed table + OnRecord.InsertIntoTable upsert (each key contributes once, so upsert = group-by-sum over a single-event group; the equivalent grouped IntoTable feed is O(N^2) per send / O(N^3) total in this engine and is preserved for smaller scenarios). EXCLUDEWHENINSTRUMENTED flags carried; Java's printed nanoTime deltas are not asserted.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-4c1261f263736d23046c",
+    "java-runtime-5c1fe99c70aaea089285"
+   ],
+   "notes": "Draft 4.557: 2002 records each (types/deployed + 1000 listener sends per case), 0 differences. Oracle pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c."
   }
  ],
  "mappings": [
@@ -54690,13 +54736,17 @@
   {
    "capabilityId": "expr.script",
    "caseId": "case.expr-script-threading-556"
+  },
+  {
+   "capabilityId": "infra.namedwindow.views",
+   "caseId": "case.infra-nwtable-comparative"
   }
  ],
  "summary": {
-  "inventoriedCases": 790,
-  "implementedCases": 788,
-  "differentialVerifiedCases": 410,
-  "differentialVerifiedRuntimeIds": 1635,
+  "inventoriedCases": 791,
+  "implementedCases": 789,
+  "differentialVerifiedCases": 411,
+  "differentialVerifiedRuntimeIds": 1637,
   "intentionallyDifferentCases": 39,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -54706,13 +54756,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4177,
-  "referencedJavaRuntimeIds": 3737,
+  "runtimeAssociationCount": 4179,
+  "referencedJavaRuntimeIds": 3739,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 399,
+  "unreferencedJavaRuntimeIds": 397,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 790,
+  "totalCases": 791,
   "totalCapabilities": 126
  }
 }

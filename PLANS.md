@@ -39,33 +39,34 @@ activity or a single coverage percentage.
 
 
 
-## Current work unit
-Active: Draft 4.556 ('expr-script-threading').
 
-- Contract frozen (JavaContract556 + GoSurface556): expr domain remainder —
-  filter core/in-set/optimizable/variables/define/dt/enum/clazz all
-  referenced. Bundle = EPLScriptExpression ord 1 QuoteEscape + ord 4
-  InvalidRegardlessDialect (compile probes) + ExprFilterLargeThreading ord 0
-  (pattern+like listener). Excluded: S5/S7 JS+MVEL dialects
-  (intentionally-different, no runtime in Go), S6/S9 MVEL no-ops,
-  F1-F6 PERFORMANCE-flagged execs.
-- [x] Assets556 dispatched (runner expr_script_threading_556.go, scenario
-  expr-script-threading-556.json, oracle ExprScriptThreading556ScenarioOracle).
-- [x] Assets556 delivered + integrated: Java trace 13 records, Go replay
-  13 (compile-ok/unrepresentable/build-error + types/listener), `-diff`
-  passing / 0 differences; evidence + traces checked in.
-- [x] ID correction: scout swapped ord 4/5 runtime IDs — ground truth is
-  ord4 InvalidRegardlessDialect=`416f111d`, ord5 InvalidScriptJS=`0198690c`.
-  Fixed scenario/runner/oracle/evidence; also corrected
-  case.expr-script-provider javaRuntimeIds (it had `416f111d` under
-  DocSamples's name; real DocSamples = `6f79531e`, now referenced).
-- [x] Manifest: NEW case.expr-script-threading-556 born-DV (3 IDs);
-  summary -> 790 cases / 410 DV / 1635 DV runtime IDs / 399 unreferenced.
+## Current work unit
+Active: Draft 4.557 ('infra-nwtable-comparative').
+
+- Contract frozen (JavaContract557 + GoSurface557): InfraNWTableComparative
+  ords 0+1 — group-by top-level single-agg read path over unique named
+  window + correlated scalar subquery vs keyed table + keyed access. Same
+  file/harness/flags (EXCLUDEWHENINSTRUMENTED), 1000-row load + 1000-probe
+  pair, expected {c0=E<i>, c1=i}.
+- [x] Assets557 dispatched (runner infra_nwtable_comparative_557.go,
+  scenario infra-nwtable-comparative-557.json, oracle
+  InfraNWTableComparative557ScenarioOracle).
+- [x] Assets557 delivered + integrated: Java trace 2002 records, Go replay
+  2002, `-diff` passing / 0 differences; evidence + traces checked in.
+  Table leg uses OnRecord.InsertIntoTable upsert (each key contributes
+  once; grouped IntoTable feed is O(N^3) here — documented).
+- [x] Manifest: NEW case.infra-nwtable-comparative born-DV (2 IDs ->
+  infra.namedwindow.views); summary -> 791 cases / 411 DV / 1637 DV
+  runtime IDs / 397 unreferenced.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev556 + JavaContract557 + GoSurface557 dispatched.
+- [x] ParityRev557 + JavaContract558 + GoSurface558 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.556 ('expr-script-threading') committed and pushed as
+  `184230e54`; Git owns identity. 3 executions born-DV (13 records each,
+  0 differences); also corrected case.expr-script-provider DocSamples
+  runtimeId (416f111d->6f79531e); review FAIL->fixed (goTests names).
 - Shipped: Draft 4.555 ('expr-define-locreport + inlined-class/cache
   dispositions') committed and pushed as `7d788e025`; Git owns identity.
   ExprDefineLambdaLocReport born-DV (2 records each, 0 differences); 3
