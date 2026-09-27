@@ -1,0 +1,133 @@
+{
+ "version": "esper-parity/v1",
+ "id": "view-expression-window-agg-568",
+ "description": "ViewExpressionWindow ords 7/8/9/10 — the aggregate-keep and named-window-delete quartet. aggregation-ungrouped (ViewExpressionWindowAggregationUngrouped, ord 7) replays `@name('s0') select irstream theString from SupportBean#expr(sum(intPrimitive) < 10)`: sends E1/1 through E9/9 post the full nine-delivery sequence including both self-expiring inserts (E3/11 posts new {E3} with old {E2,E3} and an empty iterator; E4/12 posts new {E4} with old {E4}) before E5-E7 accumulate {E5,E6,E7}, E8/6 evicts {E5,E6} and E9/9 evicts {E7,E8}; every Java iterator assertion posts an ordered snapshot. aggregation-groupwin (ord 8) replays `@name('s0') select irstream theString from SupportBean#groupwin(intPrimitive)#expr(sum(longPrimitive) < 10)`: E1-E4 accumulate per group, E5/2/6 evicts the whole group-2 pair {E2,E4} and E6/1/2 evicts the group-1 head {E1}; the Java execution pins flattened IR pairs only, so the case records listener deliveries without snapshots. named-window-delete (ord 9) and aggregation-on-delete (ord 10) replay their three-statement modules `@name('s0') create window NW#expr(true)` / `NW#expr(sum(intPrimitive) < 10) as SupportBean` plus a wildcard insert-into and an on-SupportBean_A delete (theString = id): ord 9's A(E2) delete posts old {E2} between ordered iterator snapshots {E1,E2,E3} and {E1,E3}; ord 10's keep predicate re-evaluates after the delete-triggered removal so E4/2 pops {E1} (sum(intPrimitive) = 10 fails < 10). Java milestone() calls and listenerReset are regression-harness savepoints with identical restored state, so the scenario omits them.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewExpressionWindow.java",
+ "javaSourceFiles": [
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewExpressionWindow.java",
+  "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_A.java"
+ ],
+ "javaRuntimes": [
+  "java-runtime-0201ff1e8d8eaabe883f",
+  "java-runtime-bef7f02bfc8cb8b18b86",
+  "java-runtime-d9281b1cc6d48c4984e1",
+  "java-runtime-e4c4569b44a3e479c37e"
+ ],
+ "javaNames": [
+  "ViewExpressionWindowAggregationUngrouped",
+  "ViewExpressionWindowAggregationWGroupwin",
+  "ViewExpressionWindowNamedWindowDelete",
+  "ViewExpressionWindowAggregationWOnDelete"
+ ],
+ "javaStaticIds": [
+  "java-06e6b1f6c905b8f12b82",
+  "java-06e6b1f6c905b8f12b82",
+  "java-06e6b1f6c905b8f12b82",
+  "java-06e6b1f6c905b8f12b82"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "aggregation-ungrouped",
+   "ordinal": 7,
+   "runtimeId": "java-runtime-0201ff1e8d8eaabe883f",
+   "executionName": "ViewExpressionWindowAggregationUngrouped",
+   "observation": "deployed+listener+snapshot; ungrouped sum(intPrimitive) < 10 keep over the full nine-send sequence: E1/1 keeps, E2/9 evicts {E1}, E3/11 and E4/12 self-expire (new {E3}/old {E2,E3} and new {E4}/old {E4} with empty iterators), E5/1-E7/3 accumulate {E5,E6,E7}, E8/6 evicts {E5,E6} and E9/9 evicts {E7,E8}; ordered iterator snapshots pin theString after every send",
+   "epl": "@name('s0') select irstream theString from SupportBean#expr(sum(intPrimitive) < 10)",
+   "deploys": ["s0"]
+  },
+  {
+   "case": "aggregation-groupwin",
+   "ordinal": 8,
+   "runtimeId": "java-runtime-bef7f02bfc8cb8b18b86",
+   "executionName": "ViewExpressionWindowAggregationWGroupwin",
+   "observation": "deployed+listener; #groupwin(intPrimitive)#expr(sum(longPrimitive) < 10) keeps rows per group: E1/1/5-E4/2/4 accumulate, E5/2/6 evicts the whole group-2 pair {E2,E4} in one delivery and E6/1/2 evicts the group-1 head {E1}; the Java execution pins flattened IR pairs only, so no snapshots are recorded",
+   "epl": "@name('s0') select irstream theString from SupportBean#groupwin(intPrimitive)#expr(sum(longPrimitive) < 10)",
+   "deploys": ["s0"]
+  },
+  {
+   "case": "named-window-delete",
+   "ordinal": 9,
+   "runtimeId": "java-runtime-d9281b1cc6d48c4984e1",
+   "executionName": "ViewExpressionWindowNamedWindowDelete",
+   "observation": "deployed+listener+snapshot; one three-statement module: @name('s0') create window NW#expr(true) as SupportBean, a wildcard insert-into and an on-SupportBean_A delete (theString = id); sends E1-E3 accumulate, the ordered iterator pins {E1,E2,E3}, the A(E2) delete posts old {E2} and the iterator pins {E1,E3}",
+   "epl": "@name('s0') create window NW#expr(true) as SupportBean;\ninsert into NW select * from SupportBean;\non SupportBean_A delete from NW where theString = id;\n",
+   "deploys": ["s0", "insert", "delete"]
+  },
+  {
+   "case": "aggregation-on-delete",
+   "ordinal": 10,
+   "runtimeId": "java-runtime-e4c4569b44a3e479c37e",
+   "executionName": "ViewExpressionWindowAggregationWOnDelete",
+   "observation": "deployed+listener; the named-window-delete module with NW#expr(sum(intPrimitive) < 10) retention: E1/1 and E2/8 insert, the A(E2) delete posts old {E2} with the keep predicate re-evaluated over {E1}, E3/7 inserts and E4/2 posts new {E4} while the retention pops {E1} (sum(intPrimitive) = 10 fails < 10); the Java execution pins flattened IR pairs only, so no snapshots are recorded",
+   "epl": "@name('s0') create window NW#expr(sum(intPrimitive) < 10) as SupportBean;\ninsert into NW select * from SupportBean;\non SupportBean_A delete from NW where theString = id;\n",
+   "deploys": ["s0", "insert", "delete"]
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "aggregation-ungrouped"},
+  {"op": "deploy", "case": "aggregation-ungrouped", "statement": "s0", "epl": "@name('s0') select irstream theString from SupportBean#expr(sum(intPrimitive) < 10)"},
+  {"op": "deployed", "case": "aggregation-ungrouped", "statement": "s0"},
+  {"op": "send", "case": "aggregation-ungrouped", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "snapshot", "case": "aggregation-ungrouped", "statement": "s0", "mode": "ordered"},
+  {"op": "send", "case": "aggregation-ungrouped", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 9}},
+  {"op": "snapshot", "case": "aggregation-ungrouped", "statement": "s0", "mode": "ordered"},
+  {"op": "send", "case": "aggregation-ungrouped", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 11}},
+  {"op": "snapshot", "case": "aggregation-ungrouped", "statement": "s0", "mode": "ordered"},
+  {"op": "send", "case": "aggregation-ungrouped", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 12}},
+  {"op": "snapshot", "case": "aggregation-ungrouped", "statement": "s0", "mode": "ordered"},
+  {"op": "send", "case": "aggregation-ungrouped", "eventType": "SupportBean", "payload": {"theString": "E5", "intPrimitive": 1}},
+  {"op": "snapshot", "case": "aggregation-ungrouped", "statement": "s0", "mode": "ordered"},
+  {"op": "send", "case": "aggregation-ungrouped", "eventType": "SupportBean", "payload": {"theString": "E6", "intPrimitive": 2}},
+  {"op": "snapshot", "case": "aggregation-ungrouped", "statement": "s0", "mode": "ordered"},
+  {"op": "send", "case": "aggregation-ungrouped", "eventType": "SupportBean", "payload": {"theString": "E7", "intPrimitive": 3}},
+  {"op": "snapshot", "case": "aggregation-ungrouped", "statement": "s0", "mode": "ordered"},
+  {"op": "send", "case": "aggregation-ungrouped", "eventType": "SupportBean", "payload": {"theString": "E8", "intPrimitive": 6}},
+  {"op": "snapshot", "case": "aggregation-ungrouped", "statement": "s0", "mode": "ordered"},
+  {"op": "send", "case": "aggregation-ungrouped", "eventType": "SupportBean", "payload": {"theString": "E9", "intPrimitive": 9}},
+  {"op": "snapshot", "case": "aggregation-ungrouped", "statement": "s0", "mode": "ordered"},
+  {"op": "undeploy-all", "case": "aggregation-ungrouped"},
+
+  {"op": "case", "case": "aggregation-groupwin"},
+  {"op": "deploy", "case": "aggregation-groupwin", "statement": "s0", "epl": "@name('s0') select irstream theString from SupportBean#groupwin(intPrimitive)#expr(sum(longPrimitive) < 10)"},
+  {"op": "deployed", "case": "aggregation-groupwin", "statement": "s0"},
+  {"op": "send", "case": "aggregation-groupwin", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1, "longPrimitive": 5}},
+  {"op": "send", "case": "aggregation-groupwin", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2, "longPrimitive": 2}},
+  {"op": "send", "case": "aggregation-groupwin", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 1, "longPrimitive": 3}},
+  {"op": "send", "case": "aggregation-groupwin", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 2, "longPrimitive": 4}},
+  {"op": "send", "case": "aggregation-groupwin", "eventType": "SupportBean", "payload": {"theString": "E5", "intPrimitive": 2, "longPrimitive": 6}},
+  {"op": "send", "case": "aggregation-groupwin", "eventType": "SupportBean", "payload": {"theString": "E6", "intPrimitive": 1, "longPrimitive": 2}},
+  {"op": "undeploy-all", "case": "aggregation-groupwin"},
+
+  {"op": "case", "case": "named-window-delete"},
+  {"op": "deploy", "case": "named-window-delete", "statement": "s0", "epl": "@name('s0') create window NW#expr(true) as SupportBean"},
+  {"op": "deploy", "case": "named-window-delete", "statement": "insert", "epl": "insert into NW select * from SupportBean"},
+  {"op": "deploy", "case": "named-window-delete", "statement": "delete", "epl": "on SupportBean_A delete from NW where theString = id"},
+  {"op": "deployed", "case": "named-window-delete", "statement": "s0"},
+  {"op": "deployed", "case": "named-window-delete", "statement": "insert"},
+  {"op": "deployed", "case": "named-window-delete", "statement": "delete"},
+  {"op": "send", "case": "named-window-delete", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "case": "named-window-delete", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+  {"op": "send", "case": "named-window-delete", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 3}},
+  {"op": "snapshot", "case": "named-window-delete", "statement": "s0", "mode": "ordered"},
+  {"op": "send", "case": "named-window-delete", "eventType": "SupportBean_A", "payload": {"id": "E2"}},
+  {"op": "snapshot", "case": "named-window-delete", "statement": "s0", "mode": "ordered"},
+  {"op": "undeploy-all", "case": "named-window-delete"},
+
+  {"op": "case", "case": "aggregation-on-delete"},
+  {"op": "deploy", "case": "aggregation-on-delete", "statement": "s0", "epl": "@name('s0') create window NW#expr(sum(intPrimitive) < 10) as SupportBean"},
+  {"op": "deploy", "case": "aggregation-on-delete", "statement": "insert", "epl": "insert into NW select * from SupportBean"},
+  {"op": "deploy", "case": "aggregation-on-delete", "statement": "delete", "epl": "on SupportBean_A delete from NW where theString = id"},
+  {"op": "deployed", "case": "aggregation-on-delete", "statement": "s0"},
+  {"op": "deployed", "case": "aggregation-on-delete", "statement": "insert"},
+  {"op": "deployed", "case": "aggregation-on-delete", "statement": "delete"},
+  {"op": "send", "case": "aggregation-on-delete", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "case": "aggregation-on-delete", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 8}},
+  {"op": "send", "case": "aggregation-on-delete", "eventType": "SupportBean_A", "payload": {"id": "E2"}},
+  {"op": "send", "case": "aggregation-on-delete", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 7}},
+  {"op": "send", "case": "aggregation-on-delete", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 2}},
+  {"op": "undeploy-all", "case": "aggregation-on-delete"}
+ ]
+}

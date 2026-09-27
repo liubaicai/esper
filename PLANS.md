@@ -45,33 +45,35 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.567 ('view-expression-window — promote case to DV').
+Active: Draft 4.568 ('view-expression-window aggregate/NW quartet').
 
-- Contract frozen (JavaContract567 + GoSurface567): ViewExpressionWindow
-  ords 0/1/2 — SceneOne (java-runtime-feef242da145c59be1bb), NewestOldest
-  (java-runtime-1fd41f23589a5af4132c), LengthWindow
-  (java-runtime-0c450c9d1c1fcf3b5523); all dedup static
-  java-06e6b1f6c905b8f12b82, flags[]. case.view-expression-window is
-  currently implemented-only (go-unit evidence) -> DV promotion.
-- Semantic: #expr retention keep-predicate (timestamp spread / boundary-
-  event equality / current_count). Go surface complete
-  (ExpressionWindowSpec + Window*Timestamp/Event/CurrentCount builtins);
-  no new API needed. Existing unit tests cover partial legs — the DV
-  scenario pins the FULL Java sequences (ord0 E6 mass-expiry; ord1
-  E5-E7 accumulation+flush; ord2 iterator-only + stronger IR pin).
-- [x] Assets567 delivered + integrated: Java trace 36 records, Go
-  replay 36 (14/15/7 per case), `-diff` passing / 0 differences;
-  evidence + traces checked in. ord2's plain `select *` maps to
-  SelectIStream (verified against real oracle: no old events) — the
-  IR-delivery pin is the documented stronger representation choice.
-- [x] Manifest: case.view-expression-window PROMOTED implemented->DV
-  (3 runtime IDs; the full 13-ord case was already referenced).
-  Summary -> 801 cases / 421 DV / 1672 DV runtime IDs / 386 unreferenced.
+- Contract frozen (JavaContract568 + GoSurface568): ViewExpressionWindow
+  ords 7/8/9/10 — AggregationUngrouped (java-runtime-0201ff1e8d8eaabe883f),
+  AggregationWGroupwin (java-runtime-bef7f02bfc8cb8b18b86),
+  NamedWindowDelete (java-runtime-d9281b1cc6d48c4984e1),
+  AggregationWOnDelete (java-runtime-e4c4569b44a3e479c37e); all dedup
+  static java-06e6b1f6c905b8f12b82, flags[]. #expr keep-predicate with
+  aggregate state + named-window retention/delete.
+- Go surface complete (ExpressionWindow + Sum/groupwin/DeleteFrom). Gaps:
+  Go unit tests stop early on ord7 (E6-E9 legs uncovered -> scenario
+  pins full sequence) and ord5 (subselect leg + verbatim messages; ord5
+  stays excluded as Invalid this unit). ord4's UDF text form is
+  unrepresentable if added later.
+- [x] Assets568 delivered + integrated: Java trace 43 records, Go
+  replay 43, `-diff` passing / 0 differences; evidence + traces checked
+  in. Groupwin+expr eviction pairs correct (E5->{E2,E4}, E6->{E1});
+  delete-triggered keep-predicate re-evaluation works (ord10 E4/2 ->
+  new{E4}/old{E1}); ord7 self-expiring rows preserved.
+- [x] Manifest: case.view-expression-window DV extended to 7/13 ords
+  (+4 runtime IDs). Summary -> 801 cases / 421 DV / 1676 DV runtime IDs
+  / 386 unreferenced.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev567 + JavaContract568 + GoSurface568 dispatched.
+- [x] ParityRev568 + JavaContract569 + GoSurface569 dispatched.
 - [ ] Review outcome, commit, push.
-
 ## Previous work units (shipped)
+- Shipped: Draft 4.567 ('view-expression-window trio') committed and
+  pushed as `018811630`; Git owns identity. case promoted
+  implemented->DV (36 records total, 0 differences); review PASS (1 P3).
 - Shipped: Draft 4.566 ('infra-namedwindow-explicit-index') committed
   and pushed as `a60036a4e`; Git owns identity. 2 executions born-DV
   (33 records each, 0 differences) + shared-core unique-index post-

@@ -122,6 +122,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include infra-namedwindow-update-propagation-565 and infra-namedwindow-update-propagation-565-diff")
 		fmt.Fprintln(stderr, "runner modes include infra-namedwindow-explicit-index-566 and infra-namedwindow-explicit-index-566-diff")
 		fmt.Fprintln(stderr, "runner modes include view-expression-window-567 and view-expression-window-567-diff")
+		fmt.Fprintln(stderr, "runner modes include view-expression-window-agg-568 and view-expression-window-agg-568-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-enum-select-from and expr-enum-select-from-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-type-use and expr-class-type-use-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-for-epl-objects and expr-class-for-epl-objects-diff")
@@ -527,6 +528,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWIdx566Scenario(file)
 	} else if *mode == "view-expression-window-567" || *mode == "view-expression-window-567-diff" {
 		scenario, err = loadViewExprWin567Scenario(file)
+	} else if *mode == "view-expression-window-agg-568" || *mode == "view-expression-window-agg-568-diff" {
+		scenario, err = loadViewExprWin568Scenario(file)
 	} else if *mode == "epl-contained-event-example" || *mode == "epl-contained-event-example-diff" {
 		scenario, err = loadEPLContainedEventExampleScenario(file)
 	} else if *mode == "epl-other-pattern-event-properties" || *mode == "epl-other-pattern-event-properties-diff" {
@@ -2420,6 +2423,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, viewExprWin567JavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, viewExprWin567JavaSources),
 				splitMetadata(*javaExecutions, viewExprWin567JavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "view-expression-window-agg-568" || *mode == "view-expression-window-agg-568-diff" {
+		trace, err := runViewExprWin568Scenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "view-expression-window-agg-568-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, viewExprWin568JavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, viewExprWin568JavaSources),
+				splitMetadata(*javaExecutions, viewExprWin568JavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

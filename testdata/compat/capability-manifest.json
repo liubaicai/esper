@@ -25761,7 +25761,11 @@
     "internal/app/parity/view_expression_window_567_test.go/TestRunViewExprWin567ScenarioReplay",
     "internal/app/parity/view_expression_window_567_test.go/TestRunViewExprWin567PinnedArtifacts",
     "internal/app/parity/view_expression_window_567_test.go/TestRunViewExprWin567RejectsMalformedRawScenario",
-    "internal/app/parity/view_expression_window_567_test.go/TestRunViewExprWin567RuntimeIDMappingMatchesScenario"
+    "internal/app/parity/view_expression_window_567_test.go/TestRunViewExprWin567RuntimeIDMappingMatchesScenario",
+    "internal/app/parity/view_expression_window_agg_568_test.go/TestRunViewExprWin568ScenarioReplay",
+    "internal/app/parity/view_expression_window_agg_568_test.go/TestRunViewExprWin568PinnedArtifacts",
+    "internal/app/parity/view_expression_window_agg_568_test.go/TestRunViewExprWin568RejectsMalformedRawScenario",
+    "internal/app/parity/view_expression_window_agg_568_test.go/TestRunViewExprWin568RuntimeIDMappingMatchesScenario"
    ],
    "tags": [
     "correctness",
@@ -25780,7 +25784,8 @@
    "evidence": [
     "java-runtime-inventory",
     "go-unit",
-    "testdata/parity/view-expression-window-567.evidence.json"
+    "testdata/parity/view-expression-window-567.evidence.json",
+    "testdata/parity/view-expression-window-agg-568.evidence.json"
    ],
    "difference": "",
    "verification": [
@@ -25791,9 +25796,13 @@
    "differentialVerifiedRuntimeIds": [
     "java-runtime-feef242da145c59be1bb",
     "java-runtime-1fd41f23589a5af4132c",
-    "java-runtime-0c450c9d1c1fcf3b5523"
+    "java-runtime-0c450c9d1c1fcf3b5523",
+    "java-runtime-0201ff1e8d8eaabe883f",
+    "java-runtime-bef7f02bfc8cb8b18b86",
+    "java-runtime-d9281b1cc6d48c4984e1",
+    "java-runtime-e4c4569b44a3e479c37e"
    ],
-   "notes": " Draft 4.567: ords 0/1/2 promoted to DV (36 records total (14/15/7 per case), 0 differences) \u2014 full Java sequences incl. E6 mass-expiry and E7 full-flush; ord2's Go-side IR delivery pin is stronger than Java's iterator-only assertion (representation choice). Oracle pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c."
+   "notes": " Draft 4.567: ords 0/1/2 promoted to DV (36 records total (14/15/7 per case), 0 differences) \u2014 full Java sequences incl. E6 mass-expiry and E7 full-flush; ord2's Go-side IR delivery pin is stronger than Java's iterator-only assertion (representation choice). Oracle pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c. Draft 4.568: ords 7-10 DV (43 records total: ungrouped-agg self-expiring inserts, groupwin per-group eviction, NW expr retention + on-delete re-evaluation). 7/13 ords DV."
   },
   {
    "id": "case.view-expression-batch",
@@ -55282,7 +55291,7 @@
   "inventoriedCases": 801,
   "implementedCases": 799,
   "differentialVerifiedCases": 421,
-  "differentialVerifiedRuntimeIds": 1672,
+  "differentialVerifiedRuntimeIds": 1676,
   "intentionallyDifferentCases": 40,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
