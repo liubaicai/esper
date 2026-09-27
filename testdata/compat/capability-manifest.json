@@ -50927,6 +50927,78 @@
     "java-runtime-8c90cf3d4a6abbd4848f",
     "java-runtime-59302e42b09f7b2f6818"
    ]
+  },
+  {
+   "id": "case.expr-enum-remainder",
+   "javaRuntimeIds": [
+    "java-runtime-4f1f81149f4970299646",
+    "java-runtime-27af41592ebb2ee9651c",
+    "java-runtime-717513223b2fe234ebf7",
+    "java-runtime-f36948008b15e17c460c",
+    "java-runtime-31307e312d939157b9d5",
+    "java-runtime-6cd8336511345daaec7c"
+   ],
+   "javaStaticIds": [
+    "java-2ba13d05d6e0ccaa16cb",
+    "java-2ba13d05d6e0ccaa16cb",
+    "java-8760b3322be03e680d95",
+    "java-8760b3322be03e680d95",
+    "java-46e96fc25ee5a674ded5",
+    "java-5a117b08f2037d0e6133"
+   ],
+   "javaNames": [
+    "ExprEnumAverageScalarMore",
+    "ExprEnumAverageInvalid",
+    "ExprEnumDistinctEventsMultikeyWArray",
+    "ExprEnumDistinctScalarMultikeyWArray",
+    "ExprEnumAllOfAnyOfInvalid",
+    "ExprEnumInvalid"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumAverage.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumAverage.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumDistinct.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumDistinct.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumAllOfAnyOf.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumInvalid.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunExprEnumRemainder554DirectReplay",
+    "internal/app/parity/run_test.go:TestRunExprEnumRemainder554DirectReplayEmitsExpectedValues",
+    "internal/app/parity/run_test.go:TestRunExprEnumRemainder554DiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunExprEnumRemainder554CheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunExprEnumRemainder554DiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunExprEnumRemainder554RejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunExprEnumRemainder554RuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "expr",
+    "enum",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/expr-enum-remainder-554.json",
+    "testdata/parity/expr-enum-remainder-554.trace.json",
+    "testdata/parity/expr-enum-remainder-554.go.trace.json",
+    "testdata/parity/expr-enum-remainder-554.evidence.json",
+    "tools/java-oracle/ExprEnumRemainder554ScenarioOracle.java",
+    "tools/java-oracle/run-expr-enum-remainder-554.sh"
+   ],
+   "notes": "ExprEnum remainder bundle born-DV (6 executions / 4 files, 32 records each = 6 listener + 26 compile-error, 0 differences). avg-scalarmore: strvals.average over extractNum/extractBigDecimal + index/size lambdas + case-when-null via EnumAverage/AverageOf/AverageExactOf with Func1 + EnumIndex/EnumSize markers; BigDecimal columns map to EnumAverageExactOf big.Rat; null elements skipped, empty/null collection all-null. distinct multikey-WArray (events + scalar): keepall-subquery EnumDistinctOf/EnumDistinct with composite keys; SupportEventWithManyArray is a map type on both sides (deterministic wildcard render). allofanyof-invalid + enum-invalid: 23 tryInvalidCompile probes -> compile-error records; Go-representable probes verify real ErrorInvalidRule rejections, unspellable EPL forms pin expectError prefixes (assertMessage startsWith). Rep collapse: distinct events wildcard map events render as plain sorted-key objects on both sides (kind:row unwrap).",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-4f1f81149f4970299646",
+    "java-runtime-27af41592ebb2ee9651c",
+    "java-runtime-717513223b2fe234ebf7",
+    "java-runtime-f36948008b15e17c460c",
+    "java-runtime-31307e312d939157b9d5",
+    "java-runtime-6cd8336511345daaec7c"
+   ]
   }
  ],
  "mappings": [
@@ -54413,13 +54485,17 @@
   {
    "capabilityId": "expr.core",
    "caseId": "case.expr-dt-tail"
+  },
+  {
+   "capabilityId": "expr.enum-collection-methods",
+   "caseId": "case.expr-enum-remainder"
   }
  ],
  "summary": {
-  "inventoriedCases": 784,
-  "implementedCases": 782,
-  "differentialVerifiedCases": 407,
-  "differentialVerifiedRuntimeIds": 1625,
+  "inventoriedCases": 785,
+  "implementedCases": 783,
+  "differentialVerifiedCases": 408,
+  "differentialVerifiedRuntimeIds": 1631,
   "intentionallyDifferentCases": 36,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -54429,13 +54505,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4163,
-  "referencedJavaRuntimeIds": 3723,
+  "runtimeAssociationCount": 4169,
+  "referencedJavaRuntimeIds": 3729,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 413,
+  "unreferencedJavaRuntimeIds": 407,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 784,
+  "totalCases": 785,
   "totalCapabilities": 126
  }
 }

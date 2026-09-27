@@ -38,34 +38,36 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.539 ('epl-other-invalid') committed and pushed as 3d2dd2720; Git owns identity.
 
 ## Current work unit
-Active: Draft 4.553 ('expr-dt-tail').
+Active: Draft 4.554 ('expr-enum-remainder').
 
-- Contract frozen (JavaContract553 + GoSurface553): ExprDTToDateCalMSec
-  ords 0-1, ExprDTDocSamples, ExprDTIntervalOpsCreateSchema,
-  ExprDTInvalid — 5 executions / 4 files.
-- [x] Shared core (primary): DateTimeToMillis (toMillisec),
-  DateTimeGetMonthOfYear (1-based ChronoField vs DateTimeGet's 0-based
-  Calendar.MONTH), DateTimePlusDuration/DateTimeMinusDuration
-  (duration-literal overloads) in expr_dt_resolution.go; facade
-  regenerated; TestDateTimeTailOps green. REJECTED a speculative
-  DateTimeAdd — Java's `.add()` in E1 is a method call on Calendar,
-  not a datetime chain op (contract value is null).
-- [x] Assets553 dispatched (runner expr_dt_tail_553.go, scenario
-  expr-dt-tail-553.json, oracle ExprDTTail553ScenarioOracle).
-- [x] Assets553 delivered + integrated: Java trace 57 records, Go
-  replay 57 (14 listener + 27 deployed + 4 count + 1 types + 11
-  compile-error), `-diff` passing / 0 differences; evidence + traces
-  checked in. tocalendar-chain emits null (Java .add() is a method
-  call, not a chain op); invalid probes 3/11 Go-verified rest
-  prefix-pinned; intervalops map+OA legs only.
-- [x] Manifest: NEW case.expr-dt-tail born-DV with the 5 IDs
-  (expr.core mapping); summary → 784 cases / 407 DV / 1625 DV
-  runtime IDs / 413 unreferenced.
+- Contract frozen (JavaContract554 + GoSurface554): ExprEnumAverage
+  ords 2-3 (scalar-more/invalid), ExprEnumDistinct ords 2-3
+  (multikey-WArray events+scalar), ExprEnumAllOfAnyOf ord 2 (invalid),
+  ExprEnumInvalid ord 0 — 6 executions / 4 files. Go covers every
+  builder (EnumAverage*/Distinct/AllOf/AnyOf) — pure asset unit.
+- [x] Assets554 dispatched (runner expr_enum_remainder_554.go, scenario
+  expr-enum-remainder-554.json, oracle
+  ExprEnumRemainder554ScenarioOracle).
+- [x] Assets554 delivered + integrated: Java trace 32 records, Go
+  replay 32 (6 listener + 26 compile-error), `-diff` passing / 0
+  differences; evidence + traces checked in. BigDecimal avg columns
+  map to EnumAverageExactOf big.Rat; multikey-WArray composite keys;
+  SupportEventWithManyArray map-type both sides; 13/26 Go-verified
+  rejections, rest prefix-pinned.
+- [x] Manifest: NEW case.expr-enum-remainder born-DV with the 6 IDs
+  (expr.enum-collection-methods mapping); summary → 785 cases / 408
+  DV / 1631 DV runtime IDs / 407 unreferenced.
 - [x] Gates: `make check` GREEN.
-- [x] ParityRev553 + JavaContract554 + GoSurface554 dispatched.
+- [x] ParityRev554 + JavaContract555 + GoSurface555 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+
+- Shipped: Draft 4.553 ('expr-dt-tail') committed and pushed as
+  680e7d76f; Git owns identity. 5 executions born-DV (57 records, 0
+  differences); review FAIL -> fixed -> confirm PASS (doc-set-month
+  0->1-based arg, DEFAULT-leg exclusion docs + mutation needles).
+
 
 - Shipped: Draft 4.552 ('expr-dt-remainder') committed and pushed as
   0302fcd36; Git owns identity. 6 executions born-DV (22 records, 0

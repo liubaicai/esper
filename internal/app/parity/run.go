@@ -108,6 +108,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include expr-dt-format-551 and expr-dt-format-551-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-dt-remainder-552 and expr-dt-remainder-552-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-dt-tail-553 and expr-dt-tail-553-diff")
+		fmt.Fprintln(stderr, "runner modes include expr-enum-remainder-554 and expr-enum-remainder-554-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-enum-select-from and expr-enum-select-from-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-type-use and expr-class-type-use-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-for-epl-objects and expr-class-for-epl-objects-diff")
@@ -255,6 +256,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadExprDTRemainder552Scenario(file)
 	} else if *mode == "expr-dt-tail-553" || *mode == "expr-dt-tail-553-diff" {
 		scenario, err = loadExprDTTail553Scenario(file)
+	} else if *mode == "expr-enum-remainder-554" || *mode == "expr-enum-remainder-554-diff" {
+		scenario, err = loadExprEnumRemainder554Scenario(file)
 	} else if *mode == "context-key-segmented-infra-prioritized" || *mode == "context-key-segmented-infra-prioritized-diff" {
 		scenario, err = loadContextKeySegmentedInfraPrioritizedScenario(file)
 	} else if *mode == "context-key-segmented-named-window" || *mode == "context-key-segmented-named-window-diff" {
@@ -5023,6 +5026,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, exprDTTail553JavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, exprDTTail553JavaSources),
 				splitMetadata(*javaExecutions, exprDTTail553JavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "expr-enum-remainder-554" || *mode == "expr-enum-remainder-554-diff" {
+		trace, err := runExprEnumRemainder554Scenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "expr-enum-remainder-554-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, exprEnumRemainder554JavaCommit,
+				splitMetadata(*javaRuntimeIDs, exprEnumRemainder554JavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, exprEnumRemainder554JavaSources),
+				splitMetadata(*javaExecutions, exprEnumRemainder554JavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

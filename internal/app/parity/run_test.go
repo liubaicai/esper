@@ -86387,3 +86387,381 @@ func TestRunExprDTTail553CheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
 	assertExprDTTail553Trace(t, javaTrace)
 	assertExprDTTail553Trace(t, goTrace)
 }
+
+func TestRunExprEnumRemainder554DirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", exprEnumRemainder554ID,
+		"-scenario", filepath.Join(root, exprEnumRemainder554ID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertExprEnumRemainder554Trace(t, trace)
+}
+
+func assertExprEnumRemainder554Trace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != exprEnumRemainder554ID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	counts := map[string]map[string]int{}
+	for _, record := range trace.Records {
+		if counts[record.Case] == nil {
+			counts[record.Case] = map[string]int{}
+		}
+		counts[record.Case][record.Operation]++
+	}
+	want := map[string]map[string]int{
+		"avg-scalarmore":          {"listener": 4},
+		"avg-invalid":             {"compile-error": 3},
+		"distinct-eventsmultikey": {"listener": 1},
+		"distinct-scalarmultikey": {"listener": 1},
+		"allofanyof-invalid":      {"compile-error": 3},
+		"enum-invalid":            {"compile-error": 20},
+	}
+	if !reflect.DeepEqual(counts, want) {
+		t.Fatalf("record counts = %#v, want %#v", counts, want)
+	}
+}
+
+func TestRunExprEnumRemainder554DirectReplayEmitsExpectedValues(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", exprEnumRemainder554ID,
+		"-scenario", filepath.Join(root, exprEnumRemainder554ID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	nullCell := map[string]any{"state": "null"}
+	type pin struct {
+		caseName string
+		sequence uint64
+		column   string
+		value    any
+	}
+	pins := []pin{
+		// ExprEnumAverageScalarMore: csv "E0,E1,E2" averages
+		// extractNum 3 / extractBigDecimal "3" across the six
+		// element/index/size lambda footprints; c6 case-when yields 2.
+		{"avg-scalarmore", 1, "c0", json.Number("3")},
+		{"avg-scalarmore", 1, "c1", "3"},
+		{"avg-scalarmore", 1, "c4", json.Number("418")},
+		{"avg-scalarmore", 1, "c6", json.Number("2")},
+		// csv "E1" is a single-element average; csv "" and a null
+		// strvals collection leave every column null.
+		{"avg-scalarmore", 2, "c4", json.Number("101")},
+		{"avg-scalarmore", 3, "c0", nullCell},
+		{"avg-scalarmore", 4, "c5", nullCell},
+		// ExprEnumDistinctEventsMultikeyWArray: the wildcard keepall
+		// collection deduplicates E1/E2 events by the intOne array key.
+		{"distinct-eventsmultikey", 1, "c0", []any{
+			map[string]any{"id": "E1", "intArrayCollection": nullCell, "intOne": []any{json.Number("1"), json.Number("2")}},
+			map[string]any{"id": "E2", "intArrayCollection": nullCell, "intOne": []any{json.Number("2")}},
+		}},
+		// ExprEnumDistinctScalarMultikeyWArray: Collection<int[]>
+		// deduplicates the {1,2}/{1,2}/{2}/{2} input by array value.
+		{"distinct-scalarmultikey", 1, "c0", []any{
+			[]any{json.Number("1"), json.Number("2")},
+			[]any{json.Number("2")},
+		}},
+	}
+	for _, want := range pins {
+		found := false
+		for _, record := range trace.Records {
+			if record.Case == want.caseName && record.Operation == "listener" &&
+				record.Sequence == want.sequence {
+				found = true
+				got := record.New[0].Fields[want.column]
+				if !reflect.DeepEqual(got, want.value) {
+					t.Fatalf("%s listener seq %d %s = %#v, want %#v",
+						want.caseName, want.sequence, want.column, got, want.value)
+				}
+			}
+		}
+		if !found {
+			t.Fatalf("no %s listener record at sequence %d", want.caseName, want.sequence)
+		}
+	}
+}
+
+func TestRunExprEnumRemainder554RejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, exprEnumRemainder554ID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "expr-enum-remainder-554"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "expr-enum-remainder-554"`)...), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-4f1f81149f4970299646"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "case-ordinal-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "avg-scalarmore",
+   "ordinal": 2`), []byte(`"case": "avg-scalarmore",
+   "ordinal": 0`), 1)
+		}},
+		{name: "deploy-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`strvals.average(v => extractNum(v))`), []byte(`strvals.average(v => extractNumx(v))`), 1)
+		}},
+		{name: "expect-error-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`received collection of events of type '`), []byte(`received collection of events of type 'Wrong`), 1)
+		}},
+		{name: "step-op-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "build-error",
+   "case": "avg-invalid",
+   "statement": "average-no-param"`), []byte(`"op": "compile",
+   "case": "avg-invalid",
+   "statement": "average-no-param"`), 1)
+		}},
+		{name: "send-type-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportEventWithManyArray"`), []byte(`"eventType": "SupportEventWithManyArrayX"`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", exprEnumRemainder554ID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunExprEnumRemainder554RuntimeIDMappingMatchesScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, exprEnumRemainder554ID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenario struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &scenario); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenario.JavaRuntimes, exprEnumRemainder554JavaRuntimeIDs) {
+		t.Fatalf("javaRuntimes = %#v", scenario.JavaRuntimes)
+	}
+	if !reflect.DeepEqual(scenario.JavaNames, exprEnumRemainder554JavaExecutions) {
+		t.Fatalf("javaNames = %#v", scenario.JavaNames)
+	}
+	for index, definition := range scenario.Cases {
+		if definition.RuntimeID != exprEnumRemainder554JavaRuntimeIDs[index] {
+			t.Fatalf("case %q runtimeId = %q, want %q", definition.Case, definition.RuntimeID, exprEnumRemainder554JavaRuntimeIDs[index])
+		}
+	}
+}
+
+func TestRunExprEnumRemainder554DiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTracePath := filepath.Join(root, exprEnumRemainder554ID+".trace.json")
+	evidencePath := filepath.Join(t.TempDir(), exprEnumRemainder554ID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", exprEnumRemainder554ID + "-diff",
+		"-scenario", filepath.Join(root, exprEnumRemainder554ID+".json"),
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != exprEnumRemainder554JavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, exprEnumRemainder554JavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, exprEnumRemainder554JavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, exprEnumRemainder554JavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertExprEnumRemainder554Trace(t, evidence.JavaTrace)
+	assertExprEnumRemainder554Trace(t, evidence.GoTrace)
+}
+
+func TestRunExprEnumRemainder554DiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "average-value-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "avg-scalarmore" && rec.Operation == "listener" && rec.Sequence == 1 {
+						rec.New[0].Fields["c4"] = json.Number("419")
+						return
+					}
+				}
+				panic("no avg-scalarmore listener record")
+			},
+		},
+		{
+			name: "average-null-cell-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "avg-scalarmore" && rec.Operation == "listener" && rec.Sequence == 3 {
+						rec.New[0].Fields["c0"] = json.Number("0")
+						return
+					}
+				}
+				panic("no avg-scalarmore null-collection listener record")
+			},
+		},
+		{
+			name: "distinct-event-count-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "distinct-eventsmultikey" && rec.Operation == "listener" && rec.Sequence == 1 {
+						rec.New[0].Fields["c0"] = []any{}
+						return
+					}
+				}
+				panic("no distinct-eventsmultikey listener record")
+			},
+		},
+		{
+			name: "distinct-scalar-key-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "distinct-scalarmultikey" && rec.Operation == "listener" && rec.Sequence == 1 {
+						rec.New[0].Fields["c0"] = []any{[]any{json.Number("9"), json.Number("9")}}
+						return
+					}
+				}
+				panic("no distinct-scalarmultikey listener record")
+			},
+		},
+		{
+			name: "compile-error-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "enum-invalid" && rec.Operation == "compile-error" {
+						rec.Value = "different message"
+						return
+					}
+				}
+				panic("no enum-invalid compile-error record")
+			},
+		},
+		{
+			name: "missing-record",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+		{
+			name: "record-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0], trace.Records[1] = trace.Records[1], trace.Records[0]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join(root, exprEnumRemainder554ID+".trace.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), exprEnumRemainder554ID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", exprEnumRemainder554ID + "-diff",
+				"-scenario", filepath.Join(root, exprEnumRemainder554ID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunExprEnumRemainder554CheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, exprEnumRemainder554ID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, exprEnumRemainder554ID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, exprEnumRemainder554ID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if evidence.JavaCommit != exprEnumRemainder554JavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, exprEnumRemainder554JavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, exprEnumRemainder554JavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, exprEnumRemainder554JavaExecutions) {
+		t.Fatalf("checked-in Java metadata = %#v", evidence)
+	}
+	assertExprEnumRemainder554Trace(t, javaTrace)
+	assertExprEnumRemainder554Trace(t, goTrace)
+}
