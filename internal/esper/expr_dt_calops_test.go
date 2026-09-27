@@ -80,6 +80,102 @@ func TestDateTimeCalOpsTransforms(t *testing.T) {
 	}
 }
 
+// TestDateTimeWithFieldsExpr covers the nullable expression-arg forms:
+// present fields replace, null fields keep the input's current value
+// (Java actionSetYMD/actionSetHMS skip-null semantics).
+func TestDateTimeWithFieldsExpr(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterMap(env, "DT", []FieldSpec{
+		{Name: "l", Type: reflect.TypeOf(int64(0))},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(FromAny(env, "DT").Select(
+		Alias("wd", DateTimeWithDateExpr[int64](Field[map[string]any, int64]("l"),
+			Literal(int64(2004)), NullLiteral[int64](), Literal(int64(3)))),
+		Alias("wt", DateTimeWithTimeExpr[int64](Field[map[string]any, int64]("l"),
+			Literal(int64(0)), NullLiteral[int64](), NullLiteral[int64](), Literal(int64(6)))),
+		Alias("wtAll", DateTimeWithTimeExpr[int64](Field[map[string]any, int64]("l"),
+			Literal(int64(1)), Literal(int64(2)), Literal(int64(3)), Literal(int64(4)))),
+	).Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+	rows := subscribeRows(t, engine, plan)
+
+	// 2002-05-30T09:01:02.003Z: wd keeps month(5)/time, sets 2004-?-03 with
+	// null month keeping May -> 2004-05-03T09:01:02.003; wt keeps
+	// minute/second, sets hour=0,millis=6 -> 2002-05-30T00:01:02.006.
+	base := time.Date(2002, 5, 30, 9, 1, 2, 3*int(time.Millisecond), time.UTC)
+	if err := engine.SendRecord(context.Background(), "DT", map[string]any{"l": base.UnixMilli()}); err != nil {
+		t.Fatal(err)
+	}
+	got := rows()
+	if len(got) != 1 {
+		t.Fatalf("rows = %d, want 1", len(got))
+	}
+	wantWD := time.Date(2004, 5, 3, 9, 1, 2, 3*int(time.Millisecond), time.UTC).UnixMilli()
+	wantWT := time.Date(2002, 5, 30, 0, 1, 2, 6*int(time.Millisecond), time.UTC).UnixMilli()
+	wantAll := time.Date(2002, 5, 30, 1, 2, 3, 4*int(time.Millisecond), time.UTC).UnixMilli()
+	if v := got[0].Get("wd").Any(); v != wantWD {
+		t.Fatalf("wd = %#v, want %d", v, wantWD)
+	}
+	if v := got[0].Get("wt").Any(); v != wantWT {
+		t.Fatalf("wt = %#v, want %d", v, wantWT)
+	}
+	if v := got[0].Get("wtAll").Any(); v != wantAll {
+		t.Fatalf("wtAll = %#v, want %d", v, wantAll)
+	}
+}
+
+// TestDateTimeShiftExpr covers the expression-arg plus/minus: the
+// millisecond count evaluates per event (VariableRef) and a null count
+// produces Null.
+func TestDateTimeShiftExpr(t *testing.T) {
+	env := NewEnvironment()
+	if err := env.RegisterVariable("varmsec", int64(0)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterMap(env, "DT", []FieldSpec{
+		{Name: "l", Type: reflect.TypeOf(int64(0))},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(FromAny(env, "DT").Select(
+		Alias("plus", DateTimePlusExpr[int64](Field[map[string]any, int64]("l"), VariableRef[int64]("varmsec"))),
+		Alias("minus", DateTimeMinusExpr[int64](Field[map[string]any, int64]("l"), VariableRef[int64]("varmsec"))),
+		Alias("nullMs", DateTimePlusExpr[int64](Field[map[string]any, int64]("l"), NullLiteral[int64]())),
+	).Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+	rows := subscribeRows(t, engine, plan)
+	if err := engine.SetVariable(context.Background(), "varmsec", int64(1000)); err != nil {
+		t.Fatal(err)
+	}
+	base := int64(1022749200000)
+	if err := engine.SendRecord(context.Background(), "DT", map[string]any{"l": base}); err != nil {
+		t.Fatal(err)
+	}
+	got := rows()
+	if len(got) != 1 {
+		t.Fatalf("rows = %d, want 1", len(got))
+	}
+	if v := got[0].Get("plus").Any(); v != base+1000 {
+		t.Fatalf("plus = %#v, want %d", v, base+1000)
+	}
+	if v := got[0].Get("minus").Any(); v != base-1000 {
+		t.Fatalf("minus = %#v, want %d", v, base-1000)
+	}
+	if got[0].Get("nullMs").IsPresent() {
+		t.Fatalf("nullMs = %#v, want null", got[0].Get("nullMs").Any())
+	}
+}
+
 // TestDateTimeWithMinMaxTransforms checks the withMax/withMin clamps on both
 // representations against the pinned ExprDTWithMax/ExprDTWithMin oracle
 // values: 'week' keeps the day-of-week under Java WEEK_OF_YEAR semantics,

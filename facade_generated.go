@@ -1739,6 +1739,12 @@ func DateTimeMinus[V int64 | time.Time](value Expression[V], ms int64) Expressio
 	return internalengine.DateTimeMinus[V](value, ms)
 }
 
+// DateTimeMinusExpr applies minus(ms) with an expression millisecond count;
+// additive counterpart of DateTimePlusExpr with identical semantics.
+func DateTimeMinusExpr[V int64 | time.Time](value Expression[V], ms Expression[int64]) Expression[V] {
+	return internalengine.DateTimeMinusExpr[V](value, ms)
+}
+
 const DateTimeParameterAny = internalengine.DateTimeParameterAny
 
 const DateTimeParameterBoolean = internalengine.DateTimeParameterBoolean
@@ -1803,6 +1809,15 @@ func DateTimePlus[V int64 | time.Time](value Expression[V], ms int64) Expression
 	return internalengine.DateTimePlus[V](value, ms)
 }
 
+// DateTimePlusExpr applies plus(ms) where the millisecond count is a
+// date-time expression argument (Java's form takes an expression, so
+// variables like .plus(varmsec) evaluate per event). Null ms or a null
+// date-time input produces Null. Resolution semantics match
+// DateTimePlus: ms is always milliseconds.
+func DateTimePlusExpr[V int64 | time.Time](value Expression[V], ms Expression[int64]) Expression[V] {
+	return internalengine.DateTimePlusExpr[V](value, ms)
+}
+
 // DateTimeRoundCeiling advances a date-time expression to the next unit
 // boundary (Commons MODIFY_CEILING adds one target unit unconditionally, so
 // an on-boundary input advances). The input representation is preserved:
@@ -1858,6 +1873,16 @@ func DateTimeWithDate[V int64 | time.Time](value Expression[V], year, month, day
 	return internalengine.DateTimeWithDate[V](value, year, month, day)
 }
 
+// DateTimeWithDateExpr applies withDate(year,month,day) where each calendar
+// field is an expression argument (Java's form evaluates variables per
+// event). A null field keeps the input's current field value, matching
+// Java's actionSetYMD skip-null semantics; the month argument is 1-based
+// (LDT convention). The input representation is preserved; null or missing
+// input produces Null.
+func DateTimeWithDateExpr[V int64 | time.Time](value Expression[V], year, month, day Expression[int64]) Expression[V] {
+	return internalengine.DateTimeWithDateExpr[V](value, year, month, day)
+}
+
 // DateTimeWithMax applies Esper's withMax(field) calendar operation: the
 // field is set to its actual maximum while every other component stays put
 // (withMax('month') keeps the day, withMax('week') keeps the day-of-week).
@@ -1886,6 +1911,14 @@ func DateTimeWithMin[V int64 | time.Time](value Expression[V], field string) Exp
 // produces Null.
 func DateTimeWithTime[V int64 | time.Time](value Expression[V], hour, minute, second, millis int) Expression[V] {
 	return internalengine.DateTimeWithTime[V](value, hour, minute, second, millis)
+}
+
+// DateTimeWithTimeExpr applies withTime(hour,minute,second,millis) with
+// expression arguments; a null field keeps the input's current field value
+// (Java's actionSetHMS null-skip). The input representation is preserved;
+// null or missing input produces Null.
+func DateTimeWithTimeExpr[V int64 | time.Time](value Expression[V], hour, minute, second, millis Expression[int64]) Expression[V] {
+	return internalengine.DateTimeWithTimeExpr[V](value, hour, minute, second, millis)
 }
 
 func DayOfMonth(value Expression[time.Time]) Expression[int64] {

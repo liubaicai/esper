@@ -1,0 +1,1723 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-5080e24710592989a761",
+    "java-runtime-bf73801b376a885fb2fa",
+    "java-runtime-684e3de645e51f1896c9",
+    "java-runtime-fb1954df531a2bf64b7d",
+    "java-runtime-e14ad77bdd6257964633",
+    "java-runtime-a3c430889e0a5976707a"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTGet.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTPlusMinus.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTWithDate.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTWithTime.java"
+  ],
+  "javaExecutions": [
+    "ExprDTGetFields",
+    "ExprDTGetInput",
+    "ExprDTPlusMinusSimple",
+    "ExprDTPlusMinusTimePeriod",
+    "ExprDTWithDate",
+    "ExprDTWithTime"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "expr-dt-remainder-552",
+    "steps": [
+      {
+        "op": "case",
+        "case": "get-fields"
+      },
+      {
+        "op": "deploy",
+        "case": "get-fields",
+        "statement": "s0",
+        "epl": "@name('s0') select utildate.get('msec') as val0,utildate.get('sec') as val1,utildate.get('minutes') as val2,utildate.get('hour') as val3,utildate.get('day') as val4,utildate.get('month') as val5,utildate.get('year') as val6,utildate.get('week') as val7 from SupportDateTime"
+      },
+      {
+        "op": "types",
+        "case": "get-fields",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "get-fields",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": "2002-05-30T09:01:02.003Z",
+          "expected": [
+            3,
+            2,
+            1,
+            9,
+            30,
+            4,
+            2002,
+            22
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "get-fields"
+      },
+      {
+        "op": "case",
+        "case": "get-input"
+      },
+      {
+        "op": "deploy",
+        "case": "get-input",
+        "statement": "s0",
+        "epl": "@name('s0') select utildate.get('month') as val0,longdate.get('month') as val1,caldate.get('month') as val2, localdate.get('month') as val3, zoneddate.get('month') as val4  from SupportDateTime"
+      },
+      {
+        "op": "types",
+        "case": "get-input",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "get-input",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": "2002-05-30T09:00:00.000Z",
+          "expected": [
+            4,
+            4,
+            4,
+            5,
+            5
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "get-input"
+      },
+      {
+        "op": "deploy",
+        "case": "get-input",
+        "statement": "s0",
+        "epl": "@name('s0') select abc.get('month') as val0 from SupportTimeStartEndA as abc"
+      },
+      {
+        "op": "send",
+        "case": "get-input",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "date": "2002-05-30T09:00:00.000Z",
+          "expected": [
+            4
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "get-input"
+      },
+      {
+        "op": "case",
+        "case": "plusminus-simple"
+      },
+      {
+        "op": "deploy",
+        "case": "plusminus-simple",
+        "statement": "var",
+        "epl": "@name('var') @public create variable long varmsec"
+      },
+      {
+        "op": "advance-time",
+        "case": "plusminus-simple",
+        "at": "2002-05-30T09:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "plusminus-simple",
+        "statement": "s0",
+        "epl": "@name('s0') select current_timestamp.plus(varmsec) as val0,utildate.plus(varmsec) as val1,longdate.plus(varmsec) as val2,caldate.plus(varmsec) as val3,localdate.plus(varmsec) as val4,zoneddate.plus(varmsec) as val5,current_timestamp.minus(varmsec) as val6,utildate.minus(varmsec) as val7,longdate.minus(varmsec) as val8,caldate.minus(varmsec) as val9,localdate.minus(varmsec) as val10,zoneddate.minus(varmsec) as val11 from SupportDateTime"
+      },
+      {
+        "op": "types",
+        "case": "plusminus-simple",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "plusminus-simple",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": null,
+          "expected": [
+            1022749200000,
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            1022749200000,
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            }
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "plusminus-simple",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": "2002-05-30T09:00:00.000Z",
+          "expected": [
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000
+          ]
+        }
+      },
+      {
+        "op": "set-variable",
+        "case": "plusminus-simple",
+        "statement": "var",
+        "name": "varmsec",
+        "payload": 1000
+      },
+      {
+        "op": "send",
+        "case": "plusminus-simple",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": "2002-05-30T09:00:00.000Z",
+          "expected": [
+            1022749201000,
+            1022749201000,
+            1022749201000,
+            1022749201000,
+            1022749201000,
+            1022749201000,
+            1022749199000,
+            1022749199000,
+            1022749199000,
+            1022749199000,
+            1022749199000,
+            1022749199000
+          ]
+        }
+      },
+      {
+        "op": "set-variable",
+        "case": "plusminus-simple",
+        "statement": "var",
+        "name": "varmsec",
+        "payload": 172800000
+      },
+      {
+        "op": "send",
+        "case": "plusminus-simple",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": "2002-05-30T09:00:00.000Z",
+          "expected": [
+            1022922000000,
+            1022922000000,
+            1022922000000,
+            1022922000000,
+            1022922000000,
+            1022922000000,
+            1022576400000,
+            1022576400000,
+            1022576400000,
+            1022576400000,
+            1022576400000,
+            1022576400000
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "plusminus-simple"
+      },
+      {
+        "op": "case",
+        "case": "plusminus-timeperiod"
+      },
+      {
+        "op": "advance-time",
+        "case": "plusminus-timeperiod",
+        "at": "2002-05-30T09:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "plusminus-timeperiod",
+        "statement": "s0",
+        "epl": "@name('s0') select current_timestamp.plus(1 hour 10 sec 20 msec) as val0,utildate.plus(1 hour 10 sec 20 msec) as val1,longdate.plus(1 hour 10 sec 20 msec) as val2,caldate.plus(1 hour 10 sec 20 msec) as val3,localdate.plus(1 hour 10 sec 20 msec) as val4,zoneddate.plus(1 hour 10 sec 20 msec) as val5,current_timestamp.minus(1 hour 10 sec 20 msec) as val6,utildate.minus(1 hour 10 sec 20 msec) as val7,longdate.minus(1 hour 10 sec 20 msec) as val8,caldate.minus(1 hour 10 sec 20 msec) as val9,localdate.minus(1 hour 10 sec 20 msec) as val10,zoneddate.minus(1 hour 10 sec 20 msec) as val11 from SupportDateTime"
+      },
+      {
+        "op": "types",
+        "case": "plusminus-timeperiod",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "plusminus-timeperiod",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": "2002-05-30T09:00:00.000Z",
+          "expected": [
+            1022752810020,
+            1022752810020,
+            1022752810020,
+            1022752810020,
+            1022752810020,
+            1022752810020,
+            1022745589980,
+            1022745589980,
+            1022745589980,
+            1022745589980,
+            1022745589980,
+            1022745589980
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "plusminus-timeperiod",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": null,
+          "expected": [
+            1022752810020,
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            1022745589980,
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            }
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "plusminus-timeperiod"
+      },
+      {
+        "op": "case",
+        "case": "withdate"
+      },
+      {
+        "op": "advance-time",
+        "case": "withdate",
+        "at": "2002-05-30T09:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "withdate",
+        "statement": "s0",
+        "epl": "create variable int varyear;\ncreate variable int varmonth;\ncreate variable int varday;\n@name('s0') select current_timestamp.withDate(varyear, varmonth, varday) as val0,utildate.withDate(varyear, varmonth, varday) as val1,longdate.withDate(varyear, varmonth, varday) as val2,caldate.withDate(varyear, varmonth, varday) as val3,localdate.withDate(varyear, varmonth+1, varday) as val4,zoneddate.withDate(varyear, varmonth+1, varday) as val5 from SupportDateTime"
+      },
+      {
+        "op": "types",
+        "case": "withdate",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "withdate",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": null,
+          "expected": [
+            1022749200000,
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            }
+          ]
+        }
+      },
+      {
+        "op": "set-variable",
+        "case": "withdate",
+        "statement": "s0",
+        "name": "varyear",
+        "payload": 2004
+      },
+      {
+        "op": "set-variable",
+        "case": "withdate",
+        "statement": "s0",
+        "name": "varmonth",
+        "payload": 8
+      },
+      {
+        "op": "set-variable",
+        "case": "withdate",
+        "statement": "s0",
+        "name": "varday",
+        "payload": 3
+      },
+      {
+        "op": "send",
+        "case": "withdate",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": "2002-05-30T09:00:00.000Z",
+          "expected": [
+            1094202000000,
+            1094202000000,
+            1094202000000,
+            1094202000000,
+            1094202000000,
+            1094202000000
+          ]
+        }
+      },
+      {
+        "op": "set-variable",
+        "case": "withdate",
+        "statement": "s0",
+        "name": "varyear",
+        "payload": null
+      },
+      {
+        "op": "set-variable",
+        "case": "withdate",
+        "statement": "s0",
+        "name": "varmonth",
+        "payload": 8
+      },
+      {
+        "op": "set-variable",
+        "case": "withdate",
+        "statement": "s0",
+        "name": "varday",
+        "payload": null
+      },
+      {
+        "op": "send",
+        "case": "withdate",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": "2002-05-30T09:00:00.000Z",
+          "expected": [
+            1033376400000,
+            1033376400000,
+            1033376400000,
+            1033376400000,
+            1033376400000,
+            1033376400000
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "withdate"
+      },
+      {
+        "op": "case",
+        "case": "withtime"
+      },
+      {
+        "op": "deploy",
+        "case": "withtime",
+        "statement": "variables",
+        "epl": "@name('variables') @public create variable int varhour;\n@public create variable int varmin;\n@public create variable int varsec;\n@public create variable int varmsec;\n"
+      },
+      {
+        "op": "advance-time",
+        "case": "withtime",
+        "at": "2002-05-30T09:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "withtime",
+        "statement": "s0",
+        "epl": "@name('s0') select current_timestamp.withTime(varhour, varmin, varsec, varmsec) as val0,utildate.withTime(varhour, varmin, varsec, varmsec) as val1,longdate.withTime(varhour, varmin, varsec, varmsec) as val2,caldate.withTime(varhour, varmin, varsec, varmsec) as val3,localdate.withTime(varhour, varmin, varsec, varmsec) as val4,zoneddate.withTime(varhour, varmin, varsec, varmsec) as val5 from SupportDateTime"
+      },
+      {
+        "op": "types",
+        "case": "withtime",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "withtime",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": null,
+          "expected": [
+            1022749200000,
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            }
+          ]
+        }
+      },
+      {
+        "op": "set-variable",
+        "case": "withtime",
+        "statement": "variables",
+        "name": "varhour",
+        "payload": null
+      },
+      {
+        "op": "send",
+        "case": "withtime",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": "2002-05-30T09:00:00.000Z",
+          "expected": [
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000
+          ]
+        }
+      },
+      {
+        "op": "set-variable",
+        "case": "withtime",
+        "statement": "variables",
+        "name": "varhour",
+        "payload": 1
+      },
+      {
+        "op": "set-variable",
+        "case": "withtime",
+        "statement": "variables",
+        "name": "varmin",
+        "payload": 2
+      },
+      {
+        "op": "set-variable",
+        "case": "withtime",
+        "statement": "variables",
+        "name": "varsec",
+        "payload": 3
+      },
+      {
+        "op": "set-variable",
+        "case": "withtime",
+        "statement": "variables",
+        "name": "varmsec",
+        "payload": 4
+      },
+      {
+        "op": "send",
+        "case": "withtime",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": "2002-05-30T09:00:00.000Z",
+          "expected": [
+            1022720523004,
+            1022720523004,
+            1022720523004,
+            1022720523004,
+            1022720523004,
+            1022720523004
+          ]
+        }
+      },
+      {
+        "op": "set-variable",
+        "case": "withtime",
+        "statement": "variables",
+        "name": "varhour",
+        "payload": 0
+      },
+      {
+        "op": "set-variable",
+        "case": "withtime",
+        "statement": "variables",
+        "name": "varmin",
+        "payload": null
+      },
+      {
+        "op": "set-variable",
+        "case": "withtime",
+        "statement": "variables",
+        "name": "varsec",
+        "payload": null
+      },
+      {
+        "op": "set-variable",
+        "case": "withtime",
+        "statement": "variables",
+        "name": "varmsec",
+        "payload": 6
+      },
+      {
+        "op": "send",
+        "case": "withtime",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": "2002-05-30T09:00:00.000Z",
+          "expected": [
+            1022716800006,
+            1022716800006,
+            1022716800006,
+            1022716800006,
+            1022716800006,
+            1022716800006
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "withtime"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-dt-remainder-552",
+    "records": [
+      {
+        "case": "get-fields",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "Integer",
+            "val1": "Integer",
+            "val2": "Integer",
+            "val3": "Integer",
+            "val4": "Integer",
+            "val5": "Integer",
+            "val6": "Integer",
+            "val7": "Integer"
+          }
+        }
+      },
+      {
+        "case": "get-fields",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 3,
+              "val1": 2,
+              "val2": 1,
+              "val3": 9,
+              "val4": 30,
+              "val5": 4,
+              "val6": 2002,
+              "val7": 22
+            }
+          }
+        ]
+      },
+      {
+        "case": "get-input",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "Integer",
+            "val1": "Integer",
+            "val2": "Integer",
+            "val3": "Integer",
+            "val4": "Integer"
+          }
+        }
+      },
+      {
+        "case": "get-input",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 4,
+              "val1": 4,
+              "val2": 4,
+              "val3": 5,
+              "val4": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "get-input",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "plusminus-simple",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "2002-05-30T09:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "Long",
+            "val1": "Date",
+            "val10": "LocalDateTime",
+            "val11": "ZonedDateTime",
+            "val2": "Long",
+            "val3": "Calendar",
+            "val4": "LocalDateTime",
+            "val5": "ZonedDateTime",
+            "val6": "Long",
+            "val7": "Date",
+            "val8": "Long",
+            "val9": "Calendar"
+          }
+        }
+      },
+      {
+        "case": "plusminus-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022749200000,
+              "val1": {
+                "state": "null"
+              },
+              "val10": {
+                "state": "null"
+              },
+              "val11": {
+                "state": "null"
+              },
+              "val2": {
+                "state": "null"
+              },
+              "val3": {
+                "state": "null"
+              },
+              "val4": {
+                "state": "null"
+              },
+              "val5": {
+                "state": "null"
+              },
+              "val6": 1022749200000,
+              "val7": {
+                "state": "null"
+              },
+              "val8": {
+                "state": "null"
+              },
+              "val9": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "plusminus-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022749200000,
+              "val1": 1022749200000,
+              "val10": 1022749200000,
+              "val11": 1022749200000,
+              "val2": 1022749200000,
+              "val3": 1022749200000,
+              "val4": 1022749200000,
+              "val5": 1022749200000,
+              "val6": 1022749200000,
+              "val7": 1022749200000,
+              "val8": 1022749200000,
+              "val9": 1022749200000
+            }
+          }
+        ]
+      },
+      {
+        "case": "plusminus-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022749201000,
+              "val1": 1022749201000,
+              "val10": 1022749199000,
+              "val11": 1022749199000,
+              "val2": 1022749201000,
+              "val3": 1022749201000,
+              "val4": 1022749201000,
+              "val5": 1022749201000,
+              "val6": 1022749199000,
+              "val7": 1022749199000,
+              "val8": 1022749199000,
+              "val9": 1022749199000
+            }
+          }
+        ]
+      },
+      {
+        "case": "plusminus-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022922000000,
+              "val1": 1022922000000,
+              "val10": 1022576400000,
+              "val11": 1022576400000,
+              "val2": 1022922000000,
+              "val3": 1022922000000,
+              "val4": 1022922000000,
+              "val5": 1022922000000,
+              "val6": 1022576400000,
+              "val7": 1022576400000,
+              "val8": 1022576400000,
+              "val9": 1022576400000
+            }
+          }
+        ]
+      },
+      {
+        "case": "plusminus-timeperiod",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "2002-05-30T09:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "Long",
+            "val1": "Date",
+            "val10": "LocalDateTime",
+            "val11": "ZonedDateTime",
+            "val2": "Long",
+            "val3": "Calendar",
+            "val4": "LocalDateTime",
+            "val5": "ZonedDateTime",
+            "val6": "Long",
+            "val7": "Date",
+            "val8": "Long",
+            "val9": "Calendar"
+          }
+        }
+      },
+      {
+        "case": "plusminus-timeperiod",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022752810020,
+              "val1": 1022752810020,
+              "val10": 1022745589980,
+              "val11": 1022745589980,
+              "val2": 1022752810020,
+              "val3": 1022752810020,
+              "val4": 1022752810020,
+              "val5": 1022752810020,
+              "val6": 1022745589980,
+              "val7": 1022745589980,
+              "val8": 1022745589980,
+              "val9": 1022745589980
+            }
+          }
+        ]
+      },
+      {
+        "case": "plusminus-timeperiod",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022752810020,
+              "val1": {
+                "state": "null"
+              },
+              "val10": {
+                "state": "null"
+              },
+              "val11": {
+                "state": "null"
+              },
+              "val2": {
+                "state": "null"
+              },
+              "val3": {
+                "state": "null"
+              },
+              "val4": {
+                "state": "null"
+              },
+              "val5": {
+                "state": "null"
+              },
+              "val6": 1022745589980,
+              "val7": {
+                "state": "null"
+              },
+              "val8": {
+                "state": "null"
+              },
+              "val9": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "withdate",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "2002-05-30T09:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "Long",
+            "val1": "Date",
+            "val2": "Long",
+            "val3": "Calendar",
+            "val4": "LocalDateTime",
+            "val5": "ZonedDateTime"
+          }
+        }
+      },
+      {
+        "case": "withdate",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022749200000,
+              "val1": {
+                "state": "null"
+              },
+              "val2": {
+                "state": "null"
+              },
+              "val3": {
+                "state": "null"
+              },
+              "val4": {
+                "state": "null"
+              },
+              "val5": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "withdate",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1094202000000,
+              "val1": 1094202000000,
+              "val2": 1094202000000,
+              "val3": 1094202000000,
+              "val4": 1094202000000,
+              "val5": 1094202000000
+            }
+          }
+        ]
+      },
+      {
+        "case": "withdate",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1033376400000,
+              "val1": 1033376400000,
+              "val2": 1033376400000,
+              "val3": 1033376400000,
+              "val4": 1033376400000,
+              "val5": 1033376400000
+            }
+          }
+        ]
+      },
+      {
+        "case": "withtime",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "2002-05-30T09:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "Long",
+            "val1": "Date",
+            "val2": "Long",
+            "val3": "Calendar",
+            "val4": "LocalDateTime",
+            "val5": "ZonedDateTime"
+          }
+        }
+      },
+      {
+        "case": "withtime",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022749200000,
+              "val1": {
+                "state": "null"
+              },
+              "val2": {
+                "state": "null"
+              },
+              "val3": {
+                "state": "null"
+              },
+              "val4": {
+                "state": "null"
+              },
+              "val5": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "withtime",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022749200000,
+              "val1": 1022749200000,
+              "val2": 1022749200000,
+              "val3": 1022749200000,
+              "val4": 1022749200000,
+              "val5": 1022749200000
+            }
+          }
+        ]
+      },
+      {
+        "case": "withtime",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022720523004,
+              "val1": 1022720523004,
+              "val2": 1022720523004,
+              "val3": 1022720523004,
+              "val4": 1022720523004,
+              "val5": 1022720523004
+            }
+          }
+        ]
+      },
+      {
+        "case": "withtime",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022716800006,
+              "val1": 1022716800006,
+              "val2": 1022716800006,
+              "val3": 1022716800006,
+              "val4": 1022716800006,
+              "val5": 1022716800006
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-dt-remainder-552",
+    "records": [
+      {
+        "case": "get-fields",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "Integer",
+            "val1": "Integer",
+            "val2": "Integer",
+            "val3": "Integer",
+            "val4": "Integer",
+            "val5": "Integer",
+            "val6": "Integer",
+            "val7": "Integer"
+          }
+        }
+      },
+      {
+        "case": "get-fields",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 3,
+              "val1": 2,
+              "val2": 1,
+              "val3": 9,
+              "val4": 30,
+              "val5": 4,
+              "val6": 2002,
+              "val7": 22
+            }
+          }
+        ]
+      },
+      {
+        "case": "get-input",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "Integer",
+            "val1": "Integer",
+            "val2": "Integer",
+            "val3": "Integer",
+            "val4": "Integer"
+          }
+        }
+      },
+      {
+        "case": "get-input",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 4,
+              "val1": 4,
+              "val2": 4,
+              "val3": 5,
+              "val4": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "get-input",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "plusminus-simple",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "2002-05-30T09:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "Long",
+            "val1": "Date",
+            "val10": "LocalDateTime",
+            "val11": "ZonedDateTime",
+            "val2": "Long",
+            "val3": "Calendar",
+            "val4": "LocalDateTime",
+            "val5": "ZonedDateTime",
+            "val6": "Long",
+            "val7": "Date",
+            "val8": "Long",
+            "val9": "Calendar"
+          }
+        }
+      },
+      {
+        "case": "plusminus-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022749200000,
+              "val1": {
+                "state": "null"
+              },
+              "val10": {
+                "state": "null"
+              },
+              "val11": {
+                "state": "null"
+              },
+              "val2": {
+                "state": "null"
+              },
+              "val3": {
+                "state": "null"
+              },
+              "val4": {
+                "state": "null"
+              },
+              "val5": {
+                "state": "null"
+              },
+              "val6": 1022749200000,
+              "val7": {
+                "state": "null"
+              },
+              "val8": {
+                "state": "null"
+              },
+              "val9": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "plusminus-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022749200000,
+              "val1": 1022749200000,
+              "val10": 1022749200000,
+              "val11": 1022749200000,
+              "val2": 1022749200000,
+              "val3": 1022749200000,
+              "val4": 1022749200000,
+              "val5": 1022749200000,
+              "val6": 1022749200000,
+              "val7": 1022749200000,
+              "val8": 1022749200000,
+              "val9": 1022749200000
+            }
+          }
+        ]
+      },
+      {
+        "case": "plusminus-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022749201000,
+              "val1": 1022749201000,
+              "val10": 1022749199000,
+              "val11": 1022749199000,
+              "val2": 1022749201000,
+              "val3": 1022749201000,
+              "val4": 1022749201000,
+              "val5": 1022749201000,
+              "val6": 1022749199000,
+              "val7": 1022749199000,
+              "val8": 1022749199000,
+              "val9": 1022749199000
+            }
+          }
+        ]
+      },
+      {
+        "case": "plusminus-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022922000000,
+              "val1": 1022922000000,
+              "val10": 1022576400000,
+              "val11": 1022576400000,
+              "val2": 1022922000000,
+              "val3": 1022922000000,
+              "val4": 1022922000000,
+              "val5": 1022922000000,
+              "val6": 1022576400000,
+              "val7": 1022576400000,
+              "val8": 1022576400000,
+              "val9": 1022576400000
+            }
+          }
+        ]
+      },
+      {
+        "case": "plusminus-timeperiod",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "2002-05-30T09:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "Long",
+            "val1": "Date",
+            "val10": "LocalDateTime",
+            "val11": "ZonedDateTime",
+            "val2": "Long",
+            "val3": "Calendar",
+            "val4": "LocalDateTime",
+            "val5": "ZonedDateTime",
+            "val6": "Long",
+            "val7": "Date",
+            "val8": "Long",
+            "val9": "Calendar"
+          }
+        }
+      },
+      {
+        "case": "plusminus-timeperiod",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022752810020,
+              "val1": 1022752810020,
+              "val10": 1022745589980,
+              "val11": 1022745589980,
+              "val2": 1022752810020,
+              "val3": 1022752810020,
+              "val4": 1022752810020,
+              "val5": 1022752810020,
+              "val6": 1022745589980,
+              "val7": 1022745589980,
+              "val8": 1022745589980,
+              "val9": 1022745589980
+            }
+          }
+        ]
+      },
+      {
+        "case": "plusminus-timeperiod",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022752810020,
+              "val1": {
+                "state": "null"
+              },
+              "val10": {
+                "state": "null"
+              },
+              "val11": {
+                "state": "null"
+              },
+              "val2": {
+                "state": "null"
+              },
+              "val3": {
+                "state": "null"
+              },
+              "val4": {
+                "state": "null"
+              },
+              "val5": {
+                "state": "null"
+              },
+              "val6": 1022745589980,
+              "val7": {
+                "state": "null"
+              },
+              "val8": {
+                "state": "null"
+              },
+              "val9": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "withdate",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "2002-05-30T09:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "Long",
+            "val1": "Date",
+            "val2": "Long",
+            "val3": "Calendar",
+            "val4": "LocalDateTime",
+            "val5": "ZonedDateTime"
+          }
+        }
+      },
+      {
+        "case": "withdate",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022749200000,
+              "val1": {
+                "state": "null"
+              },
+              "val2": {
+                "state": "null"
+              },
+              "val3": {
+                "state": "null"
+              },
+              "val4": {
+                "state": "null"
+              },
+              "val5": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "withdate",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1094202000000,
+              "val1": 1094202000000,
+              "val2": 1094202000000,
+              "val3": 1094202000000,
+              "val4": 1094202000000,
+              "val5": 1094202000000
+            }
+          }
+        ]
+      },
+      {
+        "case": "withdate",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1033376400000,
+              "val1": 1033376400000,
+              "val2": 1033376400000,
+              "val3": 1033376400000,
+              "val4": 1033376400000,
+              "val5": 1033376400000
+            }
+          }
+        ]
+      },
+      {
+        "case": "withtime",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "2002-05-30T09:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "Long",
+            "val1": "Date",
+            "val2": "Long",
+            "val3": "Calendar",
+            "val4": "LocalDateTime",
+            "val5": "ZonedDateTime"
+          }
+        }
+      },
+      {
+        "case": "withtime",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022749200000,
+              "val1": {
+                "state": "null"
+              },
+              "val2": {
+                "state": "null"
+              },
+              "val3": {
+                "state": "null"
+              },
+              "val4": {
+                "state": "null"
+              },
+              "val5": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "withtime",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022749200000,
+              "val1": 1022749200000,
+              "val2": 1022749200000,
+              "val3": 1022749200000,
+              "val4": 1022749200000,
+              "val5": 1022749200000
+            }
+          }
+        ]
+      },
+      {
+        "case": "withtime",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022720523004,
+              "val1": 1022720523004,
+              "val2": 1022720523004,
+              "val3": 1022720523004,
+              "val4": 1022720523004,
+              "val5": 1022720523004
+            }
+          }
+        ]
+      },
+      {
+        "case": "withtime",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022716800006,
+              "val1": 1022716800006,
+              "val2": 1022716800006,
+              "val3": 1022716800006,
+              "val4": 1022716800006,
+              "val5": 1022716800006
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

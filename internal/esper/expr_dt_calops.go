@@ -382,6 +382,120 @@ func DateTimeWithTime[V int64 | time.Time](value Expression[V], hour, minute, se
 		fmt.Sprintf("%d,%d,%d,%d", hour, minute, second, millis), "")
 }
 
+// DateTimeWithDateExpr applies withDate(year,month,day) where each calendar
+// field is an expression argument (Java's form evaluates variables per
+// event). A null field keeps the input's current field value, matching
+// Java's actionSetYMD skip-null semantics; the month argument is 1-based
+// (LDT convention). The input representation is preserved; null or missing
+// input produces Null.
+func DateTimeWithDateExpr[V int64 | time.Time](value Expression[V], year, month, day Expression[int64]) Expression[V] {
+	fields := []Expression[int64]{year, month, day}
+	node := dateTimeFieldsNode[V]("date-time-with-date", value, fields)
+	return typedExpr[V]{n: node, fn: func(ctx EvalContext) Value {
+		current, instant, parts, present, ok := dateTimeFieldsEval[V](ctx, value, fields)
+		if !ok {
+			return Null()
+		}
+		y, mo, d := dateTimeJavaDecompose(instant.millis, instant.location)
+		if present[0] {
+			y = int(parts[0])
+		}
+		if present[1] {
+			mo = time.Month(parts[1])
+		}
+		if present[2] {
+			d = int(parts[2])
+		}
+		clock := time.UnixMilli(instant.millis).In(instant.location)
+		h, mi, s := clock.Clock()
+		return dateTimeCalOpResult(current, dateTimeCalOpJoin(instant, dateTimeJavaToMillis(y, mo, d, h, mi, s, clock.Nanosecond(), instant.location)))
+	}}
+}
+
+// DateTimeWithTimeExpr applies withTime(hour,minute,second,millis) with
+// expression arguments; a null field keeps the input's current field value
+// (Java's actionSetHMS null-skip). The input representation is preserved;
+// null or missing input produces Null.
+func DateTimeWithTimeExpr[V int64 | time.Time](value Expression[V], hour, minute, second, millis Expression[int64]) Expression[V] {
+	fields := []Expression[int64]{hour, minute, second, millis}
+	node := dateTimeFieldsNode[V]("date-time-with-time", value, fields)
+	return typedExpr[V]{n: node, fn: func(ctx EvalContext) Value {
+		current, instant, parts, present, ok := dateTimeFieldsEval[V](ctx, value, fields)
+		if !ok {
+			return Null()
+		}
+		clock := time.UnixMilli(instant.millis).In(instant.location)
+		h, mi, s := clock.Clock()
+		ns := clock.Nanosecond()
+		if present[0] {
+			h = int(parts[0])
+		}
+		if present[1] {
+			mi = int(parts[1])
+		}
+		if present[2] {
+			s = int(parts[2])
+		}
+		if present[3] {
+			ns = int(parts[3]) * int(time.Millisecond)
+		}
+		y, mo, d := dateTimeJavaDecompose(instant.millis, instant.location)
+		return dateTimeCalOpResult(current, dateTimeCalOpJoin(instant, dateTimeJavaToMillis(y, mo, d, h, mi, s, ns, instant.location)))
+	}}
+}
+
+func dateTimeFieldsNode[V int64 | time.Time](kind string, value Expression[V], fields []Expression[int64]) *exprNode {
+	var children []*exprNode
+	if value != nil {
+		children = append(children, value.node())
+	}
+	for _, field := range fields {
+		if field != nil {
+			children = append(children, field.node())
+		}
+	}
+	node := &exprNode{
+		kind:        kind,
+		typ:         typeOf[V](),
+		description: kind + "(expr)",
+		children:    children,
+	}
+	if value == nil || value.node() == nil {
+		node.configurationError = fmt.Sprintf("%s requires a date-time operand", kind)
+	} else {
+		validateDateTimeOperand(node, "value", value)
+	}
+	return node
+}
+
+// dateTimeFieldsEval splits the input instant and evaluates each field
+// argument; a null argument is reported via present=false so callers keep
+// the input's existing field value.
+func dateTimeFieldsEval[V int64 | time.Time](ctx EvalContext, value Expression[V], fields []Expression[int64]) (Value, dateTimeCalOpInstant, []int64, []bool, bool) {
+	if value == nil {
+		return Value{}, dateTimeCalOpInstant{}, nil, nil, false
+	}
+	current := value.eval(ctx)
+	instant, ok := dateTimeCalOpSplit(ctx, current)
+	if !ok {
+		return Value{}, dateTimeCalOpInstant{}, nil, nil, false
+	}
+	parts := make([]int64, len(fields))
+	present := make([]bool, len(fields))
+	for index, field := range fields {
+		if field == nil {
+			continue
+		}
+		raw := field.eval(ctx)
+		num, numOK := dateTimeEpochMillis(raw)
+		if numOK {
+			parts[index] = num
+			present[index] = true
+		}
+	}
+	return current, instant, parts, present, true
+}
+
 // dateTimeCalOpExpression builds a rep-preserving calendar transform node.
 // Calendar fields derive in the value's own zone for time.Time inputs;
 // epoch-millis inputs carry no zone and evaluate in UTC (the pinned harness

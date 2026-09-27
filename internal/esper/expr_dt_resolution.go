@@ -256,6 +256,74 @@ func dateTimeShift[V int64 | time.Time](kind string, value Expression[V], ms int
 	}}
 }
 
+// DateTimePlusExpr applies plus(ms) where the millisecond count is a
+// date-time expression argument (Java's form takes an expression, so
+// variables like .plus(varmsec) evaluate per event). Null ms or a null
+// date-time input produces Null. Resolution semantics match
+// DateTimePlus: ms is always milliseconds.
+func DateTimePlusExpr[V int64 | time.Time](value Expression[V], ms Expression[int64]) Expression[V] {
+	return dateTimeShiftExpr[V]("date-time-plus", value, ms, 1)
+}
+
+// DateTimeMinusExpr applies minus(ms) with an expression millisecond count;
+// additive counterpart of DateTimePlusExpr with identical semantics.
+func DateTimeMinusExpr[V int64 | time.Time](value Expression[V], ms Expression[int64]) Expression[V] {
+	return dateTimeShiftExpr[V]("date-time-minus", value, ms, -1)
+}
+
+func dateTimeShiftExpr[V int64 | time.Time](kind string, value Expression[V], ms Expression[int64], sign int64) Expression[V] {
+	var children []*exprNode
+	if value != nil {
+		children = append(children, value.node())
+	}
+	if ms != nil {
+		children = append(children, ms.node())
+	}
+	node := &exprNode{
+		kind:        kind,
+		typ:         typeOf[V](),
+		description: fmt.Sprintf("%s(%s,%s)", kind, expressionDescription(value), expressionDescription(ms)),
+		children:    children,
+	}
+	if value == nil || value.node() == nil || ms == nil || ms.node() == nil {
+		node.configurationError = fmt.Sprintf("%s requires a date-time operand and a millisecond count", kind)
+	} else {
+		validateDateTimeOperand(node, "value", value)
+	}
+	return typedExpr[V]{n: node, fn: func(ctx EvalContext) Value {
+		if value == nil || ms == nil {
+			return Null()
+		}
+		current := value.eval(ctx)
+		if !current.IsPresent() {
+			return Null()
+		}
+		delta, ok := dateTimeEpochMillis(ms.eval(ctx))
+		if !ok {
+			return Null()
+		}
+		switch instant := current.Any().(type) {
+		case time.Time:
+			return Present(instant.Add(time.Duration(sign*delta) * time.Millisecond))
+		case *time.Time:
+			if instant == nil {
+				return Null()
+			}
+			shifted := instant.Add(time.Duration(sign*delta) * time.Millisecond)
+			return Present(&shifted)
+		}
+		units, ok := dateTimeEngineUnits(current)
+		if !ok {
+			return Null()
+		}
+		scale := int64(1)
+		if ctx.timeUnit() == Microseconds {
+			scale = 1000
+		}
+		return dateTimeCalOpResult(current, units+sign*delta*scale)
+	}}
+}
+
 // DateTimeToTime applies Esper's toDate()/toCalendar() conversion: engine
 // units become a time.Time truncated to millisecond precision (under
 // Microseconds, ts/1000). time.Time inputs pass through unchanged, matching

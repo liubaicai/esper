@@ -50786,6 +50786,79 @@
     "java-runtime-2832950bf0c454ecf2df",
     "java-runtime-8a27995fa8e41684f6b8"
    ]
+  },
+  {
+   "id": "case.expr-dt-remainder",
+   "javaRuntimeIds": [
+    "java-runtime-5080e24710592989a761",
+    "java-runtime-bf73801b376a885fb2fa",
+    "java-runtime-684e3de645e51f1896c9",
+    "java-runtime-fb1954df531a2bf64b7d",
+    "java-runtime-e14ad77bdd6257964633",
+    "java-runtime-a3c430889e0a5976707a"
+   ],
+   "javaStaticIds": [
+    "java-be89d7aef06f908e34ed",
+    "java-be89d7aef06f908e34ed",
+    "java-038b5ae418fa9a980078",
+    "java-038b5ae418fa9a980078",
+    "java-709b9139cb524eef97dd",
+    "java-209fc0139b57c99890bb"
+   ],
+   "javaNames": [
+    "ExprDTGetFields",
+    "ExprDTGetInput",
+    "ExprDTPlusMinusSimple",
+    "ExprDTPlusMinusTimePeriod",
+    "ExprDTWithDate",
+    "ExprDTWithTime"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTGet.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTGet.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTPlusMinus.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTPlusMinus.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTWithDate.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTWithTime.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunExprDTRemainder552DirectReplay",
+    "internal/app/parity/run_test.go:TestRunExprDTRemainder552DirectReplayEmitsExpectedValues",
+    "internal/app/parity/run_test.go:TestRunExprDTRemainder552DiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunExprDTRemainder552CheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunExprDTRemainder552DiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunExprDTRemainder552RejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunExprDTRemainder552RuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "expr",
+    "datetime",
+    "calop",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/expr-dt-remainder-552.json",
+    "testdata/parity/expr-dt-remainder-552.trace.json",
+    "testdata/parity/expr-dt-remainder-552.go.trace.json",
+    "testdata/parity/expr-dt-remainder-552.evidence.json",
+    "tools/java-oracle/ExprDTRemainder552ScenarioOracle.java",
+    "tools/java-oracle/run-expr-dt-remainder-552.sh"
+   ],
+   "notes": "expr/datetime remainder bundle born-DV (6 executions / 4 files). get-fields: all 8 DateTimeGet aliases byte-exact {3,2,1,9,30,4,2002,22}. get-input: Java's get('month') rep asymmetry (Calendar-backed 0-based=4 vs LDT/ZDT 1-based=5) modeled via Add(DateTimeGet,'1') on the LDT/ZDT columns \u2014 Go keeps the 0-based Calendar convention; milestone abc.get('month') maps to the SupportTimeStartEndA configured start prop; EPL-C POJO-get() overload preference excluded (not datetime DSL). plusminus: NEW DateTimePlusExpr/DateTimeMinusExpr for variable-ms (varmsec 0/1000/2days incl. null-bean row with only current_timestamp firing); TimePeriod '1 hour 10 sec 20 msec' folded to 3610020ms constant \u2014 calendar-free units only. withdate/withtime: NEW DateTimeWithDateExpr/DateTimeWithTimeExpr nullable-arg overloads implementing Java actionSetYMD/actionSetHMSM null-field-keep; Java's LDT varmonth+1 collapses (Go month already 1-based). Java/Go 22 records each (16 listener + 6 types), 0 differences.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-5080e24710592989a761",
+    "java-runtime-bf73801b376a885fb2fa",
+    "java-runtime-684e3de645e51f1896c9",
+    "java-runtime-fb1954df531a2bf64b7d",
+    "java-runtime-e14ad77bdd6257964633",
+    "java-runtime-a3c430889e0a5976707a"
+   ]
   }
  ],
  "mappings": [
@@ -54264,13 +54337,17 @@
   {
    "capabilityId": "expr.core",
    "caseId": "case.expr-dt-format"
+  },
+  {
+   "capabilityId": "expr.core",
+   "caseId": "case.expr-dt-remainder"
   }
  ],
  "summary": {
-  "inventoriedCases": 782,
-  "implementedCases": 780,
-  "differentialVerifiedCases": 405,
-  "differentialVerifiedRuntimeIds": 1614,
+  "inventoriedCases": 783,
+  "implementedCases": 781,
+  "differentialVerifiedCases": 406,
+  "differentialVerifiedRuntimeIds": 1620,
   "intentionallyDifferentCases": 36,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -54280,13 +54357,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4152,
-  "referencedJavaRuntimeIds": 3712,
+  "runtimeAssociationCount": 4158,
+  "referencedJavaRuntimeIds": 3718,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 424,
+  "unreferencedJavaRuntimeIds": 418,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 782,
+  "totalCases": 783,
   "totalCapabilities": 126
  }
 }

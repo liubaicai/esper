@@ -1,0 +1,707 @@
+{
+  "version": "esper-parity/v1",
+  "id": "expr-dt-remainder-552",
+  "description": "ExprDTGet/ExprDTPlusMinus/ExprDTWithDate/ExprDTWithTime executions: get-fields replays ExprDTGetFields (utildate.get over msec,sec,minutes,hour,day,month,year,week on 2002-05-30T09:01:02.003 emits {3,2,1,9,30,4,2002,22} — 0-based month, ISO week 22), get-input replays ExprDTGetInput (get('month') over all five representations of 2002-05-30T09:00:00.000 emits {4,4,4,5,5} — Calendar-backed reps 0-based vs LDT/ZDT 1-based, then the SupportTimeStartEndA event milestone emits {4}; the SupportEventWithJustGet bean-method milestone is excluded as non-datetime DSL), plusminus-simple replays ExprDTPlusMinusSimple (varmsec 0/1000/172800000 shifts all representations of 2002-05-30T09:00:00.000 by 0/+1s/+2d; the null-bean send emits only current_timestamp), plusminus-timeperiod replays ExprDTPlusMinusTimePeriod (.plus/.minus(1 hour 10 sec 20 msec) = +/-3610020ms emits 10:00:10.020/07:59:49.980), withdate replays ExprDTWithDate (variable varyear/varmonth/varday with null-keeps-field: (2004,8,3) emits 2004-09-03T09:00, (null,8,null) emits 2002-09-30T09:00), withtime replays ExprDTWithTime (variable varhour/varmin/varsec/varmsec with null-keeps-field: all-null emits the unchanged instant, (1,2,3,4) emits 01:02:03.004, (0,null,null,6) emits 00:00:00.006).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime",
+  "javaRuntimes": [
+    "java-runtime-5080e24710592989a761",
+    "java-runtime-bf73801b376a885fb2fa",
+    "java-runtime-684e3de645e51f1896c9",
+    "java-runtime-fb1954df531a2bf64b7d",
+    "java-runtime-e14ad77bdd6257964633",
+    "java-runtime-a3c430889e0a5976707a"
+  ],
+  "javaNames": [
+    "ExprDTGetFields",
+    "ExprDTGetInput",
+    "ExprDTPlusMinusSimple",
+    "ExprDTPlusMinusTimePeriod",
+    "ExprDTWithDate",
+    "ExprDTWithTime"
+  ],
+  "javaStaticIds": [
+    "java-be89d7aef06f908e34ed",
+    "java-be89d7aef06f908e34ed",
+    "java-038b5ae418fa9a980078",
+    "java-038b5ae418fa9a980078",
+    "java-709b9139cb524eef97dd",
+    "java-209fc0139b57c99890bb"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "get-fields",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-5080e24710592989a761",
+      "executionName": "ExprDTGetFields",
+      "observation": "listener+types; deploy s0 utildate.get over msec,sec,minutes,hour,day,month,year,week, types pins all-Integer, send make(2002-05-30T09:01:02.003) emits {3,2,1,9,30,4,2002,22}",
+      "epl": "@name('s0') select utildate.get('msec') as val0,utildate.get('sec') as val1,utildate.get('minutes') as val2,utildate.get('hour') as val3,utildate.get('day') as val4,utildate.get('month') as val5,utildate.get('year') as val6,utildate.get('week') as val7 from SupportDateTime"
+    },
+    {
+      "case": "get-input",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-bf73801b376a885fb2fa",
+      "executionName": "ExprDTGetInput",
+      "observation": "listener x2+types; deploy s0 get('month') over all five representations, types pins all-Integer, send make(2002-05-30T09:00:00.000) emits {4,4,4,5,5}, undeploy, redeploy s0 abc.get('month') on SupportTimeStartEndA, send make(A0,2002-05-30T09:00:00.000,0) emits {4} (SupportEventWithJustGet milestone excluded: bean-method get() preference is not datetime DSL)",
+      "epl": "@name('s0') select utildate.get('month') as val0,longdate.get('month') as val1,caldate.get('month') as val2, localdate.get('month') as val3, zoneddate.get('month') as val4  from SupportDateTime"
+    },
+    {
+      "case": "plusminus-simple",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-684e3de645e51f1896c9",
+      "executionName": "ExprDTPlusMinusSimple",
+      "observation": "listener x4+types; deploy 'var' create variable long varmsec, advanceTime(2002-05-30T09:00:00.000), deploy s0 twelve plus/minus(varmsec) columns, types pins {Long,Date,Long,Calendar,LocalDateTime,ZonedDateTime}x2, send make(null) emits only current_timestamp x2, send make(startTime) at varmsec=0 emits the instant x12, set varmsec=1000 emits +/-1s, set varmsec=172800000 emits +/-2d",
+      "epl": "@name('s0') select current_timestamp.plus(varmsec) as val0,utildate.plus(varmsec) as val1,longdate.plus(varmsec) as val2,caldate.plus(varmsec) as val3,localdate.plus(varmsec) as val4,zoneddate.plus(varmsec) as val5,current_timestamp.minus(varmsec) as val6,utildate.minus(varmsec) as val7,longdate.minus(varmsec) as val8,caldate.minus(varmsec) as val9,localdate.minus(varmsec) as val10,zoneddate.minus(varmsec) as val11 from SupportDateTime"
+    },
+    {
+      "case": "plusminus-timeperiod",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-fb1954df531a2bf64b7d",
+      "executionName": "ExprDTPlusMinusTimePeriod",
+      "observation": "listener x2+types; advanceTime(2002-05-30T09:00:00.000), deploy s0 twelve plus/minus(1 hour 10 sec 20 msec) columns, types pins {Long,Date,Long,Calendar,LocalDateTime,ZonedDateTime}x2, send make(startTime) emits 10:00:10.020 x6 + 07:59:49.980 x6, send make(null) emits only the two current_timestamp columns",
+      "epl": "@name('s0') select current_timestamp.plus(1 hour 10 sec 20 msec) as val0,utildate.plus(1 hour 10 sec 20 msec) as val1,longdate.plus(1 hour 10 sec 20 msec) as val2,caldate.plus(1 hour 10 sec 20 msec) as val3,localdate.plus(1 hour 10 sec 20 msec) as val4,zoneddate.plus(1 hour 10 sec 20 msec) as val5,current_timestamp.minus(1 hour 10 sec 20 msec) as val6,utildate.minus(1 hour 10 sec 20 msec) as val7,longdate.minus(1 hour 10 sec 20 msec) as val8,caldate.minus(1 hour 10 sec 20 msec) as val9,localdate.minus(1 hour 10 sec 20 msec) as val10,zoneddate.minus(1 hour 10 sec 20 msec) as val11 from SupportDateTime"
+    },
+    {
+      "case": "withdate",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-e14ad77bdd6257964633",
+      "executionName": "ExprDTWithDate",
+      "observation": "listener x3+types; advanceTime(2002-05-30T09:00:00.000), deploy s0 create-variable module + withDate(varyear,varmonth,varday), types pins {Long,Date,Long,Calendar,LocalDateTime,ZonedDateTime}, send make(null) emits only current_timestamp, set (2004,8,3) emits 2004-09-03T09:00 x6, set (null,8,null) emits 2002-09-30T09:00 x6",
+      "epl": "create variable int varyear;\ncreate variable int varmonth;\ncreate variable int varday;\n@name('s0') select current_timestamp.withDate(varyear, varmonth, varday) as val0,utildate.withDate(varyear, varmonth, varday) as val1,longdate.withDate(varyear, varmonth, varday) as val2,caldate.withDate(varyear, varmonth, varday) as val3,localdate.withDate(varyear, varmonth+1, varday) as val4,zoneddate.withDate(varyear, varmonth+1, varday) as val5 from SupportDateTime"
+    },
+    {
+      "case": "withtime",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-a3c430889e0a5976707a",
+      "executionName": "ExprDTWithTime",
+      "observation": "listener x4+types; deploy 'variables' create variable module, advanceTime(2002-05-30T09:00:00.000), deploy s0 withTime(varhour,varmin,varsec,varmsec), types pins {Long,Date,Long,Calendar,LocalDateTime,ZonedDateTime}, send make(null) emits only current_timestamp, send at varhour=null emits the unchanged instant x6, set (1,2,3,4) emits 01:02:03.004 x6, set (0,null,null,6) emits 00:00:00.006 x6",
+      "epl": "@name('s0') select current_timestamp.withTime(varhour, varmin, varsec, varmsec) as val0,utildate.withTime(varhour, varmin, varsec, varmsec) as val1,longdate.withTime(varhour, varmin, varsec, varmsec) as val2,caldate.withTime(varhour, varmin, varsec, varmsec) as val3,localdate.withTime(varhour, varmin, varsec, varmsec) as val4,zoneddate.withTime(varhour, varmin, varsec, varmsec) as val5 from SupportDateTime"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "get-fields"
+    },
+    {
+      "op": "deploy",
+      "case": "get-fields",
+      "statement": "s0",
+      "epl": "@name('s0') select utildate.get('msec') as val0,utildate.get('sec') as val1,utildate.get('minutes') as val2,utildate.get('hour') as val3,utildate.get('day') as val4,utildate.get('month') as val5,utildate.get('year') as val6,utildate.get('week') as val7 from SupportDateTime"
+    },
+    {
+      "op": "types",
+      "case": "get-fields",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "get-fields",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "date": "2002-05-30T09:01:02.003Z",
+        "expected": [
+          3,
+          2,
+          1,
+          9,
+          30,
+          4,
+          2002,
+          22
+        ]
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "get-fields"
+    },
+    {
+      "op": "case",
+      "case": "get-input"
+    },
+    {
+      "op": "deploy",
+      "case": "get-input",
+      "statement": "s0",
+      "epl": "@name('s0') select utildate.get('month') as val0,longdate.get('month') as val1,caldate.get('month') as val2, localdate.get('month') as val3, zoneddate.get('month') as val4  from SupportDateTime"
+    },
+    {
+      "op": "types",
+      "case": "get-input",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "get-input",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "date": "2002-05-30T09:00:00.000Z",
+        "expected": [
+          4,
+          4,
+          4,
+          5,
+          5
+        ]
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "get-input"
+    },
+    {
+      "op": "deploy",
+      "case": "get-input",
+      "statement": "s0",
+      "epl": "@name('s0') select abc.get('month') as val0 from SupportTimeStartEndA as abc"
+    },
+    {
+      "op": "send",
+      "case": "get-input",
+      "eventType": "SupportTimeStartEndA",
+      "payload": {
+        "date": "2002-05-30T09:00:00.000Z",
+        "expected": [
+          4
+        ]
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "get-input"
+    },
+    {
+      "op": "case",
+      "case": "plusminus-simple"
+    },
+    {
+      "op": "deploy",
+      "case": "plusminus-simple",
+      "statement": "var",
+      "epl": "@name('var') @public create variable long varmsec"
+    },
+    {
+      "op": "advance-time",
+      "case": "plusminus-simple",
+      "at": "2002-05-30T09:00:00.000Z"
+    },
+    {
+      "op": "deploy",
+      "case": "plusminus-simple",
+      "statement": "s0",
+      "epl": "@name('s0') select current_timestamp.plus(varmsec) as val0,utildate.plus(varmsec) as val1,longdate.plus(varmsec) as val2,caldate.plus(varmsec) as val3,localdate.plus(varmsec) as val4,zoneddate.plus(varmsec) as val5,current_timestamp.minus(varmsec) as val6,utildate.minus(varmsec) as val7,longdate.minus(varmsec) as val8,caldate.minus(varmsec) as val9,localdate.minus(varmsec) as val10,zoneddate.minus(varmsec) as val11 from SupportDateTime"
+    },
+    {
+      "op": "types",
+      "case": "plusminus-simple",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "plusminus-simple",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "date": null,
+        "expected": [
+          1022749200000,
+          {
+            "state": "null"
+          },
+          {
+            "state": "null"
+          },
+          {
+            "state": "null"
+          },
+          {
+            "state": "null"
+          },
+          {
+            "state": "null"
+          },
+          1022749200000,
+          {
+            "state": "null"
+          },
+          {
+            "state": "null"
+          },
+          {
+            "state": "null"
+          },
+          {
+            "state": "null"
+          },
+          {
+            "state": "null"
+          }
+        ]
+      }
+    },
+    {
+      "op": "send",
+      "case": "plusminus-simple",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "date": "2002-05-30T09:00:00.000Z",
+        "expected": [
+          1022749200000,
+          1022749200000,
+          1022749200000,
+          1022749200000,
+          1022749200000,
+          1022749200000,
+          1022749200000,
+          1022749200000,
+          1022749200000,
+          1022749200000,
+          1022749200000,
+          1022749200000
+        ]
+      }
+    },
+    {
+      "op": "set-variable",
+      "case": "plusminus-simple",
+      "statement": "var",
+      "name": "varmsec",
+      "payload": 1000
+    },
+    {
+      "op": "send",
+      "case": "plusminus-simple",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "date": "2002-05-30T09:00:00.000Z",
+        "expected": [
+          1022749201000,
+          1022749201000,
+          1022749201000,
+          1022749201000,
+          1022749201000,
+          1022749201000,
+          1022749199000,
+          1022749199000,
+          1022749199000,
+          1022749199000,
+          1022749199000,
+          1022749199000
+        ]
+      }
+    },
+    {
+      "op": "set-variable",
+      "case": "plusminus-simple",
+      "statement": "var",
+      "name": "varmsec",
+      "payload": 172800000
+    },
+    {
+      "op": "send",
+      "case": "plusminus-simple",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "date": "2002-05-30T09:00:00.000Z",
+        "expected": [
+          1022922000000,
+          1022922000000,
+          1022922000000,
+          1022922000000,
+          1022922000000,
+          1022922000000,
+          1022576400000,
+          1022576400000,
+          1022576400000,
+          1022576400000,
+          1022576400000,
+          1022576400000
+        ]
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "plusminus-simple"
+    },
+    {
+      "op": "case",
+      "case": "plusminus-timeperiod"
+    },
+    {
+      "op": "advance-time",
+      "case": "plusminus-timeperiod",
+      "at": "2002-05-30T09:00:00.000Z"
+    },
+    {
+      "op": "deploy",
+      "case": "plusminus-timeperiod",
+      "statement": "s0",
+      "epl": "@name('s0') select current_timestamp.plus(1 hour 10 sec 20 msec) as val0,utildate.plus(1 hour 10 sec 20 msec) as val1,longdate.plus(1 hour 10 sec 20 msec) as val2,caldate.plus(1 hour 10 sec 20 msec) as val3,localdate.plus(1 hour 10 sec 20 msec) as val4,zoneddate.plus(1 hour 10 sec 20 msec) as val5,current_timestamp.minus(1 hour 10 sec 20 msec) as val6,utildate.minus(1 hour 10 sec 20 msec) as val7,longdate.minus(1 hour 10 sec 20 msec) as val8,caldate.minus(1 hour 10 sec 20 msec) as val9,localdate.minus(1 hour 10 sec 20 msec) as val10,zoneddate.minus(1 hour 10 sec 20 msec) as val11 from SupportDateTime"
+    },
+    {
+      "op": "types",
+      "case": "plusminus-timeperiod",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "plusminus-timeperiod",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "date": "2002-05-30T09:00:00.000Z",
+        "expected": [
+          1022752810020,
+          1022752810020,
+          1022752810020,
+          1022752810020,
+          1022752810020,
+          1022752810020,
+          1022745589980,
+          1022745589980,
+          1022745589980,
+          1022745589980,
+          1022745589980,
+          1022745589980
+        ]
+      }
+    },
+    {
+      "op": "send",
+      "case": "plusminus-timeperiod",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "date": null,
+        "expected": [
+          1022752810020,
+          {
+            "state": "null"
+          },
+          {
+            "state": "null"
+          },
+          {
+            "state": "null"
+          },
+          {
+            "state": "null"
+          },
+          {
+            "state": "null"
+          },
+          1022745589980,
+          {
+            "state": "null"
+          },
+          {
+            "state": "null"
+          },
+          {
+            "state": "null"
+          },
+          {
+            "state": "null"
+          },
+          {
+            "state": "null"
+          }
+        ]
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "plusminus-timeperiod"
+    },
+    {
+      "op": "case",
+      "case": "withdate"
+    },
+    {
+      "op": "advance-time",
+      "case": "withdate",
+      "at": "2002-05-30T09:00:00.000Z"
+    },
+    {
+      "op": "deploy",
+      "case": "withdate",
+      "statement": "s0",
+      "epl": "create variable int varyear;\ncreate variable int varmonth;\ncreate variable int varday;\n@name('s0') select current_timestamp.withDate(varyear, varmonth, varday) as val0,utildate.withDate(varyear, varmonth, varday) as val1,longdate.withDate(varyear, varmonth, varday) as val2,caldate.withDate(varyear, varmonth, varday) as val3,localdate.withDate(varyear, varmonth+1, varday) as val4,zoneddate.withDate(varyear, varmonth+1, varday) as val5 from SupportDateTime"
+    },
+    {
+      "op": "types",
+      "case": "withdate",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "withdate",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "date": null,
+        "expected": [
+          1022749200000,
+          {
+            "state": "null"
+          },
+          {
+            "state": "null"
+          },
+          {
+            "state": "null"
+          },
+          {
+            "state": "null"
+          },
+          {
+            "state": "null"
+          }
+        ]
+      }
+    },
+    {
+      "op": "set-variable",
+      "case": "withdate",
+      "statement": "s0",
+      "name": "varyear",
+      "payload": 2004
+    },
+    {
+      "op": "set-variable",
+      "case": "withdate",
+      "statement": "s0",
+      "name": "varmonth",
+      "payload": 8
+    },
+    {
+      "op": "set-variable",
+      "case": "withdate",
+      "statement": "s0",
+      "name": "varday",
+      "payload": 3
+    },
+    {
+      "op": "send",
+      "case": "withdate",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "date": "2002-05-30T09:00:00.000Z",
+        "expected": [
+          1094202000000,
+          1094202000000,
+          1094202000000,
+          1094202000000,
+          1094202000000,
+          1094202000000
+        ]
+      }
+    },
+    {
+      "op": "set-variable",
+      "case": "withdate",
+      "statement": "s0",
+      "name": "varyear",
+      "payload": null
+    },
+    {
+      "op": "set-variable",
+      "case": "withdate",
+      "statement": "s0",
+      "name": "varmonth",
+      "payload": 8
+    },
+    {
+      "op": "set-variable",
+      "case": "withdate",
+      "statement": "s0",
+      "name": "varday",
+      "payload": null
+    },
+    {
+      "op": "send",
+      "case": "withdate",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "date": "2002-05-30T09:00:00.000Z",
+        "expected": [
+          1033376400000,
+          1033376400000,
+          1033376400000,
+          1033376400000,
+          1033376400000,
+          1033376400000
+        ]
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "withdate"
+    },
+    {
+      "op": "case",
+      "case": "withtime"
+    },
+    {
+      "op": "deploy",
+      "case": "withtime",
+      "statement": "variables",
+      "epl": "@name('variables') @public create variable int varhour;\n@public create variable int varmin;\n@public create variable int varsec;\n@public create variable int varmsec;\n"
+    },
+    {
+      "op": "advance-time",
+      "case": "withtime",
+      "at": "2002-05-30T09:00:00.000Z"
+    },
+    {
+      "op": "deploy",
+      "case": "withtime",
+      "statement": "s0",
+      "epl": "@name('s0') select current_timestamp.withTime(varhour, varmin, varsec, varmsec) as val0,utildate.withTime(varhour, varmin, varsec, varmsec) as val1,longdate.withTime(varhour, varmin, varsec, varmsec) as val2,caldate.withTime(varhour, varmin, varsec, varmsec) as val3,localdate.withTime(varhour, varmin, varsec, varmsec) as val4,zoneddate.withTime(varhour, varmin, varsec, varmsec) as val5 from SupportDateTime"
+    },
+    {
+      "op": "types",
+      "case": "withtime",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "withtime",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "date": null,
+        "expected": [
+          1022749200000,
+          {
+            "state": "null"
+          },
+          {
+            "state": "null"
+          },
+          {
+            "state": "null"
+          },
+          {
+            "state": "null"
+          },
+          {
+            "state": "null"
+          }
+        ]
+      }
+    },
+    {
+      "op": "set-variable",
+      "case": "withtime",
+      "statement": "variables",
+      "name": "varhour",
+      "payload": null
+    },
+    {
+      "op": "send",
+      "case": "withtime",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "date": "2002-05-30T09:00:00.000Z",
+        "expected": [
+          1022749200000,
+          1022749200000,
+          1022749200000,
+          1022749200000,
+          1022749200000,
+          1022749200000
+        ]
+      }
+    },
+    {
+      "op": "set-variable",
+      "case": "withtime",
+      "statement": "variables",
+      "name": "varhour",
+      "payload": 1
+    },
+    {
+      "op": "set-variable",
+      "case": "withtime",
+      "statement": "variables",
+      "name": "varmin",
+      "payload": 2
+    },
+    {
+      "op": "set-variable",
+      "case": "withtime",
+      "statement": "variables",
+      "name": "varsec",
+      "payload": 3
+    },
+    {
+      "op": "set-variable",
+      "case": "withtime",
+      "statement": "variables",
+      "name": "varmsec",
+      "payload": 4
+    },
+    {
+      "op": "send",
+      "case": "withtime",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "date": "2002-05-30T09:00:00.000Z",
+        "expected": [
+          1022720523004,
+          1022720523004,
+          1022720523004,
+          1022720523004,
+          1022720523004,
+          1022720523004
+        ]
+      }
+    },
+    {
+      "op": "set-variable",
+      "case": "withtime",
+      "statement": "variables",
+      "name": "varhour",
+      "payload": 0
+    },
+    {
+      "op": "set-variable",
+      "case": "withtime",
+      "statement": "variables",
+      "name": "varmin",
+      "payload": null
+    },
+    {
+      "op": "set-variable",
+      "case": "withtime",
+      "statement": "variables",
+      "name": "varsec",
+      "payload": null
+    },
+    {
+      "op": "set-variable",
+      "case": "withtime",
+      "statement": "variables",
+      "name": "varmsec",
+      "payload": 6
+    },
+    {
+      "op": "send",
+      "case": "withtime",
+      "eventType": "SupportDateTime",
+      "payload": {
+        "date": "2002-05-30T09:00:00.000Z",
+        "expected": [
+          1022716800006,
+          1022716800006,
+          1022716800006,
+          1022716800006,
+          1022716800006,
+          1022716800006
+        ]
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "withtime"
+    }
+  ]
+}

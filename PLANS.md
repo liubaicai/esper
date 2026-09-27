@@ -38,36 +38,37 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.539 ('epl-other-invalid') committed and pushed as 3d2dd2720; Git owns identity.
 
 ## Current work unit
-Active: Draft 4.551 ('expr-dt-format').
+Active: Draft 4.552 ('expr-dt-remainder').
 
-- Contract frozen (JavaContract551 + GoSurface551): ExprDTFormat ords
-  0-1 (runtimeIds 2832950bf0c454ecf2df / 8a27995fa8e41684f6b8, staticId
-  05592d8076a91dd5cbed, flags []). HARNESS-GAP resolved via a new
-  terminal String format surface; JVM locale pin en/US already present
-  in run.sh conventions (SDF-default is locale-dependent).
-- [x] Shared core (primary): NEW internal/esper/expr_dt_format.go —
-  DateTimeFormatDefault (new SimpleDateFormat() en_US "M/d/yy, h:mm a"),
-  DateTimeFormatDateInstance ("MMM d, yyyy"), DateTimeFormatISO /
-  DateTimeFormatISOZoned (LDT/ZDT split; Go's single time.Time needs two
-  builders), DateTimeFormatPattern (Java SDF/DTF pattern -> Go layout
-  translator incl. 'G' era sentinel + 'at' literals; 'k'/'K' unsupported
-  like Java validation). Facade regenerated; TestDateTimeFormatRenders
-  pins JDK17-en_US strings byte-exact (5/30/02, 9:00 AM | May 30, 2002 |
-  2002.05.30 AD at 09:00:00 | 2002-05-30T09:00:00 | ...Z[UTC] | 20020530).
-- [x] Assets551 delivered + integrated: Java trace 6 records, Go
-  replay 6 (4 listener + 2 types pins), `-diff` passing / 0
-  differences; evidence + traces checked in. Null row pins
-  current_timestamp.format() non-null vs 5 nulls; formatter-object
-  EPL args map to documented equivalents (getDateInstance /
-  'yyyyMMdd').
-- [x] Manifest: NEW case.expr-dt-format born-DV with the 2 IDs
-  (expr.core mapping added); summary → 782 cases / 405 DV / 1614 DV
-  runtime IDs / 424 unreferenced.
+- Contract frozen (JavaContract552 + GoSurface552): ExprDTGet ords 0-1,
+  ExprDTPlusMinus ords 0-1, ExprDTWithDate, ExprDTWithTime — 6
+  executions / 4 files. Two real shared-core gaps + one rep-asymmetry.
+- [x] Shared core (primary): DateTimePlusExpr/DateTimeMinusExpr
+  (expression-ms overloads for .plus(varmsec)) in
+  expr_dt_resolution.go; DateTimeWithDateExpr/DateTimeWithTimeExpr
+  (nullable-arg overloads, null field keeps input value per
+  actionSetYMD/actionSetHMSM) + dateTimeFieldsNode/dateTimeFieldsEval
+  in expr_dt_calops.go; facade regenerated; focused tests
+  TestDateTimeWithFieldsExpr + TestDateTimeShiftExpr green.
+- [x] Assets552 delivered + integrated: Java trace 22 records, Go
+  replay 22 (16 listener + 6 types), `-diff` passing / 0 differences;
+  evidence + traces checked in. get('month') rep asymmetry modeled
+  runner-side via Add(+1) on LDT/ZDT columns; EPL-C POJO-get
+  excluded (not datetime DSL); TimePeriod folded to 3610020ms.
+- [x] Manifest: NEW case.expr-dt-remainder born-DV with the 6 IDs
+  (expr.core mapping); summary → 783 cases / 406 DV / 1620 DV
+  runtime IDs / 418 unreferenced.
 - [x] Gates: `make check` GREEN.
-- [x] ParityRev551 + JavaContract552 + GoSurface552 dispatched.
+- [x] ParityRev552 + JavaContract553 + GoSurface553 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+
+- Shipped: Draft 4.551 ('expr-dt-format') committed and pushed as
+  701614c56; Git owns identity. ExprDTFormat 2/2 born-DV (6 records,
+  0 differences); review FAIL -> fixed -> confirm PASS (P2
+  getDateInstance padding + literal injection, P3 run-lengths/docs).
+
 
 - Shipped: Draft 4.550 ('expr-dt-set-nested') committed and pushed as
   03e5bc6f1; Git owns identity. ExprDTSet 2/2 + ExprDTNested 1/1
