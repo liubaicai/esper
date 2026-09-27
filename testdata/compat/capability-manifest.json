@@ -51226,6 +51226,58 @@
     "java-runtime-5c1fe99c70aaea089285"
    ],
    "notes": "Draft 4.557: 2002 records each (types/deployed + 1000 listener sends per case), 0 differences. Oracle pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c."
+  },
+  {
+   "id": "case.infra-nwtable-create-index-widening",
+   "javaRuntimeIds": [
+    "java-runtime-ea8f73c9bd9fc31f1312",
+    "java-runtime-c29b248899a0388e0768",
+    "java-runtime-f4b0d37d40e38914df36",
+    "java-runtime-2bffd7c0683d9195c556"
+   ],
+   "javaStaticIds": [
+    "java-06a59928c63cc7360d2b"
+   ],
+   "javaNames": [
+    "InfraHashBTreeWidening{namedWindow=true}",
+    "InfraHashBTreeWidening{namedWindow=false}",
+    "InfraWidening{namedWindow=true}",
+    "InfraWidening{namedWindow=false}"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableCreateIndex.java"
+   ],
+   "goTests": [
+    "internal/app/parity/infra_nwtable_widening_558_test.go/TestRunInfraNWTableWidening558DirectReplay",
+    "internal/app/parity/infra_nwtable_widening_558_test.go/TestRunInfraNWTableWidening558PinnedArtifacts",
+    "internal/app/parity/infra_nwtable_widening_558_test.go/TestRunInfraNWTableWidening558ScenarioLoader",
+    "internal/app/parity/infra_nwtable_widening_558_test.go/TestRunInfraNWTableWidening558DiffWritesPassingEvidence",
+    "internal/app/parity/infra_nwtable_widening_558_test.go/TestRunInfraNWTableWidening558DiffRejectsTraceMutations",
+    "internal/app/parity/infra_nwtable_widening_558_test.go/TestRunInfraNWTableWidening558CheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/infra_nwtable_widening_558_test.go/TestRunInfraNWTableWidening558RejectsMalformedRawScenario",
+    "internal/app/parity/infra_nwtable_widening_558_test.go/TestRunInfraNWTableWidening558RuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "infra",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-nwtable-widening-558.evidence.json"
+   ],
+   "difference": "Go reproduces Java numeric widening inside the secondary-index lookup path: FAF int literals (10, 2, 9, >=2) coerce to long/short indexed columns for both hash-equality and btree-range probes on named windows and tables; the runner asserts plan.IndexPlan().ForSource(0) resolves to the declared index (not a full scan) before executing. Indexes are declared at creation time (NamedWindowIndex/NamedWindowBTreeIndex/SecondaryIndex/SecondaryBTreeIndex) because plan.indexPlan is frozen at env.Build from the env catalog \u2014 a live CreateIndex would be invisible to FAF selection, an ordering divergence vs the Java late `create index` that is observably identical here (no rows before index creation). The SODA-only create-index plan probes (IX1/IX2 eplToModelCompileDeploy) are recorded as plan-only/unrepresentable since EPL text is not the Go entry point; index kind choice introspection is not part of the Java assertions.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-ea8f73c9bd9fc31f1312",
+    "java-runtime-c29b248899a0388e0768",
+    "java-runtime-f4b0d37d40e38914df36",
+    "java-runtime-2bffd7c0683d9195c556"
+   ],
+   "notes": "Draft 4.558: 36 records each, 0 differences. Oracle pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c."
   }
  ],
  "mappings": [
@@ -54740,13 +54792,17 @@
   {
    "capabilityId": "infra.namedwindow.views",
    "caseId": "case.infra-nwtable-comparative"
+  },
+  {
+   "capabilityId": "infra.namedwindow.views",
+   "caseId": "case.infra-nwtable-create-index-widening"
   }
  ],
  "summary": {
-  "inventoriedCases": 791,
-  "implementedCases": 789,
-  "differentialVerifiedCases": 411,
-  "differentialVerifiedRuntimeIds": 1637,
+  "inventoriedCases": 792,
+  "implementedCases": 790,
+  "differentialVerifiedCases": 412,
+  "differentialVerifiedRuntimeIds": 1641,
   "intentionallyDifferentCases": 39,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -54756,13 +54812,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4179,
+  "runtimeAssociationCount": 4183,
   "referencedJavaRuntimeIds": 3739,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 397,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 791,
+  "totalCases": 792,
   "totalCapabilities": 126
  }
 }

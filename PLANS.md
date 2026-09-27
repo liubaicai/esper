@@ -40,29 +40,32 @@ activity or a single coverage percentage.
 
 
 
-## Current work unit
-Active: Draft 4.557 ('infra-nwtable-comparative').
 
-- Contract frozen (JavaContract557 + GoSurface557): InfraNWTableComparative
-  ords 0+1 — group-by top-level single-agg read path over unique named
-  window + correlated scalar subquery vs keyed table + keyed access. Same
-  file/harness/flags (EXCLUDEWHENINSTRUMENTED), 1000-row load + 1000-probe
-  pair, expected {c0=E<i>, c1=i}.
-- [x] Assets557 dispatched (runner infra_nwtable_comparative_557.go,
-  scenario infra-nwtable-comparative-557.json, oracle
-  InfraNWTableComparative557ScenarioOracle).
-- [x] Assets557 delivered + integrated: Java trace 2002 records, Go replay
-  2002, `-diff` passing / 0 differences; evidence + traces checked in.
-  Table leg uses OnRecord.InsertIntoTable upsert (each key contributes
-  once; grouped IntoTable feed is O(N^3) here — documented).
-- [x] Manifest: NEW case.infra-nwtable-comparative born-DV (2 IDs ->
-  infra.namedwindow.views); summary -> 791 cases / 411 DV / 1637 DV
-  runtime IDs / 397 unreferenced.
+## Current work unit
+Active: Draft 4.558 ('infra-nwtable-widening').
+
+- Contract frozen (JavaContract558 + GoSurface558): InfraNWTableCreateIndex
+  ords 2-5 — HashBTreeWidening{w±} + Widening{w±}; numeric widening on
+  FAF int literals vs long/short indexed columns; hash equality vs btree
+  range; SODA IX1/IX2 plan-only -> unrepresentable. Go surface complete:
+  NamedWindow.CreateIndex/Secondary(BTree)Index + ExecuteFireAndForget.
+- [x] Assets558 dispatched (runner infra_nwtable_widening_558.go, scenario
+  infra-nwtable-widening-558.json, oracle InfraNWTableWidening558ScenarioOracle).
+- [x] Assets558 delivered + integrated: Java trace 36 records, Go replay
+  36, `-diff` passing / 0 differences; evidence + traces checked in.
+  Spike confirmed numeric widening works in the Go index path (int literal
+  -> long/short indexed columns, hash + btree) with NO engine change.
+- [x] Manifest: NEW case.infra-nwtable-create-index-widening born-DV
+  (4 IDs); summary -> 792 cases / 412 DV / 1641 DV runtime IDs / 397
+  unreferenced (the two exec names share the same two static parents).
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev557 + JavaContract558 + GoSurface558 dispatched.
+- [x] ParityRev558 + JavaContract559 + GoSurface559 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.557 ('infra-nwtable-comparative') committed and pushed as
+  `253dbe630`; Git owns identity. 2 executions born-DV (2002 records each,
+  0 differences); review PASS (P3 complexity wording unified).
 - Shipped: Draft 4.556 ('expr-script-threading') committed and pushed as
   `184230e54`; Git owns identity. 3 executions born-DV (13 records each,
   0 differences); also corrected case.expr-script-provider DocSamples

@@ -1,0 +1,1139 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-ea8f73c9bd9fc31f1312",
+    "java-runtime-c29b248899a0388e0768",
+    "java-runtime-f4b0d37d40e38914df36",
+    "java-runtime-2bffd7c0683d9195c556"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableCreateIndex.java"
+  ],
+  "javaExecutions": [
+    "InfraHashBTreeWidening{namedWindow=true}",
+    "InfraHashBTreeWidening{namedWindow=false}",
+    "InfraWidening{namedWindow=true}",
+    "InfraWidening{namedWindow=false}"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-widening-558",
+    "steps": [
+      {
+        "op": "case",
+        "case": "hashbtree-window"
+      },
+      {
+        "op": "deploy",
+        "case": "hashbtree-window",
+        "statement": "create-one",
+        "epl": "@public create window MyInfraHBTW#keepall as (f1 long, f2 string)"
+      },
+      {
+        "op": "deployed",
+        "case": "hashbtree-window",
+        "statement": "create-one"
+      },
+      {
+        "op": "deploy",
+        "case": "hashbtree-window",
+        "statement": "insert-one",
+        "epl": "insert into MyInfraHBTW(f1, f2) select longPrimitive, theString from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "hashbtree-window",
+        "statement": "insert-one"
+      },
+      {
+        "op": "deploy",
+        "case": "hashbtree-window",
+        "statement": "index-one",
+        "epl": "create index MyInfraHBTWIndex1 on MyInfraHBTW(f1 btree)"
+      },
+      {
+        "op": "deployed",
+        "case": "hashbtree-window",
+        "statement": "index-one"
+      },
+      {
+        "op": "send",
+        "case": "hashbtree-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "hashbtree-window",
+        "statement": "select-gt-long",
+        "epl": "select * from MyInfraHBTW where f1\u003e9",
+        "mode": "any"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "hashbtree-window",
+        "statement": "soda-ix1",
+        "expectError": "SODA create index IX1 on MyInfraHBTW(f1, f2 btree): the Java execution deploys the statement-object-model index over the long leg; EPL-object-model deploy has no Go boundary so the record is plan-only",
+        "epl": "create index IX1 on MyInfraHBTW(f1, f2 btree)"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "hashbtree-window",
+        "statement": "soda-ix2",
+        "expectError": "SODA create unique index IX2 on MyInfraHBTW(f1): the Java execution deploys the statement-object-model unique index over the long leg; EPL-object-model deploy has no Go boundary so the record is plan-only",
+        "epl": "create unique index IX2 on MyInfraHBTW(f1)"
+      },
+      {
+        "op": "deploy",
+        "case": "hashbtree-window",
+        "statement": "create-two",
+        "epl": "@public create window MyInfraHBTWTwo#keepall as (f1 short, f2 string)"
+      },
+      {
+        "op": "deployed",
+        "case": "hashbtree-window",
+        "statement": "create-two"
+      },
+      {
+        "op": "deploy",
+        "case": "hashbtree-window",
+        "statement": "insert-two",
+        "epl": "insert into MyInfraHBTWTwo(f1, f2) select shortPrimitive, theString from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "hashbtree-window",
+        "statement": "insert-two"
+      },
+      {
+        "op": "deploy",
+        "case": "hashbtree-window",
+        "statement": "index-two",
+        "epl": "create index MyInfraHBTWTwoIndex1 on MyInfraHBTWTwo(f1 btree)"
+      },
+      {
+        "op": "deployed",
+        "case": "hashbtree-window",
+        "statement": "index-two"
+      },
+      {
+        "op": "send",
+        "case": "hashbtree-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "shortPrimitive": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "hashbtree-window",
+        "statement": "select-gte-short",
+        "epl": "select * from MyInfraHBTWTwo where f1\u003e=2",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "hashbtree-window"
+      },
+      {
+        "op": "case",
+        "case": "hashbtree-table"
+      },
+      {
+        "op": "deploy",
+        "case": "hashbtree-table",
+        "statement": "create-one",
+        "epl": "@public create table MyInfraHBTW as (f1 long primary key, f2 string primary key)"
+      },
+      {
+        "op": "deployed",
+        "case": "hashbtree-table",
+        "statement": "create-one"
+      },
+      {
+        "op": "deploy",
+        "case": "hashbtree-table",
+        "statement": "insert-one",
+        "epl": "insert into MyInfraHBTW(f1, f2) select longPrimitive, theString from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "hashbtree-table",
+        "statement": "insert-one"
+      },
+      {
+        "op": "deploy",
+        "case": "hashbtree-table",
+        "statement": "index-one",
+        "epl": "create index MyInfraHBTWIndex1 on MyInfraHBTW(f1 btree)"
+      },
+      {
+        "op": "deployed",
+        "case": "hashbtree-table",
+        "statement": "index-one"
+      },
+      {
+        "op": "send",
+        "case": "hashbtree-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "hashbtree-table",
+        "statement": "select-gt-long",
+        "epl": "select * from MyInfraHBTW where f1\u003e9",
+        "mode": "any"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "hashbtree-table",
+        "statement": "soda-ix1",
+        "expectError": "SODA create index IX1 on MyInfraHBTW(f1, f2 btree): the Java execution deploys the statement-object-model index over the long leg; EPL-object-model deploy has no Go boundary so the record is plan-only",
+        "epl": "create index IX1 on MyInfraHBTW(f1, f2 btree)"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "hashbtree-table",
+        "statement": "soda-ix2",
+        "expectError": "SODA create unique index IX2 on MyInfraHBTW(f1): the Java execution deploys the statement-object-model unique index over the long leg; EPL-object-model deploy has no Go boundary so the record is plan-only",
+        "epl": "create unique index IX2 on MyInfraHBTW(f1)"
+      },
+      {
+        "op": "deploy",
+        "case": "hashbtree-table",
+        "statement": "create-two",
+        "epl": "@public create table MyInfraHBTWTwo as (f1 short primary key, f2 string primary key)"
+      },
+      {
+        "op": "deployed",
+        "case": "hashbtree-table",
+        "statement": "create-two"
+      },
+      {
+        "op": "deploy",
+        "case": "hashbtree-table",
+        "statement": "insert-two",
+        "epl": "insert into MyInfraHBTWTwo(f1, f2) select shortPrimitive, theString from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "hashbtree-table",
+        "statement": "insert-two"
+      },
+      {
+        "op": "deploy",
+        "case": "hashbtree-table",
+        "statement": "index-two",
+        "epl": "create index MyInfraHBTWTwoIndex1 on MyInfraHBTWTwo(f1 btree)"
+      },
+      {
+        "op": "deployed",
+        "case": "hashbtree-table",
+        "statement": "index-two"
+      },
+      {
+        "op": "send",
+        "case": "hashbtree-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "shortPrimitive": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "hashbtree-table",
+        "statement": "select-gte-short",
+        "epl": "select * from MyInfraHBTWTwo where f1\u003e=2",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "hashbtree-table"
+      },
+      {
+        "op": "case",
+        "case": "widening-window"
+      },
+      {
+        "op": "deploy",
+        "case": "widening-window",
+        "statement": "create-one",
+        "epl": "@public create window MyInfraW#keepall as (f1 long, f2 string)"
+      },
+      {
+        "op": "deployed",
+        "case": "widening-window",
+        "statement": "create-one"
+      },
+      {
+        "op": "deploy",
+        "case": "widening-window",
+        "statement": "insert-one",
+        "epl": "insert into MyInfraW(f1, f2) select longPrimitive, theString from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "widening-window",
+        "statement": "insert-one"
+      },
+      {
+        "op": "deploy",
+        "case": "widening-window",
+        "statement": "index-one",
+        "epl": "create index MyInfraWIndex1 on MyInfraW(f1)"
+      },
+      {
+        "op": "deployed",
+        "case": "widening-window",
+        "statement": "index-one"
+      },
+      {
+        "op": "send",
+        "case": "widening-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "widening-window",
+        "statement": "select-eq-long",
+        "epl": "select * from MyInfraW where f1=10",
+        "mode": "any"
+      },
+      {
+        "op": "deploy",
+        "case": "widening-window",
+        "statement": "create-two",
+        "epl": "@public create window MyInfraWTwo#keepall as (f1 short, f2 string)"
+      },
+      {
+        "op": "deployed",
+        "case": "widening-window",
+        "statement": "create-two"
+      },
+      {
+        "op": "deploy",
+        "case": "widening-window",
+        "statement": "insert-two",
+        "epl": "insert into MyInfraWTwo(f1, f2) select shortPrimitive, theString from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "widening-window",
+        "statement": "insert-two"
+      },
+      {
+        "op": "deploy",
+        "case": "widening-window",
+        "statement": "index-two",
+        "epl": "create index MyInfraWTwoIndex1 on MyInfraWTwo(f1)"
+      },
+      {
+        "op": "deployed",
+        "case": "widening-window",
+        "statement": "index-two"
+      },
+      {
+        "op": "send",
+        "case": "widening-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "shortPrimitive": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "widening-window",
+        "statement": "select-eq-short",
+        "epl": "select * from MyInfraWTwo where f1=2",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "widening-window"
+      },
+      {
+        "op": "case",
+        "case": "widening-table"
+      },
+      {
+        "op": "deploy",
+        "case": "widening-table",
+        "statement": "create-one",
+        "epl": "@public create table MyInfraW as (f1 long primary key, f2 string primary key)"
+      },
+      {
+        "op": "deployed",
+        "case": "widening-table",
+        "statement": "create-one"
+      },
+      {
+        "op": "deploy",
+        "case": "widening-table",
+        "statement": "insert-one",
+        "epl": "insert into MyInfraW(f1, f2) select longPrimitive, theString from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "widening-table",
+        "statement": "insert-one"
+      },
+      {
+        "op": "deploy",
+        "case": "widening-table",
+        "statement": "index-one",
+        "epl": "create index MyInfraWIndex1 on MyInfraW(f1)"
+      },
+      {
+        "op": "deployed",
+        "case": "widening-table",
+        "statement": "index-one"
+      },
+      {
+        "op": "send",
+        "case": "widening-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "widening-table",
+        "statement": "select-eq-long",
+        "epl": "select * from MyInfraW where f1=10",
+        "mode": "any"
+      },
+      {
+        "op": "deploy",
+        "case": "widening-table",
+        "statement": "create-two",
+        "epl": "@public create table MyInfraWTwo as (f1 short primary key, f2 string primary key)"
+      },
+      {
+        "op": "deployed",
+        "case": "widening-table",
+        "statement": "create-two"
+      },
+      {
+        "op": "deploy",
+        "case": "widening-table",
+        "statement": "insert-two",
+        "epl": "insert into MyInfraWTwo(f1, f2) select shortPrimitive, theString from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "widening-table",
+        "statement": "insert-two"
+      },
+      {
+        "op": "deploy",
+        "case": "widening-table",
+        "statement": "index-two",
+        "epl": "create index MyInfraWTwoIndex1 on MyInfraWTwo(f1)"
+      },
+      {
+        "op": "deployed",
+        "case": "widening-table",
+        "statement": "index-two"
+      },
+      {
+        "op": "send",
+        "case": "widening-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "shortPrimitive": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "widening-table",
+        "statement": "select-eq-short",
+        "epl": "select * from MyInfraWTwo where f1=2",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "widening-table"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-widening-558",
+    "records": [
+      {
+        "case": "hashbtree-window",
+        "operation": "deployed",
+        "statement": "create-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "hashbtree-window",
+        "operation": "deployed",
+        "statement": "insert-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "hashbtree-window",
+        "operation": "deployed",
+        "statement": "index-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "hashbtree-window",
+        "operation": "snapshot",
+        "statement": "select-gt-long",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": 10,
+              "f2": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "hashbtree-window",
+        "operation": "unrepresentable",
+        "statement": "soda-ix1",
+        "sequence": 0,
+        "value": "SODA create index IX1 on MyInfraHBTW(f1, f2 btree): the Java execution deploys the statement-object-model index over the long leg; EPL-object-model deploy has no Go boundary so the record is plan-only"
+      },
+      {
+        "case": "hashbtree-window",
+        "operation": "unrepresentable",
+        "statement": "soda-ix2",
+        "sequence": 0,
+        "value": "SODA create unique index IX2 on MyInfraHBTW(f1): the Java execution deploys the statement-object-model unique index over the long leg; EPL-object-model deploy has no Go boundary so the record is plan-only"
+      },
+      {
+        "case": "hashbtree-window",
+        "operation": "deployed",
+        "statement": "create-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "hashbtree-window",
+        "operation": "deployed",
+        "statement": "insert-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "hashbtree-window",
+        "operation": "deployed",
+        "statement": "index-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "hashbtree-window",
+        "operation": "snapshot",
+        "statement": "select-gte-short",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": 2,
+              "f2": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "hashbtree-table",
+        "operation": "deployed",
+        "statement": "create-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "hashbtree-table",
+        "operation": "deployed",
+        "statement": "insert-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "hashbtree-table",
+        "operation": "deployed",
+        "statement": "index-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "hashbtree-table",
+        "operation": "snapshot",
+        "statement": "select-gt-long",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": 10,
+              "f2": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "hashbtree-table",
+        "operation": "unrepresentable",
+        "statement": "soda-ix1",
+        "sequence": 0,
+        "value": "SODA create index IX1 on MyInfraHBTW(f1, f2 btree): the Java execution deploys the statement-object-model index over the long leg; EPL-object-model deploy has no Go boundary so the record is plan-only"
+      },
+      {
+        "case": "hashbtree-table",
+        "operation": "unrepresentable",
+        "statement": "soda-ix2",
+        "sequence": 0,
+        "value": "SODA create unique index IX2 on MyInfraHBTW(f1): the Java execution deploys the statement-object-model unique index over the long leg; EPL-object-model deploy has no Go boundary so the record is plan-only"
+      },
+      {
+        "case": "hashbtree-table",
+        "operation": "deployed",
+        "statement": "create-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "hashbtree-table",
+        "operation": "deployed",
+        "statement": "insert-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "hashbtree-table",
+        "operation": "deployed",
+        "statement": "index-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "hashbtree-table",
+        "operation": "snapshot",
+        "statement": "select-gte-short",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": 2,
+              "f2": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "widening-window",
+        "operation": "deployed",
+        "statement": "create-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "widening-window",
+        "operation": "deployed",
+        "statement": "insert-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "widening-window",
+        "operation": "deployed",
+        "statement": "index-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "widening-window",
+        "operation": "snapshot",
+        "statement": "select-eq-long",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": 10,
+              "f2": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "widening-window",
+        "operation": "deployed",
+        "statement": "create-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "widening-window",
+        "operation": "deployed",
+        "statement": "insert-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "widening-window",
+        "operation": "deployed",
+        "statement": "index-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "widening-window",
+        "operation": "snapshot",
+        "statement": "select-eq-short",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": 2,
+              "f2": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "widening-table",
+        "operation": "deployed",
+        "statement": "create-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "widening-table",
+        "operation": "deployed",
+        "statement": "insert-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "widening-table",
+        "operation": "deployed",
+        "statement": "index-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "widening-table",
+        "operation": "snapshot",
+        "statement": "select-eq-long",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": 10,
+              "f2": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "widening-table",
+        "operation": "deployed",
+        "statement": "create-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "widening-table",
+        "operation": "deployed",
+        "statement": "insert-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "widening-table",
+        "operation": "deployed",
+        "statement": "index-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "widening-table",
+        "operation": "snapshot",
+        "statement": "select-eq-short",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": 2,
+              "f2": "E1"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-widening-558",
+    "records": [
+      {
+        "case": "hashbtree-window",
+        "operation": "deployed",
+        "statement": "create-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "hashbtree-window",
+        "operation": "deployed",
+        "statement": "insert-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "hashbtree-window",
+        "operation": "deployed",
+        "statement": "index-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "hashbtree-window",
+        "operation": "snapshot",
+        "statement": "select-gt-long",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": 10,
+              "f2": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "hashbtree-window",
+        "operation": "unrepresentable",
+        "statement": "soda-ix1",
+        "sequence": 0,
+        "value": "SODA create index IX1 on MyInfraHBTW(f1, f2 btree): the Java execution deploys the statement-object-model index over the long leg; EPL-object-model deploy has no Go boundary so the record is plan-only"
+      },
+      {
+        "case": "hashbtree-window",
+        "operation": "unrepresentable",
+        "statement": "soda-ix2",
+        "sequence": 0,
+        "value": "SODA create unique index IX2 on MyInfraHBTW(f1): the Java execution deploys the statement-object-model unique index over the long leg; EPL-object-model deploy has no Go boundary so the record is plan-only"
+      },
+      {
+        "case": "hashbtree-window",
+        "operation": "deployed",
+        "statement": "create-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "hashbtree-window",
+        "operation": "deployed",
+        "statement": "insert-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "hashbtree-window",
+        "operation": "deployed",
+        "statement": "index-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "hashbtree-window",
+        "operation": "snapshot",
+        "statement": "select-gte-short",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": 2,
+              "f2": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "hashbtree-table",
+        "operation": "deployed",
+        "statement": "create-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "hashbtree-table",
+        "operation": "deployed",
+        "statement": "insert-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "hashbtree-table",
+        "operation": "deployed",
+        "statement": "index-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "hashbtree-table",
+        "operation": "snapshot",
+        "statement": "select-gt-long",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": 10,
+              "f2": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "hashbtree-table",
+        "operation": "unrepresentable",
+        "statement": "soda-ix1",
+        "sequence": 0,
+        "value": "SODA create index IX1 on MyInfraHBTW(f1, f2 btree): the Java execution deploys the statement-object-model index over the long leg; EPL-object-model deploy has no Go boundary so the record is plan-only"
+      },
+      {
+        "case": "hashbtree-table",
+        "operation": "unrepresentable",
+        "statement": "soda-ix2",
+        "sequence": 0,
+        "value": "SODA create unique index IX2 on MyInfraHBTW(f1): the Java execution deploys the statement-object-model unique index over the long leg; EPL-object-model deploy has no Go boundary so the record is plan-only"
+      },
+      {
+        "case": "hashbtree-table",
+        "operation": "deployed",
+        "statement": "create-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "hashbtree-table",
+        "operation": "deployed",
+        "statement": "insert-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "hashbtree-table",
+        "operation": "deployed",
+        "statement": "index-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "hashbtree-table",
+        "operation": "snapshot",
+        "statement": "select-gte-short",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": 2,
+              "f2": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "widening-window",
+        "operation": "deployed",
+        "statement": "create-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "widening-window",
+        "operation": "deployed",
+        "statement": "insert-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "widening-window",
+        "operation": "deployed",
+        "statement": "index-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "widening-window",
+        "operation": "snapshot",
+        "statement": "select-eq-long",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": 10,
+              "f2": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "widening-window",
+        "operation": "deployed",
+        "statement": "create-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "widening-window",
+        "operation": "deployed",
+        "statement": "insert-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "widening-window",
+        "operation": "deployed",
+        "statement": "index-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "widening-window",
+        "operation": "snapshot",
+        "statement": "select-eq-short",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": 2,
+              "f2": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "widening-table",
+        "operation": "deployed",
+        "statement": "create-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "widening-table",
+        "operation": "deployed",
+        "statement": "insert-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "widening-table",
+        "operation": "deployed",
+        "statement": "index-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "widening-table",
+        "operation": "snapshot",
+        "statement": "select-eq-long",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": 10,
+              "f2": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "widening-table",
+        "operation": "deployed",
+        "statement": "create-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "widening-table",
+        "operation": "deployed",
+        "statement": "insert-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "widening-table",
+        "operation": "deployed",
+        "statement": "index-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "widening-table",
+        "operation": "snapshot",
+        "statement": "select-eq-short",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": 2,
+              "f2": "E1"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
