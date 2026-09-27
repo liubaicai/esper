@@ -43,30 +43,41 @@ activity or a single coverage percentage.
 
 
 
+
 ## Current work unit
-Active: Draft 4.560 ('infra-nwtable-late-index').
+Active: Draft 4.561 ('infra-nwtable-index-remainder').
 
-- Contract frozen (JavaContract560 + GoSurface560): InfraNWTableCreateIndex
-  ords 8/9 LateCreate + 10/11 SceneTwo — late-create-serves-FAF, no flags.
-  Remaining after this: ords 12-15 (MultiColMultiIndex + DropCreate),
-  16-19 (OnSelectReUse + Invalid), 0-1 MultiRangeAndKey (blocked on
-  per-column mixed hash+btree composite index — engine gap).
-- [x] Assets560 dispatched (runner infra_nwtable_late_index_560.go).
-- [x] Assets560 delivered + integrated: Java trace 16 records, Go replay
-  16, `-diff` passing / 0 differences; evidence + traces checked in.
-  Ordered `order by` snapshots compared positionally; LateCreate asserts
-  IndexAccessEquality on the declared index, SceneTwo f3-leading probe
-  pins full-scan (Java hash needs the full key — row sets equal).
-- [x] Umbrella fix: the 4 runtime IDs were already referenced by
-  case.inventory.infra-nwtable-create-index; narrowed its `remaining`
-  (widening/composite/multikey/late now DV; MultiRange + DropCreate +
-  MCMI + OnSelectReUse + Invalid remain).
-- [x] Manifest: NEW case.infra-nwtable-create-index-late born-DV (4 IDs);
-  summary -> 794 cases / 414 DV / 1649 DV runtime IDs / 397 unreferenced.
+- Contract frozen (JavaContract561 + GoSurface561): this unit covers ords
+  12/13 MultiColMultiIndex (3 overlapping late indexes, 6 FAF probes) +
+  16/17 OnSelectReUse (trigger select-and-reuse; no flags — the static
+  manifest's FIREANDFORGET on 16/17 is a file-level over-attribution).
+- Deferred: ords 14/15 DropCreate — live DropIndex/CreateIndex are
+  plan-invisible (plan.indexPlan frozen at env.Build AND the env catalog
+  never sees live mutations); DV would require either a deployable
+  create-index statement (new API) or a staged env-per-stage workaround —
+  decision pending. Ords 0/1 MultiRangeAndKey (engine gap)
+  remain.
+- Commit-message accident on 4.560: backticks in the -m message were
+  shell-substituted; the pushed commit `24416543a` has two dropped words
+  ("order by", "remaining"). Force-push rejected (master protected);
+  content is correct, message stands as-is. Use single quotes for -m.
+- [x] Assets561 delivered + integrated: Java trace 92 records, Go replay
+  92, `-diff` passing / 0 differences; evidence + traces checked in.
+  MCMI per-probe index-selection pins (f3/f1 scan; f3+f2 -> Index2; f2 ->
+  Index3; full key -> Index1; table f1 -> PK). OnSelectReUse divergent
+  index counts ride unrepresentable records; coincident counts real.
+  Invalid: 5 Go-verified build errors + 5-6 unrepresentable + unique-
+  violation send-error asserting ErrorState + I1.
+- [x] Fixed worker leftovers: deleted zz_probe561_test.go throwaway,
+  compact-JSON mutation needle (space after colon broke the match).
+- [x] Manifest: NEW case.infra-nwtable-create-index-ops born-DV (6 IDs) +
+  case.infra-nwtable-create-index-drop-disposition intentionally-different
+  (ords 14/15: live index mutations are planner-invisible — plan.indexPlan
+  frozen at env.Build, env catalog never sees them). Summary -> 796 cases
+  / 415 DV / 1655 DV runtime IDs / 397 unreferenced.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev560 + JavaContract561 + GoSurface561 dispatched.
+- [x] ParityRev561 + JavaContract562 + GoSurface562 dispatched.
 - [ ] Review outcome, commit, push.
-
 ## Previous work units (shipped)
 - Shipped: Draft 4.559 ('infra-nwtable-index-faf') committed and pushed as
   `272065ad4`; Git owns identity. 4 executions born-DV (28 records each,
