@@ -32978,10 +32978,7 @@
    "goTests": [
     "TestInfraNWTableCreateIndexParity"
    ],
-   "remaining": [
-    "InfraMultiRangeAndKey (ords 0-1): per-column mixed hash+btree composite index \u2014 engine gap"
-   ],
-   "difference": "Go adds live NamedWindow.CreateIndex/DropIndex and Table.CreateIndex/DropIndex: existing rows are indexed immediately, future writes maintain the index atomically, and context partitions inherit late indexes. The parity test covers InfraLateCreate, InfraDropCreate, InfraMultipleColumnMultipleIndex and InfraInvalid for both named-window and table variants, including duplicate/unknown/unique-btree/empty-column rejection. Widening (ords 2-5), composite/multikey FAF (ords 6/7/20/21) and late-create scene one/two (ords 8-11) are now born-differential cases (case.infra-nwtable-create-index-widening / -faf / -late). Multi-column-multi-index (12-13), on-select reuse (16-17) and invalid probes (18-19) are now born-differential via case.infra-nwtable-create-index-ops; drop-create (14-15) is intentionally-different via case.infra-nwtable-create-index-drop-disposition (live index mutations are planner-invisible: plan.indexPlan is frozen at env.Build and the env catalog never sees them). Only multi-range-and-key (ords 0-1, per-column mixed hash+btree composite \u2014 engine gap) remains open."
+   "difference": "Go adds live NamedWindow.CreateIndex/DropIndex and Table.CreateIndex/DropIndex: existing rows are indexed immediately, future writes maintain the index atomically, and context partitions inherit late indexes. The parity test covers InfraLateCreate, InfraDropCreate, InfraMultipleColumnMultipleIndex and InfraInvalid for both named-window and table variants, including duplicate/unknown/unique-btree/empty-column rejection. Widening (ords 2-5), composite/multikey FAF (ords 6/7/20/21) and late-create scene one/two (ords 8-11) are now born-differential cases (case.infra-nwtable-create-index-widening / -faf / -late). Multi-column-multi-index (12-13), on-select reuse (16-17) and invalid probes (18-19) are now born-differential via case.infra-nwtable-create-index-ops; drop-create (14-15) is intentionally-different via case.infra-nwtable-create-index-drop-disposition (live index mutations are planner-invisible: plan.indexPlan is frozen at env.Build and the env catalog never sees them). All 22 executions are dispositioned: 20 born-differential (widening/composite/multikey/late/MCMI/onr/invalid/mrak cases) and 2 intentionally-different (drop-create, plan-frozen catalog)."
   },
   {
    "id": "case.inventory.epl-database-join",
@@ -51470,6 +51467,53 @@
     "java-runtime-a27f8fd61fbafd563173"
    ],
    "notes": "Draft 4.561: 92 records each, 0 differences. Oracle pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c."
+  },
+  {
+   "id": "case.infra-nwtable-create-index-mrak",
+   "javaRuntimeIds": [
+    "java-runtime-7242c335a588f1d6fa15",
+    "java-runtime-4d509bfd0e311be23afe"
+   ],
+   "javaStaticIds": [
+    "java-06a59928c63cc7360d2b"
+   ],
+   "javaNames": [
+    "InfraMultiRangeAndKey{namedWindow=true}",
+    "InfraMultiRangeAndKey{namedWindow=false}"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableCreateIndex.java"
+   ],
+   "goTests": [
+    "internal/app/parity/infra_nwtable_mrak_562_test.go/TestRunInfraNWTableMRAK562DirectReplay",
+    "internal/app/parity/infra_nwtable_mrak_562_test.go/TestRunInfraNWTableMRAK562PinnedArtifacts",
+    "internal/app/parity/infra_nwtable_mrak_562_test.go/TestRunInfraNWTableMRAK562ScenarioLoader",
+    "internal/app/parity/infra_nwtable_mrak_562_test.go/TestRunInfraNWTableMRAK562DiffWritesPassingEvidence",
+    "internal/app/parity/infra_nwtable_mrak_562_test.go/TestRunInfraNWTableMRAK562DiffRejectsTraceMutations",
+    "internal/app/parity/infra_nwtable_mrak_562_test.go/TestRunInfraNWTableMRAK562CheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/infra_nwtable_mrak_562_test.go/TestRunInfraNWTableMRAK562RejectsMalformedRawScenario",
+    "internal/app/parity/infra_nwtable_mrak_562_test.go/TestRunInfraNWTableMRAK562RuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "infra",
+    "differential",
+    "fire-and-forget"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-nwtable-mrak-562.evidence.json"
+   ],
+   "difference": "Java's create index idx1 uses per-column mixed kinds (key hash, keyLong hash, rangeStartLong btree, rangeEndLong btree); Go's index model carries one Kind per index, so idx1 is declared as a creation-time btree composite \u2014 Go's btree matcher consumes the (key,keyLong) equality prefix and stops at the first range column (rangeStartLong), leaving rangeEndLong>2 to post-filter; rows are identical. The plan-kind divergence rides an unrepresentable record; the key-less probe (equality prefix cannot start at keyLong) pins full-scan on both legs; index counts assert window=1/table=2 (PK+idx1).",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-7242c335a588f1d6fa15",
+    "java-runtime-4d509bfd0e311be23afe"
+   ],
+   "notes": "Draft 4.562: 20 records each, 0 differences. Closes InfraNWTableCreateIndex (22/22 referenced: 20 DV + 2 intentionally-different). Oracle pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c."
   }
  ],
  "mappings": [
@@ -55004,13 +55048,17 @@
   {
    "capabilityId": "infra.namedwindow.views",
    "caseId": "case.infra-nwtable-create-index-ops"
+  },
+  {
+   "capabilityId": "infra.namedwindow.views",
+   "caseId": "case.infra-nwtable-create-index-mrak"
   }
  ],
  "summary": {
-  "inventoriedCases": 796,
-  "implementedCases": 794,
-  "differentialVerifiedCases": 415,
-  "differentialVerifiedRuntimeIds": 1655,
+  "inventoriedCases": 797,
+  "implementedCases": 795,
+  "differentialVerifiedCases": 416,
+  "differentialVerifiedRuntimeIds": 1657,
   "intentionallyDifferentCases": 40,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -55020,13 +55068,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4199,
+  "runtimeAssociationCount": 4201,
   "referencedJavaRuntimeIds": 3739,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 397,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 796,
+  "totalCases": 797,
   "totalCapabilities": 126
  }
 }

@@ -116,6 +116,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include infra-nwtable-index-faf-559 and infra-nwtable-index-faf-559-diff")
 		fmt.Fprintln(stderr, "runner modes include infra-nwtable-late-index-560 and infra-nwtable-late-index-560-diff")
 		fmt.Fprintln(stderr, "runner modes include infra-nwtable-index-ops-561 and infra-nwtable-index-ops-561-diff")
+		fmt.Fprintln(stderr, "runner modes include infra-nwtable-mrak-562 and infra-nwtable-mrak-562-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-enum-select-from and expr-enum-select-from-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-type-use and expr-class-type-use-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-for-epl-objects and expr-class-for-epl-objects-diff")
@@ -509,6 +510,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWTableLateIndex560Scenario(file)
 	} else if *mode == "infra-nwtable-index-ops-561" || *mode == "infra-nwtable-index-ops-561-diff" {
 		scenario, err = loadInfraNWTableIndexOps561Scenario(file)
+	} else if *mode == "infra-nwtable-mrak-562" || *mode == "infra-nwtable-mrak-562-diff" {
+		scenario, err = loadInfraNWTableMRAK562Scenario(file)
 	} else if *mode == "epl-contained-event-example" || *mode == "epl-contained-event-example-diff" {
 		scenario, err = loadEPLContainedEventExampleScenario(file)
 	} else if *mode == "epl-other-pattern-event-properties" || *mode == "epl-other-pattern-event-properties-diff" {
@@ -2322,6 +2325,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNWTableIndexOps561JavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNWTableIndexOps561JavaSources),
 				splitMetadata(*javaExecutions, infraNWTableIndexOps561JavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-nwtable-mrak-562" || *mode == "infra-nwtable-mrak-562-diff" {
+		trace, err := runInfraNWTableMRAK562Scenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-nwtable-mrak-562-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNWTableMRAK562JavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNWTableMRAK562JavaSources),
+				splitMetadata(*javaExecutions, infraNWTableMRAK562JavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

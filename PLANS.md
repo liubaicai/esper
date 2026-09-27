@@ -45,40 +45,37 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.561 ('infra-nwtable-index-remainder').
+Active: Draft 4.562 ('infra-nwtable-mrak — closes InfraNWTableCreateIndex').
 
-- Contract frozen (JavaContract561 + GoSurface561): this unit covers ords
-  12/13 MultiColMultiIndex (3 overlapping late indexes, 6 FAF probes) +
-  16/17 OnSelectReUse (trigger select-and-reuse; no flags — the static
-  manifest's FIREANDFORGET on 16/17 is a file-level over-attribution).
-- Deferred: ords 14/15 DropCreate — live DropIndex/CreateIndex are
-  plan-invisible (plan.indexPlan frozen at env.Build AND the env catalog
-  never sees live mutations); DV would require either a deployable
-  create-index statement (new API) or a staged env-per-stage workaround —
-  decision pending. Ords 0/1 MultiRangeAndKey (engine gap)
-  remain.
-- Commit-message accident on 4.560: backticks in the -m message were
-  shell-substituted; the pushed commit `24416543a` has two dropped words
-  ("order by", "remaining"). Force-push rejected (master protected);
-  content is correct, message stands as-is. Use single quotes for -m.
-- [x] Assets561 delivered + integrated: Java trace 92 records, Go replay
-  92, `-diff` passing / 0 differences; evidence + traces checked in.
-  MCMI per-probe index-selection pins (f3/f1 scan; f3+f2 -> Index2; f2 ->
-  Index3; full key -> Index1; table f1 -> PK). OnSelectReUse divergent
-  index counts ride unrepresentable records; coincident counts real.
-  Invalid: 5 Go-verified build errors + 5-6 unrepresentable + unique-
-  violation send-error asserting ErrorState + I1.
-- [x] Fixed worker leftovers: deleted zz_probe561_test.go throwaway,
-  compact-JSON mutation needle (space after colon broke the match).
-- [x] Manifest: NEW case.infra-nwtable-create-index-ops born-DV (6 IDs) +
-  case.infra-nwtable-create-index-drop-disposition intentionally-different
-  (ords 14/15: live index mutations are planner-invisible — plan.indexPlan
-  frozen at env.Build, env catalog never sees them). Summary -> 796 cases
-  / 415 DV / 1655 DV runtime IDs / 397 unreferenced.
+- Contract frozen (JavaContract562 + GoSurface562): ords 0/1
+  InfraMultiRangeAndKey (FIREANDFORGET) — mixed hash+btree composite
+  replayed as single-kind btree (row sets identical; plan-kind divergence
+  rides an unrepresentable record). Table leg: composite PK +
+  merge-not-matched feed + index count 2.
+- [x] Assets562 dispatched (runner infra_nwtable_mrak_562.go).
+- [x] Assets562 delivered + integrated: Java trace 20 records, Go replay
+  20, `-diff` passing / 0 differences; evidence + traces checked in.
+  Spike: q1 resolves IndexAccessRange on idx1 [key keyLong rangeStartLong]
+  (equality prefix + first range); q2 pins full-scan (key-less prefix);
+  index counts 1 window / 2 table (PK+idx1); mixed-kind divergence rides
+  an unrepresentable record.
+- [x] Manifest: NEW case.infra-nwtable-create-index-mrak born-DV (2 IDs);
+  umbrella case.inventory.infra-nwtable-create-index CLOSED (22/22
+  dispositioned: 20 DV + 2 intentionally-different). Summary -> 797 cases
+  / 416 DV / 1657 DV runtime IDs / 397 unreferenced.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev561 + JavaContract562 + GoSurface562 dispatched.
-- [ ] Review outcome, commit, push.
+- [x] ParityRev562 + JavaContract563 + GoSurface563 dispatched.
+- [x] Review outcome: PASS (2 P3s fixed — duplicate heading demoted,
+  umbrella `remaining` key removed to match closed-inventory convention).
+- [ ] Commit, push.
 ## Previous work units (shipped)
+- Shipped: Draft 4.561 ('infra-nwtable-index-remainder + drop
+  disposition') committed and pushed as `9bd01f337`; Git owns identity.
+  6 executions born-DV (92 records each, 0 differences) + DropCreate
+  intentionally-different.
+- Shipped: Draft 4.560 ('infra-nwtable-late-index') committed and pushed
+  as `24416543a`; Git owns identity. 4 executions born-DV (16 records
+  each, 0 differences); review PASS (P3 rationale wording).
 - Shipped: Draft 4.559 ('infra-nwtable-index-faf') committed and pushed as
   `272065ad4`; Git owns identity. 4 executions born-DV (28 records each,
   0 differences); review PASS (clean).

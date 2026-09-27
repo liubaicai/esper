@@ -1,0 +1,62 @@
+{
+ "version": "esper-parity/v1",
+ "id": "infra-nwtable-mrak-562",
+ "description": "InfraNWTableCreateIndex ordinals 0-1: InfraMultiRangeAndKey {namedWindow=true/false} deploys a SupportBeanRange keepall window or the (id,rangeStartLong,rangeEndLong)-keyed table MyInfraMRAK fed by the select-* insert-into (window) or the merge-not-matched insert (table) plus the mixed-kind index idx1 (key hash, keyLong hash, rangeStartLong btree, rangeEndLong btree), then runs query1 (rangeStartLong>1, rangeEndLong>2, keyLong=1, key='K1', order by id asc) four times around the E1/E2/E3 sends with milestone(0) between E2 and E3 (a harness no-op carrying no step) and query2 (query1 minus key='K1') once, returning {}, {E1}, {E1,E2}, {E1,E2,E3} and {E1,E2,E3}; the mixed index kind has no Go single-Kind form and rides a plan-only record, and the tail asserts getIndexCount == 1 (window) / 2 (table). (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableCreateIndex.java).",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableCreateIndex.java",
+ "javaRuntimes": [
+  "java-runtime-7242c335a588f1d6fa15",
+  "java-runtime-4d509bfd0e311be23afe"
+ ],
+ "javaNames": [
+  "InfraMultiRangeAndKey{namedWindow=true}",
+  "InfraMultiRangeAndKey{namedWindow=false}"
+ ],
+ "javaStaticIds": [
+  "java-06a59928c63cc7360d2b",
+  "java-06a59928c63cc7360d2b"
+ ],
+ "javaFlags": ["FIREANDFORGET"],
+ "cases": [
+  {"case": "mrak-window", "ordinal": 0, "runtimeId": "java-runtime-7242c335a588f1d6fa15", "executionName": "InfraMultiRangeAndKey{namedWindow=true}", "observation": "deploy+send+snapshot+index-count+unrepresentable; SupportBeanRange MyInfraMRAK#keepall window fed by the select-* insert-into with mixed-kind index idx1 (key hash, keyLong hash, rangeStartLong btree, rangeEndLong btree) replayed as a single btree composite (plan-only record): the keyed FAF probe resolves idx1's equality prefix plus the rangeStartLong range leg (rangeEndLong post-filters) while the key-less probe full-scans; both return {E1},{E1,E2},{E1,E2,E3}; index-count 1", "epl": "@name('create') @public create window MyInfraMRAK#keepall as SupportBeanRange\ninsert into MyInfraMRAK select * from SupportBeanRange\ncreate index idx1 on MyInfraMRAK(key hash, keyLong hash, rangeStartLong btree, rangeEndLong btree)\ncreate index idx1 on MyInfraMRAK(key hash, keyLong hash, rangeStartLong btree, rangeEndLong btree)\nselect * from MyInfraMRAK where rangeStartLong > 1 and rangeEndLong > 2 and keyLong=1 and key='K1' order by id asc\nselect * from MyInfraMRAK where rangeStartLong > 1 and rangeEndLong > 2 and keyLong=1 and key='K1' order by id asc\nselect * from MyInfraMRAK where rangeStartLong > 1 and rangeEndLong > 2 and keyLong=1 and key='K1' order by id asc\nselect * from MyInfraMRAK where rangeStartLong > 1 and rangeEndLong > 2 and keyLong=1 and key='K1' order by id asc\nselect * from MyInfraMRAK where rangeStartLong > 1 and rangeEndLong > 2 and keyLong=1 order by id asc"},
+  {"case": "mrak-table", "ordinal": 1, "runtimeId": "java-runtime-4d509bfd0e311be23afe", "executionName": "InfraMultiRangeAndKey{namedWindow=false}", "observation": "deploy+send+snapshot+index-count+unrepresentable; (id,rangeStartLong,rangeEndLong)-keyed MyInfraMRAK table fed by the merge-not-matched insert with mixed-kind index idx1 replayed as a single btree composite (plan-only record): the keyed FAF probe resolves idx1's equality prefix plus the rangeStartLong range leg while the key-less probe full-scans; both return {E1},{E1,E2},{E1,E2,E3}; index-count 2 (idx1 plus the implicit primary-key descriptor)", "epl": "@name('create') @public create table MyInfraMRAK(id string primary key, key string, keyLong long, rangeStartLong long primary key, rangeEndLong long primary key)\non SupportBeanRange t0 merge MyInfraMRAK t1 where t0.id = t1.id when not matched then insert select id, key, keyLong, rangeStartLong, rangeEndLong\ncreate index idx1 on MyInfraMRAK(key hash, keyLong hash, rangeStartLong btree, rangeEndLong btree)\ncreate index idx1 on MyInfraMRAK(key hash, keyLong hash, rangeStartLong btree, rangeEndLong btree)\nselect * from MyInfraMRAK where rangeStartLong > 1 and rangeEndLong > 2 and keyLong=1 and key='K1' order by id asc\nselect * from MyInfraMRAK where rangeStartLong > 1 and rangeEndLong > 2 and keyLong=1 and key='K1' order by id asc\nselect * from MyInfraMRAK where rangeStartLong > 1 and rangeEndLong > 2 and keyLong=1 and key='K1' order by id asc\nselect * from MyInfraMRAK where rangeStartLong > 1 and rangeEndLong > 2 and keyLong=1 and key='K1' order by id asc\nselect * from MyInfraMRAK where rangeStartLong > 1 and rangeEndLong > 2 and keyLong=1 order by id asc"}
+ ],
+ "steps": [
+  {"op": "case", "case": "mrak-window"},
+  {"op": "deploy", "case": "mrak-window", "statement": "create", "epl": "@name('create') @public create window MyInfraMRAK#keepall as SupportBeanRange"},
+  {"op": "deployed", "case": "mrak-window", "statement": "create"},
+  {"op": "deploy", "case": "mrak-window", "statement": "insert", "epl": "insert into MyInfraMRAK select * from SupportBeanRange"},
+  {"op": "deployed", "case": "mrak-window", "statement": "insert"},
+  {"op": "deploy", "case": "mrak-window", "statement": "index", "epl": "create index idx1 on MyInfraMRAK(key hash, keyLong hash, rangeStartLong btree, rangeEndLong btree)"},
+  {"op": "deployed", "case": "mrak-window", "statement": "index"},
+  {"op": "unrepresentable", "case": "mrak-window", "statement": "index-kind", "epl": "create index idx1 on MyInfraMRAK(key hash, keyLong hash, rangeStartLong btree, rangeEndLong btree)", "expectError": "create index idx1 on MyInfraMRAK(key hash, keyLong hash, rangeStartLong btree, rangeEndLong btree): Java declares per-column kinds (two hash plus two btree legs) while Go indexes carry a single Kind; the replay declares idx1 as a creation-time btree composite (key,keyLong,rangeStartLong,rangeEndLong) - identical rows (Go consumes the key+keyLong equality prefix and the rangeStartLong range leg; rangeEndLong>2 post-filters) so the kind split is plan-only"},
+  {"op": "snapshot", "case": "mrak-window", "statement": "select-q1-empty", "mode": "ordered", "fields": ["id"], "epl": "select * from MyInfraMRAK where rangeStartLong > 1 and rangeEndLong > 2 and keyLong=1 and key='K1' order by id asc"},
+  {"op": "send", "case": "mrak-window", "eventType": "SupportBeanRange", "payload": {"id": "E1", "key": "K1", "keyLong": 1, "rangeStartLong": 2, "rangeEndLong": 3}},
+  {"op": "snapshot", "case": "mrak-window", "statement": "select-q1-e1", "mode": "ordered", "fields": ["id"], "epl": "select * from MyInfraMRAK where rangeStartLong > 1 and rangeEndLong > 2 and keyLong=1 and key='K1' order by id asc"},
+  {"op": "send", "case": "mrak-window", "eventType": "SupportBeanRange", "payload": {"id": "E2", "key": "K1", "keyLong": 1, "rangeStartLong": 2, "rangeEndLong": 4}},
+  {"op": "snapshot", "case": "mrak-window", "statement": "select-q1-e2", "mode": "ordered", "fields": ["id"], "epl": "select * from MyInfraMRAK where rangeStartLong > 1 and rangeEndLong > 2 and keyLong=1 and key='K1' order by id asc"},
+  {"op": "send", "case": "mrak-window", "eventType": "SupportBeanRange", "payload": {"id": "E3", "key": "K1", "keyLong": 1, "rangeStartLong": 3, "rangeEndLong": 3}},
+  {"op": "snapshot", "case": "mrak-window", "statement": "select-q1-e3", "mode": "ordered", "fields": ["id"], "epl": "select * from MyInfraMRAK where rangeStartLong > 1 and rangeEndLong > 2 and keyLong=1 and key='K1' order by id asc"},
+  {"op": "snapshot", "case": "mrak-window", "statement": "select-q2", "mode": "ordered", "fields": ["id"], "epl": "select * from MyInfraMRAK where rangeStartLong > 1 and rangeEndLong > 2 and keyLong=1 order by id asc"},
+  {"op": "index-count", "case": "mrak-window", "statement": "MyInfraMRAK", "create": "create", "of": "indexes", "count": 1},
+  {"op": "undeploy-all", "case": "mrak-window"},
+  {"op": "case", "case": "mrak-table"},
+  {"op": "deploy", "case": "mrak-table", "statement": "create", "epl": "@name('create') @public create table MyInfraMRAK(id string primary key, key string, keyLong long, rangeStartLong long primary key, rangeEndLong long primary key)"},
+  {"op": "deployed", "case": "mrak-table", "statement": "create"},
+  {"op": "deploy", "case": "mrak-table", "statement": "insert", "epl": "on SupportBeanRange t0 merge MyInfraMRAK t1 where t0.id = t1.id when not matched then insert select id, key, keyLong, rangeStartLong, rangeEndLong"},
+  {"op": "deployed", "case": "mrak-table", "statement": "insert"},
+  {"op": "deploy", "case": "mrak-table", "statement": "index", "epl": "create index idx1 on MyInfraMRAK(key hash, keyLong hash, rangeStartLong btree, rangeEndLong btree)"},
+  {"op": "deployed", "case": "mrak-table", "statement": "index"},
+  {"op": "unrepresentable", "case": "mrak-table", "statement": "index-kind", "epl": "create index idx1 on MyInfraMRAK(key hash, keyLong hash, rangeStartLong btree, rangeEndLong btree)", "expectError": "create index idx1 on MyInfraMRAK(key hash, keyLong hash, rangeStartLong btree, rangeEndLong btree): Java declares per-column kinds (two hash plus two btree legs) while Go indexes carry a single Kind; the replay declares idx1 as a creation-time btree composite (key,keyLong,rangeStartLong,rangeEndLong) - identical rows (Go consumes the key+keyLong equality prefix and the rangeStartLong range leg; rangeEndLong>2 post-filters) so the kind split is plan-only"},
+  {"op": "snapshot", "case": "mrak-table", "statement": "select-q1-empty", "mode": "ordered", "fields": ["id"], "epl": "select * from MyInfraMRAK where rangeStartLong > 1 and rangeEndLong > 2 and keyLong=1 and key='K1' order by id asc"},
+  {"op": "send", "case": "mrak-table", "eventType": "SupportBeanRange", "payload": {"id": "E1", "key": "K1", "keyLong": 1, "rangeStartLong": 2, "rangeEndLong": 3}},
+  {"op": "snapshot", "case": "mrak-table", "statement": "select-q1-e1", "mode": "ordered", "fields": ["id"], "epl": "select * from MyInfraMRAK where rangeStartLong > 1 and rangeEndLong > 2 and keyLong=1 and key='K1' order by id asc"},
+  {"op": "send", "case": "mrak-table", "eventType": "SupportBeanRange", "payload": {"id": "E2", "key": "K1", "keyLong": 1, "rangeStartLong": 2, "rangeEndLong": 4}},
+  {"op": "snapshot", "case": "mrak-table", "statement": "select-q1-e2", "mode": "ordered", "fields": ["id"], "epl": "select * from MyInfraMRAK where rangeStartLong > 1 and rangeEndLong > 2 and keyLong=1 and key='K1' order by id asc"},
+  {"op": "send", "case": "mrak-table", "eventType": "SupportBeanRange", "payload": {"id": "E3", "key": "K1", "keyLong": 1, "rangeStartLong": 3, "rangeEndLong": 3}},
+  {"op": "snapshot", "case": "mrak-table", "statement": "select-q1-e3", "mode": "ordered", "fields": ["id"], "epl": "select * from MyInfraMRAK where rangeStartLong > 1 and rangeEndLong > 2 and keyLong=1 and key='K1' order by id asc"},
+  {"op": "snapshot", "case": "mrak-table", "statement": "select-q2", "mode": "ordered", "fields": ["id"], "epl": "select * from MyInfraMRAK where rangeStartLong > 1 and rangeEndLong > 2 and keyLong=1 order by id asc"},
+  {"op": "index-count", "case": "mrak-table", "statement": "MyInfraMRAK", "create": "create", "of": "indexes", "count": 2},
+  {"op": "undeploy-all", "case": "mrak-table"}
+ ]
+}
