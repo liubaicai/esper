@@ -45,30 +45,36 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.562 ('infra-nwtable-mrak — closes InfraNWTableCreateIndex').
+Active: Draft 4.563 ('infra-nwtable-create-ddl').
 
-- Contract frozen (JavaContract562 + GoSurface562): ords 0/1
-  InfraMultiRangeAndKey (FIREANDFORGET) — mixed hash+btree composite
-  replayed as single-kind btree (row sets identical; plan-kind divergence
-  rides an unrepresentable record). Table leg: composite PK +
-  merge-not-matched feed + index count 2.
-- [x] Assets562 dispatched (runner infra_nwtable_mrak_562.go).
-- [x] Assets562 delivered + integrated: Java trace 20 records, Go replay
-  20, `-diff` passing / 0 differences; evidence + traces checked in.
-  Spike: q1 resolves IndexAccessRange on idx1 [key keyLong rangeStartLong]
-  (equality prefix + first range); q2 pins full-scan (key-less prefix);
-  index counts 1 window / 2 table (PK+idx1); mixed-kind divergence rides
-  an unrepresentable record.
-- [x] Manifest: NEW case.infra-nwtable-create-index-mrak born-DV (2 IDs);
-  umbrella case.inventory.infra-nwtable-create-index CLOSED (22/22
-  dispositioned: 20 DV + 2 intentionally-different). Summary -> 797 cases
-  / 416 DV / 1657 DV runtime IDs / 397 unreferenced.
+- Contract frozen (JavaContract563 + GoSurface563): 3 executions —
+  InfraNWTableCreate ords 0/1 InfraCreateGenericColType (SERDEREQUIRED;
+  java-runtime-b7fab192ff4a0d2ff2ce / 48d80d017090dd3410b7, static
+  java-621032f62ef7cf1bc193) + InfraNWTableCreateIndexAdvancedSyntax ord 0
+  (java-runtime-bc1a897eca64b5da6df3, static java-b6b074549bedc2ab1767).
+  All unreferenced; create-DDL semantic + RegressionEnvironment harness.
+- Semantic: generic-col create window/table + merge-insert + iterator.
+  SODA eplToModel round-trips are a text/compile surface ->
+  unrepresentable; the parameterized EPType descriptor asserts have no Go
+  PropertyDescriptor metadata -> pin names/order/Kind/Optional, ride
+  unrepresentable for type-arg asserts; Optional<Integer> has no reflect
+  counterpart -> nearest Go type + unrepresentable note.
+- [x] Assets563 dispatched.
+- [x] Assets563 delivered + integrated: Java trace 16 records, Go replay
+  16, `-diff` passing / 0 differences; evidence + traces checked in.
+  Fixed: worker left both new files unformatted (check-layout caught
+  it). Types record pins all 8 generic columns; SODA/invalid probes
+  ride unrepresentable records with Go typed CreateIndex equivalents.
+- [x] Manifest: NEW case.infra-nwtable-create-ddl born-DV (3 IDs).
+  Summary -> 798 cases / 417 DV / 1660 DV runtime IDs / 394 unreferenced.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev562 + JavaContract563 + GoSurface563 dispatched.
-- [x] Review outcome: PASS (2 P3s fixed — duplicate heading demoted,
-  umbrella `remaining` key removed to match closed-inventory convention).
-- [ ] Commit, push.
+- [x] ParityRev563 + JavaContract564 + GoSurface564 dispatched.
+- [ ] Review outcome, commit, push.
 ## Previous work units (shipped)
+- Shipped: Draft 4.562 ('infra-nwtable-create-index-mrak, file closed')
+  committed and pushed as `ac405900a`; Git owns identity. 2 executions
+  born-DV (20 records each, 0 differences); umbrella 22/22 dispositioned
+  (20 DV + 2 intentionally-different); review PASS (2 P3s fixed).
 - Shipped: Draft 4.561 ('infra-nwtable-index-remainder + drop
   disposition') committed and pushed as `9bd01f337`; Git owns identity.
   6 executions born-DV (92 records each, 0 differences) + DropCreate

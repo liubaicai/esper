@@ -1,0 +1,863 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-b7fab192ff4a0d2ff2ce",
+    "java-runtime-48d80d017090dd3410b7",
+    "java-runtime-bc1a897eca64b5da6df3"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableCreate.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableCreateIndexAdvancedSyntax.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/events/SupportGenericColUtil.java"
+  ],
+  "javaExecutions": [
+    "InfraCreateGenericColType{namedWindow=true}",
+    "InfraCreateGenericColType{namedWindow=false}",
+    "InfraNWTableCreateIndexAdvancedSyntax"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-create-ddl-563",
+    "steps": [
+      {
+        "op": "case",
+        "case": "generic-col-window"
+      },
+      {
+        "op": "deploy",
+        "case": "generic-col-window",
+        "statement": "module",
+        "epl": "@public @buseventtype create schema MyInputEvent(listOfString java.util.List\u003cString\u003e,listOfOptionalInteger java.util.List\u003cOptional\u003cInteger\u003e\u003e,mapOfStringAndInteger java.util.Map\u003cString, Integer\u003e,listArrayOfString java.util.List\u003cString\u003e[],listOfStringArray java.util.List\u003cString[]\u003e,listArray2DimOfString java.util.List\u003cString\u003e[][],listOfStringArray2Dim java.util.List\u003cString[][]\u003e,listOfT java.util.List\u003cObject\u003e);\n@name('infra')create window MyInfra#keepall as (listOfString java.util.List\u003cString\u003e,listOfOptionalInteger java.util.List\u003cOptional\u003cInteger\u003e\u003e,mapOfStringAndInteger java.util.Map\u003cString, Integer\u003e,listArrayOfString java.util.List\u003cString\u003e[],listOfStringArray java.util.List\u003cString[]\u003e,listArray2DimOfString java.util.List\u003cString\u003e[][],listOfStringArray2Dim java.util.List\u003cString[][]\u003e,listOfT java.util.List\u003cObject\u003e);\non MyInputEvent merge MyInfra insert select listOfString,listOfOptionalInteger,mapOfStringAndInteger,listArrayOfString,listOfStringArray,listArray2DimOfString,listOfStringArray2Dim,listOfT;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "generic-col-window",
+        "statement": "module"
+      },
+      {
+        "op": "types",
+        "case": "generic-col-window",
+        "statement": "infra"
+      },
+      {
+        "op": "send",
+        "case": "generic-col-window",
+        "eventType": "MyInputEvent",
+        "payload": {
+          "listOfString": [
+            "a"
+          ],
+          "listOfOptionalInteger": [
+            10
+          ],
+          "mapOfStringAndInteger": {
+            "k": 20
+          },
+          "listArrayOfString": [
+            [
+              "b"
+            ]
+          ],
+          "listOfStringArray": [
+            [
+              "c"
+            ]
+          ],
+          "listArray2DimOfString": [
+            [
+              [
+                "b"
+              ]
+            ]
+          ],
+          "listOfStringArray2Dim": [
+            [
+              [
+                "c"
+              ]
+            ]
+          ],
+          "listOfT": [
+            "x"
+          ]
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "generic-col-window",
+        "statement": "infra",
+        "mode": "unordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "generic-col-window"
+      },
+      {
+        "op": "case",
+        "case": "generic-col-table"
+      },
+      {
+        "op": "deploy",
+        "case": "generic-col-table",
+        "statement": "module",
+        "epl": "@public @buseventtype create schema MyInputEvent(listOfString java.util.List\u003cString\u003e,listOfOptionalInteger java.util.List\u003cOptional\u003cInteger\u003e\u003e,mapOfStringAndInteger java.util.Map\u003cString, Integer\u003e,listArrayOfString java.util.List\u003cString\u003e[],listOfStringArray java.util.List\u003cString[]\u003e,listArray2DimOfString java.util.List\u003cString\u003e[][],listOfStringArray2Dim java.util.List\u003cString[][]\u003e,listOfT java.util.List\u003cObject\u003e);\n@name('infra')create table MyInfra as (listOfString java.util.List\u003cString\u003e,listOfOptionalInteger java.util.List\u003cOptional\u003cInteger\u003e\u003e,mapOfStringAndInteger java.util.Map\u003cString, Integer\u003e,listArrayOfString java.util.List\u003cString\u003e[],listOfStringArray java.util.List\u003cString[]\u003e,listArray2DimOfString java.util.List\u003cString\u003e[][],listOfStringArray2Dim java.util.List\u003cString[][]\u003e,listOfT java.util.List\u003cObject\u003e);\non MyInputEvent merge MyInfra insert select listOfString,listOfOptionalInteger,mapOfStringAndInteger,listArrayOfString,listOfStringArray,listArray2DimOfString,listOfStringArray2Dim,listOfT;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "generic-col-table",
+        "statement": "module"
+      },
+      {
+        "op": "types",
+        "case": "generic-col-table",
+        "statement": "infra"
+      },
+      {
+        "op": "send",
+        "case": "generic-col-table",
+        "eventType": "MyInputEvent",
+        "payload": {
+          "listOfString": [
+            "a"
+          ],
+          "listOfOptionalInteger": [
+            10
+          ],
+          "mapOfStringAndInteger": {
+            "k": 20
+          },
+          "listArrayOfString": [
+            [
+              "b"
+            ]
+          ],
+          "listOfStringArray": [
+            [
+              "c"
+            ]
+          ],
+          "listArray2DimOfString": [
+            [
+              [
+                "b"
+              ]
+            ]
+          ],
+          "listOfStringArray2Dim": [
+            [
+              [
+                "c"
+              ]
+            ]
+          ],
+          "listOfT": [
+            "x"
+          ]
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "generic-col-table",
+        "statement": "infra",
+        "mode": "unordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "generic-col-table"
+      },
+      {
+        "op": "case",
+        "case": "index-syntax"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "index-syntax",
+        "statement": "soda-index-advanced-args",
+        "expectError": "soda-eplToModel: create index MyIndex on MyWindow((x,y) dummy_name(\"a\",10101)) - Java eplToModel parses the statement text into a statement object model and assertEquals(epl, model.toEPL()) round-trips it; the Go surface has no EPL-text parser or statement object model, so the create-index syntax round-trip is pinned text with no Go counterpart",
+        "epl": "create index MyIndex on MyWindow((x,y) dummy_name(\"a\",10101))"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "index-syntax",
+        "statement": "soda-index-single-named-type",
+        "expectError": "soda-eplToModel: create index MyIndex on MyWindow(x dummy_name) - same SODA round-trip; single-expression advanced-type indexes have no typed Go create-index form",
+        "epl": "create index MyIndex on MyWindow(x dummy_name)"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "index-syntax",
+        "statement": "soda-index-multi-col-named-type",
+        "expectError": "soda-eplToModel: create index MyIndex on MyWindow((x,y,z) dummy_name) - same SODA round-trip; multi-expression advanced-type lists have no typed Go create-index form",
+        "epl": "create index MyIndex on MyWindow((x,y,z) dummy_name)"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "index-syntax",
+        "statement": "soda-index-mixed-columns",
+        "expectError": "soda-eplToModel: create index MyIndex on MyWindow(x dummy_name, (y,z) dummy_name_2(\"a\"), p dummyname3) - same SODA round-trip; mixed column-list/named-type index forms have no Go equivalent",
+        "epl": "create index MyIndex on MyWindow(x dummy_name, (y,z) dummy_name_2(\"a\"), p dummyname3)"
+      },
+      {
+        "op": "deploy",
+        "case": "index-syntax",
+        "statement": "window",
+        "epl": "@public create window MyWindow#keepall as SupportSpatialPoint"
+      },
+      {
+        "op": "deployed",
+        "case": "index-syntax",
+        "statement": "window"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "index-syntax",
+        "statement": "invalid-empty-expr-list",
+        "expectError": "Invalid empty list of index expressions - Go equivalent: NamedWindow.CreateIndex rejects the empty column list (InvalidRule)",
+        "epl": "create index MyIndex on MyWindow(())"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "index-syntax",
+        "statement": "invalid-expression",
+        "expectError": "Invalid index expression 'intPrimitive+1' - Go equivalent: NamedWindow.CreateIndex rejects 'intPrimitive+1' as an unknown column name (UnknownName); expression columns have no Go form",
+        "epl": "create index MyIndex on MyWindow(intPrimitive+1)"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "index-syntax",
+        "statement": "invalid-multi-expr-list",
+        "expectError": "Invalid multiple index expressions - Go equivalent: NamedWindow.CreateIndex on the typed column list (x,y) rejects 'x'/'y' as unknown columns (UnknownName)",
+        "epl": "create index MyIndex on MyWindow((x, y))"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "index-syntax",
+        "statement": "invalid-dotted-expr",
+        "expectError": "Invalid index expression 'x.y' - Go equivalent: NamedWindow.CreateIndex rejects 'x.y' as an unknown column name (UnknownName)",
+        "epl": "create index MyIndex on MyWindow(x.y)"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "index-syntax",
+        "statement": "invalid-advanced-type",
+        "expectError": "Unrecognized advanced-type index 'xxxx' - Go equivalent: the typed create-index API carries no named index-type surface; the closest typed probe is the invalid-Kind rejection (InvalidRule)",
+        "epl": "create index MyIndex on MyWindow(id xxxx)"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "index-syntax"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-create-ddl-563",
+    "records": [
+      {
+        "case": "generic-col-window",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "generic-col-window",
+        "operation": "types",
+        "statement": "infra",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listOfString",
+            "type": "java.util.List\u003cString\u003e"
+          },
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listOfOptionalInteger",
+            "type": "java.util.List\u003cOptional\u003cInteger\u003e\u003e"
+          },
+          {
+            "indexed": false,
+            "mapped": true,
+            "name": "mapOfStringAndInteger",
+            "type": "java.util.Map\u003cString, Integer\u003e"
+          },
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listArrayOfString",
+            "type": "java.util.List\u003cString\u003e[]"
+          },
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listOfStringArray",
+            "type": "java.util.List\u003cString[]\u003e"
+          },
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listArray2DimOfString",
+            "type": "java.util.List\u003cString\u003e[][]"
+          },
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listOfStringArray2Dim",
+            "type": "java.util.List\u003cString[][]\u003e"
+          },
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listOfT",
+            "type": "java.util.List\u003cObject\u003e"
+          }
+        ]
+      },
+      {
+        "case": "generic-col-window",
+        "operation": "snapshot",
+        "statement": "infra",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "listArray2DimOfString": [
+                [
+                  [
+                    "b"
+                  ]
+                ]
+              ],
+              "listArrayOfString": [
+                [
+                  "b"
+                ]
+              ],
+              "listOfOptionalInteger": [
+                10
+              ],
+              "listOfString": [
+                "a"
+              ],
+              "listOfStringArray": [
+                [
+                  "c"
+                ]
+              ],
+              "listOfStringArray2Dim": [
+                [
+                  [
+                    "c"
+                  ]
+                ]
+              ],
+              "listOfT": [
+                "x"
+              ],
+              "mapOfStringAndInteger": {
+                "k": 20
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "generic-col-table",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "generic-col-table",
+        "operation": "types",
+        "statement": "infra",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listOfString",
+            "type": "java.util.List\u003cString\u003e"
+          },
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listOfOptionalInteger",
+            "type": "java.util.List\u003cOptional\u003cInteger\u003e\u003e"
+          },
+          {
+            "indexed": false,
+            "mapped": true,
+            "name": "mapOfStringAndInteger",
+            "type": "java.util.Map\u003cString, Integer\u003e"
+          },
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listArrayOfString",
+            "type": "java.util.List\u003cString\u003e[]"
+          },
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listOfStringArray",
+            "type": "java.util.List\u003cString[]\u003e"
+          },
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listArray2DimOfString",
+            "type": "java.util.List\u003cString\u003e[][]"
+          },
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listOfStringArray2Dim",
+            "type": "java.util.List\u003cString[][]\u003e"
+          },
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listOfT",
+            "type": "java.util.List\u003cObject\u003e"
+          }
+        ]
+      },
+      {
+        "case": "generic-col-table",
+        "operation": "snapshot",
+        "statement": "infra",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "listArray2DimOfString": [
+                [
+                  [
+                    "b"
+                  ]
+                ]
+              ],
+              "listArrayOfString": [
+                [
+                  "b"
+                ]
+              ],
+              "listOfOptionalInteger": [
+                10
+              ],
+              "listOfString": [
+                "a"
+              ],
+              "listOfStringArray": [
+                [
+                  "c"
+                ]
+              ],
+              "listOfStringArray2Dim": [
+                [
+                  [
+                    "c"
+                  ]
+                ]
+              ],
+              "listOfT": [
+                "x"
+              ],
+              "mapOfStringAndInteger": {
+                "k": 20
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-syntax",
+        "operation": "unrepresentable",
+        "statement": "soda-index-advanced-args",
+        "sequence": 0,
+        "value": "soda-eplToModel: create index MyIndex on MyWindow((x,y) dummy_name(\"a\",10101)) - Java eplToModel parses the statement text into a statement object model and assertEquals(epl, model.toEPL()) round-trips it; the Go surface has no EPL-text parser or statement object model, so the create-index syntax round-trip is pinned text with no Go counterpart"
+      },
+      {
+        "case": "index-syntax",
+        "operation": "unrepresentable",
+        "statement": "soda-index-single-named-type",
+        "sequence": 0,
+        "value": "soda-eplToModel: create index MyIndex on MyWindow(x dummy_name) - same SODA round-trip; single-expression advanced-type indexes have no typed Go create-index form"
+      },
+      {
+        "case": "index-syntax",
+        "operation": "unrepresentable",
+        "statement": "soda-index-multi-col-named-type",
+        "sequence": 0,
+        "value": "soda-eplToModel: create index MyIndex on MyWindow((x,y,z) dummy_name) - same SODA round-trip; multi-expression advanced-type lists have no typed Go create-index form"
+      },
+      {
+        "case": "index-syntax",
+        "operation": "unrepresentable",
+        "statement": "soda-index-mixed-columns",
+        "sequence": 0,
+        "value": "soda-eplToModel: create index MyIndex on MyWindow(x dummy_name, (y,z) dummy_name_2(\"a\"), p dummyname3) - same SODA round-trip; mixed column-list/named-type index forms have no Go equivalent"
+      },
+      {
+        "case": "index-syntax",
+        "operation": "deployed",
+        "statement": "window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "index-syntax",
+        "operation": "unrepresentable",
+        "statement": "invalid-empty-expr-list",
+        "sequence": 0,
+        "value": "Invalid empty list of index expressions - Go equivalent: NamedWindow.CreateIndex rejects the empty column list (InvalidRule)"
+      },
+      {
+        "case": "index-syntax",
+        "operation": "unrepresentable",
+        "statement": "invalid-expression",
+        "sequence": 0,
+        "value": "Invalid index expression 'intPrimitive+1' - Go equivalent: NamedWindow.CreateIndex rejects 'intPrimitive+1' as an unknown column name (UnknownName); expression columns have no Go form"
+      },
+      {
+        "case": "index-syntax",
+        "operation": "unrepresentable",
+        "statement": "invalid-multi-expr-list",
+        "sequence": 0,
+        "value": "Invalid multiple index expressions - Go equivalent: NamedWindow.CreateIndex on the typed column list (x,y) rejects 'x'/'y' as unknown columns (UnknownName)"
+      },
+      {
+        "case": "index-syntax",
+        "operation": "unrepresentable",
+        "statement": "invalid-dotted-expr",
+        "sequence": 0,
+        "value": "Invalid index expression 'x.y' - Go equivalent: NamedWindow.CreateIndex rejects 'x.y' as an unknown column name (UnknownName)"
+      },
+      {
+        "case": "index-syntax",
+        "operation": "unrepresentable",
+        "statement": "invalid-advanced-type",
+        "sequence": 0,
+        "value": "Unrecognized advanced-type index 'xxxx' - Go equivalent: the typed create-index API carries no named index-type surface; the closest typed probe is the invalid-Kind rejection (InvalidRule)"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-create-ddl-563",
+    "records": [
+      {
+        "case": "generic-col-window",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "generic-col-window",
+        "operation": "types",
+        "statement": "infra",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listOfString",
+            "type": "java.util.List\u003cString\u003e"
+          },
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listOfOptionalInteger",
+            "type": "java.util.List\u003cOptional\u003cInteger\u003e\u003e"
+          },
+          {
+            "indexed": false,
+            "mapped": true,
+            "name": "mapOfStringAndInteger",
+            "type": "java.util.Map\u003cString, Integer\u003e"
+          },
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listArrayOfString",
+            "type": "java.util.List\u003cString\u003e[]"
+          },
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listOfStringArray",
+            "type": "java.util.List\u003cString[]\u003e"
+          },
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listArray2DimOfString",
+            "type": "java.util.List\u003cString\u003e[][]"
+          },
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listOfStringArray2Dim",
+            "type": "java.util.List\u003cString[][]\u003e"
+          },
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listOfT",
+            "type": "java.util.List\u003cObject\u003e"
+          }
+        ]
+      },
+      {
+        "case": "generic-col-window",
+        "operation": "snapshot",
+        "statement": "infra",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "listArray2DimOfString": [
+                [
+                  [
+                    "b"
+                  ]
+                ]
+              ],
+              "listArrayOfString": [
+                [
+                  "b"
+                ]
+              ],
+              "listOfOptionalInteger": [
+                10
+              ],
+              "listOfString": [
+                "a"
+              ],
+              "listOfStringArray": [
+                [
+                  "c"
+                ]
+              ],
+              "listOfStringArray2Dim": [
+                [
+                  [
+                    "c"
+                  ]
+                ]
+              ],
+              "listOfT": [
+                "x"
+              ],
+              "mapOfStringAndInteger": {
+                "k": 20
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "generic-col-table",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "generic-col-table",
+        "operation": "types",
+        "statement": "infra",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listOfString",
+            "type": "java.util.List\u003cString\u003e"
+          },
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listOfOptionalInteger",
+            "type": "java.util.List\u003cOptional\u003cInteger\u003e\u003e"
+          },
+          {
+            "indexed": false,
+            "mapped": true,
+            "name": "mapOfStringAndInteger",
+            "type": "java.util.Map\u003cString, Integer\u003e"
+          },
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listArrayOfString",
+            "type": "java.util.List\u003cString\u003e[]"
+          },
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listOfStringArray",
+            "type": "java.util.List\u003cString[]\u003e"
+          },
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listArray2DimOfString",
+            "type": "java.util.List\u003cString\u003e[][]"
+          },
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listOfStringArray2Dim",
+            "type": "java.util.List\u003cString[][]\u003e"
+          },
+          {
+            "indexed": true,
+            "mapped": false,
+            "name": "listOfT",
+            "type": "java.util.List\u003cObject\u003e"
+          }
+        ]
+      },
+      {
+        "case": "generic-col-table",
+        "operation": "snapshot",
+        "statement": "infra",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "listArray2DimOfString": [
+                [
+                  [
+                    "b"
+                  ]
+                ]
+              ],
+              "listArrayOfString": [
+                [
+                  "b"
+                ]
+              ],
+              "listOfOptionalInteger": [
+                10
+              ],
+              "listOfString": [
+                "a"
+              ],
+              "listOfStringArray": [
+                [
+                  "c"
+                ]
+              ],
+              "listOfStringArray2Dim": [
+                [
+                  [
+                    "c"
+                  ]
+                ]
+              ],
+              "listOfT": [
+                "x"
+              ],
+              "mapOfStringAndInteger": {
+                "k": 20
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-syntax",
+        "operation": "unrepresentable",
+        "statement": "soda-index-advanced-args",
+        "sequence": 0,
+        "value": "soda-eplToModel: create index MyIndex on MyWindow((x,y) dummy_name(\"a\",10101)) - Java eplToModel parses the statement text into a statement object model and assertEquals(epl, model.toEPL()) round-trips it; the Go surface has no EPL-text parser or statement object model, so the create-index syntax round-trip is pinned text with no Go counterpart"
+      },
+      {
+        "case": "index-syntax",
+        "operation": "unrepresentable",
+        "statement": "soda-index-single-named-type",
+        "sequence": 0,
+        "value": "soda-eplToModel: create index MyIndex on MyWindow(x dummy_name) - same SODA round-trip; single-expression advanced-type indexes have no typed Go create-index form"
+      },
+      {
+        "case": "index-syntax",
+        "operation": "unrepresentable",
+        "statement": "soda-index-multi-col-named-type",
+        "sequence": 0,
+        "value": "soda-eplToModel: create index MyIndex on MyWindow((x,y,z) dummy_name) - same SODA round-trip; multi-expression advanced-type lists have no typed Go create-index form"
+      },
+      {
+        "case": "index-syntax",
+        "operation": "unrepresentable",
+        "statement": "soda-index-mixed-columns",
+        "sequence": 0,
+        "value": "soda-eplToModel: create index MyIndex on MyWindow(x dummy_name, (y,z) dummy_name_2(\"a\"), p dummyname3) - same SODA round-trip; mixed column-list/named-type index forms have no Go equivalent"
+      },
+      {
+        "case": "index-syntax",
+        "operation": "deployed",
+        "statement": "window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "index-syntax",
+        "operation": "unrepresentable",
+        "statement": "invalid-empty-expr-list",
+        "sequence": 0,
+        "value": "Invalid empty list of index expressions - Go equivalent: NamedWindow.CreateIndex rejects the empty column list (InvalidRule)"
+      },
+      {
+        "case": "index-syntax",
+        "operation": "unrepresentable",
+        "statement": "invalid-expression",
+        "sequence": 0,
+        "value": "Invalid index expression 'intPrimitive+1' - Go equivalent: NamedWindow.CreateIndex rejects 'intPrimitive+1' as an unknown column name (UnknownName); expression columns have no Go form"
+      },
+      {
+        "case": "index-syntax",
+        "operation": "unrepresentable",
+        "statement": "invalid-multi-expr-list",
+        "sequence": 0,
+        "value": "Invalid multiple index expressions - Go equivalent: NamedWindow.CreateIndex on the typed column list (x,y) rejects 'x'/'y' as unknown columns (UnknownName)"
+      },
+      {
+        "case": "index-syntax",
+        "operation": "unrepresentable",
+        "statement": "invalid-dotted-expr",
+        "sequence": 0,
+        "value": "Invalid index expression 'x.y' - Go equivalent: NamedWindow.CreateIndex rejects 'x.y' as an unknown column name (UnknownName)"
+      },
+      {
+        "case": "index-syntax",
+        "operation": "unrepresentable",
+        "statement": "invalid-advanced-type",
+        "sequence": 0,
+        "value": "Unrecognized advanced-type index 'xxxx' - Go equivalent: the typed create-index API carries no named index-type surface; the closest typed probe is the invalid-Kind rejection (InvalidRule)"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

@@ -1,0 +1,306 @@
+{
+ "version": "esper-parity/v1",
+ "id": "infra-nwtable-create-ddl-563",
+ "description": "InfraNWTableCreate ordinals 0-1 plus InfraNWTableCreateIndexAdvancedSyntax ordinal 0: InfraCreateGenericColType {namedWindow=true/false} deploys one @public @buseventtype create-map-schema MyInputEvent module (8 parameterized columns from SupportGenericColUtil: java.util.List<String>, java.util.List<Optional<Integer>>, java.util.Map<String,Integer>, java.util.List<String>[], java.util.List<String[]>, java.util.List<String>[][], java.util.List<String[][]>, java.util.List<T>) including @name('infra') create-window MyInfra#keepall or create-table MyInfra over the same columns and 'on MyInputEvent merge MyInfra insert select <8 names>', asserts the infra statement's EPType descriptors, sends the SupportGenericColUtil sample map event, runs milestone(0) (a harness no-op carrying no step) and iterators the single merged row; InfraNWTableCreateIndexAdvancedSyntax runs four SODA eplToModel round-trips, deploys an @public SupportSpatialPoint(id,px,py,category) keepall MyWindow and replays five invalid create-index compile probes as unrepresentable records (the Go surface carries no statement-object model or EPL-text compiler; the typed create-index validation equivalents are exercised live where a Go form exists).",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable",
+ "javaSourceFiles": [
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableCreate.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableCreateIndexAdvancedSyntax.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/events/SupportGenericColUtil.java"
+ ],
+ "javaRuntimes": [
+  "java-runtime-b7fab192ff4a0d2ff2ce",
+  "java-runtime-48d80d017090dd3410b7",
+  "java-runtime-bc1a897eca64b5da6df3"
+ ],
+ "javaNames": [
+  "InfraCreateGenericColType{namedWindow=true}",
+  "InfraCreateGenericColType{namedWindow=false}",
+  "InfraNWTableCreateIndexAdvancedSyntax"
+ ],
+ "javaStaticIds": [
+  "java-621032f62ef7cf1bc193",
+  "java-621032f62ef7cf1bc193",
+  "java-b6b074549bedc2ab1767"
+ ],
+ "javaFlags": [
+  "SERDEREQUIRED"
+ ],
+ "cases": [
+  {
+   "case": "generic-col-window",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-b7fab192ff4a0d2ff2ce",
+   "executionName": "InfraCreateGenericColType{namedWindow=true}",
+   "observation": "deploy+types+send+snapshot+undeploy; a single module deploy carrying @public @buseventtype create-map-schema MyInputEvent (8 SupportGenericColUtil parameterized columns), @name('infra') keepall MyInfra named window and 'on MyInputEvent merge MyInfra insert select <8 names>': the types record pins the eight declared java.util.-qualified type tokens, the sample map send inserts one row and the iterator snapshot returns all eight columns (Optional/parameterized generic metadata has no Go schema surface; the Go schema pins element/container reflect types, so EPType generic-arg fidelity is documented in the record note)",
+   "epl": "@public @buseventtype create schema MyInputEvent(listOfString java.util.List<String>,listOfOptionalInteger java.util.List<Optional<Integer>>,mapOfStringAndInteger java.util.Map<String, Integer>,listArrayOfString java.util.List<String>[],listOfStringArray java.util.List<String[]>,listArray2DimOfString java.util.List<String>[][],listOfStringArray2Dim java.util.List<String[][]>,listOfT java.util.List<Object>);\n@name('infra')create window MyInfra#keepall as (listOfString java.util.List<String>,listOfOptionalInteger java.util.List<Optional<Integer>>,mapOfStringAndInteger java.util.Map<String, Integer>,listArrayOfString java.util.List<String>[],listOfStringArray java.util.List<String[]>,listArray2DimOfString java.util.List<String>[][],listOfStringArray2Dim java.util.List<String[][]>,listOfT java.util.List<Object>);\non MyInputEvent merge MyInfra insert select listOfString,listOfOptionalInteger,mapOfStringAndInteger,listArrayOfString,listOfStringArray,listArray2DimOfString,listOfStringArray2Dim,listOfT;\n"
+  },
+  {
+   "case": "generic-col-table",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-48d80d017090dd3410b7",
+   "executionName": "InfraCreateGenericColType{namedWindow=false}",
+   "observation": "deploy+types+send+snapshot+undeploy; a single module deploy carrying the same @public @buseventtype schema plus an unkeyed MyInfra table over the 8 parameterized columns fed by the merge insert: the types record pins the declared type tokens, the sample map send inserts one row and the iterator snapshot returns all eight columns (same Optional/parameterized downgrade note as the window leg)",
+   "epl": "@public @buseventtype create schema MyInputEvent(listOfString java.util.List<String>,listOfOptionalInteger java.util.List<Optional<Integer>>,mapOfStringAndInteger java.util.Map<String, Integer>,listArrayOfString java.util.List<String>[],listOfStringArray java.util.List<String[]>,listArray2DimOfString java.util.List<String>[][],listOfStringArray2Dim java.util.List<String[][]>,listOfT java.util.List<Object>);\n@name('infra')create table MyInfra as (listOfString java.util.List<String>,listOfOptionalInteger java.util.List<Optional<Integer>>,mapOfStringAndInteger java.util.Map<String, Integer>,listArrayOfString java.util.List<String>[],listOfStringArray java.util.List<String[]>,listArray2DimOfString java.util.List<String>[][],listOfStringArray2Dim java.util.List<String[][]>,listOfT java.util.List<Object>);\non MyInputEvent merge MyInfra insert select listOfString,listOfOptionalInteger,mapOfStringAndInteger,listArrayOfString,listOfStringArray,listArray2DimOfString,listOfStringArray2Dim,listOfT;\n"
+  },
+  {
+   "case": "index-syntax",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-bc1a897eca64b5da6df3",
+   "executionName": "InfraNWTableCreateIndexAdvancedSyntax",
+   "observation": "unrepresentable+deploy+unrepresentable; four SODA eplToModel round-trips run before the @public SupportSpatialPoint(id,px,py,category) keepall MyWindow deploy (matching the Java source order - the round-trips are syntax-only), then five invalid create-index compile probes (empty expression list, expression column, multi-expression list, dotted column, unknown advanced type) run against the deployed path, their Java messages pinned; the Go runner exercises the typed create-index validation equivalents live where a form exists (empty columns, unknown-column, invalid kind) and records the EPL-text-only probes without a Go counterpart",
+   "epl": "create index MyIndex on MyWindow((x,y) dummy_name(\"a\",10101))\ncreate index MyIndex on MyWindow(x dummy_name)\ncreate index MyIndex on MyWindow((x,y,z) dummy_name)\ncreate index MyIndex on MyWindow(x dummy_name, (y,z) dummy_name_2(\"a\"), p dummyname3)\n@public create window MyWindow#keepall as SupportSpatialPoint\ncreate index MyIndex on MyWindow(())\ncreate index MyIndex on MyWindow(intPrimitive+1)\ncreate index MyIndex on MyWindow((x, y))\ncreate index MyIndex on MyWindow(x.y)\ncreate index MyIndex on MyWindow(id xxxx)"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "generic-col-window"
+  },
+  {
+   "op": "deploy",
+   "case": "generic-col-window",
+   "statement": "module",
+   "epl": "@public @buseventtype create schema MyInputEvent(listOfString java.util.List<String>,listOfOptionalInteger java.util.List<Optional<Integer>>,mapOfStringAndInteger java.util.Map<String, Integer>,listArrayOfString java.util.List<String>[],listOfStringArray java.util.List<String[]>,listArray2DimOfString java.util.List<String>[][],listOfStringArray2Dim java.util.List<String[][]>,listOfT java.util.List<Object>);\n@name('infra')create window MyInfra#keepall as (listOfString java.util.List<String>,listOfOptionalInteger java.util.List<Optional<Integer>>,mapOfStringAndInteger java.util.Map<String, Integer>,listArrayOfString java.util.List<String>[],listOfStringArray java.util.List<String[]>,listArray2DimOfString java.util.List<String>[][],listOfStringArray2Dim java.util.List<String[][]>,listOfT java.util.List<Object>);\non MyInputEvent merge MyInfra insert select listOfString,listOfOptionalInteger,mapOfStringAndInteger,listArrayOfString,listOfStringArray,listArray2DimOfString,listOfStringArray2Dim,listOfT;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "generic-col-window",
+   "statement": "module"
+  },
+  {
+   "op": "types",
+   "case": "generic-col-window",
+   "statement": "infra"
+  },
+  {
+   "op": "send",
+   "case": "generic-col-window",
+   "eventType": "MyInputEvent",
+   "payload": {
+    "listOfString": [
+     "a"
+    ],
+    "listOfOptionalInteger": [
+     10
+    ],
+    "mapOfStringAndInteger": {
+     "k": 20
+    },
+    "listArrayOfString": [
+     [
+      "b"
+     ]
+    ],
+    "listOfStringArray": [
+     [
+      "c"
+     ]
+    ],
+    "listArray2DimOfString": [
+     [
+      [
+       "b"
+      ]
+     ]
+    ],
+    "listOfStringArray2Dim": [
+     [
+      [
+       "c"
+      ]
+     ]
+    ],
+    "listOfT": [
+     "x"
+    ]
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "generic-col-window",
+   "statement": "infra",
+   "mode": "unordered",
+   "fields": [
+    "listArray2DimOfString",
+    "listArrayOfString",
+    "listOfOptionalInteger",
+    "listOfString",
+    "listOfStringArray",
+    "listOfStringArray2Dim",
+    "listOfT",
+    "mapOfStringAndInteger"
+   ]
+  },
+  {
+   "op": "undeploy-all",
+   "case": "generic-col-window"
+  },
+  {
+   "op": "case",
+   "case": "generic-col-table"
+  },
+  {
+   "op": "deploy",
+   "case": "generic-col-table",
+   "statement": "module",
+   "epl": "@public @buseventtype create schema MyInputEvent(listOfString java.util.List<String>,listOfOptionalInteger java.util.List<Optional<Integer>>,mapOfStringAndInteger java.util.Map<String, Integer>,listArrayOfString java.util.List<String>[],listOfStringArray java.util.List<String[]>,listArray2DimOfString java.util.List<String>[][],listOfStringArray2Dim java.util.List<String[][]>,listOfT java.util.List<Object>);\n@name('infra')create table MyInfra as (listOfString java.util.List<String>,listOfOptionalInteger java.util.List<Optional<Integer>>,mapOfStringAndInteger java.util.Map<String, Integer>,listArrayOfString java.util.List<String>[],listOfStringArray java.util.List<String[]>,listArray2DimOfString java.util.List<String>[][],listOfStringArray2Dim java.util.List<String[][]>,listOfT java.util.List<Object>);\non MyInputEvent merge MyInfra insert select listOfString,listOfOptionalInteger,mapOfStringAndInteger,listArrayOfString,listOfStringArray,listArray2DimOfString,listOfStringArray2Dim,listOfT;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "generic-col-table",
+   "statement": "module"
+  },
+  {
+   "op": "types",
+   "case": "generic-col-table",
+   "statement": "infra"
+  },
+  {
+   "op": "send",
+   "case": "generic-col-table",
+   "eventType": "MyInputEvent",
+   "payload": {
+    "listOfString": [
+     "a"
+    ],
+    "listOfOptionalInteger": [
+     10
+    ],
+    "mapOfStringAndInteger": {
+     "k": 20
+    },
+    "listArrayOfString": [
+     [
+      "b"
+     ]
+    ],
+    "listOfStringArray": [
+     [
+      "c"
+     ]
+    ],
+    "listArray2DimOfString": [
+     [
+      [
+       "b"
+      ]
+     ]
+    ],
+    "listOfStringArray2Dim": [
+     [
+      [
+       "c"
+      ]
+     ]
+    ],
+    "listOfT": [
+     "x"
+    ]
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "generic-col-table",
+   "statement": "infra",
+   "mode": "unordered",
+   "fields": [
+    "listArray2DimOfString",
+    "listArrayOfString",
+    "listOfOptionalInteger",
+    "listOfString",
+    "listOfStringArray",
+    "listOfStringArray2Dim",
+    "listOfT",
+    "mapOfStringAndInteger"
+   ]
+  },
+  {
+   "op": "undeploy-all",
+   "case": "generic-col-table"
+  },
+  {
+   "op": "case",
+   "case": "index-syntax"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "index-syntax",
+   "statement": "soda-index-advanced-args",
+   "epl": "create index MyIndex on MyWindow((x,y) dummy_name(\"a\",10101))",
+   "expectError": "soda-eplToModel: create index MyIndex on MyWindow((x,y) dummy_name(\"a\",10101)) - Java eplToModel parses the statement text into a statement object model and assertEquals(epl, model.toEPL()) round-trips it; the Go surface has no EPL-text parser or statement object model, so the create-index syntax round-trip is pinned text with no Go counterpart"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "index-syntax",
+   "statement": "soda-index-single-named-type",
+   "epl": "create index MyIndex on MyWindow(x dummy_name)",
+   "expectError": "soda-eplToModel: create index MyIndex on MyWindow(x dummy_name) - same SODA round-trip; single-expression advanced-type indexes have no typed Go create-index form"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "index-syntax",
+   "statement": "soda-index-multi-col-named-type",
+   "epl": "create index MyIndex on MyWindow((x,y,z) dummy_name)",
+   "expectError": "soda-eplToModel: create index MyIndex on MyWindow((x,y,z) dummy_name) - same SODA round-trip; multi-expression advanced-type lists have no typed Go create-index form"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "index-syntax",
+   "statement": "soda-index-mixed-columns",
+   "epl": "create index MyIndex on MyWindow(x dummy_name, (y,z) dummy_name_2(\"a\"), p dummyname3)",
+   "expectError": "soda-eplToModel: create index MyIndex on MyWindow(x dummy_name, (y,z) dummy_name_2(\"a\"), p dummyname3) - same SODA round-trip; mixed column-list/named-type index forms have no Go equivalent"
+  },
+  {
+   "op": "deploy",
+   "case": "index-syntax",
+   "statement": "window",
+   "epl": "@public create window MyWindow#keepall as SupportSpatialPoint"
+  },
+  {
+   "op": "deployed",
+   "case": "index-syntax",
+   "statement": "window"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "index-syntax",
+   "statement": "invalid-empty-expr-list",
+   "epl": "create index MyIndex on MyWindow(())",
+   "expectError": "Invalid empty list of index expressions - Go equivalent: NamedWindow.CreateIndex rejects the empty column list (InvalidRule)"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "index-syntax",
+   "statement": "invalid-expression",
+   "epl": "create index MyIndex on MyWindow(intPrimitive+1)",
+   "expectError": "Invalid index expression 'intPrimitive+1' - Go equivalent: NamedWindow.CreateIndex rejects 'intPrimitive+1' as an unknown column name (UnknownName); expression columns have no Go form"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "index-syntax",
+   "statement": "invalid-multi-expr-list",
+   "epl": "create index MyIndex on MyWindow((x, y))",
+   "expectError": "Invalid multiple index expressions - Go equivalent: NamedWindow.CreateIndex on the typed column list (x,y) rejects 'x'/'y' as unknown columns (UnknownName)"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "index-syntax",
+   "statement": "invalid-dotted-expr",
+   "epl": "create index MyIndex on MyWindow(x.y)",
+   "expectError": "Invalid index expression 'x.y' - Go equivalent: NamedWindow.CreateIndex rejects 'x.y' as an unknown column name (UnknownName)"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "index-syntax",
+   "statement": "invalid-advanced-type",
+   "epl": "create index MyIndex on MyWindow(id xxxx)",
+   "expectError": "Unrecognized advanced-type index 'xxxx' - Go equivalent: the typed create-index API carries no named index-type surface; the closest typed probe is the invalid-Kind rejection (InvalidRule)"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "index-syntax"
+  }
+ ]
+}

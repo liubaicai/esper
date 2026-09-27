@@ -51514,6 +51514,55 @@
     "java-runtime-4d509bfd0e311be23afe"
    ],
    "notes": "Draft 4.562: 20 records each, 0 differences. Closes InfraNWTableCreateIndex (22/22 referenced: 20 DV + 2 intentionally-different). Oracle pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c."
+  },
+  {
+   "id": "case.infra-nwtable-create-ddl",
+   "javaRuntimeIds": [
+    "java-runtime-b7fab192ff4a0d2ff2ce",
+    "java-runtime-48d80d017090dd3410b7",
+    "java-runtime-bc1a897eca64b5da6df3"
+   ],
+   "javaStaticIds": [
+    "java-621032f62ef7cf1bc193",
+    "java-b6b074549bedc2ab1767"
+   ],
+   "javaNames": [
+    "InfraCreateGenericColType{namedWindow=true}",
+    "InfraCreateGenericColType{namedWindow=false}",
+    "InfraNWTableCreateIndexAdvancedSyntax"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableCreate.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableCreateIndexAdvancedSyntax.java"
+   ],
+   "goTests": [
+    "internal/app/parity/infra_nwtable_create_ddl_563_test.go/TestRunInfraNWTableCreateDDL563ScenarioReplay",
+    "internal/app/parity/infra_nwtable_create_ddl_563_test.go/TestRunInfraNWTableCreateDDL563PinnedArtifacts",
+    "internal/app/parity/infra_nwtable_create_ddl_563_test.go/TestRunInfraNWTableCreateDDL563RejectsMalformedRawScenario",
+    "internal/app/parity/infra_nwtable_create_ddl_563_test.go/TestRunInfraNWTableCreateDDL563RuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "infra",
+    "differential",
+    "named-window",
+    "table"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-nwtable-create-ddl-563.evidence.json"
+   ],
+   "difference": "Java parameterizes columns via java.util generics (List<String>, List<Optional<Integer>>, List<String>[] etc.) and asserts EPTypeClassParameterized descriptors; Go pins the same 8 columns by reflect container/element type + Optional flag without generic-arg metadata. Java Optional<Integer> has no Go reflect counterpart (pinned via Optional flag); the 4 SODA eplToModel round-trips and 5 tryInvalidCompile create-index probes are EPL-text compile surfaces riding unrepresentable records \u2014 Go exercises the typed CreateIndex validation equivalents (empty index list -> InvalidRule; unknown expr/dotted/multi columns -> UnknownName; unknown advanced type -> InvalidRule) and asserts the catalog keeps zero indexes.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-b7fab192ff4a0d2ff2ce",
+    "java-runtime-48d80d017090dd3410b7",
+    "java-runtime-bc1a897eca64b5da6df3"
+   ],
+   "notes": "Draft 4.563: 16 records each, 0 differences. Closes the infra-nwtable create-DDL cluster. Oracle pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c."
   }
  ],
  "mappings": [
@@ -55052,13 +55101,17 @@
   {
    "capabilityId": "infra.namedwindow.views",
    "caseId": "case.infra-nwtable-create-index-mrak"
+  },
+  {
+   "capabilityId": "infra.namedwindow.views",
+   "caseId": "case.infra-nwtable-create-ddl"
   }
  ],
  "summary": {
-  "inventoriedCases": 797,
-  "implementedCases": 795,
-  "differentialVerifiedCases": 416,
-  "differentialVerifiedRuntimeIds": 1657,
+  "inventoriedCases": 798,
+  "implementedCases": 796,
+  "differentialVerifiedCases": 417,
+  "differentialVerifiedRuntimeIds": 1660,
   "intentionallyDifferentCases": 40,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -55068,13 +55121,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4201,
-  "referencedJavaRuntimeIds": 3739,
+  "runtimeAssociationCount": 4204,
+  "referencedJavaRuntimeIds": 3742,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 397,
+  "unreferencedJavaRuntimeIds": 394,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 797,
+  "totalCases": 798,
   "totalCapabilities": 126
  }
 }
