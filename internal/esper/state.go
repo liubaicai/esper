@@ -2373,13 +2373,16 @@ func rebuildNamedWindowIndexesLocked(state *namedWindowRuntime) {
 	state.indexEntries = indexEntries
 }
 
-func validateNamedWindowUniqueIndexesLocked(state *namedWindowRuntime, event Event) error {
+func validateNamedWindowUniqueIndexesLocked(state *namedWindowRuntime, event Event, survives func(storedEvent) bool) error {
 	if state == nil || len(state.def.uniqueIndexes) == 0 {
 		return nil
 	}
 	for _, definition := range state.def.uniqueIndexes {
 		key := namedWindowIndexKey(event, definition.Columns)
 		for _, existing := range state.entries {
+			if survives != nil && !survives(existing) {
+				continue
+			}
 			if namedWindowIndexKey(existing.event, definition.Columns) != key {
 				continue
 			}
@@ -4107,8 +4110,83 @@ func (w *NamedWindow) insertIntoState(state *namedWindowRuntime, event Event, no
 	}
 	state.mu.Lock()
 	defer state.mu.Unlock()
-	if err := validateNamedWindowUniqueIndexesLocked(state, event); err != nil {
-		return NamedWindowDelta{}, err
+	switch retention := state.def.retention.(type) {
+	case UniqueWindowSpec:
+		// The unique retention's synchronous replace precedes declared
+		// unique-index validation (Esper removes the displaced row before
+		// the constraint runs), so a create-unique-index window tolerates
+		// an insert whose key the retention would have evicted.
+		if state.keyed == nil {
+			state.keyed = make(map[string]storedEvent)
+		}
+		key := uniqueWindowKey(retention, event, now, nil)
+		if previous, exists := state.keyed[key]; exists {
+			if retention.First {
+				return NamedWindowDelta{Time: now}, nil
+			}
+			if err := validateNamedWindowUniqueIndexesLocked(state, event, func(candidate storedEvent) bool {
+				return !sameEvent(candidate.event, previous.event)
+			}); err != nil {
+				return NamedWindowDelta{}, err
+			}
+			entry := storedEvent{event: event, receivedAt: now}
+			delta := NamedWindowDelta{New: []Event{event}, Time: now, External: true}
+			for index, candidate := range state.entries {
+				if sameEvent(candidate.event, previous.event) {
+					state.entries[index] = entry
+					state.keyed[key] = entry
+					delta.Old = append(delta.Old, previous.event)
+					rebuildNamedWindowIndexesLocked(state)
+					return delta, nil
+				}
+			}
+			state.keyed[key] = entry
+			state.entries = append(state.entries, entry)
+			rebuildNamedWindowIndexesLocked(state)
+			return delta, nil
+		}
+		if err := validateNamedWindowUniqueIndexesLocked(state, event, nil); err != nil {
+			return NamedWindowDelta{}, err
+		}
+		entry := storedEvent{event: event, receivedAt: now}
+		state.keyed[key] = entry
+		state.keyOrder = append(state.keyOrder, key)
+		state.entries = append(state.entries, entry)
+		rebuildNamedWindowIndexesLocked(state)
+		return NamedWindowDelta{New: []Event{event}, Time: now, External: true}, nil
+	case LastEventWindowSpec:
+		// Every retained row is displaced by this insert, so declared
+		// unique indexes cannot conflict.
+	case LengthWindowSpec:
+		// Overflow rows leave before the constraint runs in Esper; the
+		// unique check applies only to the surviving tail.
+		evict := len(state.entries) + 1 - retention.Size
+		if evict < 0 {
+			evict = 0
+		}
+		survivors := state.entries[evict:]
+		if err := validateNamedWindowUniqueIndexesLocked(&namedWindowRuntime{def: state.def, entries: survivors}, event, nil); err != nil {
+			return NamedWindowDelta{}, err
+		}
+	case FirstEventWindowSpec, FirstLengthWindowSpec:
+		// Both first-bound retentions drop inserts once full; the dropped
+		// event never reaches the index.
+		full := false
+		if _, firstEvent := retention.(FirstEventWindowSpec); firstEvent {
+			full = len(state.entries) > 0
+		} else if fl, ok := retention.(FirstLengthWindowSpec); ok {
+			full = len(state.entries) >= fl.Size
+		}
+		if full {
+			break
+		}
+		if err := validateNamedWindowUniqueIndexesLocked(state, event, nil); err != nil {
+			return NamedWindowDelta{}, err
+		}
+	default:
+		if err := validateNamedWindowUniqueIndexesLocked(state, event, nil); err != nil {
+			return NamedWindowDelta{}, err
+		}
 	}
 	entry := storedEvent{event: event, receivedAt: now}
 	delta := NamedWindowDelta{New: []Event{event}, Time: now, External: true}
@@ -4362,32 +4440,6 @@ func (w *NamedWindow) insertIntoState(state *namedWindowRuntime, event Event, no
 			}
 		}
 		state.entries = kept
-	case UniqueWindowSpec:
-		if state.keyed == nil {
-			state.keyed = make(map[string]storedEvent)
-		}
-		key := uniqueWindowKey(retention, event, now, nil)
-		if previous, exists := state.keyed[key]; exists {
-			if retention.First {
-				return NamedWindowDelta{Time: now}, nil
-			}
-			for index, candidate := range state.entries {
-				if sameEvent(candidate.event, previous.event) {
-					state.entries[index] = entry
-					state.keyed[key] = entry
-					delta.Old = append(delta.Old, previous.event)
-					rebuildNamedWindowIndexesLocked(state)
-					return delta, nil
-				}
-			}
-			state.keyed[key] = entry
-			state.entries = append(state.entries, entry)
-			rebuildNamedWindowIndexesLocked(state)
-			return delta, nil
-		}
-		state.keyed[key] = entry
-		state.keyOrder = append(state.keyOrder, key)
-		state.entries = append(state.entries, entry)
 	case SortedWindowSpec:
 		applySortedNamedWindowInsertLocked(state, retention, entry, now, &delta)
 	case ExpressionWindowSpec:

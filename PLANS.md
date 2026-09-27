@@ -45,37 +45,43 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.565 ('infra-namedwindow-update-propagation').
+Active: Draft 4.566 ('infra-namedwindow-explicit-index').
 
-- Contract frozen (JavaContract565 + GoSurface565): 4 executions —
-
-  EPLOtherUpdateNamedWindow (ord 6, java-runtime-7c91cbd63d65e3078e25),
-  InfraNamedWindowOnUpdateWMultiDispatch ord 0
-  (java-runtime-fcbbceeaf04849dc64bc, EXCLUDEWHENINSTRUMENTED),
-  InfraNamedWindowOutputrate ord 0 (java-runtime-da3a1e5e9ab73d4a067e),
-  InfraNamedWindowRemoveStream ord 0 (java-runtime-4971ea67797956c303ee).
-  One semantic: window row-lifecycle -> downstream-consumer propagation.
-- Surfaces: update-istream copy-on-write + redeploy barriers (E1);
-  IntersectWindows(TimeWindow,FirstUnique) + on-update multi-dispatch
-  ambiguity tolerance (E2); grouped irstream + OutputSnapshotEvery with
-  identical-repeat emission (E3); rstream chain via
-  WithRemoveStreamOnly+WithRStreamRoute+RouteTo — CONFIRMED
-  representable in route plumbing (E4, worker spikes cascade order).
-- [x] Assets565 dispatched.
-- [x] Assets565 delivered + integrated: Java trace 37 records, Go
-  replay 37 (16/11/4/6 per case), `-diff` passing / 0 differences;
-  evidence + traces checked in. E4 spike confirmed the rstream chain is
-  representable (no engine work). E2 multi-dispatch ambiguity pinned
-  via window iterator snapshots. E1 milestones -> redeploy barriers.
-- [x] Manifest: NEW case.infra-namedwindow-update-propagation born-DV
-  (4 IDs); case.epl-other-update-istream remaining narrowed (named-
-  window target done). Summary -> 800 cases / 419 DV / 1667 DV runtime
-  IDs / 388 unreferenced.
+- Contract frozen (JavaContract566 + GoSurface566): 2 executions —
+  InfraNamedWindowIndex ord 0 (java-runtime-9c952fff6ef8c649c2e4,
+  dedup static java-152a3c2771c531a8841c, flags[]) and
+  InfraNamedWindowLateStartIndex ord 0 (java-runtime-3bf753f4ff71d21df968,
+  dedup static java-a81367bdfb722afec857,
+  EXCLUDEWHENINSTRUMENTED+PERFORMANCE — delivery assertions are
+  wall-clock-free; getter-call counters ride unrepresentable records).
+  Dispositions: ContainedEvent -> intentionally-different
+  (invalid-text-only); Performance x6 + FAFJoinPerf -> excluded
+  (wall-clock perf loads).
+- Semantic: explicit named-window index DDL (unique index over
+  #unique(theString) window; idx iterator = deduped last-wins rows) +
+  late-start index reuse (preloaded keepall + create index + late
+  unidirectional join/subquery + indexshare twin).
+- Gap: no statement-type/CREATEOBJECTNAME metadata surface in Go —
+  idx props ride a deploy-ack/unrepresentable record. E2 s1 delivery
+  value (-1) unasserted in Java — confirm against the real trace.
+- [x] Assets566 delivered + integrated. Engine fix (shared core):
+  insertIntoState ran declared unique-index validation against
+  PRE-retention contents; Esper validates post-displacement. Unique
+  (non-first) excludes the replaced row; LastEvent displaces all;
+  Length validates survivors; dropped first-* inserts skip validation;
+  dead duplicate unique branch removed. Regression caught + fixed
+  (missing index rebuild on new-key insert). unique=true pin restored.
+- [x] Manifest: NEW case.infra-namedwindow-explicit-index born-DV
+  (2 IDs). Summary -> 801 cases / 420 DV / 1669 DV runtime IDs /
+  386 unreferenced.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev565 + JavaContract566 + GoSurface566 dispatched.
+- [x] ParityRev566 + JavaContract567 + GoSurface567 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.565 ('infra-namedwindow-update-propagation')
+  committed and pushed as `d439b2cb5`; Git owns identity. 4 executions
+  born-DV (37 records each, 0 differences); review PASS (4 P3s fixed).
 - Shipped: Draft 4.564 ('infra-namedwindow-om, file closed') committed
   and pushed as `b345a2b95`; Git owns identity. 3 executions born-DV
   (62 records each, 0 differences); review FAIL->fixed->PASS (P2

@@ -51663,6 +51663,52 @@
     "java-runtime-4971ea67797956c303ee"
    ],
    "notes": "Draft 4.565: 37 records each (16/11/4/6 per case), 0 differences. Oracle pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c."
+  },
+  {
+   "id": "case.infra-namedwindow-explicit-index",
+   "javaRuntimeIds": [
+    "java-runtime-9c952fff6ef8c649c2e4",
+    "java-runtime-3bf753f4ff71d21df968"
+   ],
+   "javaStaticIds": [
+    "java-152a3c2771c531a8841c",
+    "java-a81367bdfb722afec857"
+   ],
+   "javaNames": [
+    "InfraNamedWindowIndex",
+    "InfraNamedWindowLateStartIndex"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowIndex.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowLateStartIndex.java"
+   ],
+   "goTests": [
+    "internal/app/parity/infra_namedwindow_explicit_index_566_test.go/TestRunInfraNWIdx566ScenarioReplay",
+    "internal/app/parity/infra_namedwindow_explicit_index_566_test.go/TestRunInfraNWIdx566PinnedArtifacts",
+    "internal/app/parity/infra_namedwindow_explicit_index_566_test.go/TestRunInfraNWIdx566RejectsMalformedRawScenario",
+    "internal/app/parity/infra_namedwindow_explicit_index_566_test.go/TestRunInfraNWIdx566RuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "infra",
+    "differential",
+    "named-window",
+    "index"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-namedwindow-explicit-index-566.evidence.json"
+   ],
+   "difference": "SupportCountAccessEvent getter-call counters are JVM instrumentation (EXCLUDEWHENINSTRUMENTED) with no Go counterpart \u2014 deliveries, IndexCount and window snapshots pin the same observable state. Statement-type/CREATEOBJECTNAME metadata has no Go surface (unrepresentable). Go reproduces Esper's post-retention unique-index validation: insertIntoState validates declared unique indexes only against rows that survive the synchronous retention replace (unique non-first/last/length displacements excluded), which the engine now implements directly.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-9c952fff6ef8c649c2e4",
+    "java-runtime-3bf753f4ff71d21df968"
+   ],
+   "notes": "Draft 4.566: 33 records each (5/28 per case), 0 differences. Engine fix: declared unique-index validation moved after retention displacement in insertIntoState. Oracle pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c. Residual: other retentions (firsttime, batch, ext_timed, group, composite, sorted-rank, expression) still validate unique indexes pre-displacement \u2014 a future unique-index unit over them needs the same survivor handling."
   }
  ],
  "mappings": [
@@ -55213,13 +55259,17 @@
   {
    "capabilityId": "infra.namedwindow.views",
    "caseId": "case.infra-namedwindow-update-propagation"
+  },
+  {
+   "capabilityId": "infra.namedwindow.views",
+   "caseId": "case.infra-namedwindow-explicit-index"
   }
  ],
  "summary": {
-  "inventoriedCases": 800,
-  "implementedCases": 798,
-  "differentialVerifiedCases": 419,
-  "differentialVerifiedRuntimeIds": 1667,
+  "inventoriedCases": 801,
+  "implementedCases": 799,
+  "differentialVerifiedCases": 420,
+  "differentialVerifiedRuntimeIds": 1669,
   "intentionallyDifferentCases": 40,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -55229,13 +55279,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4211,
-  "referencedJavaRuntimeIds": 3748,
+  "runtimeAssociationCount": 4213,
+  "referencedJavaRuntimeIds": 3750,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 388,
+  "unreferencedJavaRuntimeIds": 386,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 800,
+  "totalCases": 801,
   "totalCapabilities": 126
  }
 }

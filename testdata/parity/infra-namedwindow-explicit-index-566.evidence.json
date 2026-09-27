@@ -1,0 +1,5663 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-9c952fff6ef8c649c2e4",
+    "java-runtime-3bf753f4ff71d21df968"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowIndex.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowLateStartIndex.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_S0.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportCountAccessEvent.java"
+  ],
+  "javaExecutions": [
+    "InfraNamedWindowIndex",
+    "InfraNamedWindowLateStartIndex"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-namedwindow-explicit-index-566",
+    "steps": [
+      {
+        "op": "case",
+        "case": "named-window-index"
+      },
+      {
+        "op": "deploy",
+        "case": "named-window-index",
+        "statement": "window",
+        "epl": "@name('window') create window MyWindowOne#unique(theString) as SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "named-window-index",
+        "statement": "insert",
+        "epl": "insert into MyWindowOne select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "named-window-index",
+        "statement": "idx",
+        "epl": "@name('idx') create unique index I1 on MyWindowOne(theString)"
+      },
+      {
+        "op": "deployed",
+        "case": "named-window-index",
+        "statement": "window"
+      },
+      {
+        "op": "deployed",
+        "case": "named-window-index",
+        "statement": "insert"
+      },
+      {
+        "op": "deployed",
+        "case": "named-window-index",
+        "statement": "idx"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "named-window-index",
+        "statement": "idx-props",
+        "expectError": "Java asserts the idx statement properties STATEMENTTYPE=CREATE_INDEX and CREATEOBJECTNAME=I1 through EPStatement.getProperty; the typed Go API has no statement-type metadata surface"
+      },
+      {
+        "op": "send",
+        "case": "named-window-index",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E0",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "named-window-index",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "named-window-index",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "named-window-index",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "named-window-index",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E0",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "named-window-index",
+        "statement": "window",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "named-window-index"
+      },
+      {
+        "op": "case",
+        "case": "late-start-index"
+      },
+      {
+        "op": "deploy",
+        "case": "late-start-index",
+        "statement": "create",
+        "epl": "@public create window AWindow#keepall as SupportCountAccessEvent"
+      },
+      {
+        "op": "deployed",
+        "case": "late-start-index",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "late-start-index",
+        "statement": "insert",
+        "epl": "insert into AWindow select * from SupportCountAccessEvent"
+      },
+      {
+        "op": "deployed",
+        "case": "late-start-index",
+        "statement": "insert"
+      },
+      {
+        "op": "deploy",
+        "case": "late-start-index",
+        "statement": "index",
+        "epl": "create index I1 on AWindow(p00)"
+      },
+      {
+        "op": "deployed",
+        "case": "late-start-index",
+        "statement": "index"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "late-start-index",
+        "statement": "getter-reset",
+        "expectError": "SupportCountAccessEvent.getAndResetCountGetterCalled() resets the JVM getter-call counter before the preload loop; no Go instrumentation counterpart exists"
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 0,
+          "p00": "E0"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 1,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 2,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 3,
+          "p00": "E3"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 4,
+          "p00": "E4"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 5,
+          "p00": "E5"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 6,
+          "p00": "E6"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 7,
+          "p00": "E7"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 8,
+          "p00": "E8"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 9,
+          "p00": "E9"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 10,
+          "p00": "E10"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 11,
+          "p00": "E11"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 12,
+          "p00": "E12"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 13,
+          "p00": "E13"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 14,
+          "p00": "E14"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 15,
+          "p00": "E15"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 16,
+          "p00": "E16"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 17,
+          "p00": "E17"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 18,
+          "p00": "E18"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 19,
+          "p00": "E19"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 20,
+          "p00": "E20"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 21,
+          "p00": "E21"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 22,
+          "p00": "E22"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 23,
+          "p00": "E23"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 24,
+          "p00": "E24"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 25,
+          "p00": "E25"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 26,
+          "p00": "E26"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 27,
+          "p00": "E27"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 28,
+          "p00": "E28"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 29,
+          "p00": "E29"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 30,
+          "p00": "E30"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 31,
+          "p00": "E31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 32,
+          "p00": "E32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 33,
+          "p00": "E33"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 34,
+          "p00": "E34"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 35,
+          "p00": "E35"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 36,
+          "p00": "E36"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 37,
+          "p00": "E37"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 38,
+          "p00": "E38"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 39,
+          "p00": "E39"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 40,
+          "p00": "E40"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 41,
+          "p00": "E41"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 42,
+          "p00": "E42"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 43,
+          "p00": "E43"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 44,
+          "p00": "E44"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 45,
+          "p00": "E45"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 46,
+          "p00": "E46"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 47,
+          "p00": "E47"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 48,
+          "p00": "E48"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 49,
+          "p00": "E49"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 50,
+          "p00": "E50"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 51,
+          "p00": "E51"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 52,
+          "p00": "E52"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 53,
+          "p00": "E53"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 54,
+          "p00": "E54"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 55,
+          "p00": "E55"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 56,
+          "p00": "E56"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 57,
+          "p00": "E57"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 58,
+          "p00": "E58"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 59,
+          "p00": "E59"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 60,
+          "p00": "E60"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 61,
+          "p00": "E61"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 62,
+          "p00": "E62"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 63,
+          "p00": "E63"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 64,
+          "p00": "E64"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 65,
+          "p00": "E65"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 66,
+          "p00": "E66"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 67,
+          "p00": "E67"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 68,
+          "p00": "E68"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 69,
+          "p00": "E69"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 70,
+          "p00": "E70"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 71,
+          "p00": "E71"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 72,
+          "p00": "E72"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 73,
+          "p00": "E73"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 74,
+          "p00": "E74"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 75,
+          "p00": "E75"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 76,
+          "p00": "E76"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 77,
+          "p00": "E77"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 78,
+          "p00": "E78"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 79,
+          "p00": "E79"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 80,
+          "p00": "E80"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 81,
+          "p00": "E81"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 82,
+          "p00": "E82"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 83,
+          "p00": "E83"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 84,
+          "p00": "E84"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 85,
+          "p00": "E85"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 86,
+          "p00": "E86"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 87,
+          "p00": "E87"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 88,
+          "p00": "E88"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 89,
+          "p00": "E89"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 90,
+          "p00": "E90"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 91,
+          "p00": "E91"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 92,
+          "p00": "E92"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 93,
+          "p00": "E93"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 94,
+          "p00": "E94"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 95,
+          "p00": "E95"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 96,
+          "p00": "E96"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 97,
+          "p00": "E97"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 98,
+          "p00": "E98"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 99,
+          "p00": "E99"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": -1,
+          "p00": "x"
+        }
+      },
+      {
+        "op": "unrepresentable",
+        "case": "late-start-index",
+        "statement": "getter-preload",
+        "expectError": "Java asserts getAndResetCountGetterCalled()=101 after preloading 100 E-rows plus (-1,'x') through the insert-into; Go has no getter-call instrumentation"
+      },
+      {
+        "op": "index-count",
+        "case": "late-start-index",
+        "statement": "AWindow",
+        "count": 1,
+        "of": "indexes",
+        "create": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "late-start-index",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportBean_S0 as s0 unidirectional, AWindow(p00='x') as aw where aw.id = s0.id"
+      },
+      {
+        "op": "deployed",
+        "case": "late-start-index",
+        "statement": "s0"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "late-start-index",
+        "statement": "getter-s0",
+        "expectError": "Java asserts getAndResetCountGetterCalled()=2 after deploying the s0 unidirectional join (the parens p00='x' filter is planned against the declared I1 index); Go has no getter-call instrumentation"
+      },
+      {
+        "op": "index-count",
+        "case": "late-start-index",
+        "statement": "AWindow",
+        "count": 1,
+        "of": "indexes",
+        "create": "create"
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": -1,
+          "p00": "x"
+        }
+      },
+      {
+        "op": "unrepresentable",
+        "case": "late-start-index",
+        "statement": "getter-reset",
+        "expectError": "SupportCountAccessEvent.getAndResetCountGetterCalled() resets the JVM getter-call counter before the preload loop; no Go instrumentation counterpart exists"
+      },
+      {
+        "op": "deploy",
+        "case": "late-start-index",
+        "statement": "s1",
+        "epl": "@name('s1') select (select id from AWindow(p00='x') as aw where aw.id = s0.id) from SupportBean_S0 as s0 unidirectional"
+      },
+      {
+        "op": "deployed",
+        "case": "late-start-index",
+        "statement": "s1"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "late-start-index",
+        "statement": "getter-s1",
+        "expectError": "Java asserts getAndResetCountGetterCalled()=2 after deploying the s1 correlated subquery without index sharing; Go has no getter-call instrumentation"
+      },
+      {
+        "op": "index-count",
+        "case": "late-start-index",
+        "statement": "AWindow",
+        "count": 1,
+        "of": "indexes",
+        "create": "create"
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": -1,
+          "p00": "x"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "late-start-index",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "late-start-index"
+      },
+      {
+        "op": "deploy",
+        "case": "late-start-index",
+        "statement": "create",
+        "epl": "@Hint('enable_window_subquery_indexshare') @public create window AWindow#keepall as SupportCountAccessEvent"
+      },
+      {
+        "op": "deployed",
+        "case": "late-start-index",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "late-start-index",
+        "statement": "insert",
+        "epl": "insert into AWindow select * from SupportCountAccessEvent"
+      },
+      {
+        "op": "deployed",
+        "case": "late-start-index",
+        "statement": "insert"
+      },
+      {
+        "op": "deploy",
+        "case": "late-start-index",
+        "statement": "index",
+        "epl": "create index I1 on AWindow(p00)"
+      },
+      {
+        "op": "deployed",
+        "case": "late-start-index",
+        "statement": "index"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "late-start-index",
+        "statement": "getter-reset",
+        "expectError": "SupportCountAccessEvent.getAndResetCountGetterCalled() resets the JVM getter-call counter before the preload loop; no Go instrumentation counterpart exists"
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 0,
+          "p00": "E0"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 1,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 2,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 3,
+          "p00": "E3"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 4,
+          "p00": "E4"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 5,
+          "p00": "E5"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 6,
+          "p00": "E6"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 7,
+          "p00": "E7"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 8,
+          "p00": "E8"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 9,
+          "p00": "E9"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 10,
+          "p00": "E10"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 11,
+          "p00": "E11"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 12,
+          "p00": "E12"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 13,
+          "p00": "E13"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 14,
+          "p00": "E14"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 15,
+          "p00": "E15"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 16,
+          "p00": "E16"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 17,
+          "p00": "E17"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 18,
+          "p00": "E18"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 19,
+          "p00": "E19"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 20,
+          "p00": "E20"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 21,
+          "p00": "E21"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 22,
+          "p00": "E22"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 23,
+          "p00": "E23"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 24,
+          "p00": "E24"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 25,
+          "p00": "E25"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 26,
+          "p00": "E26"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 27,
+          "p00": "E27"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 28,
+          "p00": "E28"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 29,
+          "p00": "E29"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 30,
+          "p00": "E30"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 31,
+          "p00": "E31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 32,
+          "p00": "E32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 33,
+          "p00": "E33"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 34,
+          "p00": "E34"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 35,
+          "p00": "E35"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 36,
+          "p00": "E36"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 37,
+          "p00": "E37"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 38,
+          "p00": "E38"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 39,
+          "p00": "E39"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 40,
+          "p00": "E40"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 41,
+          "p00": "E41"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 42,
+          "p00": "E42"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 43,
+          "p00": "E43"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 44,
+          "p00": "E44"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 45,
+          "p00": "E45"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 46,
+          "p00": "E46"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 47,
+          "p00": "E47"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 48,
+          "p00": "E48"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 49,
+          "p00": "E49"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 50,
+          "p00": "E50"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 51,
+          "p00": "E51"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 52,
+          "p00": "E52"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 53,
+          "p00": "E53"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 54,
+          "p00": "E54"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 55,
+          "p00": "E55"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 56,
+          "p00": "E56"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 57,
+          "p00": "E57"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 58,
+          "p00": "E58"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 59,
+          "p00": "E59"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 60,
+          "p00": "E60"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 61,
+          "p00": "E61"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 62,
+          "p00": "E62"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 63,
+          "p00": "E63"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 64,
+          "p00": "E64"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 65,
+          "p00": "E65"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 66,
+          "p00": "E66"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 67,
+          "p00": "E67"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 68,
+          "p00": "E68"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 69,
+          "p00": "E69"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 70,
+          "p00": "E70"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 71,
+          "p00": "E71"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 72,
+          "p00": "E72"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 73,
+          "p00": "E73"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 74,
+          "p00": "E74"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 75,
+          "p00": "E75"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 76,
+          "p00": "E76"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 77,
+          "p00": "E77"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 78,
+          "p00": "E78"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 79,
+          "p00": "E79"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 80,
+          "p00": "E80"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 81,
+          "p00": "E81"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 82,
+          "p00": "E82"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 83,
+          "p00": "E83"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 84,
+          "p00": "E84"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 85,
+          "p00": "E85"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 86,
+          "p00": "E86"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 87,
+          "p00": "E87"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 88,
+          "p00": "E88"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 89,
+          "p00": "E89"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 90,
+          "p00": "E90"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 91,
+          "p00": "E91"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 92,
+          "p00": "E92"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 93,
+          "p00": "E93"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 94,
+          "p00": "E94"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 95,
+          "p00": "E95"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 96,
+          "p00": "E96"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 97,
+          "p00": "E97"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 98,
+          "p00": "E98"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": 99,
+          "p00": "E99"
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportCountAccessEvent",
+        "payload": {
+          "id": -1,
+          "p00": "x"
+        }
+      },
+      {
+        "op": "unrepresentable",
+        "case": "late-start-index",
+        "statement": "getter-preload",
+        "expectError": "Java asserts getAndResetCountGetterCalled()=101 after preloading 100 E-rows plus (-1,'x') through the insert-into; Go has no getter-call instrumentation"
+      },
+      {
+        "op": "index-count",
+        "case": "late-start-index",
+        "statement": "AWindow",
+        "count": 1,
+        "of": "indexes",
+        "create": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "late-start-index",
+        "statement": "s2",
+        "epl": "@name('s2') select (select id from AWindow(p00='x') as aw where aw.id = s0.id) from SupportBean_S0 as s0 unidirectional"
+      },
+      {
+        "op": "deployed",
+        "case": "late-start-index",
+        "statement": "s2"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "late-start-index",
+        "statement": "getter-s2",
+        "expectError": "Java asserts getAndResetCountGetterCalled()=2 after deploying the s2 correlated subquery with enable_window_subquery_indexshare; Go has no getter-call instrumentation"
+      },
+      {
+        "op": "index-count",
+        "case": "late-start-index",
+        "statement": "AWindow",
+        "count": 1,
+        "of": "indexes",
+        "create": "create"
+      },
+      {
+        "op": "send",
+        "case": "late-start-index",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": -1,
+          "p00": "x"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "late-start-index",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "late-start-index"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-namedwindow-explicit-index-566",
+    "records": [
+      {
+        "case": "named-window-index",
+        "operation": "deployed",
+        "statement": "window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "named-window-index",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "named-window-index",
+        "operation": "deployed",
+        "statement": "idx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "named-window-index",
+        "operation": "unrepresentable",
+        "statement": "idx-props",
+        "sequence": 0,
+        "value": "Java asserts the idx statement properties STATEMENTTYPE=CREATE_INDEX and CREATEOBJECTNAME=I1 through EPStatement.getProperty; the typed Go API has no statement-type metadata surface"
+      },
+      {
+        "case": "named-window-index",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 4,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 5,
+              "theString": "E0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "late-start-index",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "deployed",
+        "statement": "index",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "unrepresentable",
+        "statement": "getter-reset",
+        "sequence": 0,
+        "value": "SupportCountAccessEvent.getAndResetCountGetterCalled() resets the JVM getter-call counter before the preload loop; no Go instrumentation counterpart exists"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "unrepresentable",
+        "statement": "getter-preload",
+        "sequence": 0,
+        "value": "Java asserts getAndResetCountGetterCalled()=101 after preloading 100 E-rows plus (-1,'x') through the insert-into; Go has no getter-call instrumentation"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "index-count",
+        "statement": "AWindow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "late-start-index",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "unrepresentable",
+        "statement": "getter-s0",
+        "sequence": 0,
+        "value": "Java asserts getAndResetCountGetterCalled()=2 after deploying the s0 unidirectional join (the parens p00='x' filter is planned against the declared I1 index); Go has no getter-call instrumentation"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "index-count",
+        "statement": "AWindow",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "late-start-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aw": {
+                "fields": {
+                  "id": -1,
+                  "p00": "x"
+                },
+                "kind": "row"
+              },
+              "s0": {
+                "fields": {
+                  "id": -1,
+                  "p00": "x"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "late-start-index",
+        "operation": "unrepresentable",
+        "statement": "getter-reset",
+        "sequence": 0,
+        "value": "SupportCountAccessEvent.getAndResetCountGetterCalled() resets the JVM getter-call counter before the preload loop; no Go instrumentation counterpart exists"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "unrepresentable",
+        "statement": "getter-s1",
+        "sequence": 0,
+        "value": "Java asserts getAndResetCountGetterCalled()=2 after deploying the s1 correlated subquery without index sharing; Go has no getter-call instrumentation"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "index-count",
+        "statement": "AWindow",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "late-start-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aw": {
+                "fields": {
+                  "id": -1,
+                  "p00": "x"
+                },
+                "kind": "row"
+              },
+              "s0": {
+                "fields": {
+                  "id": -1,
+                  "p00": "x"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "late-start-index",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "late-start-index",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": -1,
+              "p00": "x"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 0,
+              "p00": "E0"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 1,
+              "p00": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 10,
+              "p00": "E10"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 11,
+              "p00": "E11"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 12,
+              "p00": "E12"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 13,
+              "p00": "E13"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 14,
+              "p00": "E14"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 15,
+              "p00": "E15"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 16,
+              "p00": "E16"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 17,
+              "p00": "E17"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 18,
+              "p00": "E18"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 19,
+              "p00": "E19"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 2,
+              "p00": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 20,
+              "p00": "E20"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 21,
+              "p00": "E21"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 22,
+              "p00": "E22"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 23,
+              "p00": "E23"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 24,
+              "p00": "E24"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 25,
+              "p00": "E25"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 26,
+              "p00": "E26"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 27,
+              "p00": "E27"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 28,
+              "p00": "E28"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 29,
+              "p00": "E29"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 3,
+              "p00": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 30,
+              "p00": "E30"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 31,
+              "p00": "E31"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 32,
+              "p00": "E32"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 33,
+              "p00": "E33"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 34,
+              "p00": "E34"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 35,
+              "p00": "E35"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 36,
+              "p00": "E36"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 37,
+              "p00": "E37"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 38,
+              "p00": "E38"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 39,
+              "p00": "E39"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 4,
+              "p00": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 40,
+              "p00": "E40"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 41,
+              "p00": "E41"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 42,
+              "p00": "E42"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 43,
+              "p00": "E43"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 44,
+              "p00": "E44"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 45,
+              "p00": "E45"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 46,
+              "p00": "E46"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 47,
+              "p00": "E47"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 48,
+              "p00": "E48"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 49,
+              "p00": "E49"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 5,
+              "p00": "E5"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 50,
+              "p00": "E50"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 51,
+              "p00": "E51"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 52,
+              "p00": "E52"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 53,
+              "p00": "E53"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 54,
+              "p00": "E54"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 55,
+              "p00": "E55"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 56,
+              "p00": "E56"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 57,
+              "p00": "E57"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 58,
+              "p00": "E58"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 59,
+              "p00": "E59"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 6,
+              "p00": "E6"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 60,
+              "p00": "E60"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 61,
+              "p00": "E61"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 62,
+              "p00": "E62"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 63,
+              "p00": "E63"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 64,
+              "p00": "E64"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 65,
+              "p00": "E65"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 66,
+              "p00": "E66"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 67,
+              "p00": "E67"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 68,
+              "p00": "E68"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 69,
+              "p00": "E69"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 7,
+              "p00": "E7"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 70,
+              "p00": "E70"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 71,
+              "p00": "E71"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 72,
+              "p00": "E72"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 73,
+              "p00": "E73"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 74,
+              "p00": "E74"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 75,
+              "p00": "E75"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 76,
+              "p00": "E76"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 77,
+              "p00": "E77"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 78,
+              "p00": "E78"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 79,
+              "p00": "E79"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 8,
+              "p00": "E8"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 80,
+              "p00": "E80"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 81,
+              "p00": "E81"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 82,
+              "p00": "E82"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 83,
+              "p00": "E83"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 84,
+              "p00": "E84"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 85,
+              "p00": "E85"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 86,
+              "p00": "E86"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 87,
+              "p00": "E87"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 88,
+              "p00": "E88"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 89,
+              "p00": "E89"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 9,
+              "p00": "E9"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 90,
+              "p00": "E90"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 91,
+              "p00": "E91"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 92,
+              "p00": "E92"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 93,
+              "p00": "E93"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 94,
+              "p00": "E94"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 95,
+              "p00": "E95"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 96,
+              "p00": "E96"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 97,
+              "p00": "E97"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 98,
+              "p00": "E98"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 99,
+              "p00": "E99"
+            }
+          }
+        ]
+      },
+      {
+        "case": "late-start-index",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "deployed",
+        "statement": "index",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "unrepresentable",
+        "statement": "getter-reset",
+        "sequence": 0,
+        "value": "SupportCountAccessEvent.getAndResetCountGetterCalled() resets the JVM getter-call counter before the preload loop; no Go instrumentation counterpart exists"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "unrepresentable",
+        "statement": "getter-preload",
+        "sequence": 0,
+        "value": "Java asserts getAndResetCountGetterCalled()=101 after preloading 100 E-rows plus (-1,'x') through the insert-into; Go has no getter-call instrumentation"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "index-count",
+        "statement": "AWindow",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "late-start-index",
+        "operation": "deployed",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "unrepresentable",
+        "statement": "getter-s2",
+        "sequence": 0,
+        "value": "Java asserts getAndResetCountGetterCalled()=2 after deploying the s2 correlated subquery with enable_window_subquery_indexshare; Go has no getter-call instrumentation"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "index-count",
+        "statement": "AWindow",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "late-start-index",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "late-start-index",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": -1,
+              "p00": "x"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 0,
+              "p00": "E0"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 1,
+              "p00": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 10,
+              "p00": "E10"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 11,
+              "p00": "E11"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 12,
+              "p00": "E12"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 13,
+              "p00": "E13"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 14,
+              "p00": "E14"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 15,
+              "p00": "E15"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 16,
+              "p00": "E16"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 17,
+              "p00": "E17"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 18,
+              "p00": "E18"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 19,
+              "p00": "E19"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 2,
+              "p00": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 20,
+              "p00": "E20"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 21,
+              "p00": "E21"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 22,
+              "p00": "E22"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 23,
+              "p00": "E23"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 24,
+              "p00": "E24"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 25,
+              "p00": "E25"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 26,
+              "p00": "E26"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 27,
+              "p00": "E27"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 28,
+              "p00": "E28"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 29,
+              "p00": "E29"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 3,
+              "p00": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 30,
+              "p00": "E30"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 31,
+              "p00": "E31"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 32,
+              "p00": "E32"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 33,
+              "p00": "E33"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 34,
+              "p00": "E34"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 35,
+              "p00": "E35"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 36,
+              "p00": "E36"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 37,
+              "p00": "E37"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 38,
+              "p00": "E38"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 39,
+              "p00": "E39"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 4,
+              "p00": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 40,
+              "p00": "E40"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 41,
+              "p00": "E41"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 42,
+              "p00": "E42"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 43,
+              "p00": "E43"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 44,
+              "p00": "E44"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 45,
+              "p00": "E45"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 46,
+              "p00": "E46"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 47,
+              "p00": "E47"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 48,
+              "p00": "E48"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 49,
+              "p00": "E49"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 5,
+              "p00": "E5"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 50,
+              "p00": "E50"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 51,
+              "p00": "E51"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 52,
+              "p00": "E52"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 53,
+              "p00": "E53"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 54,
+              "p00": "E54"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 55,
+              "p00": "E55"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 56,
+              "p00": "E56"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 57,
+              "p00": "E57"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 58,
+              "p00": "E58"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 59,
+              "p00": "E59"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 6,
+              "p00": "E6"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 60,
+              "p00": "E60"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 61,
+              "p00": "E61"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 62,
+              "p00": "E62"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 63,
+              "p00": "E63"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 64,
+              "p00": "E64"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 65,
+              "p00": "E65"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 66,
+              "p00": "E66"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 67,
+              "p00": "E67"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 68,
+              "p00": "E68"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 69,
+              "p00": "E69"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 7,
+              "p00": "E7"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 70,
+              "p00": "E70"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 71,
+              "p00": "E71"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 72,
+              "p00": "E72"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 73,
+              "p00": "E73"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 74,
+              "p00": "E74"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 75,
+              "p00": "E75"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 76,
+              "p00": "E76"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 77,
+              "p00": "E77"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 78,
+              "p00": "E78"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 79,
+              "p00": "E79"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 8,
+              "p00": "E8"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 80,
+              "p00": "E80"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 81,
+              "p00": "E81"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 82,
+              "p00": "E82"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 83,
+              "p00": "E83"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 84,
+              "p00": "E84"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 85,
+              "p00": "E85"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 86,
+              "p00": "E86"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 87,
+              "p00": "E87"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 88,
+              "p00": "E88"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 89,
+              "p00": "E89"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 9,
+              "p00": "E9"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 90,
+              "p00": "E90"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 91,
+              "p00": "E91"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 92,
+              "p00": "E92"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 93,
+              "p00": "E93"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 94,
+              "p00": "E94"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 95,
+              "p00": "E95"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 96,
+              "p00": "E96"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 97,
+              "p00": "E97"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 98,
+              "p00": "E98"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 99,
+              "p00": "E99"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-namedwindow-explicit-index-566",
+    "records": [
+      {
+        "case": "named-window-index",
+        "operation": "deployed",
+        "statement": "window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "named-window-index",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "named-window-index",
+        "operation": "deployed",
+        "statement": "idx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "named-window-index",
+        "operation": "unrepresentable",
+        "statement": "idx-props",
+        "sequence": 0,
+        "value": "Java asserts the idx statement properties STATEMENTTYPE=CREATE_INDEX and CREATEOBJECTNAME=I1 through EPStatement.getProperty; the typed Go API has no statement-type metadata surface"
+      },
+      {
+        "case": "named-window-index",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 4,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 5,
+              "theString": "E0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "late-start-index",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "deployed",
+        "statement": "index",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "unrepresentable",
+        "statement": "getter-reset",
+        "sequence": 0,
+        "value": "SupportCountAccessEvent.getAndResetCountGetterCalled() resets the JVM getter-call counter before the preload loop; no Go instrumentation counterpart exists"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "unrepresentable",
+        "statement": "getter-preload",
+        "sequence": 0,
+        "value": "Java asserts getAndResetCountGetterCalled()=101 after preloading 100 E-rows plus (-1,'x') through the insert-into; Go has no getter-call instrumentation"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "index-count",
+        "statement": "AWindow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "late-start-index",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "unrepresentable",
+        "statement": "getter-s0",
+        "sequence": 0,
+        "value": "Java asserts getAndResetCountGetterCalled()=2 after deploying the s0 unidirectional join (the parens p00='x' filter is planned against the declared I1 index); Go has no getter-call instrumentation"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "index-count",
+        "statement": "AWindow",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "late-start-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aw": {
+                "fields": {
+                  "id": -1,
+                  "p00": "x"
+                },
+                "kind": "row"
+              },
+              "s0": {
+                "fields": {
+                  "id": -1,
+                  "p00": "x"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "late-start-index",
+        "operation": "unrepresentable",
+        "statement": "getter-reset",
+        "sequence": 0,
+        "value": "SupportCountAccessEvent.getAndResetCountGetterCalled() resets the JVM getter-call counter before the preload loop; no Go instrumentation counterpart exists"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "unrepresentable",
+        "statement": "getter-s1",
+        "sequence": 0,
+        "value": "Java asserts getAndResetCountGetterCalled()=2 after deploying the s1 correlated subquery without index sharing; Go has no getter-call instrumentation"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "index-count",
+        "statement": "AWindow",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "late-start-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aw": {
+                "fields": {
+                  "id": -1,
+                  "p00": "x"
+                },
+                "kind": "row"
+              },
+              "s0": {
+                "fields": {
+                  "id": -1,
+                  "p00": "x"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "late-start-index",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "late-start-index",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": -1,
+              "p00": "x"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 0,
+              "p00": "E0"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 1,
+              "p00": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 10,
+              "p00": "E10"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 11,
+              "p00": "E11"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 12,
+              "p00": "E12"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 13,
+              "p00": "E13"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 14,
+              "p00": "E14"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 15,
+              "p00": "E15"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 16,
+              "p00": "E16"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 17,
+              "p00": "E17"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 18,
+              "p00": "E18"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 19,
+              "p00": "E19"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 2,
+              "p00": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 20,
+              "p00": "E20"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 21,
+              "p00": "E21"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 22,
+              "p00": "E22"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 23,
+              "p00": "E23"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 24,
+              "p00": "E24"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 25,
+              "p00": "E25"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 26,
+              "p00": "E26"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 27,
+              "p00": "E27"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 28,
+              "p00": "E28"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 29,
+              "p00": "E29"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 3,
+              "p00": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 30,
+              "p00": "E30"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 31,
+              "p00": "E31"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 32,
+              "p00": "E32"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 33,
+              "p00": "E33"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 34,
+              "p00": "E34"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 35,
+              "p00": "E35"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 36,
+              "p00": "E36"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 37,
+              "p00": "E37"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 38,
+              "p00": "E38"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 39,
+              "p00": "E39"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 4,
+              "p00": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 40,
+              "p00": "E40"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 41,
+              "p00": "E41"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 42,
+              "p00": "E42"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 43,
+              "p00": "E43"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 44,
+              "p00": "E44"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 45,
+              "p00": "E45"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 46,
+              "p00": "E46"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 47,
+              "p00": "E47"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 48,
+              "p00": "E48"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 49,
+              "p00": "E49"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 5,
+              "p00": "E5"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 50,
+              "p00": "E50"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 51,
+              "p00": "E51"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 52,
+              "p00": "E52"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 53,
+              "p00": "E53"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 54,
+              "p00": "E54"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 55,
+              "p00": "E55"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 56,
+              "p00": "E56"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 57,
+              "p00": "E57"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 58,
+              "p00": "E58"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 59,
+              "p00": "E59"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 6,
+              "p00": "E6"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 60,
+              "p00": "E60"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 61,
+              "p00": "E61"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 62,
+              "p00": "E62"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 63,
+              "p00": "E63"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 64,
+              "p00": "E64"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 65,
+              "p00": "E65"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 66,
+              "p00": "E66"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 67,
+              "p00": "E67"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 68,
+              "p00": "E68"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 69,
+              "p00": "E69"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 7,
+              "p00": "E7"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 70,
+              "p00": "E70"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 71,
+              "p00": "E71"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 72,
+              "p00": "E72"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 73,
+              "p00": "E73"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 74,
+              "p00": "E74"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 75,
+              "p00": "E75"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 76,
+              "p00": "E76"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 77,
+              "p00": "E77"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 78,
+              "p00": "E78"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 79,
+              "p00": "E79"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 8,
+              "p00": "E8"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 80,
+              "p00": "E80"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 81,
+              "p00": "E81"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 82,
+              "p00": "E82"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 83,
+              "p00": "E83"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 84,
+              "p00": "E84"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 85,
+              "p00": "E85"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 86,
+              "p00": "E86"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 87,
+              "p00": "E87"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 88,
+              "p00": "E88"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 89,
+              "p00": "E89"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 9,
+              "p00": "E9"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 90,
+              "p00": "E90"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 91,
+              "p00": "E91"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 92,
+              "p00": "E92"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 93,
+              "p00": "E93"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 94,
+              "p00": "E94"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 95,
+              "p00": "E95"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 96,
+              "p00": "E96"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 97,
+              "p00": "E97"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 98,
+              "p00": "E98"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 99,
+              "p00": "E99"
+            }
+          }
+        ]
+      },
+      {
+        "case": "late-start-index",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "deployed",
+        "statement": "index",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "unrepresentable",
+        "statement": "getter-reset",
+        "sequence": 0,
+        "value": "SupportCountAccessEvent.getAndResetCountGetterCalled() resets the JVM getter-call counter before the preload loop; no Go instrumentation counterpart exists"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "unrepresentable",
+        "statement": "getter-preload",
+        "sequence": 0,
+        "value": "Java asserts getAndResetCountGetterCalled()=101 after preloading 100 E-rows plus (-1,'x') through the insert-into; Go has no getter-call instrumentation"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "index-count",
+        "statement": "AWindow",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "late-start-index",
+        "operation": "deployed",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "unrepresentable",
+        "statement": "getter-s2",
+        "sequence": 0,
+        "value": "Java asserts getAndResetCountGetterCalled()=2 after deploying the s2 correlated subquery with enable_window_subquery_indexshare; Go has no getter-call instrumentation"
+      },
+      {
+        "case": "late-start-index",
+        "operation": "index-count",
+        "statement": "AWindow",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "late-start-index",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "late-start-index",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": -1,
+              "p00": "x"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 0,
+              "p00": "E0"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 1,
+              "p00": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 10,
+              "p00": "E10"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 11,
+              "p00": "E11"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 12,
+              "p00": "E12"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 13,
+              "p00": "E13"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 14,
+              "p00": "E14"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 15,
+              "p00": "E15"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 16,
+              "p00": "E16"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 17,
+              "p00": "E17"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 18,
+              "p00": "E18"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 19,
+              "p00": "E19"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 2,
+              "p00": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 20,
+              "p00": "E20"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 21,
+              "p00": "E21"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 22,
+              "p00": "E22"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 23,
+              "p00": "E23"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 24,
+              "p00": "E24"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 25,
+              "p00": "E25"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 26,
+              "p00": "E26"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 27,
+              "p00": "E27"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 28,
+              "p00": "E28"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 29,
+              "p00": "E29"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 3,
+              "p00": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 30,
+              "p00": "E30"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 31,
+              "p00": "E31"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 32,
+              "p00": "E32"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 33,
+              "p00": "E33"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 34,
+              "p00": "E34"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 35,
+              "p00": "E35"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 36,
+              "p00": "E36"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 37,
+              "p00": "E37"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 38,
+              "p00": "E38"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 39,
+              "p00": "E39"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 4,
+              "p00": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 40,
+              "p00": "E40"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 41,
+              "p00": "E41"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 42,
+              "p00": "E42"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 43,
+              "p00": "E43"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 44,
+              "p00": "E44"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 45,
+              "p00": "E45"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 46,
+              "p00": "E46"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 47,
+              "p00": "E47"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 48,
+              "p00": "E48"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 49,
+              "p00": "E49"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 5,
+              "p00": "E5"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 50,
+              "p00": "E50"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 51,
+              "p00": "E51"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 52,
+              "p00": "E52"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 53,
+              "p00": "E53"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 54,
+              "p00": "E54"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 55,
+              "p00": "E55"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 56,
+              "p00": "E56"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 57,
+              "p00": "E57"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 58,
+              "p00": "E58"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 59,
+              "p00": "E59"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 6,
+              "p00": "E6"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 60,
+              "p00": "E60"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 61,
+              "p00": "E61"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 62,
+              "p00": "E62"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 63,
+              "p00": "E63"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 64,
+              "p00": "E64"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 65,
+              "p00": "E65"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 66,
+              "p00": "E66"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 67,
+              "p00": "E67"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 68,
+              "p00": "E68"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 69,
+              "p00": "E69"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 7,
+              "p00": "E7"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 70,
+              "p00": "E70"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 71,
+              "p00": "E71"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 72,
+              "p00": "E72"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 73,
+              "p00": "E73"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 74,
+              "p00": "E74"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 75,
+              "p00": "E75"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 76,
+              "p00": "E76"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 77,
+              "p00": "E77"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 78,
+              "p00": "E78"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 79,
+              "p00": "E79"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 8,
+              "p00": "E8"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 80,
+              "p00": "E80"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 81,
+              "p00": "E81"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 82,
+              "p00": "E82"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 83,
+              "p00": "E83"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 84,
+              "p00": "E84"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 85,
+              "p00": "E85"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 86,
+              "p00": "E86"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 87,
+              "p00": "E87"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 88,
+              "p00": "E88"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 89,
+              "p00": "E89"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 9,
+              "p00": "E9"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 90,
+              "p00": "E90"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 91,
+              "p00": "E91"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 92,
+              "p00": "E92"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 93,
+              "p00": "E93"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 94,
+              "p00": "E94"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 95,
+              "p00": "E95"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 96,
+              "p00": "E96"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 97,
+              "p00": "E97"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 98,
+              "p00": "E98"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": 99,
+              "p00": "E99"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

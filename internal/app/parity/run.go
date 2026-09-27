@@ -120,6 +120,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include infra-nwtable-create-ddl-563 and infra-nwtable-create-ddl-563-diff")
 		fmt.Fprintln(stderr, "runner modes include infra-namedwindow-om-564 and infra-namedwindow-om-564-diff")
 		fmt.Fprintln(stderr, "runner modes include infra-namedwindow-update-propagation-565 and infra-namedwindow-update-propagation-565-diff")
+		fmt.Fprintln(stderr, "runner modes include infra-namedwindow-explicit-index-566 and infra-namedwindow-explicit-index-566-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-enum-select-from and expr-enum-select-from-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-type-use and expr-class-type-use-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-for-epl-objects and expr-class-for-epl-objects-diff")
@@ -521,6 +522,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWOM564Scenario(file)
 	} else if *mode == "infra-namedwindow-update-propagation-565" || *mode == "infra-namedwindow-update-propagation-565-diff" {
 		scenario, err = loadInfraNWUP565Scenario(file)
+	} else if *mode == "infra-namedwindow-explicit-index-566" || *mode == "infra-namedwindow-explicit-index-566-diff" {
+		scenario, err = loadInfraNWIdx566Scenario(file)
 	} else if *mode == "epl-contained-event-example" || *mode == "epl-contained-event-example-diff" {
 		scenario, err = loadEPLContainedEventExampleScenario(file)
 	} else if *mode == "epl-other-pattern-event-properties" || *mode == "epl-other-pattern-event-properties-diff" {
@@ -2382,6 +2385,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNWUP565JavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNWUP565JavaSources),
 				splitMetadata(*javaExecutions, infraNWUP565JavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-namedwindow-explicit-index-566" || *mode == "infra-namedwindow-explicit-index-566-diff" {
+		trace, err := runInfraNWIdx566Scenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-namedwindow-explicit-index-566-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNWIdx566JavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNWIdx566JavaSources),
+				splitMetadata(*javaExecutions, infraNWIdx566JavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
