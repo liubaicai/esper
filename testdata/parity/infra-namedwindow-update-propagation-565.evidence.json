@@ -1,0 +1,2010 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-7c91cbd63d65e3078e25",
+    "java-runtime-fcbbceeaf04849dc64bc",
+    "java-runtime-da3a1e5e9ab73d4a067e",
+    "java-runtime-4971ea67797956c303ee"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherUpdateIStream.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowOnUpdateWMultiDispatch.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowOutputrate.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowRemoveStream.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean.java"
+  ],
+  "javaExecutions": [
+    "EPLOtherUpdateNamedWindow",
+    "InfraNamedWindowOnUpdateWMultiDispatch",
+    "InfraNamedWindowOutputrate",
+    "InfraNamedWindowRemoveStream"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-namedwindow-update-propagation-565",
+    "steps": [
+      {
+        "op": "case",
+        "case": "update-namedwindow"
+      },
+      {
+        "op": "deploy",
+        "case": "update-namedwindow",
+        "statement": "window",
+        "epl": "@name('window') @public create window AWindow#keepall select * from MyMapTypeNW"
+      },
+      {
+        "op": "deploy",
+        "case": "update-namedwindow",
+        "statement": "insert",
+        "epl": "@name('insert') insert into AWindow select * from MyMapTypeNW"
+      },
+      {
+        "op": "deploy",
+        "case": "update-namedwindow",
+        "statement": "select",
+        "epl": "@name('select') select * from AWindow"
+      },
+      {
+        "op": "deploy",
+        "case": "update-namedwindow",
+        "statement": "update",
+        "epl": "update istream AWindow set p1='newvalue'"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "update-namedwindow"
+      },
+      {
+        "op": "deploy",
+        "case": "update-namedwindow",
+        "statement": "window",
+        "epl": "@name('window') @public create window AWindow#keepall select * from MyMapTypeNW"
+      },
+      {
+        "op": "deploy",
+        "case": "update-namedwindow",
+        "statement": "insert",
+        "epl": "@name('insert') insert into AWindow select * from MyMapTypeNW"
+      },
+      {
+        "op": "deploy",
+        "case": "update-namedwindow",
+        "statement": "select",
+        "epl": "@name('select') select * from AWindow"
+      },
+      {
+        "op": "deploy",
+        "case": "update-namedwindow",
+        "statement": "update",
+        "epl": "update istream AWindow set p1='newvalue'"
+      },
+      {
+        "op": "send",
+        "case": "update-namedwindow",
+        "eventType": "MyMapTypeNW",
+        "payload": {
+          "p0": "E1",
+          "p1": "oldvalue"
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "update-namedwindow",
+        "statement": "onselect",
+        "epl": "@name('onselect') on SupportBean(theString='A') select win.* from AWindow as win"
+      },
+      {
+        "op": "send",
+        "case": "update-namedwindow",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "update-namedwindow"
+      },
+      {
+        "op": "deploy",
+        "case": "update-namedwindow",
+        "statement": "window",
+        "epl": "@name('window') @public create window AWindow#keepall select * from MyMapTypeNW"
+      },
+      {
+        "op": "deploy",
+        "case": "update-namedwindow",
+        "statement": "insert",
+        "epl": "@name('insert') insert into AWindow select * from MyMapTypeNW"
+      },
+      {
+        "op": "deploy",
+        "case": "update-namedwindow",
+        "statement": "select",
+        "epl": "@name('select') select * from AWindow"
+      },
+      {
+        "op": "deploy",
+        "case": "update-namedwindow",
+        "statement": "update",
+        "epl": "update istream AWindow set p1='newvalue'"
+      },
+      {
+        "op": "deploy",
+        "case": "update-namedwindow",
+        "statement": "onselect",
+        "epl": "@name('onselect') on SupportBean(theString='A') select win.* from AWindow as win"
+      },
+      {
+        "op": "send",
+        "case": "update-namedwindow",
+        "eventType": "MyMapTypeNW",
+        "payload": {
+          "p0": "E1",
+          "p1": "oldvalue"
+        }
+      },
+      {
+        "op": "send",
+        "case": "update-namedwindow",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "update-namedwindow",
+        "statement": "oninsert",
+        "epl": "@name('oninsert') @public on SupportBean(theString='B') insert into MyOtherStream select win.* from AWindow as win"
+      },
+      {
+        "op": "send",
+        "case": "update-namedwindow",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "update-namedwindow"
+      },
+      {
+        "op": "deploy",
+        "case": "update-namedwindow",
+        "statement": "window",
+        "epl": "@name('window') @public create window AWindow#keepall select * from MyMapTypeNW"
+      },
+      {
+        "op": "deploy",
+        "case": "update-namedwindow",
+        "statement": "insert",
+        "epl": "@name('insert') insert into AWindow select * from MyMapTypeNW"
+      },
+      {
+        "op": "deploy",
+        "case": "update-namedwindow",
+        "statement": "select",
+        "epl": "@name('select') select * from AWindow"
+      },
+      {
+        "op": "deploy",
+        "case": "update-namedwindow",
+        "statement": "update",
+        "epl": "update istream AWindow set p1='newvalue'"
+      },
+      {
+        "op": "deploy",
+        "case": "update-namedwindow",
+        "statement": "onselect",
+        "epl": "@name('onselect') on SupportBean(theString='A') select win.* from AWindow as win"
+      },
+      {
+        "op": "deploy",
+        "case": "update-namedwindow",
+        "statement": "oninsert",
+        "epl": "@name('oninsert') @public on SupportBean(theString='B') insert into MyOtherStream select win.* from AWindow as win"
+      },
+      {
+        "op": "send",
+        "case": "update-namedwindow",
+        "eventType": "MyMapTypeNW",
+        "payload": {
+          "p0": "E1",
+          "p1": "oldvalue"
+        }
+      },
+      {
+        "op": "send",
+        "case": "update-namedwindow",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "update-namedwindow",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "update-namedwindow",
+        "statement": "update-other",
+        "epl": "update istream MyOtherStream set p0='a', p1='b'"
+      },
+      {
+        "op": "deploy",
+        "case": "update-namedwindow",
+        "statement": "s0",
+        "epl": "@name('s0') select * from MyOtherStream"
+      },
+      {
+        "op": "send",
+        "case": "update-namedwindow",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "update-namedwindow"
+      },
+      {
+        "op": "case",
+        "case": "onupdate-multidispatch"
+      },
+      {
+        "op": "deploy",
+        "case": "onupdate-multidispatch",
+        "statement": "schema",
+        "epl": "@public @buseventtype create schema S2 ( company string, value double, total double)"
+      },
+      {
+        "op": "deploy",
+        "case": "onupdate-multidispatch",
+        "statement": "create",
+        "epl": "@name('create') @public create window S2Win#time(25 hour)#firstunique(company) as S2"
+      },
+      {
+        "op": "deploy",
+        "case": "onupdate-multidispatch",
+        "statement": "insert",
+        "epl": "insert into S2Win select * from S2#firstunique(company)"
+      },
+      {
+        "op": "deploy",
+        "case": "onupdate-multidispatch",
+        "statement": "upd",
+        "epl": "on S2 as a update S2Win as b set total = b.value + a.value"
+      },
+      {
+        "op": "deploy",
+        "case": "onupdate-multidispatch",
+        "statement": "s0",
+        "epl": "@name('s0') select count(*) as cnt from S2Win"
+      },
+      {
+        "op": "send",
+        "case": "onupdate-multidispatch",
+        "eventType": "S2",
+        "payload": {
+          "company": "AComp",
+          "value": 3,
+          "total": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "onupdate-multidispatch",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "snapshot",
+        "case": "onupdate-multidispatch",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "onupdate-multidispatch",
+        "eventType": "S2",
+        "payload": {
+          "company": "AComp",
+          "value": 6,
+          "total": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "onupdate-multidispatch",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "snapshot",
+        "case": "onupdate-multidispatch",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "onupdate-multidispatch",
+        "eventType": "S2",
+        "payload": {
+          "company": "AComp",
+          "value": 5,
+          "total": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "onupdate-multidispatch",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "snapshot",
+        "case": "onupdate-multidispatch",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "onupdate-multidispatch",
+        "eventType": "S2",
+        "payload": {
+          "company": "BComp",
+          "value": 4,
+          "total": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "onupdate-multidispatch",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "snapshot",
+        "case": "onupdate-multidispatch",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "onupdate-multidispatch"
+      },
+      {
+        "op": "case",
+        "case": "outputrate-snapshot"
+      },
+      {
+        "op": "deploy",
+        "case": "outputrate-snapshot",
+        "statement": "create",
+        "epl": "@public create window MyWindowOne#keepall as (theString string, intv int)"
+      },
+      {
+        "op": "deploy",
+        "case": "outputrate-snapshot",
+        "statement": "insert",
+        "epl": "insert into MyWindowOne select theString, intPrimitive as intv from SupportBean"
+      },
+      {
+        "op": "advance-time",
+        "case": "outputrate-snapshot",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deploy",
+        "case": "outputrate-snapshot",
+        "statement": "s0",
+        "epl": "@name('s0') select irstream theString, count(*) as c from MyWindowOne group by theString output snapshot every 1 second"
+      },
+      {
+        "op": "send",
+        "case": "outputrate-snapshot",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "outputrate-snapshot",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "outputrate-snapshot",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "outputrate-snapshot",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "send",
+        "case": "outputrate-snapshot",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "outputrate-snapshot",
+        "at": "1970-01-01T00:00:02Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "outputrate-snapshot",
+        "at": "1970-01-01T00:00:03Z"
+      },
+      {
+        "op": "send",
+        "case": "outputrate-snapshot",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "send",
+        "case": "outputrate-snapshot",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "C",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "outputrate-snapshot",
+        "at": "1970-01-01T00:00:04Z"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "outputrate-snapshot"
+      },
+      {
+        "op": "case",
+        "case": "removestream-chain"
+      },
+      {
+        "op": "deploy",
+        "case": "removestream-chain",
+        "statement": "c1",
+        "epl": "@name('c1') @public create window W1#length(2) as select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "removestream-chain",
+        "statement": "c2",
+        "epl": "@name('c2') @public create window W2#length(2) as select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "removestream-chain",
+        "statement": "c3",
+        "epl": "@name('c3') @public create window W3#length(2) as select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "removestream-chain",
+        "statement": "insert",
+        "epl": "insert into W1 select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "removestream-chain",
+        "statement": "route-w2",
+        "epl": "insert rstream into W2 select rstream * from W1"
+      },
+      {
+        "op": "deploy",
+        "case": "removestream-chain",
+        "statement": "route-w3",
+        "epl": "insert rstream into W3 select rstream * from W2"
+      },
+      {
+        "op": "send",
+        "case": "removestream-chain",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "removestream-chain",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "removestream-chain",
+        "statement": "c1",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "removestream-chain",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "removestream-chain",
+        "statement": "c1",
+        "mode": "any"
+      },
+      {
+        "op": "snapshot",
+        "case": "removestream-chain",
+        "statement": "c2",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "removestream-chain",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "removestream-chain",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "removestream-chain",
+        "statement": "c1",
+        "mode": "any"
+      },
+      {
+        "op": "snapshot",
+        "case": "removestream-chain",
+        "statement": "c2",
+        "mode": "any"
+      },
+      {
+        "op": "snapshot",
+        "case": "removestream-chain",
+        "statement": "c3",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "removestream-chain"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-namedwindow-update-propagation-565",
+    "records": [
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "oldvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "newvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "newvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "onselect",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "newvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "insert",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "oldvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "window",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "newvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "newvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "onselect",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "newvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "oninsert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "newvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "insert",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "oldvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "window",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "newvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "newvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "onselect",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "newvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "oninsert",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "newvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "oninsert",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "newvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "a",
+              "p1": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onupdate-multidispatch",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "onupdate-multidispatch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "company": "AComp",
+              "total": 0,
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "onupdate-multidispatch",
+        "operation": "listener",
+        "statement": "upd",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "company": "AComp",
+              "total": 9,
+              "value": 3
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "company": "AComp",
+              "total": 0,
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "onupdate-multidispatch",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "onupdate-multidispatch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "company": "AComp",
+              "total": 9,
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "onupdate-multidispatch",
+        "operation": "listener",
+        "statement": "upd",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "company": "AComp",
+              "total": 8,
+              "value": 3
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "company": "AComp",
+              "total": 9,
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "onupdate-multidispatch",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "onupdate-multidispatch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "company": "AComp",
+              "total": 8,
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "onupdate-multidispatch",
+        "operation": "listener",
+        "statement": "upd",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "company": "AComp",
+              "total": 7,
+              "value": 3
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "company": "AComp",
+              "total": 8,
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "onupdate-multidispatch",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "onupdate-multidispatch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "company": "AComp",
+              "total": 7,
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "company": "BComp",
+              "total": 0,
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "outputrate-snapshot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c": 2,
+              "theString": "A"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c": 1,
+              "theString": "B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "outputrate-snapshot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c": 2,
+              "theString": "A"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c": 2,
+              "theString": "B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "outputrate-snapshot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:03Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c": 2,
+              "theString": "A"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c": 2,
+              "theString": "B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "outputrate-snapshot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:04Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c": 3,
+              "theString": "A"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c": 2,
+              "theString": "B"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c": 1,
+              "theString": "C"
+            }
+          }
+        ]
+      },
+      {
+        "case": "removestream-chain",
+        "operation": "snapshot",
+        "statement": "c1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "removestream-chain",
+        "operation": "snapshot",
+        "statement": "c1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "removestream-chain",
+        "operation": "snapshot",
+        "statement": "c2",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "removestream-chain",
+        "operation": "snapshot",
+        "statement": "c1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "removestream-chain",
+        "operation": "snapshot",
+        "statement": "c2",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "removestream-chain",
+        "operation": "snapshot",
+        "statement": "c3",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-namedwindow-update-propagation-565",
+    "records": [
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "oldvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "newvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "newvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "onselect",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "newvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "insert",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "oldvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "window",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "newvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "newvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "onselect",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "newvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "oninsert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "newvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "insert",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "oldvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "window",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "newvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "newvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "onselect",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "newvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "oninsert",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "newvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "oninsert",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "newvalue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "update-namedwindow",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "a",
+              "p1": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onupdate-multidispatch",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "onupdate-multidispatch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "company": "AComp",
+              "total": 0,
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "onupdate-multidispatch",
+        "operation": "listener",
+        "statement": "upd",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "company": "AComp",
+              "total": 9,
+              "value": 3
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "company": "AComp",
+              "total": 0,
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "onupdate-multidispatch",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "onupdate-multidispatch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "company": "AComp",
+              "total": 9,
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "onupdate-multidispatch",
+        "operation": "listener",
+        "statement": "upd",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "company": "AComp",
+              "total": 8,
+              "value": 3
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "company": "AComp",
+              "total": 9,
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "onupdate-multidispatch",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "onupdate-multidispatch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "company": "AComp",
+              "total": 8,
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "onupdate-multidispatch",
+        "operation": "listener",
+        "statement": "upd",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "company": "AComp",
+              "total": 7,
+              "value": 3
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "company": "AComp",
+              "total": 8,
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "onupdate-multidispatch",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "onupdate-multidispatch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "company": "AComp",
+              "total": 7,
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "company": "BComp",
+              "total": 0,
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "outputrate-snapshot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c": 2,
+              "theString": "A"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c": 1,
+              "theString": "B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "outputrate-snapshot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c": 2,
+              "theString": "A"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c": 2,
+              "theString": "B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "outputrate-snapshot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:03Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c": 2,
+              "theString": "A"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c": 2,
+              "theString": "B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "outputrate-snapshot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:04Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c": 3,
+              "theString": "A"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c": 2,
+              "theString": "B"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c": 1,
+              "theString": "C"
+            }
+          }
+        ]
+      },
+      {
+        "case": "removestream-chain",
+        "operation": "snapshot",
+        "statement": "c1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "removestream-chain",
+        "operation": "snapshot",
+        "statement": "c1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "removestream-chain",
+        "operation": "snapshot",
+        "statement": "c2",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "removestream-chain",
+        "operation": "snapshot",
+        "statement": "c1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "removestream-chain",
+        "operation": "snapshot",
+        "statement": "c2",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "removestream-chain",
+        "operation": "snapshot",
+        "statement": "c3",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

@@ -45,34 +45,41 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.564 ('infra-namedwindow-om').
+Active: Draft 4.565 ('infra-namedwindow-update-propagation').
 
-- Contract frozen (JavaContract564 + GoSurface564): InfraNamedWindowOM
-  ords 0/1/2 — InfraCompile (java-runtime-2fadc5dd18bce73a28d5, static
-  java-10c000a768d7eb5776f7), InfraOM (java-runtime-2d6d5656b8c1bbec11ac,
-  static java-10c000a768d7eb5776f7), InfraOMCreateTableSyntax
-  (java-runtime-7521a52d49a6bc033264, static java-10c000a768d7eb5776f7);
-  all flags=[], all unreferenced, one SODA/OM compile-deploy semantic.
-- Semantic: keepall key/value window + insert + irstream select +
-  on-delete + on-select. OM-builder/toEPL text and eplToModel compile
-  paths are unrepresentable (Go Plan IS the object model); ord 2 is
-  compile-only -> all-unrepresentable. Ord 0 on-select is unconditional;
-  ord 1 is correlated (s0.id=s1.key) with E3+E4. Behavioral surface
-  fully representable via CreateNamedWindow/InsertInto/DeleteFrom/
-  SelectFromNamedWindow + FromNamedWindow WithOldStream.
-- [x] Assets564 delivered + integrated: Java trace 62 records, Go replay
-  62, `-diff` passing / 0 differences; evidence + traces checked in.
-  Dispatch-order note: Go merges deferred trigger dispatches into the
-  window delta wave by deployment order — the runner pre-deploys the
-  delete plan (no observable change; no market events precede it).
-- [x] Manifest: NEW case.infra-namedwindow-om born-DV (3 IDs); file
-  closed (3/3). Summary -> 799 cases / 418 DV / 1663 DV runtime IDs /
-  391 unreferenced.
+- Contract frozen (JavaContract565 + GoSurface565): 4 executions —
+
+  EPLOtherUpdateNamedWindow (ord 6, java-runtime-7c91cbd63d65e3078e25),
+  InfraNamedWindowOnUpdateWMultiDispatch ord 0
+  (java-runtime-fcbbceeaf04849dc64bc, EXCLUDEWHENINSTRUMENTED),
+  InfraNamedWindowOutputrate ord 0 (java-runtime-da3a1e5e9ab73d4a067e),
+  InfraNamedWindowRemoveStream ord 0 (java-runtime-4971ea67797956c303ee).
+  One semantic: window row-lifecycle -> downstream-consumer propagation.
+- Surfaces: update-istream copy-on-write + redeploy barriers (E1);
+  IntersectWindows(TimeWindow,FirstUnique) + on-update multi-dispatch
+  ambiguity tolerance (E2); grouped irstream + OutputSnapshotEvery with
+  identical-repeat emission (E3); rstream chain via
+  WithRemoveStreamOnly+WithRStreamRoute+RouteTo — CONFIRMED
+  representable in route plumbing (E4, worker spikes cascade order).
+- [x] Assets565 dispatched.
+- [x] Assets565 delivered + integrated: Java trace 37 records, Go
+  replay 37 (16/11/4/6 per case), `-diff` passing / 0 differences;
+  evidence + traces checked in. E4 spike confirmed the rstream chain is
+  representable (no engine work). E2 multi-dispatch ambiguity pinned
+  via window iterator snapshots. E1 milestones -> redeploy barriers.
+- [x] Manifest: NEW case.infra-namedwindow-update-propagation born-DV
+  (4 IDs); case.epl-other-update-istream remaining narrowed (named-
+  window target done). Summary -> 800 cases / 419 DV / 1667 DV runtime
+  IDs / 388 unreferenced.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev564 + JavaContract565 + GoSurface565 dispatched.
+- [x] ParityRev565 + JavaContract566 + GoSurface566 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.564 ('infra-namedwindow-om, file closed') committed
+  and pushed as `b345a2b95`; Git owns identity. 3 executions born-DV
+  (62 records each, 0 differences); review FAIL->fixed->PASS (P2
+  manifest javaStaticIds pinned the deduplicated inventory id).
 - Shipped: Draft 4.563 ('infra-nwtable-create-ddl') committed and pushed
   as `d291e4665`; Git owns identity. 3 executions born-DV (16 records
   each, 0 differences); review FAIL->fixed->PASS (P1 mangled staticIds,
