@@ -45,40 +45,37 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.566 ('infra-namedwindow-explicit-index').
+Active: Draft 4.567 ('view-expression-window — promote case to DV').
 
-- Contract frozen (JavaContract566 + GoSurface566): 2 executions —
-  InfraNamedWindowIndex ord 0 (java-runtime-9c952fff6ef8c649c2e4,
-  dedup static java-152a3c2771c531a8841c, flags[]) and
-  InfraNamedWindowLateStartIndex ord 0 (java-runtime-3bf753f4ff71d21df968,
-  dedup static java-a81367bdfb722afec857,
-  EXCLUDEWHENINSTRUMENTED+PERFORMANCE — delivery assertions are
-  wall-clock-free; getter-call counters ride unrepresentable records).
-  Dispositions: ContainedEvent -> intentionally-different
-  (invalid-text-only); Performance x6 + FAFJoinPerf -> excluded
-  (wall-clock perf loads).
-- Semantic: explicit named-window index DDL (unique index over
-  #unique(theString) window; idx iterator = deduped last-wins rows) +
-  late-start index reuse (preloaded keepall + create index + late
-  unidirectional join/subquery + indexshare twin).
-- Gap: no statement-type/CREATEOBJECTNAME metadata surface in Go —
-  idx props ride a deploy-ack/unrepresentable record. E2 s1 delivery
-  value (-1) unasserted in Java — confirm against the real trace.
-- [x] Assets566 delivered + integrated. Engine fix (shared core):
-  insertIntoState ran declared unique-index validation against
-  PRE-retention contents; Esper validates post-displacement. Unique
-  (non-first) excludes the replaced row; LastEvent displaces all;
-  Length validates survivors; dropped first-* inserts skip validation;
-  dead duplicate unique branch removed. Regression caught + fixed
-  (missing index rebuild on new-key insert). unique=true pin restored.
-- [x] Manifest: NEW case.infra-namedwindow-explicit-index born-DV
-  (2 IDs). Summary -> 801 cases / 420 DV / 1669 DV runtime IDs /
-  386 unreferenced.
+- Contract frozen (JavaContract567 + GoSurface567): ViewExpressionWindow
+  ords 0/1/2 — SceneOne (java-runtime-feef242da145c59be1bb), NewestOldest
+  (java-runtime-1fd41f23589a5af4132c), LengthWindow
+  (java-runtime-0c450c9d1c1fcf3b5523); all dedup static
+  java-06e6b1f6c905b8f12b82, flags[]. case.view-expression-window is
+  currently implemented-only (go-unit evidence) -> DV promotion.
+- Semantic: #expr retention keep-predicate (timestamp spread / boundary-
+  event equality / current_count). Go surface complete
+  (ExpressionWindowSpec + Window*Timestamp/Event/CurrentCount builtins);
+  no new API needed. Existing unit tests cover partial legs — the DV
+  scenario pins the FULL Java sequences (ord0 E6 mass-expiry; ord1
+  E5-E7 accumulation+flush; ord2 iterator-only + stronger IR pin).
+- [x] Assets567 delivered + integrated: Java trace 36 records, Go
+  replay 36 (14/15/7 per case), `-diff` passing / 0 differences;
+  evidence + traces checked in. ord2's plain `select *` maps to
+  SelectIStream (verified against real oracle: no old events) — the
+  IR-delivery pin is the documented stronger representation choice.
+- [x] Manifest: case.view-expression-window PROMOTED implemented->DV
+  (3 runtime IDs; the full 13-ord case was already referenced).
+  Summary -> 801 cases / 421 DV / 1672 DV runtime IDs / 386 unreferenced.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev566 + JavaContract567 + GoSurface567 dispatched.
+- [x] ParityRev567 + JavaContract568 + GoSurface568 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.566 ('infra-namedwindow-explicit-index') committed
+  and pushed as `a60036a4e`; Git owns identity. 2 executions born-DV
+  (33 records each, 0 differences) + shared-core unique-index post-
+  retention-validation fix; review PASS.
 - Shipped: Draft 4.565 ('infra-namedwindow-update-propagation')
   committed and pushed as `d439b2cb5`; Git owns identity. 4 executions
   born-DV (37 records each, 0 differences); review PASS (4 P3s fixed).

@@ -1,0 +1,112 @@
+{
+ "version": "esper-parity/v1",
+ "id": "view-expression-window-567",
+ "description": "ViewExpressionWindow ords 0/1/2 — the expression-window scene trio. scene-one (ViewExpressionWindowSceneOne, ord 0) replays `@Name('s0') select irstream theString as c0 from SupportBean#expr(newest_timestamp - oldest_timestamp < 1000)`: advanceTime(0) plus sends E1@1000, E2@1500, E3@2000 (IR pair {E3}/{E1}), E4@2499 (window {E2,E3,E4}), E5@2500 (IR pair {E5}/{E2}), advanceTime(10000) expiring nothing, then E6 (IR pair {E6}/{E3,E4,E5}); every iterator assertion posts a snapshot record (mode any). newest-oldest (ord 1) replays `@name('s0') select irstream * from SupportBean#expr(newest_event.intPrimitive = oldest_event.intPrimitive)`: E1/1 and E2/1 accumulate, E3/2 flushes {E1,E2}, E4/3 flushes {E3}, E5/3+E6/3 accumulate to {E4,E5,E6}, E7/2 flushes the triple — in-order iterator pins after every send. length-window (ord 2) replays `@name('s0') select * from SupportBean#expr(current_count <= 2)`: E1/1, E2/2, E3/3 with iterator pins {E1}, {E1,E2}, {E2,E3}; both oracles also record the new-only listener deliveries (the plain select surfaces the insert stream only, so E3's eviction rides the snapshots), a stronger pin than Java's iterator-only assertion. Java milestone() calls are regression-harness savepoints with identical restored state for these executions, so the scenario omits them.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewExpressionWindow.java",
+ "javaSourceFiles": [
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewExpressionWindow.java",
+  "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java"
+ ],
+ "javaRuntimes": [
+  "java-runtime-feef242da145c59be1bb",
+  "java-runtime-1fd41f23589a5af4132c",
+  "java-runtime-0c450c9d1c1fcf3b5523"
+ ],
+ "javaNames": [
+  "ViewExpressionWindowSceneOne",
+  "ViewExpressionWindowNewestEventOldestEvent",
+  "ViewExpressionWindowLengthWindow"
+ ],
+ "javaStaticIds": [
+  "java-06e6b1f6c905b8f12b82",
+  "java-06e6b1f6c905b8f12b82",
+  "java-06e6b1f6c905b8f12b82"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "scene-one",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-feef242da145c59be1bb",
+   "executionName": "ViewExpressionWindowSceneOne",
+   "observation": "deployed+listener+snapshot; timestamp-spread keep (newest_timestamp - oldest_timestamp < 1000 over row arrival times): E1@1000/E2@1500 accumulate, E3@2000 posts the {E3}/{E1} pair, E4@2499 is retained (window {E2,E3,E4}), E5@2500 posts {E5}/{E2}, advanceTime(10000) removes nothing and the E6 send posts {E6}/{E3,E4,E5}; seven iterator assertions post canonical-sorted snapshots (empty pre-E1 included) on the c0 projection",
+   "epl": "@Name('s0') select irstream theString as c0 from SupportBean#expr(newest_timestamp - oldest_timestamp < 1000)",
+   "deploys": ["s0"]
+  },
+  {
+   "case": "newest-oldest",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-1fd41f23589a5af4132c",
+   "executionName": "ViewExpressionWindowNewestEventOldestEvent",
+   "observation": "deployed+listener+snapshot; boundary-event equality keep (newest_event.intPrimitive = oldest_event.intPrimitive): E1/1,E2/1 accumulate, E3/2 flushes {E1,E2}, E4/3 flushes {E3}, E5/3+E6/3 accumulate to {E4,E5,E6}, E7/2 flushes the whole triple; per-send in-order iterator pins project theString",
+   "epl": "@name('s0') select irstream * from SupportBean#expr(newest_event.intPrimitive = oldest_event.intPrimitive)",
+   "deploys": ["s0"]
+  },
+  {
+   "case": "length-window",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-0c450c9d1c1fcf3b5523",
+   "executionName": "ViewExpressionWindowLengthWindow",
+   "observation": "deployed+listener+snapshot; current_count <= 2 keep: E1/1 and E2/2 deliver new-only, E3/3 appends and evicts E1 — the plain select delivers the insert stream only so E3 posts a new-only record; the Java test asserts iterator-only, both oracles pin the stronger delivery plus the in-order iterator {E1}, {E1,E2}, {E2,E3}",
+   "epl": "@name('s0') select * from SupportBean#expr(current_count <= 2)",
+   "deploys": ["s0"]
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "scene-one"},
+  {"op": "advance-time", "case": "scene-one", "at": "1970-01-01T00:00:00.000Z"},
+  {"op": "deploy", "case": "scene-one", "statement": "s0", "epl": "@Name('s0') select irstream theString as c0 from SupportBean#expr(newest_timestamp - oldest_timestamp < 1000)"},
+  {"op": "deployed", "case": "scene-one", "statement": "s0"},
+  {"op": "advance-time", "case": "scene-one", "at": "1970-01-01T00:00:01.000Z"},
+  {"op": "snapshot", "case": "scene-one", "statement": "s0", "mode": "any"},
+  {"op": "send", "case": "scene-one", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 0}},
+  {"op": "advance-time", "case": "scene-one", "at": "1970-01-01T00:00:01.500Z"},
+  {"op": "snapshot", "case": "scene-one", "statement": "s0", "mode": "any"},
+  {"op": "send", "case": "scene-one", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 0}},
+  {"op": "advance-time", "case": "scene-one", "at": "1970-01-01T00:00:02.000Z"},
+  {"op": "snapshot", "case": "scene-one", "statement": "s0", "mode": "any"},
+  {"op": "send", "case": "scene-one", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 0}},
+  {"op": "snapshot", "case": "scene-one", "statement": "s0", "mode": "any"},
+  {"op": "advance-time", "case": "scene-one", "at": "1970-01-01T00:00:02.499Z"},
+  {"op": "snapshot", "case": "scene-one", "statement": "s0", "mode": "any"},
+  {"op": "send", "case": "scene-one", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 0}},
+  {"op": "snapshot", "case": "scene-one", "statement": "s0", "mode": "any"},
+  {"op": "advance-time", "case": "scene-one", "at": "1970-01-01T00:00:02.500Z"},
+  {"op": "snapshot", "case": "scene-one", "statement": "s0", "mode": "any"},
+  {"op": "send", "case": "scene-one", "eventType": "SupportBean", "payload": {"theString": "E5", "intPrimitive": 0}},
+  {"op": "advance-time", "case": "scene-one", "at": "1970-01-01T00:00:10.000Z"},
+  {"op": "send", "case": "scene-one", "eventType": "SupportBean", "payload": {"theString": "E6", "intPrimitive": 0}},
+  {"op": "undeploy-all", "case": "scene-one"},
+
+  {"op": "case", "case": "newest-oldest"},
+  {"op": "deploy", "case": "newest-oldest", "statement": "s0", "epl": "@name('s0') select irstream * from SupportBean#expr(newest_event.intPrimitive = oldest_event.intPrimitive)"},
+  {"op": "deployed", "case": "newest-oldest", "statement": "s0"},
+  {"op": "send", "case": "newest-oldest", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "snapshot", "case": "newest-oldest", "statement": "s0", "mode": "ordered"},
+  {"op": "send", "case": "newest-oldest", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 1}},
+  {"op": "snapshot", "case": "newest-oldest", "statement": "s0", "mode": "ordered"},
+  {"op": "send", "case": "newest-oldest", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 2}},
+  {"op": "snapshot", "case": "newest-oldest", "statement": "s0", "mode": "ordered"},
+  {"op": "send", "case": "newest-oldest", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 3}},
+  {"op": "snapshot", "case": "newest-oldest", "statement": "s0", "mode": "ordered"},
+  {"op": "send", "case": "newest-oldest", "eventType": "SupportBean", "payload": {"theString": "E5", "intPrimitive": 3}},
+  {"op": "snapshot", "case": "newest-oldest", "statement": "s0", "mode": "ordered"},
+  {"op": "send", "case": "newest-oldest", "eventType": "SupportBean", "payload": {"theString": "E6", "intPrimitive": 3}},
+  {"op": "snapshot", "case": "newest-oldest", "statement": "s0", "mode": "ordered"},
+  {"op": "send", "case": "newest-oldest", "eventType": "SupportBean", "payload": {"theString": "E7", "intPrimitive": 2}},
+  {"op": "snapshot", "case": "newest-oldest", "statement": "s0", "mode": "ordered"},
+  {"op": "undeploy-all", "case": "newest-oldest"},
+
+  {"op": "case", "case": "length-window"},
+  {"op": "deploy", "case": "length-window", "statement": "s0", "epl": "@name('s0') select * from SupportBean#expr(current_count <= 2)"},
+  {"op": "deployed", "case": "length-window", "statement": "s0"},
+  {"op": "send", "case": "length-window", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "snapshot", "case": "length-window", "statement": "s0", "mode": "ordered"},
+  {"op": "send", "case": "length-window", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+  {"op": "snapshot", "case": "length-window", "statement": "s0", "mode": "ordered"},
+  {"op": "send", "case": "length-window", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 3}},
+  {"op": "snapshot", "case": "length-window", "statement": "s0", "mode": "ordered"},
+  {"op": "undeploy-all", "case": "length-window"}
+ ]
+}
