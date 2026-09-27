@@ -13830,7 +13830,7 @@
    "javaRuntimeIds": [
     "java-runtime-1010c63eb2330597a750",
     "java-runtime-a2b886734b1a2ad4cc28",
-    "java-runtime-416f111d2368882ea644",
+    "java-runtime-6f79531e2384e89d51ce",
     "java-runtime-3834e7de0be8f481cea2",
     "java-runtime-76f900f81eab8fbb7068",
     "java-runtime-7b3d5e1ed4c6e5a98f89",
@@ -51130,6 +51130,56 @@
     "java-runtime-867dc2875052889e9df2"
    ],
    "notes": "Draft 4.555: 2 records each (types + listener), 0 differences. val1 = 3 lost-luggage items in fixture order [L00000, L00007, L00008]; val2 = map {L00000->P00008, L00007->P00001, L00008->P00001}. Fixture order is load-bearing; 21-item makeLarge copied verbatim."
+  },
+  {
+   "id": "case.expr-script-threading-556",
+   "javaRuntimeIds": [
+    "java-runtime-950fed16f3830d3a9926",
+    "java-runtime-416f111d2368882ea644",
+    "java-runtime-17b5c153a73414b75e24"
+   ],
+   "javaStaticIds": [
+    "java-25975b631283eca66de6",
+    "java-a977dd316de9d77c011c"
+   ],
+   "javaNames": [
+    "EPLScriptQuoteEscape",
+    "EPLScriptInvalidRegardlessDialect",
+    "ExprFilterLargeThreading"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/script/EPLScriptExpression.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterLargeThreading.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go/TestRunExprScriptThreading556DirectReplay",
+    "internal/app/parity/run_test.go/TestRunExprScriptThreading556PinnedArtifacts",
+    "internal/app/parity/run_test.go/TestRunExprScriptThreading556ScenarioLoader",
+    "internal/app/parity/run_test.go/TestRunExprScriptThreading556CompileProbeBoundaries",
+    "internal/app/parity/run_test.go/TestRunExprScriptThreading556DiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go/TestRunExprScriptThreading556DiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go/TestRunExprScriptThreading556CheckedInEvidenceMatchesTraceAndReplay"
+   ],
+   "tags": [
+    "expr",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/expr-script-threading-556.evidence.json"
+   ],
+   "difference": "Go rejects the unregistered-script, arity-mismatch, duplicate-name probes at Build with pinned Java prefixes; the named-parameter, named-return-type, dialect-resolution and script/expression-name-overlap probes have no typed Go surface and are recorded as unrepresentable/accepted boundaries (Go keeps script and declared-expression names in separate registries and treats dialect as plan metadata). LargeThreading maps pattern[a=SB -> every event1=Trade(userId like '123%')] to PatternFrom+Every+Like with Map event types.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-950fed16f3830d3a9926",
+    "java-runtime-416f111d2368882ea644",
+    "java-runtime-17b5c153a73414b75e24"
+   ],
+   "notes": "Draft 4.556: 13 records each, 0 differences. Oracle pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c."
   }
  ],
  "mappings": [
@@ -54636,13 +54686,17 @@
   {
    "capabilityId": "expr.declared",
    "caseId": "case.expr-define-locreport"
+  },
+  {
+   "capabilityId": "expr.script",
+   "caseId": "case.expr-script-threading-556"
   }
  ],
  "summary": {
-  "inventoriedCases": 789,
-  "implementedCases": 787,
-  "differentialVerifiedCases": 409,
-  "differentialVerifiedRuntimeIds": 1632,
+  "inventoriedCases": 790,
+  "implementedCases": 788,
+  "differentialVerifiedCases": 410,
+  "differentialVerifiedRuntimeIds": 1635,
   "intentionallyDifferentCases": 39,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -54652,13 +54706,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4174,
-  "referencedJavaRuntimeIds": 3734,
+  "runtimeAssociationCount": 4177,
+  "referencedJavaRuntimeIds": 3737,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 402,
+  "unreferencedJavaRuntimeIds": 399,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 789,
+  "totalCases": 790,
   "totalCapabilities": 126
  }
 }

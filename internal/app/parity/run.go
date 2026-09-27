@@ -110,6 +110,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include expr-dt-tail-553 and expr-dt-tail-553-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-enum-remainder-554 and expr-enum-remainder-554-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-define-locreport-555 and expr-define-locreport-555-diff")
+		fmt.Fprintln(stderr, "runner modes include expr-script-threading-556 and expr-script-threading-556-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-enum-select-from and expr-enum-select-from-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-type-use and expr-class-type-use-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-for-epl-objects and expr-class-for-epl-objects-diff")
@@ -261,6 +262,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadExprEnumRemainder554Scenario(file)
 	} else if *mode == "expr-define-locreport-555" || *mode == "expr-define-locreport-555-diff" {
 		scenario, err = loadExprDefineLocReport555Scenario(file)
+	} else if *mode == "expr-script-threading-556" || *mode == "expr-script-threading-556-diff" {
+		scenario, err = loadExprScriptThreading556Scenario(file)
 	} else if *mode == "context-key-segmented-infra-prioritized" || *mode == "context-key-segmented-infra-prioritized-diff" {
 		scenario, err = loadContextKeySegmentedInfraPrioritizedScenario(file)
 	} else if *mode == "context-key-segmented-named-window" || *mode == "context-key-segmented-named-window-diff" {
@@ -5061,6 +5064,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, exprDefineLocReport555JavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, exprDefineLocReport555JavaSources),
 				splitMetadata(*javaExecutions, exprDefineLocReport555JavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "expr-script-threading-556" || *mode == "expr-script-threading-556-diff" {
+		trace, err := runExprScriptThreading556Scenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "expr-script-threading-556-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, exprScriptThreading556JavaCommit,
+				splitMetadata(*javaRuntimeIDs, exprScriptThreading556JavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, exprScriptThreading556JavaSources),
+				splitMetadata(*javaExecutions, exprScriptThreading556JavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

@@ -1,0 +1,218 @@
+{
+ "version": "esper-parity/v1",
+ "id": "expr-script-threading-556",
+ "description": "EPLScriptExpression compile probes + ExprFilterLargeThreading (pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c): script-probes bundles ord 1 EPLScriptQuoteEscape (two compileDeploy quote-escape probes over single-line and multi-line I'am comments) and ord 4 EPLScriptInvalidRegardlessDialect (eight tryInvalidCompile probes \u2014 parameter defined twice, invalid dialect, unknown script, arity mismatch, same-arity overload, parameter-name overlap, script/expression overlap and unresolvable return type); large-threading (ord 0) deploys pattern[a=SupportBean -> every event1=SupportTradeEvent(userId like '123%')] and one SupportBean arm + TradeEvent(1,null,1001) no-fire + TradeEvent(2,'1234',1001) send emits event1.id=2",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/script/EPLScriptExpression.java",
+ "javaRuntimes": [
+  "java-runtime-950fed16f3830d3a9926",
+  "java-runtime-416f111d2368882ea644",
+  "java-runtime-17b5c153a73414b75e24"
+ ],
+ "javaNames": [
+  "EPLScriptQuoteEscape",
+  "EPLScriptInvalidRegardlessDialect",
+  "ExprFilterLargeThreading"
+ ],
+ "javaStaticIds": [
+  "java-25975b631283eca66de6",
+  "java-25975b631283eca66de6",
+  "java-a977dd316de9d77c011c"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "script-probes",
+   "ordinals": [
+    1,
+    4
+   ],
+   "runtimeIds": [
+    "java-runtime-950fed16f3830d3a9926",
+    "java-runtime-416f111d2368882ea644"
+   ],
+   "executionNames": [
+    "EPLScriptQuoteEscape",
+    "EPLScriptInvalidRegardlessDialect"
+   ],
+   "staticIds": [
+    "java-25975b631283eca66de6",
+    "java-25975b631283eca66de6"
+   ],
+   "source": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/script/EPLScriptExpression.java",
+   "observation": "compile-ok+compile-error+unrepresentable+intentionally-different; the two quote-escape compileDeploy probes (ord 1) and the eight tryInvalidCompile probes (ord 4) pin the asserted Java messages \u2014 Go rejects the unregistered/arity/duplicate-name probes at Build, the named-parameter and named-return-type probes have no Go surface, and Go accepts the descriptive 'dummy' dialect plus the separate script/expression name spaces",
+   "epl": "create expression f(params)[\n  // I'am...\n];\ncreate expression g(params)[\n  /* I'am... */];\nexpression js:abc(p1, p1) [/* text */] select * from SupportBean\nexpression dummy:abc() [10] select * from SupportBean\nselect abc() from SupportBean\nexpression js:abc() [10] select abc(1) from SupportBean\nexpression js:abc() [10] expression js:abc() [10] select abc() from SupportBean\nexpression js:abc(p1) [10] expression js:abc(p2) [10] select abc() from SupportBean\nexpression js:abc() [10] expression abc {10} select abc() from SupportBean\nexpression dummy js:abc() [10] select abc() from SupportBean"
+  },
+  {
+   "case": "large-threading",
+   "ordinals": [
+    0
+   ],
+   "runtimeIds": [
+    "java-runtime-17b5c153a73414b75e24"
+   ],
+   "executionNames": [
+    "ExprFilterLargeThreading"
+   ],
+   "staticIds": [
+    "java-a977dd316de9d77c011c"
+   ],
+   "source": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterLargeThreading.java",
+   "observation": "deployed+types+listener; pattern[a=SupportBean -> every event1=SupportTradeEvent(userId like '123%')] arms on SupportBean(), ignores TradeEvent(1,null,1001) (null userId like-fails) and fires once on TradeEvent(2,'1234',1001) with event1.id=2",
+   "epl": "@name('s0') select * from pattern[a=SupportBean -> every event1=SupportTradeEvent(userId like '123%')]"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "script-probes"
+  },
+  {
+   "op": "deploy",
+   "case": "script-probes",
+   "statement": "sl-comment",
+   "runtimeId": "java-runtime-950fed16f3830d3a9926",
+   "epl": "create expression f(params)[\n  // I'am...\n];"
+  },
+  {
+   "op": "deploy",
+   "case": "script-probes",
+   "statement": "ml-comment",
+   "runtimeId": "java-runtime-950fed16f3830d3a9926",
+   "epl": "create expression g(params)[\n  /* I'am... */];"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "script-probes",
+   "statement": "param-defined-twice",
+   "runtimeId": "java-runtime-416f111d2368882ea644",
+   "epl": "expression js:abc(p1, p1) [/* text */] select * from SupportBean",
+   "expectError": "Invalid script parameters for script 'abc', parameter 'p1' is defined more then once [expression js:abc(p1, p1) [/* text */] select * from SupportBean]"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "script-probes",
+   "statement": "invalid-dialect",
+   "runtimeId": "java-runtime-416f111d2368882ea644",
+   "epl": "expression dummy:abc() [10] select * from SupportBean",
+   "expectError": "Failed to obtain script runtime for dialect 'dummy' for script 'abc' [expression dummy:abc() [10] select * from SupportBean]"
+  },
+  {
+   "op": "build-error",
+   "case": "script-probes",
+   "statement": "unknown-script",
+   "runtimeId": "java-runtime-416f111d2368882ea644",
+   "epl": "select abc() from SupportBean",
+   "expectError": "Failed to validate select-clause expression 'abc()': Unknown single-row function, expression declaration, script or aggregation function named 'abc' could not be resolved [select abc() from SupportBean]"
+  },
+  {
+   "op": "build-error",
+   "case": "script-probes",
+   "statement": "arity-mismatch",
+   "runtimeId": "java-runtime-416f111d2368882ea644",
+   "epl": "expression js:abc() [10] select abc(1) from SupportBean",
+   "expectError": "Failed to validate select-clause expression 'abc(1)': Invalid number of parameters for script 'abc', expected 0 parameters but received 1 parameters [expression js:abc() [10] select abc(1) from SupportBean]"
+  },
+  {
+   "op": "build-error",
+   "case": "script-probes",
+   "statement": "same-arity-overload",
+   "runtimeId": "java-runtime-416f111d2368882ea644",
+   "epl": "expression js:abc() [10] expression js:abc() [10] select abc() from SupportBean",
+   "expectError": "Script name 'abc' has already been defined with the same number of parameters [expression js:abc() [10] expression js:abc() [10] select abc() from SupportBean]"
+  },
+  {
+   "op": "build-error",
+   "case": "script-probes",
+   "statement": "param-name-overlap",
+   "runtimeId": "java-runtime-416f111d2368882ea644",
+   "epl": "expression js:abc(p1) [10] expression js:abc(p2) [10] select abc() from SupportBean",
+   "expectError": "Script name 'abc' has already been defined with the same number of parameters [expression js:abc(p1) [10] expression js:abc(p2) [10] select abc() from SupportBean]"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "script-probes",
+   "statement": "script-expression-overlap",
+   "runtimeId": "java-runtime-416f111d2368882ea644",
+   "epl": "expression js:abc() [10] expression abc {10} select abc() from SupportBean",
+   "expectError": "Script name 'abc' overlaps with another expression of the same name [expression js:abc() [10] expression abc {10} select abc() from SupportBean]"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "script-probes",
+   "statement": "unresolvable-return-type",
+   "runtimeId": "java-runtime-416f111d2368882ea644",
+   "epl": "expression dummy js:abc() [10] select abc() from SupportBean",
+   "expectError": "Failed to validate select-clause expression 'abc()': Failed to resolve return type 'dummy' specified for script 'abc' [expression dummy js:abc() [10] select abc() from SupportBean]"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "script-probes",
+   "runtimeId": "java-runtime-950fed16f3830d3a9926"
+  },
+  {
+   "op": "case",
+   "case": "large-threading"
+  },
+  {
+   "op": "deploy",
+   "case": "large-threading",
+   "statement": "s0",
+   "runtimeId": "java-runtime-17b5c153a73414b75e24",
+   "epl": "@name('s0') select * from pattern[a=SupportBean -> every event1=SupportTradeEvent(userId like '123%')]"
+  },
+  {
+   "op": "deployed",
+   "case": "large-threading",
+   "statement": "s0",
+   "runtimeId": "java-runtime-17b5c153a73414b75e24"
+  },
+  {
+   "op": "types",
+   "case": "large-threading",
+   "statement": "s0",
+   "runtimeId": "java-runtime-17b5c153a73414b75e24"
+  },
+  {
+   "op": "send",
+   "case": "large-threading",
+   "statement": "s0",
+   "runtimeId": "java-runtime-17b5c153a73414b75e24",
+   "eventType": "SupportBean",
+   "payload": {
+    "expectedFire": false
+   }
+  },
+  {
+   "op": "send",
+   "case": "large-threading",
+   "statement": "s0",
+   "runtimeId": "java-runtime-17b5c153a73414b75e24",
+   "eventType": "SupportTradeEvent",
+   "payload": {
+    "id": 1,
+    "userId": null,
+    "amount": 1001,
+    "expectedFire": false
+   }
+  },
+  {
+   "op": "send",
+   "case": "large-threading",
+   "statement": "s0",
+   "runtimeId": "java-runtime-17b5c153a73414b75e24",
+   "eventType": "SupportTradeEvent",
+   "payload": {
+    "id": 2,
+    "userId": "1234",
+    "amount": 1001,
+    "expectedFire": true
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "large-threading",
+   "runtimeId": "java-runtime-17b5c153a73414b75e24"
+  }
+ ]
+}

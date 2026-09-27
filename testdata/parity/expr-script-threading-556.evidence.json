@@ -1,0 +1,493 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-950fed16f3830d3a9926",
+    "java-runtime-416f111d2368882ea644",
+    "java-runtime-17b5c153a73414b75e24"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/script/EPLScriptExpression.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterLargeThreading.java"
+  ],
+  "javaExecutions": [
+    "EPLScriptQuoteEscape",
+    "EPLScriptInvalidRegardlessDialect",
+    "ExprFilterLargeThreading"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "expr-script-threading-556",
+    "steps": [
+      {
+        "op": "case",
+        "case": "script-probes"
+      },
+      {
+        "op": "deploy",
+        "case": "script-probes",
+        "statement": "sl-comment",
+        "epl": "create expression f(params)[\n  // I'am...\n];"
+      },
+      {
+        "op": "deploy",
+        "case": "script-probes",
+        "statement": "ml-comment",
+        "epl": "create expression g(params)[\n  /* I'am... */];"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "script-probes",
+        "statement": "param-defined-twice",
+        "expectError": "Invalid script parameters for script 'abc', parameter 'p1' is defined more then once [expression js:abc(p1, p1) [/* text */] select * from SupportBean]",
+        "epl": "expression js:abc(p1, p1) [/* text */] select * from SupportBean"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "script-probes",
+        "statement": "invalid-dialect",
+        "expectError": "Failed to obtain script runtime for dialect 'dummy' for script 'abc' [expression dummy:abc() [10] select * from SupportBean]",
+        "epl": "expression dummy:abc() [10] select * from SupportBean"
+      },
+      {
+        "op": "build-error",
+        "case": "script-probes",
+        "statement": "unknown-script",
+        "expectError": "Failed to validate select-clause expression 'abc()': Unknown single-row function, expression declaration, script or aggregation function named 'abc' could not be resolved [select abc() from SupportBean]",
+        "epl": "select abc() from SupportBean"
+      },
+      {
+        "op": "build-error",
+        "case": "script-probes",
+        "statement": "arity-mismatch",
+        "expectError": "Failed to validate select-clause expression 'abc(1)': Invalid number of parameters for script 'abc', expected 0 parameters but received 1 parameters [expression js:abc() [10] select abc(1) from SupportBean]",
+        "epl": "expression js:abc() [10] select abc(1) from SupportBean"
+      },
+      {
+        "op": "build-error",
+        "case": "script-probes",
+        "statement": "same-arity-overload",
+        "expectError": "Script name 'abc' has already been defined with the same number of parameters [expression js:abc() [10] expression js:abc() [10] select abc() from SupportBean]",
+        "epl": "expression js:abc() [10] expression js:abc() [10] select abc() from SupportBean"
+      },
+      {
+        "op": "build-error",
+        "case": "script-probes",
+        "statement": "param-name-overlap",
+        "expectError": "Script name 'abc' has already been defined with the same number of parameters [expression js:abc(p1) [10] expression js:abc(p2) [10] select abc() from SupportBean]",
+        "epl": "expression js:abc(p1) [10] expression js:abc(p2) [10] select abc() from SupportBean"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "script-probes",
+        "statement": "script-expression-overlap",
+        "expectError": "Script name 'abc' overlaps with another expression of the same name [expression js:abc() [10] expression abc {10} select abc() from SupportBean]",
+        "epl": "expression js:abc() [10] expression abc {10} select abc() from SupportBean"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "script-probes",
+        "statement": "unresolvable-return-type",
+        "expectError": "Failed to validate select-clause expression 'abc()': Failed to resolve return type 'dummy' specified for script 'abc' [expression dummy js:abc() [10] select abc() from SupportBean]",
+        "epl": "expression dummy js:abc() [10] select abc() from SupportBean"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "script-probes"
+      },
+      {
+        "op": "case",
+        "case": "large-threading"
+      },
+      {
+        "op": "deploy",
+        "case": "large-threading",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern[a=SupportBean -\u003e every event1=SupportTradeEvent(userId like '123%')]"
+      },
+      {
+        "op": "deployed",
+        "case": "large-threading",
+        "statement": "s0"
+      },
+      {
+        "op": "types",
+        "case": "large-threading",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "large-threading",
+        "statement": "s0",
+        "eventType": "SupportBean",
+        "payload": {
+          "expectedFire": false
+        }
+      },
+      {
+        "op": "send",
+        "case": "large-threading",
+        "statement": "s0",
+        "eventType": "SupportTradeEvent",
+        "payload": {
+          "id": 1,
+          "userId": null,
+          "amount": 1001,
+          "expectedFire": false
+        }
+      },
+      {
+        "op": "send",
+        "case": "large-threading",
+        "statement": "s0",
+        "eventType": "SupportTradeEvent",
+        "payload": {
+          "id": 2,
+          "userId": "1234",
+          "amount": 1001,
+          "expectedFire": true
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "large-threading"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-script-threading-556",
+    "records": [
+      {
+        "case": "script-probes",
+        "operation": "compile-ok",
+        "statement": "sl-comment",
+        "sequence": 0,
+        "value": "compile-ok: Java compileDeploy accepts the script body whose single-line comment text contains an apostrophe (// I'am...); the Go script surface registers provider callbacks rather than EPL bodies, so the lexing detail has no Go boundary"
+      },
+      {
+        "case": "script-probes",
+        "operation": "compile-ok",
+        "statement": "ml-comment",
+        "sequence": 0,
+        "value": "compile-ok: Java compileDeploy accepts the script body whose multi-line comment text contains an apostrophe (/* I'am... */); the Go script surface registers provider callbacks rather than EPL bodies, so the lexing detail has no Go boundary"
+      },
+      {
+        "case": "script-probes",
+        "operation": "unrepresentable",
+        "statement": "param-defined-twice",
+        "sequence": 0,
+        "value": "Invalid script parameters for script 'abc', parameter 'p1' is defined more then once [expression js:abc(p1, p1) [/* text */] select * from SupportBean]"
+      },
+      {
+        "case": "script-probes",
+        "operation": "intentionally-different",
+        "statement": "invalid-dialect",
+        "sequence": 0,
+        "value": "Failed to obtain script runtime for dialect 'dummy' for script 'abc' [expression dummy:abc() [10] select * from SupportBean]"
+      },
+      {
+        "case": "script-probes",
+        "operation": "compile-error",
+        "statement": "unknown-script",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'abc()': Unknown single-row function, expression declaration, script or aggregation function named 'abc' could not be resolved [select abc() from SupportBean]"
+      },
+      {
+        "case": "script-probes",
+        "operation": "compile-error",
+        "statement": "arity-mismatch",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'abc(1)': Invalid number of parameters for script 'abc', expected 0 parameters but received 1 parameters [expression js:abc() [10] select abc(1) from SupportBean]"
+      },
+      {
+        "case": "script-probes",
+        "operation": "compile-error",
+        "statement": "same-arity-overload",
+        "sequence": 0,
+        "value": "Script name 'abc' has already been defined with the same number of parameters [expression js:abc() [10] expression js:abc() [10] select abc() from SupportBean]"
+      },
+      {
+        "case": "script-probes",
+        "operation": "compile-error",
+        "statement": "param-name-overlap",
+        "sequence": 0,
+        "value": "Script name 'abc' has already been defined with the same number of parameters [expression js:abc(p1) [10] expression js:abc(p2) [10] select abc() from SupportBean]"
+      },
+      {
+        "case": "script-probes",
+        "operation": "intentionally-different",
+        "statement": "script-expression-overlap",
+        "sequence": 0,
+        "value": "Script name 'abc' overlaps with another expression of the same name [expression js:abc() [10] expression abc {10} select abc() from SupportBean]"
+      },
+      {
+        "case": "script-probes",
+        "operation": "unrepresentable",
+        "statement": "unresolvable-return-type",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'abc()': Failed to resolve return type 'dummy' specified for script 'abc' [expression dummy js:abc() [10] select abc() from SupportBean]"
+      },
+      {
+        "case": "large-threading",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "large-threading",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "properties": {
+            "a": "Map",
+            "event1": "Map"
+          }
+        }
+      },
+      {
+        "case": "large-threading",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "bigDecimal": {
+                  "state": "null"
+                },
+                "bigInteger": {
+                  "state": "null"
+                },
+                "boolBoxed": {
+                  "state": "null"
+                },
+                "boolPrimitive": false,
+                "byteBoxed": {
+                  "state": "null"
+                },
+                "bytePrimitive": 0,
+                "charBoxed": {
+                  "state": "null"
+                },
+                "charPrimitive": "\u0000",
+                "doubleBoxed": {
+                  "state": "null"
+                },
+                "doublePrimitive": 0,
+                "enumValue": {
+                  "state": "null"
+                },
+                "floatBoxed": {
+                  "state": "null"
+                },
+                "floatPrimitive": 0,
+                "intBoxed": {
+                  "state": "null"
+                },
+                "intPrimitive": 0,
+                "longBoxed": {
+                  "state": "null"
+                },
+                "longPrimitive": 0,
+                "shortBoxed": {
+                  "state": "null"
+                },
+                "shortPrimitive": 0,
+                "theString": {
+                  "state": "null"
+                }
+              },
+              "event1": {
+                "amount": 1001,
+                "ccypair": {
+                  "state": "null"
+                },
+                "direction": {
+                  "state": "null"
+                },
+                "id": 2,
+                "userId": "1234"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-script-threading-556",
+    "records": [
+      {
+        "case": "script-probes",
+        "operation": "compile-ok",
+        "statement": "sl-comment",
+        "sequence": 0,
+        "value": "compile-ok: Java compileDeploy accepts the script body whose single-line comment text contains an apostrophe (// I'am...); the Go script surface registers provider callbacks rather than EPL bodies, so the lexing detail has no Go boundary"
+      },
+      {
+        "case": "script-probes",
+        "operation": "compile-ok",
+        "statement": "ml-comment",
+        "sequence": 0,
+        "value": "compile-ok: Java compileDeploy accepts the script body whose multi-line comment text contains an apostrophe (/* I'am... */); the Go script surface registers provider callbacks rather than EPL bodies, so the lexing detail has no Go boundary"
+      },
+      {
+        "case": "script-probes",
+        "operation": "unrepresentable",
+        "statement": "param-defined-twice",
+        "sequence": 0,
+        "value": "Invalid script parameters for script 'abc', parameter 'p1' is defined more then once [expression js:abc(p1, p1) [/* text */] select * from SupportBean]"
+      },
+      {
+        "case": "script-probes",
+        "operation": "intentionally-different",
+        "statement": "invalid-dialect",
+        "sequence": 0,
+        "value": "Failed to obtain script runtime for dialect 'dummy' for script 'abc' [expression dummy:abc() [10] select * from SupportBean]"
+      },
+      {
+        "case": "script-probes",
+        "operation": "compile-error",
+        "statement": "unknown-script",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'abc()': Unknown single-row function, expression declaration, script or aggregation function named 'abc' could not be resolved [select abc() from SupportBean]"
+      },
+      {
+        "case": "script-probes",
+        "operation": "compile-error",
+        "statement": "arity-mismatch",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'abc(1)': Invalid number of parameters for script 'abc', expected 0 parameters but received 1 parameters [expression js:abc() [10] select abc(1) from SupportBean]"
+      },
+      {
+        "case": "script-probes",
+        "operation": "compile-error",
+        "statement": "same-arity-overload",
+        "sequence": 0,
+        "value": "Script name 'abc' has already been defined with the same number of parameters [expression js:abc() [10] expression js:abc() [10] select abc() from SupportBean]"
+      },
+      {
+        "case": "script-probes",
+        "operation": "compile-error",
+        "statement": "param-name-overlap",
+        "sequence": 0,
+        "value": "Script name 'abc' has already been defined with the same number of parameters [expression js:abc(p1) [10] expression js:abc(p2) [10] select abc() from SupportBean]"
+      },
+      {
+        "case": "script-probes",
+        "operation": "intentionally-different",
+        "statement": "script-expression-overlap",
+        "sequence": 0,
+        "value": "Script name 'abc' overlaps with another expression of the same name [expression js:abc() [10] expression abc {10} select abc() from SupportBean]"
+      },
+      {
+        "case": "script-probes",
+        "operation": "unrepresentable",
+        "statement": "unresolvable-return-type",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'abc()': Failed to resolve return type 'dummy' specified for script 'abc' [expression dummy js:abc() [10] select abc() from SupportBean]"
+      },
+      {
+        "case": "large-threading",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "large-threading",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "properties": {
+            "a": "Map",
+            "event1": "Map"
+          }
+        }
+      },
+      {
+        "case": "large-threading",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "bigDecimal": {
+                  "state": "null"
+                },
+                "bigInteger": {
+                  "state": "null"
+                },
+                "boolBoxed": {
+                  "state": "null"
+                },
+                "boolPrimitive": false,
+                "byteBoxed": {
+                  "state": "null"
+                },
+                "bytePrimitive": 0,
+                "charBoxed": {
+                  "state": "null"
+                },
+                "charPrimitive": "\u0000",
+                "doubleBoxed": {
+                  "state": "null"
+                },
+                "doublePrimitive": 0,
+                "enumValue": {
+                  "state": "null"
+                },
+                "floatBoxed": {
+                  "state": "null"
+                },
+                "floatPrimitive": 0,
+                "intBoxed": {
+                  "state": "null"
+                },
+                "intPrimitive": 0,
+                "longBoxed": {
+                  "state": "null"
+                },
+                "longPrimitive": 0,
+                "shortBoxed": {
+                  "state": "null"
+                },
+                "shortPrimitive": 0,
+                "theString": {
+                  "state": "null"
+                }
+              },
+              "event1": {
+                "amount": 1001,
+                "ccypair": {
+                  "state": "null"
+                },
+                "direction": {
+                  "state": "null"
+                },
+                "id": 2,
+                "userId": "1234"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

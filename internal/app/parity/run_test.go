@@ -87139,3 +87139,323 @@ func TestRunExprDefineLocReport555CheckedInEvidenceMatchesTraceAndReplay(t *test
 	assertExprDefineLocReport555Trace(t, javaTrace)
 	assertExprDefineLocReport555Trace(t, goTrace)
 }
+
+func TestRunExprScriptThreading556DirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", exprScriptThreading556ID,
+		"-scenario", filepath.Join(root, exprScriptThreading556ID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if trace.Version != compat.ScenarioVersion {
+		t.Fatalf("trace version = %q", trace.Version)
+	}
+	assertExprScriptThreading556Trace(t, trace)
+}
+
+// TestRunExprScriptThreading556CompileProbeBoundaries drives each ord-4
+// probe's Go construction directly: the four build-error probes must fail
+// at Build with the pinned prefix, the two intentionally-different probes
+// must construct cleanly, and the two unrepresentable probes have no Go
+// script surface by design.
+func TestRunExprScriptThreading556CompileProbeBoundaries(t *testing.T) {
+	for _, probe := range exprScriptThreading556Probes {
+		t.Run(probe.Label, func(t *testing.T) {
+			switch probe.Record {
+			case "compile-error":
+				err, _ := exprScriptThreading556ProbeBoundary(probe.Label)
+				if err == nil {
+					t.Fatalf("probe %s unexpectedly built", probe.Label)
+				}
+			case "intentionally-different":
+				if err := exprScriptThreading556ProbeAccepted(probe.Label); err != nil {
+					t.Fatalf("probe %s should construct in Go: %v", probe.Label, err)
+				}
+			case "unrepresentable":
+				if _, ok := exprScriptThreading556ProbeByLabel(probe.Label); !ok {
+					t.Fatalf("probe %s missing from table", probe.Label)
+				}
+			default:
+				t.Fatalf("probe %s has unexpected record op %q", probe.Label, probe.Record)
+			}
+		})
+	}
+}
+
+// TestRunExprScriptThreading556PinnedArtifacts pins the byte-exact EPL
+// and probe metadata extracted from the Java regression source.
+func TestRunExprScriptThreading556PinnedArtifacts(t *testing.T) {
+	if exprScriptThreading556SLComment != "create expression f(params)[\n  // I'am...\n];" {
+		t.Fatalf("sl-comment epl = %q", exprScriptThreading556SLComment)
+	}
+	if exprScriptThreading556MLComment != "create expression g(params)[\n  /* I'am... */];" {
+		t.Fatalf("ml-comment epl = %q", exprScriptThreading556MLComment)
+	}
+	if exprScriptThreading556ThreadingEPL !=
+		"@name('s0') select * from pattern[a=SupportBean -> every event1=SupportTradeEvent(userId like '123%')]" {
+		t.Fatalf("threading epl = %q", exprScriptThreading556ThreadingEPL)
+	}
+	if len(exprScriptThreading556Probes) != 8 || len(exprScriptThreading556StepKeys()) != 20 {
+		t.Fatalf("probes=%d keys=%d", len(exprScriptThreading556Probes), len(exprScriptThreading556StepKeys()))
+	}
+	wantOps := map[string]string{
+		"param-defined-twice":       "unrepresentable",
+		"invalid-dialect":           "intentionally-different",
+		"unknown-script":            "compile-error",
+		"arity-mismatch":            "compile-error",
+		"same-arity-overload":       "compile-error",
+		"param-name-overlap":        "compile-error",
+		"script-expression-overlap": "intentionally-different",
+		"unresolvable-return-type":  "unrepresentable",
+	}
+	for label, want := range wantOps {
+		probe, ok := exprScriptThreading556ProbeByLabel(label)
+		if !ok || probe.Record != want {
+			t.Fatalf("probe %s record = %q, want %q", label, probe.Record, want)
+		}
+	}
+}
+
+// TestRunExprScriptThreading556ScenarioLoader pins the strict loader:
+// runtime-id drift and step-count drift are both rejected.
+func TestRunExprScriptThreading556ScenarioLoader(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	scenarioPath := filepath.Join(root, exprScriptThreading556ID+".json")
+	scenarioFile, err := os.Open(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, loadErr := loadExprScriptThreading556Scenario(scenarioFile)
+	closeErr := scenarioFile.Close()
+	if loadErr != nil {
+		t.Fatalf("checked-in scenario rejected: %v", loadErr)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	data, err := os.ReadFile(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var mutated map[string]any
+	if err := json.Unmarshal(data, &mutated); err != nil {
+		t.Fatal(err)
+	}
+	runtimes := mutated["javaRuntimes"].([]any)
+	runtimes[0] = "java-runtime-mutated"
+	raw, err := json.Marshal(mutated)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loadExprScriptThreading556Scenario(strings.NewReader(string(raw))); err == nil {
+		t.Fatal("runtime-id drift accepted")
+	}
+	mutated["javaRuntimes"] = runtimes
+	steps := mutated["steps"].([]any)
+	mutated["steps"] = steps[:len(steps)-1]
+	raw, err = json.Marshal(mutated)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loadExprScriptThreading556Scenario(strings.NewReader(string(raw))); err == nil {
+		t.Fatal("step-count drift accepted")
+	}
+}
+
+// assertExprScriptThreading556Trace pins the 13-record shared trace
+// shape: 10 script-probe compile records then the threading
+// deployed/types/listener triple.
+func assertExprScriptThreading556Trace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	want := []struct {
+		caseName  string
+		op        string
+		statement string
+	}{
+		{"script-probes", "compile-ok", "sl-comment"},
+		{"script-probes", "compile-ok", "ml-comment"},
+		{"script-probes", "unrepresentable", "param-defined-twice"},
+		{"script-probes", "intentionally-different", "invalid-dialect"},
+		{"script-probes", "compile-error", "unknown-script"},
+		{"script-probes", "compile-error", "arity-mismatch"},
+		{"script-probes", "compile-error", "same-arity-overload"},
+		{"script-probes", "compile-error", "param-name-overlap"},
+		{"script-probes", "intentionally-different", "script-expression-overlap"},
+		{"script-probes", "unrepresentable", "unresolvable-return-type"},
+		{"large-threading", "deployed", "s0"},
+		{"large-threading", "types", "s0"},
+		{"large-threading", "listener", "s0"},
+	}
+	if len(trace.Records) != len(want) {
+		t.Fatalf("records = %d, want %d", len(trace.Records), len(want))
+	}
+	for index, expected := range want {
+		rec := trace.Records[index]
+		if rec.Case != expected.caseName || rec.Operation != expected.op || rec.Statement != expected.statement {
+			t.Fatalf("record %d = %s/%s/%s, want %s/%s/%s", index,
+				rec.Case, rec.Operation, rec.Statement,
+				expected.caseName, expected.op, expected.statement)
+		}
+	}
+	listener := trace.Records[12]
+	if listener.Sequence != 1 {
+		t.Fatalf("listener sequence = %d, want 1", listener.Sequence)
+	}
+	row := listener.New[0].Fields
+	event1, ok := row["event1"].(map[string]any)
+	if !ok {
+		t.Fatalf("event1 field = %#v", row["event1"])
+	}
+	if event1["id"] != json.Number("2") && event1["id"] != float64(2) && event1["id"] != int64(2) {
+		t.Fatalf("event1.id = %#v", event1["id"])
+	}
+}
+
+func TestRunExprScriptThreading556DiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTracePath := filepath.Join(root, exprScriptThreading556ID+".trace.json")
+	evidencePath := filepath.Join(t.TempDir(), exprScriptThreading556ID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", exprScriptThreading556ID + "-diff",
+		"-scenario", filepath.Join(root, exprScriptThreading556ID+".json"),
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != exprScriptThreading556JavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, exprScriptThreading556JavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, exprScriptThreading556JavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, exprScriptThreading556JavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertExprScriptThreading556Trace(t, evidence.JavaTrace)
+	assertExprScriptThreading556Trace(t, evidence.GoTrace)
+}
+
+func TestRunExprScriptThreading556DiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "compile-error-prefix-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Operation == "compile-error" && rec.Statement == "arity-mismatch" {
+						rec.Value = "wrong prefix"
+						return
+					}
+				}
+				panic("no compile-error record")
+			},
+		},
+		{
+			name: "listener-event1-id-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[12].New[0].Fields["event1"].(map[string]any)["id"] = json.Number("99")
+			},
+		},
+		{
+			name: "types-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Operation == "types" {
+						rec.Value.(map[string]any)["properties"].(map[string]any)["a"] = "Collection"
+						return
+					}
+				}
+				panic("no types record")
+			},
+		},
+		{
+			name: "missing-record",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+		{
+			name: "record-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0], trace.Records[1] = trace.Records[1], trace.Records[0]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join(root, exprScriptThreading556ID+".trace.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), exprScriptThreading556ID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", exprScriptThreading556ID + "-diff",
+				"-scenario", filepath.Join(root, exprScriptThreading556ID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunExprScriptThreading556CheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, exprScriptThreading556ID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, exprScriptThreading556ID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, exprScriptThreading556ID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if !reflect.DeepEqual(evidence.JavaTrace, javaTrace) {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %v", evidence.Differences)
+	}
+	if !reflect.DeepEqual(evidence.GoTrace, goTrace) {
+		t.Fatalf("checked-in evidence Go trace differs from checked-in trace: %v", evidence.Differences)
+	}
+	if evidence.JavaCommit != exprScriptThreading556JavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, exprScriptThreading556JavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, exprScriptThreading556JavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, exprScriptThreading556JavaExecutions) {
+		t.Fatalf("checked-in Java metadata = %#v", evidence)
+	}
+	assertExprScriptThreading556Trace(t, javaTrace)
+	assertExprScriptThreading556Trace(t, goTrace)
+}

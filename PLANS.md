@@ -38,35 +38,39 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.539 ('epl-other-invalid') committed and pushed as 3d2dd2720; Git owns identity.
 
 
-## Current work unit
-Active: Draft 4.555 ('expr-define-locreport + inlined-class/cache dispositions').
 
-- Contract frozen (JavaContract555 + GoSurface555): ExprDefineLambdaLocReport
-  (`java-runtime-867dc2875052889e9df2`) is the sole DV execution — nested
-  declared expressions + enum lambdas over the 21-item makeLarge fixture.
-  Intentionally-different (no traces): StaticMethod ord 4 (deploy-time
-  class-version binding), ord 11 (InlinedClassInspection callback),
-  ExprClassDisable (AllowInlinedClass knob), ExprDefineConfigurations
-  (DeclaredExprValueCacheSize invocation-count observable; Go re-evaluates
-  — decision A recorded).
-- [x] Assets555 dispatched (runner expr_define_locreport_555.go + fixture).
-- [x] Manifest: 3 intentionally-different cases added
-  (case.expr-class-static-method-dispositions, case.expr-class-disable-disposition,
-  case.expr-define-value-cache-disposition); 788 cases / 403 unreferenced.
-- [x] Assets555 delivered + integrated: Java trace 2 records, Go replay 2
-  (types + listener), `-diff` passing / 0 differences; evidence + traces
-  checked in. EPL correction: `p.assetId=l.assetIdPassenger` links
-  passenger->luggage (my inline prompt copy was wrong); E00011/E00010 are
-  type 'P', A00010/A00011/L00009 type 'L'. Nested ExpressionRef composition
-  works; 2 helper declared expressions carry the outer enum element where
-  Java leaks the outer lambda scope.
-- [x] Manifest: NEW case.expr-define-locreport born-DV + 3 dispositions;
-  summary -> 789 cases / 409 DV / 1632 DV runtime IDs / 402 unreferenced.
+## Current work unit
+Active: Draft 4.556 ('expr-script-threading').
+
+- Contract frozen (JavaContract556 + GoSurface556): expr domain remainder —
+  filter core/in-set/optimizable/variables/define/dt/enum/clazz all
+  referenced. Bundle = EPLScriptExpression ord 1 QuoteEscape + ord 4
+  InvalidRegardlessDialect (compile probes) + ExprFilterLargeThreading ord 0
+  (pattern+like listener). Excluded: S5/S7 JS+MVEL dialects
+  (intentionally-different, no runtime in Go), S6/S9 MVEL no-ops,
+  F1-F6 PERFORMANCE-flagged execs.
+- [x] Assets556 dispatched (runner expr_script_threading_556.go, scenario
+  expr-script-threading-556.json, oracle ExprScriptThreading556ScenarioOracle).
+- [x] Assets556 delivered + integrated: Java trace 13 records, Go replay
+  13 (compile-ok/unrepresentable/build-error + types/listener), `-diff`
+  passing / 0 differences; evidence + traces checked in.
+- [x] ID correction: scout swapped ord 4/5 runtime IDs — ground truth is
+  ord4 InvalidRegardlessDialect=`416f111d`, ord5 InvalidScriptJS=`0198690c`.
+  Fixed scenario/runner/oracle/evidence; also corrected
+  case.expr-script-provider javaRuntimeIds (it had `416f111d` under
+  DocSamples's name; real DocSamples = `6f79531e`, now referenced).
+- [x] Manifest: NEW case.expr-script-threading-556 born-DV (3 IDs);
+  summary -> 790 cases / 410 DV / 1635 DV runtime IDs / 399 unreferenced.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev555 + JavaContract556 + GoSurface556 dispatched.
+- [x] ParityRev556 + JavaContract557 + GoSurface557 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.555 ('expr-define-locreport + inlined-class/cache
+  dispositions') committed and pushed as `7d788e025`; Git owns identity.
+  ExprDefineLambdaLocReport born-DV (2 records each, 0 differences); 3
+  intentionally-different dispositions recorded; review PASS, P3 metadata
+  pinning fixed.
 - Shipped: Draft 4.554 ('expr-enum-remainder') committed and pushed as
   `912f0eb4b`; Git owns identity. 6 executions born-DV (32 records each,
   0 differences); review PASS, P3 doc nits + must-succeed probe tolerance
