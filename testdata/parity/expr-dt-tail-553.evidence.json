@@ -1,0 +1,2037 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-96fba8bd8db354b4058e",
+    "java-runtime-9d3c9122a833c6235a1d",
+    "java-runtime-a3cec43b565226d9cbac",
+    "java-runtime-8c90cf3d4a6abbd4848f",
+    "java-runtime-59302e42b09f7b2f6818"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTToDateCalMSec.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTDocSamples.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTIntervalOpsCreateSchema.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTInvalid.java"
+  ],
+  "javaExecutions": [
+    "ExprToCalendarChain",
+    "ExprDTToDateCalMSecValue",
+    "ExprDTDocSamples",
+    "ExprDTIntervalOpsCreateSchema",
+    "ExprDTInvalid"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "expr-dt-tail-553",
+    "steps": [
+      {
+        "op": "case",
+        "case": "tocalendar-chain"
+      },
+      {
+        "op": "advance-time",
+        "case": "tocalendar-chain",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deploy",
+        "case": "tocalendar-chain",
+        "statement": "s0",
+        "epl": "@name('s0') select current_timestamp.toCalendar().add(Calendar.DAY_OF_MONTH,1) as c from SupportBean"
+      },
+      {
+        "op": "send",
+        "case": "tocalendar-chain",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0,
+          "expected": [
+            {
+              "state": "null"
+            }
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "tocalendar-chain"
+      },
+      {
+        "op": "case",
+        "case": "todatecalmsec-value"
+      },
+      {
+        "op": "deploy",
+        "case": "todatecalmsec-value",
+        "statement": "warmup",
+        "epl": "select current_timestamp.toCalendar().add(Calendar.DAY_OF_MONTH,1) from SupportBean"
+      },
+      {
+        "op": "advance-time",
+        "case": "todatecalmsec-value",
+        "at": "2002-05-30T09:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "todatecalmsec-value",
+        "statement": "s0",
+        "epl": "@name('s0') select current_timestamp.toDate() as val0,utildate.toDate() as val1,longdate.toDate() as val2,caldate.toDate() as val3,localdate.toDate() as val4,zoneddate.toDate() as val5,current_timestamp.toCalendar() as val6,utildate.toCalendar() as val7,longdate.toCalendar() as val8,caldate.toCalendar() as val9,localdate.toCalendar() as val10,zoneddate.toCalendar() as val11,current_timestamp.toMillisec() as val12,utildate.toMillisec() as val13,longdate.toMillisec() as val14,caldate.toMillisec() as val15,localdate.toMillisec() as val16,zoneddate.toMillisec() as val17 from SupportDateTime"
+      },
+      {
+        "op": "types",
+        "case": "todatecalmsec-value",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "todatecalmsec-value",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": "2002-05-30T09:00:00.000Z",
+          "expected": [
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000,
+            1022749200000
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "todatecalmsec-value",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": null,
+          "expected": [
+            1022749200000,
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            1022749200000,
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            1022749200000,
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            },
+            {
+              "state": "null"
+            }
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "todatecalmsec-value"
+      },
+      {
+        "op": "case",
+        "case": "docsamples"
+      },
+      {
+        "op": "deploy",
+        "case": "docsamples",
+        "statement": "doc-format",
+        "epl": "select timeTaken.format() as timeTakenStr from RFIDEvent"
+      },
+      {
+        "op": "deploy",
+        "case": "docsamples",
+        "statement": "doc-get-month",
+        "epl": "select timeTaken.get('month') as timeTakenMonth from RFIDEvent"
+      },
+      {
+        "op": "deploy",
+        "case": "docsamples",
+        "statement": "doc-get-month-of-year",
+        "epl": "select timeTaken.getMonthOfYear() as timeTakenMonth from RFIDEvent"
+      },
+      {
+        "op": "deploy",
+        "case": "docsamples",
+        "statement": "doc-minus-minutes",
+        "epl": "select timeTaken.minus(2 minutes) as timeTakenMinus2Min from RFIDEvent"
+      },
+      {
+        "op": "deploy",
+        "case": "docsamples",
+        "statement": "doc-minus-millis",
+        "epl": "select timeTaken.minus(2*60*1000) as timeTakenMinus2Min from RFIDEvent"
+      },
+      {
+        "op": "deploy",
+        "case": "docsamples",
+        "statement": "doc-plus-minutes",
+        "epl": "select timeTaken.plus(2 minutes) as timeTakenMinus2Min from RFIDEvent"
+      },
+      {
+        "op": "deploy",
+        "case": "docsamples",
+        "statement": "doc-plus-millis",
+        "epl": "select timeTaken.plus(2*60*1000) as timeTakenMinus2Min from RFIDEvent"
+      },
+      {
+        "op": "deploy",
+        "case": "docsamples",
+        "statement": "doc-round-ceiling",
+        "epl": "select timeTaken.roundCeiling('min') as timeTakenRounded from RFIDEvent"
+      },
+      {
+        "op": "deploy",
+        "case": "docsamples",
+        "statement": "doc-round-floor",
+        "epl": "select timeTaken.roundFloor('min') as timeTakenRounded from RFIDEvent"
+      },
+      {
+        "op": "deploy",
+        "case": "docsamples",
+        "statement": "doc-set-month",
+        "epl": "select timeTaken.set('month', 3) as timeTakenMonth from RFIDEvent"
+      },
+      {
+        "op": "deploy",
+        "case": "docsamples",
+        "statement": "doc-with-date",
+        "epl": "select timeTaken.withDate(2002, 4, 30) as timeTakenDated from RFIDEvent"
+      },
+      {
+        "op": "deploy",
+        "case": "docsamples",
+        "statement": "doc-with-max",
+        "epl": "select timeTaken.withMax('sec') as timeTakenMaxSec from RFIDEvent"
+      },
+      {
+        "op": "deploy",
+        "case": "docsamples",
+        "statement": "doc-to-calendar",
+        "epl": "select timeTaken.toCalendar() as timeTakenCal from RFIDEvent"
+      },
+      {
+        "op": "deploy",
+        "case": "docsamples",
+        "statement": "doc-to-date",
+        "epl": "select timeTaken.toDate() as timeTakenDate from RFIDEvent"
+      },
+      {
+        "op": "deploy",
+        "case": "docsamples",
+        "statement": "doc-to-millisec",
+        "epl": "select timeTaken.toMillisec() as timeTakenLong from RFIDEvent"
+      },
+      {
+        "op": "deploy",
+        "case": "docsamples",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [a=A -\u003e b=B] as abc where a.longdateStart.after(b)"
+      },
+      {
+        "op": "send",
+        "case": "docsamples",
+        "eventType": "A",
+        "payload": {
+          "date": "2002-05-30T09:00:00.000Z"
+        }
+      },
+      {
+        "op": "send",
+        "case": "docsamples",
+        "eventType": "B",
+        "payload": {
+          "date": "2002-05-30T08:59:59.999Z",
+          "expected": [
+            true
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "docsamples"
+      },
+      {
+        "op": "deploy",
+        "case": "docsamples",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [a=A -\u003e b=B] as abc where a.after(b.longdateStart)"
+      },
+      {
+        "op": "send",
+        "case": "docsamples",
+        "eventType": "A",
+        "payload": {
+          "date": "2002-05-30T09:00:00.000Z"
+        }
+      },
+      {
+        "op": "send",
+        "case": "docsamples",
+        "eventType": "B",
+        "payload": {
+          "date": "2002-05-30T08:59:59.999Z",
+          "expected": [
+            true
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "docsamples"
+      },
+      {
+        "op": "deploy",
+        "case": "docsamples",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [a=A -\u003e b=B] as abc where a.after(b)"
+      },
+      {
+        "op": "send",
+        "case": "docsamples",
+        "eventType": "A",
+        "payload": {
+          "date": "2002-05-30T09:00:00.000Z"
+        }
+      },
+      {
+        "op": "send",
+        "case": "docsamples",
+        "eventType": "B",
+        "payload": {
+          "date": "2002-05-30T08:59:59.999Z",
+          "expected": [
+            true
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "docsamples"
+      },
+      {
+        "op": "deploy",
+        "case": "docsamples",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [a=A -\u003e b=B] as abc where a.after(b)"
+      },
+      {
+        "op": "send",
+        "case": "docsamples",
+        "eventType": "A",
+        "payload": {
+          "date": "2002-05-30T08:59:59.999Z"
+        }
+      },
+      {
+        "op": "send",
+        "case": "docsamples",
+        "eventType": "B",
+        "payload": {
+          "date": "2002-05-30T09:00:00.000Z",
+          "expected": [
+            false
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "docsamples"
+      },
+      {
+        "op": "case",
+        "case": "intervalops-createschema"
+      },
+      {
+        "op": "deploy",
+        "case": "intervalops-createschema",
+        "statement": "schema-map-msec",
+        "epl": "@EventRepresentation('map') @buseventtype @public create schema TypeA as (startts long, endts long) starttimestamp startts endtimestamp endts;\n@EventRepresentation('map') @buseventtype @public create schema TypeB as (startts long, endts long) starttimestamp startts endtimestamp endts;\n@name('s0') select a.includes(b) as val0 from TypeA#lastevent as a, TypeB#lastevent as b;\n"
+      },
+      {
+        "op": "send",
+        "case": "intervalops-createschema",
+        "eventType": "TypeA",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 1000
+        }
+      },
+      {
+        "op": "send",
+        "case": "intervalops-createschema",
+        "eventType": "TypeB",
+        "payload": {
+          "start": "2002-05-30T09:00:00.500Z",
+          "duration": 200,
+          "expected": [
+            true
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "intervalops-createschema"
+      },
+      {
+        "op": "deploy",
+        "case": "intervalops-createschema",
+        "statement": "schema-map-calendar",
+        "epl": "@EventRepresentation('map') @buseventtype @public create schema TypeA as (startts java.util.Calendar, endts java.util.Calendar) starttimestamp startts endtimestamp endts;\n@EventRepresentation('map') @buseventtype @public create schema TypeB as (startts java.util.Calendar, endts java.util.Calendar) starttimestamp startts endtimestamp endts;\n@name('s0') select a.includes(b) as val0 from TypeA#lastevent as a, TypeB#lastevent as b;\n"
+      },
+      {
+        "op": "send",
+        "case": "intervalops-createschema",
+        "eventType": "TypeA",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 1000
+        }
+      },
+      {
+        "op": "send",
+        "case": "intervalops-createschema",
+        "eventType": "TypeB",
+        "payload": {
+          "start": "2002-05-30T09:00:00.500Z",
+          "duration": 200,
+          "expected": [
+            true
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "intervalops-createschema"
+      },
+      {
+        "op": "deploy",
+        "case": "intervalops-createschema",
+        "statement": "schema-map-date",
+        "epl": "@EventRepresentation('map') @buseventtype @public create schema TypeA as (startts java.util.Date, endts java.util.Date) starttimestamp startts endtimestamp endts;\n@EventRepresentation('map') @buseventtype @public create schema TypeB as (startts java.util.Date, endts java.util.Date) starttimestamp startts endtimestamp endts;\n@name('s0') select a.includes(b) as val0 from TypeA#lastevent as a, TypeB#lastevent as b;\n"
+      },
+      {
+        "op": "send",
+        "case": "intervalops-createschema",
+        "eventType": "TypeA",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 1000
+        }
+      },
+      {
+        "op": "send",
+        "case": "intervalops-createschema",
+        "eventType": "TypeB",
+        "payload": {
+          "start": "2002-05-30T09:00:00.500Z",
+          "duration": 200,
+          "expected": [
+            true
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "intervalops-createschema"
+      },
+      {
+        "op": "deploy",
+        "case": "intervalops-createschema",
+        "statement": "schema-map-localdatetime",
+        "epl": "@EventRepresentation('map') @buseventtype @public create schema TypeA as (startts java.time.LocalDateTime, endts java.time.LocalDateTime) starttimestamp startts endtimestamp endts;\n@EventRepresentation('map') @buseventtype @public create schema TypeB as (startts java.time.LocalDateTime, endts java.time.LocalDateTime) starttimestamp startts endtimestamp endts;\n@name('s0') select a.includes(b) as val0 from TypeA#lastevent as a, TypeB#lastevent as b;\n"
+      },
+      {
+        "op": "send",
+        "case": "intervalops-createschema",
+        "eventType": "TypeA",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 1000
+        }
+      },
+      {
+        "op": "send",
+        "case": "intervalops-createschema",
+        "eventType": "TypeB",
+        "payload": {
+          "start": "2002-05-30T09:00:00.500Z",
+          "duration": 200,
+          "expected": [
+            true
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "intervalops-createschema"
+      },
+      {
+        "op": "deploy",
+        "case": "intervalops-createschema",
+        "statement": "schema-map-zoneddatetime",
+        "epl": "@EventRepresentation('map') @buseventtype @public create schema TypeA as (startts java.time.ZonedDateTime, endts java.time.ZonedDateTime) starttimestamp startts endtimestamp endts;\n@EventRepresentation('map') @buseventtype @public create schema TypeB as (startts java.time.ZonedDateTime, endts java.time.ZonedDateTime) starttimestamp startts endtimestamp endts;\n@name('s0') select a.includes(b) as val0 from TypeA#lastevent as a, TypeB#lastevent as b;\n"
+      },
+      {
+        "op": "send",
+        "case": "intervalops-createschema",
+        "eventType": "TypeA",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 1000
+        }
+      },
+      {
+        "op": "send",
+        "case": "intervalops-createschema",
+        "eventType": "TypeB",
+        "payload": {
+          "start": "2002-05-30T09:00:00.500Z",
+          "duration": 200,
+          "expected": [
+            true
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "intervalops-createschema"
+      },
+      {
+        "op": "deploy",
+        "case": "intervalops-createschema",
+        "statement": "schema-objectarray-msec",
+        "epl": "@EventRepresentation('objectarray') @buseventtype @public create schema TypeA as (startts long, endts long) starttimestamp startts endtimestamp endts;\n@EventRepresentation('objectarray') @buseventtype @public create schema TypeB as (startts long, endts long) starttimestamp startts endtimestamp endts;\n@name('s0') select a.includes(b) as val0 from TypeA#lastevent as a, TypeB#lastevent as b;\n"
+      },
+      {
+        "op": "send",
+        "case": "intervalops-createschema",
+        "eventType": "TypeA",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 1000
+        }
+      },
+      {
+        "op": "send",
+        "case": "intervalops-createschema",
+        "eventType": "TypeB",
+        "payload": {
+          "start": "2002-05-30T09:00:00.500Z",
+          "duration": 200,
+          "expected": [
+            true
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "intervalops-createschema"
+      },
+      {
+        "op": "deploy",
+        "case": "intervalops-createschema",
+        "statement": "schema-objectarray-calendar",
+        "epl": "@EventRepresentation('objectarray') @buseventtype @public create schema TypeA as (startts java.util.Calendar, endts java.util.Calendar) starttimestamp startts endtimestamp endts;\n@EventRepresentation('objectarray') @buseventtype @public create schema TypeB as (startts java.util.Calendar, endts java.util.Calendar) starttimestamp startts endtimestamp endts;\n@name('s0') select a.includes(b) as val0 from TypeA#lastevent as a, TypeB#lastevent as b;\n"
+      },
+      {
+        "op": "send",
+        "case": "intervalops-createschema",
+        "eventType": "TypeA",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 1000
+        }
+      },
+      {
+        "op": "send",
+        "case": "intervalops-createschema",
+        "eventType": "TypeB",
+        "payload": {
+          "start": "2002-05-30T09:00:00.500Z",
+          "duration": 200,
+          "expected": [
+            true
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "intervalops-createschema"
+      },
+      {
+        "op": "deploy",
+        "case": "intervalops-createschema",
+        "statement": "schema-objectarray-date",
+        "epl": "@EventRepresentation('objectarray') @buseventtype @public create schema TypeA as (startts java.util.Date, endts java.util.Date) starttimestamp startts endtimestamp endts;\n@EventRepresentation('objectarray') @buseventtype @public create schema TypeB as (startts java.util.Date, endts java.util.Date) starttimestamp startts endtimestamp endts;\n@name('s0') select a.includes(b) as val0 from TypeA#lastevent as a, TypeB#lastevent as b;\n"
+      },
+      {
+        "op": "send",
+        "case": "intervalops-createschema",
+        "eventType": "TypeA",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 1000
+        }
+      },
+      {
+        "op": "send",
+        "case": "intervalops-createschema",
+        "eventType": "TypeB",
+        "payload": {
+          "start": "2002-05-30T09:00:00.500Z",
+          "duration": 200,
+          "expected": [
+            true
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "intervalops-createschema"
+      },
+      {
+        "op": "deploy",
+        "case": "intervalops-createschema",
+        "statement": "schema-objectarray-localdatetime",
+        "epl": "@EventRepresentation('objectarray') @buseventtype @public create schema TypeA as (startts java.time.LocalDateTime, endts java.time.LocalDateTime) starttimestamp startts endtimestamp endts;\n@EventRepresentation('objectarray') @buseventtype @public create schema TypeB as (startts java.time.LocalDateTime, endts java.time.LocalDateTime) starttimestamp startts endtimestamp endts;\n@name('s0') select a.includes(b) as val0 from TypeA#lastevent as a, TypeB#lastevent as b;\n"
+      },
+      {
+        "op": "send",
+        "case": "intervalops-createschema",
+        "eventType": "TypeA",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 1000
+        }
+      },
+      {
+        "op": "send",
+        "case": "intervalops-createschema",
+        "eventType": "TypeB",
+        "payload": {
+          "start": "2002-05-30T09:00:00.500Z",
+          "duration": 200,
+          "expected": [
+            true
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "intervalops-createschema"
+      },
+      {
+        "op": "deploy",
+        "case": "intervalops-createschema",
+        "statement": "schema-objectarray-zoneddatetime",
+        "epl": "@EventRepresentation('objectarray') @buseventtype @public create schema TypeA as (startts java.time.ZonedDateTime, endts java.time.ZonedDateTime) starttimestamp startts endtimestamp endts;\n@EventRepresentation('objectarray') @buseventtype @public create schema TypeB as (startts java.time.ZonedDateTime, endts java.time.ZonedDateTime) starttimestamp startts endtimestamp endts;\n@name('s0') select a.includes(b) as val0 from TypeA#lastevent as a, TypeB#lastevent as b;\n"
+      },
+      {
+        "op": "send",
+        "case": "intervalops-createschema",
+        "eventType": "TypeA",
+        "payload": {
+          "start": "2002-05-30T09:00:00.000Z",
+          "duration": 1000
+        }
+      },
+      {
+        "op": "send",
+        "case": "intervalops-createschema",
+        "eventType": "TypeB",
+        "payload": {
+          "start": "2002-05-30T09:00:00.500Z",
+          "duration": 200,
+          "expected": [
+            true
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "intervalops-createschema"
+      },
+      {
+        "op": "deploy",
+        "case": "intervalops-createschema",
+        "statement": "bean-tail",
+        "epl": "@public @buseventtype create schema SupportBeanXXX as com.espertech.esper.common.internal.support.SupportBean starttimestamp longPrimitive endtimestamp longBoxed;\n@name('s0') select a.get('month') as val0 from SupportBeanXXX a;\n"
+      },
+      {
+        "op": "send",
+        "case": "intervalops-createschema",
+        "eventType": "SupportBeanXXX",
+        "payload": {
+          "longPrimitive": 1022749200000,
+          "expected": [
+            4
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "intervalops-createschema"
+      },
+      {
+        "op": "case",
+        "case": "invalid"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "set-contained-collection",
+        "expectError": "Failed to validate select-clause expression 'contained.set(\"hour\",1)': Date-time enumeration method 'set' requires either a Calendar, Date, long, LocalDateTime or ZonedDateTime value as input or events of an event type that declares a timestamp property but received collection of events of type 'com.espertech.esper.regressionlib.support.bean.SupportBean_ST0'",
+        "epl": "select contained.set('hour', 1) from SupportBean_ST0_Container"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "set-window-collection",
+        "expectError": "Failed to validate select-clause expression 'window(*).set(\"hour\",1)': Date-time enumeration method 'set' requires either a Calendar, Date, long, LocalDateTime or ZonedDateTime value as input or events of an event type that declares a timestamp property but received collection of events of type 'SupportBean'",
+        "epl": "select window(*).set('hour', 1) from SupportBean#keepall"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "set-invalid-field",
+        "expectError": "Failed to validate select-clause expression 'utildate.set('invalid')': Failed to resolve enumeration method, date-time method or mapped property 'utildate.set('invalid')': Parameters mismatch for date-time method 'set', the method requires an expression providing a string-type calendar field name and an expression providing an integer-type value",
+        "epl": "select utildate.set('invalid') from SupportDateTime"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "set-lambda-param",
+        "expectError": "Failed to validate select-clause expression 'utildate.set()': Parameters mismatch for date-time method 'set', the method requires an expression providing a string-type calendar field name and an expression providing an integer-type value",
+        "epl": "select utildate.set(x =\u003e true) from SupportDateTime"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "set-no-params",
+        "expectError": "Failed to validate select-clause expression 'utildate.set()': Parameters mismatch for date-time method 'set', the method requires an expression providing a string-type calendar field name and an expression providing an integer-type value",
+        "epl": "select utildate.set() from SupportDateTime"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "set-numeric-param",
+        "expectError": "Failed to validate select-clause expression 'utildate.set(1)': Parameters mismatch for date-time method 'set', the method requires an expression providing a string-type calendar field name and an expression providing an integer-type value",
+        "epl": "select utildate.set(1) from SupportDateTime"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "between-string-bounds",
+        "expectError": "Failed to validate select-clause expression 'utildate.between(\"a\",\"b\")': Failed to validate date-time method 'between', expected a long-typed, Date-typed or Calendar-typed result for expression parameter 0 but received String",
+        "epl": "select utildate.between('a', 'b') from SupportDateTime"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "between-int-endpoint",
+        "expectError": "Failed to validate select-clause expression 'utildate.between(utildate,utildate,...(42 chars)': Failed to validate date-time method 'between', expected a boolean-type result for expression parameter 2 but received int",
+        "epl": "select utildate.between(utildate, utildate, 1, true) from SupportDateTime"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "format-formatter-param",
+        "expectError": "Failed to validate select-clause expression 'utildate.format(ParseCaseSensitive(...(114 chars)': Date-time enumeration method 'format' invalid format, expected string-format or DateFormat but received java.time.format.DateTimeFormatter",
+        "epl": "select utildate.format(java.time.format.DateTimeFormatter.ISO_ORDINAL_DATE) from SupportDateTime"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "format-dateformat-param",
+        "expectError": "Failed to validate select-clause expression 'zoneddate.format(SimpleDateFormat.g...(48 chars)': Date-time enumeration method 'format' invalid format, expected string-format or DateTimeFormatter but received java.text.DateFormat",
+        "epl": "select zoneddate.format(SimpleDateFormat.getInstance()) from SupportDateTime"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "format-null-param",
+        "expectError": "Failed to validate select-clause expression 'utildate.format(null)': Failed to validate date-time method 'format', expected a non-null result for expression parameter 0 but received a null-typed expression",
+        "epl": "select utildate.format(null) from SupportDateTime"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "invalid"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-dt-tail-553",
+    "records": [
+      {
+        "case": "tocalendar-chain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "todatecalmsec-value",
+        "operation": "deployed",
+        "statement": "warmup",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "todatecalmsec-value",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "2002-05-30T09:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "Date",
+            "val1": "Date",
+            "val10": "Calendar",
+            "val11": "Calendar",
+            "val12": "Long",
+            "val13": "Long",
+            "val14": "Long",
+            "val15": "Long",
+            "val16": "Long",
+            "val17": "Long",
+            "val2": "Date",
+            "val3": "Date",
+            "val4": "Date",
+            "val5": "Date",
+            "val6": "Calendar",
+            "val7": "Calendar",
+            "val8": "Calendar",
+            "val9": "Calendar"
+          }
+        }
+      },
+      {
+        "case": "todatecalmsec-value",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022749200000,
+              "val1": 1022749200000,
+              "val10": 1022749200000,
+              "val11": 1022749200000,
+              "val12": 1022749200000,
+              "val13": 1022749200000,
+              "val14": 1022749200000,
+              "val15": 1022749200000,
+              "val16": 1022749200000,
+              "val17": 1022749200000,
+              "val2": 1022749200000,
+              "val3": 1022749200000,
+              "val4": 1022749200000,
+              "val5": 1022749200000,
+              "val6": 1022749200000,
+              "val7": 1022749200000,
+              "val8": 1022749200000,
+              "val9": 1022749200000
+            }
+          }
+        ]
+      },
+      {
+        "case": "todatecalmsec-value",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022749200000,
+              "val1": {
+                "state": "null"
+              },
+              "val10": {
+                "state": "null"
+              },
+              "val11": {
+                "state": "null"
+              },
+              "val12": 1022749200000,
+              "val13": {
+                "state": "null"
+              },
+              "val14": {
+                "state": "null"
+              },
+              "val15": {
+                "state": "null"
+              },
+              "val16": {
+                "state": "null"
+              },
+              "val17": {
+                "state": "null"
+              },
+              "val2": {
+                "state": "null"
+              },
+              "val3": {
+                "state": "null"
+              },
+              "val4": {
+                "state": "null"
+              },
+              "val5": {
+                "state": "null"
+              },
+              "val6": 1022749200000,
+              "val7": {
+                "state": "null"
+              },
+              "val8": {
+                "state": "null"
+              },
+              "val9": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-format",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-get-month",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-get-month-of-year",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-minus-minutes",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-minus-millis",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-plus-minutes",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-plus-millis",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-round-ceiling",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-round-floor",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-set-month",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-with-date",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-with-max",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-to-calendar",
+        "sequence": 13,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-to-date",
+        "sequence": 14,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-to-millisec",
+        "sequence": 15,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "count",
+        "statement": "s0",
+        "sequence": 16,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-invoked",
+        "count": 1
+      },
+      {
+        "case": "docsamples",
+        "operation": "count",
+        "statement": "s0",
+        "sequence": 17,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-invoked",
+        "count": 1
+      },
+      {
+        "case": "docsamples",
+        "operation": "count",
+        "statement": "s0",
+        "sequence": 18,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-invoked",
+        "count": 1
+      },
+      {
+        "case": "docsamples",
+        "operation": "count",
+        "statement": "s0",
+        "sequence": 19,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-invoked",
+        "count": 0
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "deployed",
+        "statement": "schema-map-msec",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "deployed",
+        "statement": "schema-map-calendar",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "deployed",
+        "statement": "schema-map-date",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "deployed",
+        "statement": "schema-map-localdatetime",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "deployed",
+        "statement": "schema-map-zoneddatetime",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "deployed",
+        "statement": "schema-objectarray-msec",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "deployed",
+        "statement": "schema-objectarray-calendar",
+        "sequence": 13,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 14,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "deployed",
+        "statement": "schema-objectarray-date",
+        "sequence": 15,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 16,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "deployed",
+        "statement": "schema-objectarray-localdatetime",
+        "sequence": 17,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 18,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "deployed",
+        "statement": "schema-objectarray-zoneddatetime",
+        "sequence": 19,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 20,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "deployed",
+        "statement": "bean-tail",
+        "sequence": 21,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 22,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "set-contained-collection",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'contained.set(\"hour\",1)': Date-time enumeration method 'set' requires either a Calendar, Date, long, LocalDateTime or ZonedDateTime value as input or events of an event type that declares a timestamp property but received collection of events of type 'com.espertech.esper.regressionlib.support.bean.SupportBean_ST0'"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "set-window-collection",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'window(*).set(\"hour\",1)': Date-time enumeration method 'set' requires either a Calendar, Date, long, LocalDateTime or ZonedDateTime value as input or events of an event type that declares a timestamp property but received collection of events of type 'SupportBean'"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "set-invalid-field",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'utildate.set('invalid')': Failed to resolve enumeration method, date-time method or mapped property 'utildate.set('invalid')': Parameters mismatch for date-time method 'set', the method requires an expression providing a string-type calendar field name and an expression providing an integer-type value"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "set-lambda-param",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'utildate.set()': Parameters mismatch for date-time method 'set', the method requires an expression providing a string-type calendar field name and an expression providing an integer-type value"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "set-no-params",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'utildate.set()': Parameters mismatch for date-time method 'set', the method requires an expression providing a string-type calendar field name and an expression providing an integer-type value"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "set-numeric-param",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'utildate.set(1)': Parameters mismatch for date-time method 'set', the method requires an expression providing a string-type calendar field name and an expression providing an integer-type value"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "between-string-bounds",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'utildate.between(\"a\",\"b\")': Failed to validate date-time method 'between', expected a long-typed, Date-typed or Calendar-typed result for expression parameter 0 but received String"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "between-int-endpoint",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'utildate.between(utildate,utildate,...(42 chars)': Failed to validate date-time method 'between', expected a boolean-type result for expression parameter 2 but received int"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "format-formatter-param",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'utildate.format(ParseCaseSensitive(...(114 chars)': Date-time enumeration method 'format' invalid format, expected string-format or DateFormat but received java.time.format.DateTimeFormatter"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "format-dateformat-param",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'zoneddate.format(SimpleDateFormat.g...(48 chars)': Date-time enumeration method 'format' invalid format, expected string-format or DateTimeFormatter but received java.text.DateFormat"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "format-null-param",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'utildate.format(null)': Failed to validate date-time method 'format', expected a non-null result for expression parameter 0 but received a null-typed expression"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-dt-tail-553",
+    "records": [
+      {
+        "case": "tocalendar-chain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "todatecalmsec-value",
+        "operation": "deployed",
+        "statement": "warmup",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "todatecalmsec-value",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "2002-05-30T09:00:00Z",
+        "value": {
+          "properties": {
+            "val0": "Date",
+            "val1": "Date",
+            "val10": "Calendar",
+            "val11": "Calendar",
+            "val12": "Long",
+            "val13": "Long",
+            "val14": "Long",
+            "val15": "Long",
+            "val16": "Long",
+            "val17": "Long",
+            "val2": "Date",
+            "val3": "Date",
+            "val4": "Date",
+            "val5": "Date",
+            "val6": "Calendar",
+            "val7": "Calendar",
+            "val8": "Calendar",
+            "val9": "Calendar"
+          }
+        }
+      },
+      {
+        "case": "todatecalmsec-value",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022749200000,
+              "val1": 1022749200000,
+              "val10": 1022749200000,
+              "val11": 1022749200000,
+              "val12": 1022749200000,
+              "val13": 1022749200000,
+              "val14": 1022749200000,
+              "val15": 1022749200000,
+              "val16": 1022749200000,
+              "val17": 1022749200000,
+              "val2": 1022749200000,
+              "val3": 1022749200000,
+              "val4": 1022749200000,
+              "val5": 1022749200000,
+              "val6": 1022749200000,
+              "val7": 1022749200000,
+              "val8": 1022749200000,
+              "val9": 1022749200000
+            }
+          }
+        ]
+      },
+      {
+        "case": "todatecalmsec-value",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 1022749200000,
+              "val1": {
+                "state": "null"
+              },
+              "val10": {
+                "state": "null"
+              },
+              "val11": {
+                "state": "null"
+              },
+              "val12": 1022749200000,
+              "val13": {
+                "state": "null"
+              },
+              "val14": {
+                "state": "null"
+              },
+              "val15": {
+                "state": "null"
+              },
+              "val16": {
+                "state": "null"
+              },
+              "val17": {
+                "state": "null"
+              },
+              "val2": {
+                "state": "null"
+              },
+              "val3": {
+                "state": "null"
+              },
+              "val4": {
+                "state": "null"
+              },
+              "val5": {
+                "state": "null"
+              },
+              "val6": 1022749200000,
+              "val7": {
+                "state": "null"
+              },
+              "val8": {
+                "state": "null"
+              },
+              "val9": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-format",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-get-month",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-get-month-of-year",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-minus-minutes",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-minus-millis",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-plus-minutes",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-plus-millis",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-round-ceiling",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-round-floor",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-set-month",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-with-date",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-with-max",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-to-calendar",
+        "sequence": 13,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-to-date",
+        "sequence": 14,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "deployed",
+        "statement": "doc-to-millisec",
+        "sequence": 15,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "docsamples",
+        "operation": "count",
+        "statement": "s0",
+        "sequence": 16,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-invoked",
+        "count": 1
+      },
+      {
+        "case": "docsamples",
+        "operation": "count",
+        "statement": "s0",
+        "sequence": 17,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-invoked",
+        "count": 1
+      },
+      {
+        "case": "docsamples",
+        "operation": "count",
+        "statement": "s0",
+        "sequence": 18,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-invoked",
+        "count": 1
+      },
+      {
+        "case": "docsamples",
+        "operation": "count",
+        "statement": "s0",
+        "sequence": 19,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "listener-invoked",
+        "count": 0
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "deployed",
+        "statement": "schema-map-msec",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "deployed",
+        "statement": "schema-map-calendar",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "deployed",
+        "statement": "schema-map-date",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "deployed",
+        "statement": "schema-map-localdatetime",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "deployed",
+        "statement": "schema-map-zoneddatetime",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "deployed",
+        "statement": "schema-objectarray-msec",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "deployed",
+        "statement": "schema-objectarray-calendar",
+        "sequence": 13,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 14,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "deployed",
+        "statement": "schema-objectarray-date",
+        "sequence": 15,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 16,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "deployed",
+        "statement": "schema-objectarray-localdatetime",
+        "sequence": 17,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 18,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "deployed",
+        "statement": "schema-objectarray-zoneddatetime",
+        "sequence": 19,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 20,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "deployed",
+        "statement": "bean-tail",
+        "sequence": 21,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "intervalops-createschema",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 22,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "set-contained-collection",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'contained.set(\"hour\",1)': Date-time enumeration method 'set' requires either a Calendar, Date, long, LocalDateTime or ZonedDateTime value as input or events of an event type that declares a timestamp property but received collection of events of type 'com.espertech.esper.regressionlib.support.bean.SupportBean_ST0'"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "set-window-collection",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'window(*).set(\"hour\",1)': Date-time enumeration method 'set' requires either a Calendar, Date, long, LocalDateTime or ZonedDateTime value as input or events of an event type that declares a timestamp property but received collection of events of type 'SupportBean'"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "set-invalid-field",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'utildate.set('invalid')': Failed to resolve enumeration method, date-time method or mapped property 'utildate.set('invalid')': Parameters mismatch for date-time method 'set', the method requires an expression providing a string-type calendar field name and an expression providing an integer-type value"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "set-lambda-param",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'utildate.set()': Parameters mismatch for date-time method 'set', the method requires an expression providing a string-type calendar field name and an expression providing an integer-type value"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "set-no-params",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'utildate.set()': Parameters mismatch for date-time method 'set', the method requires an expression providing a string-type calendar field name and an expression providing an integer-type value"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "set-numeric-param",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'utildate.set(1)': Parameters mismatch for date-time method 'set', the method requires an expression providing a string-type calendar field name and an expression providing an integer-type value"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "between-string-bounds",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'utildate.between(\"a\",\"b\")': Failed to validate date-time method 'between', expected a long-typed, Date-typed or Calendar-typed result for expression parameter 0 but received String"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "between-int-endpoint",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'utildate.between(utildate,utildate,...(42 chars)': Failed to validate date-time method 'between', expected a boolean-type result for expression parameter 2 but received int"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "format-formatter-param",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'utildate.format(ParseCaseSensitive(...(114 chars)': Date-time enumeration method 'format' invalid format, expected string-format or DateFormat but received java.time.format.DateTimeFormatter"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "format-dateformat-param",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'zoneddate.format(SimpleDateFormat.g...(48 chars)': Date-time enumeration method 'format' invalid format, expected string-format or DateTimeFormatter but received java.text.DateFormat"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "format-null-param",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'utildate.format(null)': Failed to validate date-time method 'format', expected a non-null result for expression parameter 0 but received a null-typed expression"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

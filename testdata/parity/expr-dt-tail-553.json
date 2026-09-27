@@ -1,0 +1,852 @@
+{
+ "version": "esper-parity/v1",
+ "id": "expr-dt-tail-553",
+ "description": "ExprDTToDateCalMSec/ExprDTDocSamples/ExprDTIntervalOpsCreateSchema/ExprDTInvalid executions: tocalendar-chain replays ExprToCalendarChain (current_timestamp.toCalendar().add(DAY_OF_MONTH,1) is a Calendar method call, not a date-time chain op, and Java observes null), todatecalmsec-value replays ExprDTToDateCalMSecValue (the 18-column toDate/toCalendar/toMillisec matrix pins Date x6, Calendar x6, Long x6 types and, for the null bean, only the three current_timestamp cells), docsamples replays ExprDTDocSamples (15 compile-only doc selects over RFIDEvent.timeTaken then four pattern after() probes pinned by their listener-invoked flag), intervalops-createschema replays ExprDTIntervalOpsCreateSchema (map + object-array create-schema TypeA/TypeB startts/endts timestamps over five field types asserting a.includes(b) true, then the SupportBeanXXX bean-timestamp tail asserting a.get('month')==4; the Avro/JSON/JSON-provided legs are unrepresentable and DEFAULT legs are map-equivalent duplicates), invalid replays ExprDTInvalid's 11 tryInvalidCompile probes with pinned Java message prefixes.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime",
+ "javaRuntimes": [
+  "java-runtime-96fba8bd8db354b4058e",
+  "java-runtime-9d3c9122a833c6235a1d",
+  "java-runtime-a3cec43b565226d9cbac",
+  "java-runtime-8c90cf3d4a6abbd4848f",
+  "java-runtime-59302e42b09f7b2f6818"
+ ],
+ "javaNames": [
+  "ExprToCalendarChain",
+  "ExprDTToDateCalMSecValue",
+  "ExprDTDocSamples",
+  "ExprDTIntervalOpsCreateSchema",
+  "ExprDTInvalid"
+ ],
+ "javaStaticIds": [
+  "java-30f73c23a62ab5959453",
+  "java-30f73c23a62ab5959453",
+  "java-1788456b92fc17823173",
+  "java-46150495284a50e52094",
+  "java-0147f234d5dc15c47624"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "tocalendar-chain",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-96fba8bd8db354b4058e",
+   "executionName": "ExprToCalendarChain",
+   "observation": "listener; advanceTime(0), deploy s0 the toCalendar().add() chain select, send SupportBean('E1',0) emits the null c column (Calendar.add is a method call returning void, not a date-time chain op)",
+   "epl": "@name('s0') select current_timestamp.toCalendar().add(Calendar.DAY_OF_MONTH,1) as c from SupportBean"
+  },
+  {
+   "case": "todatecalmsec-value",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-9d3c9122a833c6235a1d",
+   "executionName": "ExprDTToDateCalMSecValue",
+   "observation": "deployed+types+listener x2; the unnamed warmup deploy of the same toCalendar().add() chain emits a deployed marker, advanceTime(2002-05-30T09:00:00.000), deploy s0 the 18-column toDate/toCalendar/toMillisec select, types pins Date x6 + Calendar x6 + Long x6, send make(t) emits the instant x18, send make(null) emits only the three current_timestamp cells",
+   "epl": "@name('s0') select current_timestamp.toDate() as val0,utildate.toDate() as val1,longdate.toDate() as val2,caldate.toDate() as val3,localdate.toDate() as val4,zoneddate.toDate() as val5,current_timestamp.toCalendar() as val6,utildate.toCalendar() as val7,longdate.toCalendar() as val8,caldate.toCalendar() as val9,localdate.toCalendar() as val10,zoneddate.toCalendar() as val11,current_timestamp.toMillisec() as val12,utildate.toMillisec() as val13,longdate.toMillisec() as val14,caldate.toMillisec() as val15,localdate.toMillisec() as val16,zoneddate.toMillisec() as val17 from SupportDateTime"
+  },
+  {
+   "case": "docsamples",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-a3cec43b565226d9cbac",
+   "executionName": "ExprDTDocSamples",
+   "observation": "deployed x15+count x4; fifteen compile-only doc selects over RFIDEvent.timeTaken each emit a deployed marker, then four pattern [a=A -> b=B] after() probes send A then B and emit the listener-invoked count (true, true, true, then false reversed)",
+   "epl": "@name('s0') select * from pattern [a=A -> b=B] as abc where a.longdateStart.after(b)"
+  },
+  {
+   "case": "intervalops-createschema",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-8c90cf3d4a6abbd4848f",
+   "executionName": "ExprDTIntervalOpsCreateSchema",
+   "observation": "deployed x10+listener x11; ten map/object-array legs deploy the create-schema TypeA/TypeB timestamp module and send A then B, the second send emits a.includes(b)=true (the Avro/JSON legs are excluded as unrepresentable and DEFAULT legs as map-equivalent), then the bean-tail deploy emits a.get('month')==4 for the SupportBeanXXX longPrimitive timestamp",
+   "epl": "@EventRepresentation('map') @buseventtype @public create schema TypeA as (startts long, endts long) starttimestamp startts endtimestamp endts;\n@EventRepresentation('map') @buseventtype @public create schema TypeB as (startts long, endts long) starttimestamp startts endtimestamp endts;\n@name('s0') select a.includes(b) as val0 from TypeA#lastevent as a, TypeB#lastevent as b;\n"
+  },
+  {
+   "case": "invalid",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-59302e42b09f7b2f6818",
+   "executionName": "ExprDTInvalid",
+   "observation": "compile-error; 11 tryInvalidCompile probes record the pinned Java message prefixes (startsWith assertion); the Go runner verifies the nearest expressible rejection for the three representable probes and pins prefix-only for the unrepresentable rest",
+   "epl": "select contained.set('hour', 1) from SupportBean_ST0_Container"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "tocalendar-chain"
+  },
+  {
+   "op": "advance-time",
+   "case": "tocalendar-chain",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deploy",
+   "case": "tocalendar-chain",
+   "statement": "s0",
+   "epl": "@name('s0') select current_timestamp.toCalendar().add(Calendar.DAY_OF_MONTH,1) as c from SupportBean"
+  },
+  {
+   "op": "send",
+   "case": "tocalendar-chain",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0,
+    "expected": [
+     {
+      "state": "null"
+     }
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "tocalendar-chain"
+  },
+  {
+   "op": "case",
+   "case": "todatecalmsec-value"
+  },
+  {
+   "op": "deploy",
+   "case": "todatecalmsec-value",
+   "statement": "warmup",
+   "epl": "select current_timestamp.toCalendar().add(Calendar.DAY_OF_MONTH,1) from SupportBean"
+  },
+  {
+   "op": "advance-time",
+   "case": "todatecalmsec-value",
+   "at": "2002-05-30T09:00:00.000Z"
+  },
+  {
+   "op": "deploy",
+   "case": "todatecalmsec-value",
+   "statement": "s0",
+   "epl": "@name('s0') select current_timestamp.toDate() as val0,utildate.toDate() as val1,longdate.toDate() as val2,caldate.toDate() as val3,localdate.toDate() as val4,zoneddate.toDate() as val5,current_timestamp.toCalendar() as val6,utildate.toCalendar() as val7,longdate.toCalendar() as val8,caldate.toCalendar() as val9,localdate.toCalendar() as val10,zoneddate.toCalendar() as val11,current_timestamp.toMillisec() as val12,utildate.toMillisec() as val13,longdate.toMillisec() as val14,caldate.toMillisec() as val15,localdate.toMillisec() as val16,zoneddate.toMillisec() as val17 from SupportDateTime"
+  },
+  {
+   "op": "types",
+   "case": "todatecalmsec-value",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "todatecalmsec-value",
+   "eventType": "SupportDateTime",
+   "payload": {
+    "date": "2002-05-30T09:00:00.000Z",
+    "expected": [
+     1022749200000,
+     1022749200000,
+     1022749200000,
+     1022749200000,
+     1022749200000,
+     1022749200000,
+     1022749200000,
+     1022749200000,
+     1022749200000,
+     1022749200000,
+     1022749200000,
+     1022749200000,
+     1022749200000,
+     1022749200000,
+     1022749200000,
+     1022749200000,
+     1022749200000,
+     1022749200000
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "case": "todatecalmsec-value",
+   "eventType": "SupportDateTime",
+   "payload": {
+    "date": null,
+    "expected": [
+     1022749200000,
+     {
+      "state": "null"
+     },
+     {
+      "state": "null"
+     },
+     {
+      "state": "null"
+     },
+     {
+      "state": "null"
+     },
+     {
+      "state": "null"
+     },
+     1022749200000,
+     {
+      "state": "null"
+     },
+     {
+      "state": "null"
+     },
+     {
+      "state": "null"
+     },
+     {
+      "state": "null"
+     },
+     {
+      "state": "null"
+     },
+     1022749200000,
+     {
+      "state": "null"
+     },
+     {
+      "state": "null"
+     },
+     {
+      "state": "null"
+     },
+     {
+      "state": "null"
+     },
+     {
+      "state": "null"
+     }
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "todatecalmsec-value"
+  },
+  {
+   "op": "case",
+   "case": "docsamples"
+  },
+  {
+   "op": "deploy",
+   "case": "docsamples",
+   "statement": "doc-format",
+   "epl": "select timeTaken.format() as timeTakenStr from RFIDEvent"
+  },
+  {
+   "op": "deploy",
+   "case": "docsamples",
+   "statement": "doc-get-month",
+   "epl": "select timeTaken.get('month') as timeTakenMonth from RFIDEvent"
+  },
+  {
+   "op": "deploy",
+   "case": "docsamples",
+   "statement": "doc-get-month-of-year",
+   "epl": "select timeTaken.getMonthOfYear() as timeTakenMonth from RFIDEvent"
+  },
+  {
+   "op": "deploy",
+   "case": "docsamples",
+   "statement": "doc-minus-minutes",
+   "epl": "select timeTaken.minus(2 minutes) as timeTakenMinus2Min from RFIDEvent"
+  },
+  {
+   "op": "deploy",
+   "case": "docsamples",
+   "statement": "doc-minus-millis",
+   "epl": "select timeTaken.minus(2*60*1000) as timeTakenMinus2Min from RFIDEvent"
+  },
+  {
+   "op": "deploy",
+   "case": "docsamples",
+   "statement": "doc-plus-minutes",
+   "epl": "select timeTaken.plus(2 minutes) as timeTakenMinus2Min from RFIDEvent"
+  },
+  {
+   "op": "deploy",
+   "case": "docsamples",
+   "statement": "doc-plus-millis",
+   "epl": "select timeTaken.plus(2*60*1000) as timeTakenMinus2Min from RFIDEvent"
+  },
+  {
+   "op": "deploy",
+   "case": "docsamples",
+   "statement": "doc-round-ceiling",
+   "epl": "select timeTaken.roundCeiling('min') as timeTakenRounded from RFIDEvent"
+  },
+  {
+   "op": "deploy",
+   "case": "docsamples",
+   "statement": "doc-round-floor",
+   "epl": "select timeTaken.roundFloor('min') as timeTakenRounded from RFIDEvent"
+  },
+  {
+   "op": "deploy",
+   "case": "docsamples",
+   "statement": "doc-set-month",
+   "epl": "select timeTaken.set('month', 3) as timeTakenMonth from RFIDEvent"
+  },
+  {
+   "op": "deploy",
+   "case": "docsamples",
+   "statement": "doc-with-date",
+   "epl": "select timeTaken.withDate(2002, 4, 30) as timeTakenDated from RFIDEvent"
+  },
+  {
+   "op": "deploy",
+   "case": "docsamples",
+   "statement": "doc-with-max",
+   "epl": "select timeTaken.withMax('sec') as timeTakenMaxSec from RFIDEvent"
+  },
+  {
+   "op": "deploy",
+   "case": "docsamples",
+   "statement": "doc-to-calendar",
+   "epl": "select timeTaken.toCalendar() as timeTakenCal from RFIDEvent"
+  },
+  {
+   "op": "deploy",
+   "case": "docsamples",
+   "statement": "doc-to-date",
+   "epl": "select timeTaken.toDate() as timeTakenDate from RFIDEvent"
+  },
+  {
+   "op": "deploy",
+   "case": "docsamples",
+   "statement": "doc-to-millisec",
+   "epl": "select timeTaken.toMillisec() as timeTakenLong from RFIDEvent"
+  },
+  {
+   "op": "deploy",
+   "case": "docsamples",
+   "statement": "s0",
+   "epl": "@name('s0') select * from pattern [a=A -> b=B] as abc where a.longdateStart.after(b)"
+  },
+  {
+   "op": "send",
+   "case": "docsamples",
+   "eventType": "A",
+   "payload": {
+    "date": "2002-05-30T09:00:00.000Z"
+   }
+  },
+  {
+   "op": "send",
+   "case": "docsamples",
+   "eventType": "B",
+   "payload": {
+    "date": "2002-05-30T08:59:59.999Z",
+    "expected": [
+     true
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "docsamples"
+  },
+  {
+   "op": "deploy",
+   "case": "docsamples",
+   "statement": "s0",
+   "epl": "@name('s0') select * from pattern [a=A -> b=B] as abc where a.after(b.longdateStart)"
+  },
+  {
+   "op": "send",
+   "case": "docsamples",
+   "eventType": "A",
+   "payload": {
+    "date": "2002-05-30T09:00:00.000Z"
+   }
+  },
+  {
+   "op": "send",
+   "case": "docsamples",
+   "eventType": "B",
+   "payload": {
+    "date": "2002-05-30T08:59:59.999Z",
+    "expected": [
+     true
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "docsamples"
+  },
+  {
+   "op": "deploy",
+   "case": "docsamples",
+   "statement": "s0",
+   "epl": "@name('s0') select * from pattern [a=A -> b=B] as abc where a.after(b)"
+  },
+  {
+   "op": "send",
+   "case": "docsamples",
+   "eventType": "A",
+   "payload": {
+    "date": "2002-05-30T09:00:00.000Z"
+   }
+  },
+  {
+   "op": "send",
+   "case": "docsamples",
+   "eventType": "B",
+   "payload": {
+    "date": "2002-05-30T08:59:59.999Z",
+    "expected": [
+     true
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "docsamples"
+  },
+  {
+   "op": "deploy",
+   "case": "docsamples",
+   "statement": "s0",
+   "epl": "@name('s0') select * from pattern [a=A -> b=B] as abc where a.after(b)"
+  },
+  {
+   "op": "send",
+   "case": "docsamples",
+   "eventType": "A",
+   "payload": {
+    "date": "2002-05-30T08:59:59.999Z"
+   }
+  },
+  {
+   "op": "send",
+   "case": "docsamples",
+   "eventType": "B",
+   "payload": {
+    "date": "2002-05-30T09:00:00.000Z",
+    "expected": [
+     false
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "docsamples"
+  },
+  {
+   "op": "case",
+   "case": "intervalops-createschema"
+  },
+  {
+   "op": "deploy",
+   "case": "intervalops-createschema",
+   "statement": "schema-map-msec",
+   "epl": "@EventRepresentation('map') @buseventtype @public create schema TypeA as (startts long, endts long) starttimestamp startts endtimestamp endts;\n@EventRepresentation('map') @buseventtype @public create schema TypeB as (startts long, endts long) starttimestamp startts endtimestamp endts;\n@name('s0') select a.includes(b) as val0 from TypeA#lastevent as a, TypeB#lastevent as b;\n"
+  },
+  {
+   "op": "send",
+   "case": "intervalops-createschema",
+   "eventType": "TypeA",
+   "payload": {
+    "start": "2002-05-30T09:00:00.000Z",
+    "duration": 1000
+   }
+  },
+  {
+   "op": "send",
+   "case": "intervalops-createschema",
+   "eventType": "TypeB",
+   "payload": {
+    "start": "2002-05-30T09:00:00.500Z",
+    "duration": 200,
+    "expected": [
+     true
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "intervalops-createschema"
+  },
+  {
+   "op": "deploy",
+   "case": "intervalops-createschema",
+   "statement": "schema-map-calendar",
+   "epl": "@EventRepresentation('map') @buseventtype @public create schema TypeA as (startts java.util.Calendar, endts java.util.Calendar) starttimestamp startts endtimestamp endts;\n@EventRepresentation('map') @buseventtype @public create schema TypeB as (startts java.util.Calendar, endts java.util.Calendar) starttimestamp startts endtimestamp endts;\n@name('s0') select a.includes(b) as val0 from TypeA#lastevent as a, TypeB#lastevent as b;\n"
+  },
+  {
+   "op": "send",
+   "case": "intervalops-createschema",
+   "eventType": "TypeA",
+   "payload": {
+    "start": "2002-05-30T09:00:00.000Z",
+    "duration": 1000
+   }
+  },
+  {
+   "op": "send",
+   "case": "intervalops-createschema",
+   "eventType": "TypeB",
+   "payload": {
+    "start": "2002-05-30T09:00:00.500Z",
+    "duration": 200,
+    "expected": [
+     true
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "intervalops-createschema"
+  },
+  {
+   "op": "deploy",
+   "case": "intervalops-createschema",
+   "statement": "schema-map-date",
+   "epl": "@EventRepresentation('map') @buseventtype @public create schema TypeA as (startts java.util.Date, endts java.util.Date) starttimestamp startts endtimestamp endts;\n@EventRepresentation('map') @buseventtype @public create schema TypeB as (startts java.util.Date, endts java.util.Date) starttimestamp startts endtimestamp endts;\n@name('s0') select a.includes(b) as val0 from TypeA#lastevent as a, TypeB#lastevent as b;\n"
+  },
+  {
+   "op": "send",
+   "case": "intervalops-createschema",
+   "eventType": "TypeA",
+   "payload": {
+    "start": "2002-05-30T09:00:00.000Z",
+    "duration": 1000
+   }
+  },
+  {
+   "op": "send",
+   "case": "intervalops-createschema",
+   "eventType": "TypeB",
+   "payload": {
+    "start": "2002-05-30T09:00:00.500Z",
+    "duration": 200,
+    "expected": [
+     true
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "intervalops-createschema"
+  },
+  {
+   "op": "deploy",
+   "case": "intervalops-createschema",
+   "statement": "schema-map-localdatetime",
+   "epl": "@EventRepresentation('map') @buseventtype @public create schema TypeA as (startts java.time.LocalDateTime, endts java.time.LocalDateTime) starttimestamp startts endtimestamp endts;\n@EventRepresentation('map') @buseventtype @public create schema TypeB as (startts java.time.LocalDateTime, endts java.time.LocalDateTime) starttimestamp startts endtimestamp endts;\n@name('s0') select a.includes(b) as val0 from TypeA#lastevent as a, TypeB#lastevent as b;\n"
+  },
+  {
+   "op": "send",
+   "case": "intervalops-createschema",
+   "eventType": "TypeA",
+   "payload": {
+    "start": "2002-05-30T09:00:00.000Z",
+    "duration": 1000
+   }
+  },
+  {
+   "op": "send",
+   "case": "intervalops-createschema",
+   "eventType": "TypeB",
+   "payload": {
+    "start": "2002-05-30T09:00:00.500Z",
+    "duration": 200,
+    "expected": [
+     true
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "intervalops-createschema"
+  },
+  {
+   "op": "deploy",
+   "case": "intervalops-createschema",
+   "statement": "schema-map-zoneddatetime",
+   "epl": "@EventRepresentation('map') @buseventtype @public create schema TypeA as (startts java.time.ZonedDateTime, endts java.time.ZonedDateTime) starttimestamp startts endtimestamp endts;\n@EventRepresentation('map') @buseventtype @public create schema TypeB as (startts java.time.ZonedDateTime, endts java.time.ZonedDateTime) starttimestamp startts endtimestamp endts;\n@name('s0') select a.includes(b) as val0 from TypeA#lastevent as a, TypeB#lastevent as b;\n"
+  },
+  {
+   "op": "send",
+   "case": "intervalops-createschema",
+   "eventType": "TypeA",
+   "payload": {
+    "start": "2002-05-30T09:00:00.000Z",
+    "duration": 1000
+   }
+  },
+  {
+   "op": "send",
+   "case": "intervalops-createschema",
+   "eventType": "TypeB",
+   "payload": {
+    "start": "2002-05-30T09:00:00.500Z",
+    "duration": 200,
+    "expected": [
+     true
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "intervalops-createschema"
+  },
+  {
+   "op": "deploy",
+   "case": "intervalops-createschema",
+   "statement": "schema-objectarray-msec",
+   "epl": "@EventRepresentation('objectarray') @buseventtype @public create schema TypeA as (startts long, endts long) starttimestamp startts endtimestamp endts;\n@EventRepresentation('objectarray') @buseventtype @public create schema TypeB as (startts long, endts long) starttimestamp startts endtimestamp endts;\n@name('s0') select a.includes(b) as val0 from TypeA#lastevent as a, TypeB#lastevent as b;\n"
+  },
+  {
+   "op": "send",
+   "case": "intervalops-createschema",
+   "eventType": "TypeA",
+   "payload": {
+    "start": "2002-05-30T09:00:00.000Z",
+    "duration": 1000
+   }
+  },
+  {
+   "op": "send",
+   "case": "intervalops-createschema",
+   "eventType": "TypeB",
+   "payload": {
+    "start": "2002-05-30T09:00:00.500Z",
+    "duration": 200,
+    "expected": [
+     true
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "intervalops-createschema"
+  },
+  {
+   "op": "deploy",
+   "case": "intervalops-createschema",
+   "statement": "schema-objectarray-calendar",
+   "epl": "@EventRepresentation('objectarray') @buseventtype @public create schema TypeA as (startts java.util.Calendar, endts java.util.Calendar) starttimestamp startts endtimestamp endts;\n@EventRepresentation('objectarray') @buseventtype @public create schema TypeB as (startts java.util.Calendar, endts java.util.Calendar) starttimestamp startts endtimestamp endts;\n@name('s0') select a.includes(b) as val0 from TypeA#lastevent as a, TypeB#lastevent as b;\n"
+  },
+  {
+   "op": "send",
+   "case": "intervalops-createschema",
+   "eventType": "TypeA",
+   "payload": {
+    "start": "2002-05-30T09:00:00.000Z",
+    "duration": 1000
+   }
+  },
+  {
+   "op": "send",
+   "case": "intervalops-createschema",
+   "eventType": "TypeB",
+   "payload": {
+    "start": "2002-05-30T09:00:00.500Z",
+    "duration": 200,
+    "expected": [
+     true
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "intervalops-createschema"
+  },
+  {
+   "op": "deploy",
+   "case": "intervalops-createschema",
+   "statement": "schema-objectarray-date",
+   "epl": "@EventRepresentation('objectarray') @buseventtype @public create schema TypeA as (startts java.util.Date, endts java.util.Date) starttimestamp startts endtimestamp endts;\n@EventRepresentation('objectarray') @buseventtype @public create schema TypeB as (startts java.util.Date, endts java.util.Date) starttimestamp startts endtimestamp endts;\n@name('s0') select a.includes(b) as val0 from TypeA#lastevent as a, TypeB#lastevent as b;\n"
+  },
+  {
+   "op": "send",
+   "case": "intervalops-createschema",
+   "eventType": "TypeA",
+   "payload": {
+    "start": "2002-05-30T09:00:00.000Z",
+    "duration": 1000
+   }
+  },
+  {
+   "op": "send",
+   "case": "intervalops-createschema",
+   "eventType": "TypeB",
+   "payload": {
+    "start": "2002-05-30T09:00:00.500Z",
+    "duration": 200,
+    "expected": [
+     true
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "intervalops-createschema"
+  },
+  {
+   "op": "deploy",
+   "case": "intervalops-createschema",
+   "statement": "schema-objectarray-localdatetime",
+   "epl": "@EventRepresentation('objectarray') @buseventtype @public create schema TypeA as (startts java.time.LocalDateTime, endts java.time.LocalDateTime) starttimestamp startts endtimestamp endts;\n@EventRepresentation('objectarray') @buseventtype @public create schema TypeB as (startts java.time.LocalDateTime, endts java.time.LocalDateTime) starttimestamp startts endtimestamp endts;\n@name('s0') select a.includes(b) as val0 from TypeA#lastevent as a, TypeB#lastevent as b;\n"
+  },
+  {
+   "op": "send",
+   "case": "intervalops-createschema",
+   "eventType": "TypeA",
+   "payload": {
+    "start": "2002-05-30T09:00:00.000Z",
+    "duration": 1000
+   }
+  },
+  {
+   "op": "send",
+   "case": "intervalops-createschema",
+   "eventType": "TypeB",
+   "payload": {
+    "start": "2002-05-30T09:00:00.500Z",
+    "duration": 200,
+    "expected": [
+     true
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "intervalops-createschema"
+  },
+  {
+   "op": "deploy",
+   "case": "intervalops-createschema",
+   "statement": "schema-objectarray-zoneddatetime",
+   "epl": "@EventRepresentation('objectarray') @buseventtype @public create schema TypeA as (startts java.time.ZonedDateTime, endts java.time.ZonedDateTime) starttimestamp startts endtimestamp endts;\n@EventRepresentation('objectarray') @buseventtype @public create schema TypeB as (startts java.time.ZonedDateTime, endts java.time.ZonedDateTime) starttimestamp startts endtimestamp endts;\n@name('s0') select a.includes(b) as val0 from TypeA#lastevent as a, TypeB#lastevent as b;\n"
+  },
+  {
+   "op": "send",
+   "case": "intervalops-createschema",
+   "eventType": "TypeA",
+   "payload": {
+    "start": "2002-05-30T09:00:00.000Z",
+    "duration": 1000
+   }
+  },
+  {
+   "op": "send",
+   "case": "intervalops-createschema",
+   "eventType": "TypeB",
+   "payload": {
+    "start": "2002-05-30T09:00:00.500Z",
+    "duration": 200,
+    "expected": [
+     true
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "intervalops-createschema"
+  },
+  {
+   "op": "deploy",
+   "case": "intervalops-createschema",
+   "statement": "bean-tail",
+   "epl": "@public @buseventtype create schema SupportBeanXXX as com.espertech.esper.common.internal.support.SupportBean starttimestamp longPrimitive endtimestamp longBoxed;\n@name('s0') select a.get('month') as val0 from SupportBeanXXX a;\n"
+  },
+  {
+   "op": "send",
+   "case": "intervalops-createschema",
+   "eventType": "SupportBeanXXX",
+   "payload": {
+    "longPrimitive": 1022749200000,
+    "expected": [
+     4
+    ]
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "intervalops-createschema"
+  },
+  {
+   "op": "case",
+   "case": "invalid"
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "set-contained-collection",
+   "epl": "select contained.set('hour', 1) from SupportBean_ST0_Container",
+   "expectError": "Failed to validate select-clause expression 'contained.set(\"hour\",1)': Date-time enumeration method 'set' requires either a Calendar, Date, long, LocalDateTime or ZonedDateTime value as input or events of an event type that declares a timestamp property but received collection of events of type 'com.espertech.esper.regressionlib.support.bean.SupportBean_ST0'"
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "set-window-collection",
+   "epl": "select window(*).set('hour', 1) from SupportBean#keepall",
+   "expectError": "Failed to validate select-clause expression 'window(*).set(\"hour\",1)': Date-time enumeration method 'set' requires either a Calendar, Date, long, LocalDateTime or ZonedDateTime value as input or events of an event type that declares a timestamp property but received collection of events of type 'SupportBean'"
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "set-invalid-field",
+   "epl": "select utildate.set('invalid') from SupportDateTime",
+   "expectError": "Failed to validate select-clause expression 'utildate.set('invalid')': Failed to resolve enumeration method, date-time method or mapped property 'utildate.set('invalid')': Parameters mismatch for date-time method 'set', the method requires an expression providing a string-type calendar field name and an expression providing an integer-type value"
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "set-lambda-param",
+   "epl": "select utildate.set(x => true) from SupportDateTime",
+   "expectError": "Failed to validate select-clause expression 'utildate.set()': Parameters mismatch for date-time method 'set', the method requires an expression providing a string-type calendar field name and an expression providing an integer-type value"
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "set-no-params",
+   "epl": "select utildate.set() from SupportDateTime",
+   "expectError": "Failed to validate select-clause expression 'utildate.set()': Parameters mismatch for date-time method 'set', the method requires an expression providing a string-type calendar field name and an expression providing an integer-type value"
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "set-numeric-param",
+   "epl": "select utildate.set(1) from SupportDateTime",
+   "expectError": "Failed to validate select-clause expression 'utildate.set(1)': Parameters mismatch for date-time method 'set', the method requires an expression providing a string-type calendar field name and an expression providing an integer-type value"
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "between-string-bounds",
+   "epl": "select utildate.between('a', 'b') from SupportDateTime",
+   "expectError": "Failed to validate select-clause expression 'utildate.between(\"a\",\"b\")': Failed to validate date-time method 'between', expected a long-typed, Date-typed or Calendar-typed result for expression parameter 0 but received String"
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "between-int-endpoint",
+   "epl": "select utildate.between(utildate, utildate, 1, true) from SupportDateTime",
+   "expectError": "Failed to validate select-clause expression 'utildate.between(utildate,utildate,...(42 chars)': Failed to validate date-time method 'between', expected a boolean-type result for expression parameter 2 but received int"
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "format-formatter-param",
+   "epl": "select utildate.format(java.time.format.DateTimeFormatter.ISO_ORDINAL_DATE) from SupportDateTime",
+   "expectError": "Failed to validate select-clause expression 'utildate.format(ParseCaseSensitive(...(114 chars)': Date-time enumeration method 'format' invalid format, expected string-format or DateFormat but received java.time.format.DateTimeFormatter"
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "format-dateformat-param",
+   "epl": "select zoneddate.format(SimpleDateFormat.getInstance()) from SupportDateTime",
+   "expectError": "Failed to validate select-clause expression 'zoneddate.format(SimpleDateFormat.g...(48 chars)': Date-time enumeration method 'format' invalid format, expected string-format or DateTimeFormatter but received java.text.DateFormat"
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "format-null-param",
+   "epl": "select utildate.format(null) from SupportDateTime",
+   "expectError": "Failed to validate select-clause expression 'utildate.format(null)': Failed to validate date-time method 'format', expected a non-null result for expression parameter 0 but received a null-typed expression"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "invalid"
+  }
+ ]
+}

@@ -324,6 +324,140 @@ func dateTimeShiftExpr[V int64 | time.Time](kind string, value Expression[V], ms
 	}}
 }
 
+// DateTimePlusDuration applies plus(duration) where the shift is a
+// duration-typed expression (Java's .plus(2 minutes) duration-literal
+// form). The duration converts to whole milliseconds; null duration or a
+// null date-time input produces Null.
+func DateTimePlusDuration[V int64 | time.Time](value Expression[V], duration Expression[time.Duration]) Expression[V] {
+	return dateTimeShiftDuration[V]("date-time-plus", value, duration, 1)
+}
+
+// DateTimeMinusDuration applies minus(duration); the subtractive
+// counterpart of DateTimePlusDuration with identical semantics.
+func DateTimeMinusDuration[V int64 | time.Time](value Expression[V], duration Expression[time.Duration]) Expression[V] {
+	return dateTimeShiftDuration[V]("date-time-minus", value, duration, -1)
+}
+
+func dateTimeShiftDuration[V int64 | time.Time](kind string, value Expression[V], duration Expression[time.Duration], sign int64) Expression[V] {
+	var children []*exprNode
+	if value != nil {
+		children = append(children, value.node())
+	}
+	if duration != nil {
+		children = append(children, duration.node())
+	}
+	node := &exprNode{
+		kind:        kind,
+		typ:         typeOf[V](),
+		description: fmt.Sprintf("%s(%s,%s)", kind, expressionDescription(value), expressionDescription(duration)),
+		children:    children,
+	}
+	if value == nil || value.node() == nil || duration == nil || duration.node() == nil {
+		node.configurationError = fmt.Sprintf("%s requires a date-time operand and a duration", kind)
+	} else {
+		validateDateTimeOperand(node, "value", value)
+	}
+	return typedExpr[V]{n: node, fn: func(ctx EvalContext) Value {
+		if value == nil || duration == nil {
+			return Null()
+		}
+		current := value.eval(ctx)
+		if !current.IsPresent() {
+			return Null()
+		}
+		raw := duration.eval(ctx)
+		if !raw.IsPresent() {
+			return Null()
+		}
+		delta, ok := raw.Any().(time.Duration)
+		if !ok {
+			return Null()
+		}
+		ms := int64(delta) / int64(time.Millisecond)
+		switch instant := current.Any().(type) {
+		case time.Time:
+			return Present(instant.Add(time.Duration(sign*ms) * time.Millisecond))
+		case *time.Time:
+			if instant == nil {
+				return Null()
+			}
+			shifted := instant.Add(time.Duration(sign*ms) * time.Millisecond)
+			return Present(&shifted)
+		}
+		units, ok := dateTimeEngineUnits(current)
+		if !ok {
+			return Null()
+		}
+		scale := int64(1)
+		if ctx.timeUnit() == Microseconds {
+			scale = 1000
+		}
+		return dateTimeCalOpResult(current, units+sign*ms*scale)
+	}}
+}
+
+// DateTimeToMillis applies Esper's toMillisec() conversion: epoch-millis
+// inputs pass through (or truncate to milliseconds under Microseconds,
+// matching Java's TimeAbacus), and time.Time inputs become their
+// Unix-epoch milliseconds. Null or missing input produces Null.
+func DateTimeToMillis[V int64 | time.Time](value Expression[V]) Expression[int64] {
+	var children []*exprNode
+	if value != nil {
+		children = []*exprNode{value.node()}
+	}
+	node := &exprNode{
+		kind:        "date-time-to-millisec",
+		typ:         typeOf[int64](),
+		description: fmt.Sprintf("date-time-to-millisec(%s)", expressionDescription(value)),
+		children:    children,
+	}
+	if value == nil || value.node() == nil {
+		node.configurationError = "date-time-to-millisec requires a date-time operand"
+	} else {
+		validateDateTimeOperand(node, "value", value)
+	}
+	return typedExpr[int64]{n: node, fn: func(ctx EvalContext) Value {
+		if value == nil {
+			return Null()
+		}
+		instant, ok := dateTimeCalOpSplit(ctx, value.eval(ctx))
+		if !ok {
+			return Null()
+		}
+		return Present(instant.millis)
+	}}
+}
+
+// DateTimeGetMonthOfYear applies Java's getMonthOfYear() date-time method:
+// the 1-based month-of-year (ChronoField.MONTH_OF_YEAR), unlike
+// DateTimeGet(v,"month") which reads the 0-based Calendar.MONTH. Null or
+// missing input produces Null.
+func DateTimeGetMonthOfYear[V int64 | time.Time](value Expression[V]) Expression[int64] {
+	node := &exprNode{
+		kind:        "date-time-get-month-of-year",
+		typ:         typeOf[int64](),
+		description: fmt.Sprintf("date-time-get-month-of-year(%s)", expressionDescription(value)),
+	}
+	if value != nil {
+		node.children = []*exprNode{value.node()}
+	}
+	if value == nil || value.node() == nil {
+		node.configurationError = "date-time-get-month-of-year requires a date-time operand"
+	} else {
+		validateDateTimeOperand(node, "value", value)
+	}
+	return typedExpr[int64]{n: node, fn: func(ctx EvalContext) Value {
+		if value == nil {
+			return Null()
+		}
+		instant, ok := dateTimeCalOpSplit(ctx, value.eval(ctx))
+		if !ok {
+			return Null()
+		}
+		return Present(int64(time.UnixMilli(instant.millis).In(instant.location).Month()))
+	}}
+}
+
 // DateTimeToTime applies Esper's toDate()/toCalendar() conversion: engine
 // units become a time.Time truncated to millisecond precision (under
 // Microseconds, ts/1000). time.Time inputs pass through unchanged, matching

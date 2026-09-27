@@ -50859,6 +50859,74 @@
     "java-runtime-e14ad77bdd6257964633",
     "java-runtime-a3c430889e0a5976707a"
    ]
+  },
+  {
+   "id": "case.expr-dt-tail",
+   "javaRuntimeIds": [
+    "java-runtime-96fba8bd8db354b4058e",
+    "java-runtime-9d3c9122a833c6235a1d",
+    "java-runtime-a3cec43b565226d9cbac",
+    "java-runtime-8c90cf3d4a6abbd4848f",
+    "java-runtime-59302e42b09f7b2f6818"
+   ],
+   "javaStaticIds": [
+    "java-30f73c23a62ab5959453",
+    "java-30f73c23a62ab5959453",
+    "java-1788456b92fc17823173",
+    "java-46150495284a50e52094",
+    "java-0147f234d5dc15c47624"
+   ],
+   "javaNames": [
+    "ExprToCalendarChain",
+    "ExprDTToDateCalMSecValue",
+    "ExprDTDocSamples",
+    "ExprDTIntervalOpsCreateSchema",
+    "ExprDTInvalid"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTToDateCalMSec.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTToDateCalMSec.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTDocSamples.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTIntervalOpsCreateSchema.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTInvalid.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunExprDTTail553DirectReplay",
+    "internal/app/parity/run_test.go:TestRunExprDTTail553DirectReplayEmitsExpectedValues",
+    "internal/app/parity/run_test.go:TestRunExprDTTail553DiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunExprDTTail553CheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunExprDTTail553DiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunExprDTTail553RejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunExprDTTail553RuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "expr",
+    "datetime",
+    "calop",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/expr-dt-tail-553.json",
+    "testdata/parity/expr-dt-tail-553.trace.json",
+    "testdata/parity/expr-dt-tail-553.go.trace.json",
+    "testdata/parity/expr-dt-tail-553.evidence.json",
+    "tools/java-oracle/ExprDTTail553ScenarioOracle.java",
+    "tools/java-oracle/run-expr-dt-tail-553.sh"
+   ],
+   "notes": "expr/datetime tail born-DV (5 executions / 4 files, 57 records each, 0 differences). tocalendar-chain: Java's .add() is a method call on Calendar, not a datetime chain op \u2014 contract value is null (Go emits NullLiteral). todatecalmsec-value: 18-col rep matrix via DateTimeToTime (Date+Calendar collapse to time.Time) + NEW DateTimeToMillis. docsamples: 15 selects \u2014 DateTimeFormatDefault, DateTimeGet('month'), NEW DateTimeGetMonthOfYear (1-based), NEW DateTimePlusDuration/MinusDuration (duration literals), DateTimePlusExpr/MinusExpr, DateTimeRoundCeiling/Floor, DateTimeSet, DateTimeWithDate (Go 1-based month: Java 4->Go 5 for the same observable), DateTimeWithMax, DateTimeToTime, DateTimeToMillis + 4 pattern after() probes (DateTimeAfter / Interval+After, counts [1,1,1,0]). intervalops-createschema: map+objectarray legs via StartTimestamp/EndTimestamp + a.includes(b) (Avro/JSON legs unrepresentable, excluded); bean-tail get('month')==4. invalid: 11 compile-error records; Go verifies nearest expressible rejection for 3 representable probes, rest pinned prefix-only.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-96fba8bd8db354b4058e",
+    "java-runtime-9d3c9122a833c6235a1d",
+    "java-runtime-a3cec43b565226d9cbac",
+    "java-runtime-8c90cf3d4a6abbd4848f",
+    "java-runtime-59302e42b09f7b2f6818"
+   ]
   }
  ],
  "mappings": [
@@ -54341,13 +54409,17 @@
   {
    "capabilityId": "expr.core",
    "caseId": "case.expr-dt-remainder"
+  },
+  {
+   "capabilityId": "expr.core",
+   "caseId": "case.expr-dt-tail"
   }
  ],
  "summary": {
-  "inventoriedCases": 783,
-  "implementedCases": 781,
-  "differentialVerifiedCases": 406,
-  "differentialVerifiedRuntimeIds": 1620,
+  "inventoriedCases": 784,
+  "implementedCases": 782,
+  "differentialVerifiedCases": 407,
+  "differentialVerifiedRuntimeIds": 1625,
   "intentionallyDifferentCases": 36,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -54357,13 +54429,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4158,
-  "referencedJavaRuntimeIds": 3718,
+  "runtimeAssociationCount": 4163,
+  "referencedJavaRuntimeIds": 3723,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 418,
+  "unreferencedJavaRuntimeIds": 413,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 783,
+  "totalCases": 784,
   "totalCapabilities": 126
  }
 }

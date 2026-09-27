@@ -1709,6 +1709,14 @@ func DateTimeGet[V int64 | time.Time](value Expression[V], field string) Express
 	return internalengine.DateTimeGet[V](value, field)
 }
 
+// DateTimeGetMonthOfYear applies Java's getMonthOfYear() date-time method:
+// the 1-based month-of-year (ChronoField.MONTH_OF_YEAR), unlike
+// DateTimeGet(v,"month") which reads the 0-based Calendar.MONTH. Null or
+// missing input produces Null.
+func DateTimeGetMonthOfYear[V int64 | time.Time](value Expression[V]) Expression[int64] {
+	return internalengine.DateTimeGetMonthOfYear[V](value)
+}
+
 const DateTimeInputAny = internalengine.DateTimeInputAny
 
 const DateTimeInputEpochMillis = internalengine.DateTimeInputEpochMillis
@@ -1737,6 +1745,12 @@ type DateTimeMethodParameter = internalengine.DateTimeMethodParameter
 // input produces Null.
 func DateTimeMinus[V int64 | time.Time](value Expression[V], ms int64) Expression[V] {
 	return internalengine.DateTimeMinus[V](value, ms)
+}
+
+// DateTimeMinusDuration applies minus(duration); the subtractive
+// counterpart of DateTimePlusDuration with identical semantics.
+func DateTimeMinusDuration[V int64 | time.Time](value Expression[V], duration Expression[time.Duration]) Expression[V] {
+	return internalengine.DateTimeMinusDuration[V](value, duration)
 }
 
 // DateTimeMinusExpr applies minus(ms) with an expression millisecond count;
@@ -1809,6 +1823,14 @@ func DateTimePlus[V int64 | time.Time](value Expression[V], ms int64) Expression
 	return internalengine.DateTimePlus[V](value, ms)
 }
 
+// DateTimePlusDuration applies plus(duration) where the shift is a
+// duration-typed expression (Java's .plus(2 minutes) duration-literal
+// form). The duration converts to whole milliseconds; null duration or a
+// null date-time input produces Null.
+func DateTimePlusDuration[V int64 | time.Time](value Expression[V], duration Expression[time.Duration]) Expression[V] {
+	return internalengine.DateTimePlusDuration[V](value, duration)
+}
+
 // DateTimePlusExpr applies plus(ms) where the millisecond count is a
 // date-time expression argument (Java's form takes an expression, so
 // variables like .plus(varmsec) evaluate per event). Null ms or a null
@@ -1854,6 +1876,14 @@ func DateTimeRoundHalf[T int64 | time.Time](value Expression[T], unit string) Ex
 // produces Null.
 func DateTimeSet[V int64 | time.Time](value Expression[V], field string, n int) Expression[V] {
 	return internalengine.DateTimeSet[V](value, field, n)
+}
+
+// DateTimeToMillis applies Esper's toMillisec() conversion: epoch-millis
+// inputs pass through (or truncate to milliseconds under Microseconds,
+// matching Java's TimeAbacus), and time.Time inputs become their
+// Unix-epoch milliseconds. Null or missing input produces Null.
+func DateTimeToMillis[V int64 | time.Time](value Expression[V]) Expression[int64] {
+	return internalengine.DateTimeToMillis[V](value)
 }
 
 // DateTimeToTime applies Esper's toDate()/toCalendar() conversion: engine

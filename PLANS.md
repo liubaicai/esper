@@ -38,31 +38,40 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.539 ('epl-other-invalid') committed and pushed as 3d2dd2720; Git owns identity.
 
 ## Current work unit
-Active: Draft 4.552 ('expr-dt-remainder').
+Active: Draft 4.553 ('expr-dt-tail').
 
-- Contract frozen (JavaContract552 + GoSurface552): ExprDTGet ords 0-1,
-  ExprDTPlusMinus ords 0-1, ExprDTWithDate, ExprDTWithTime — 6
-  executions / 4 files. Two real shared-core gaps + one rep-asymmetry.
-- [x] Shared core (primary): DateTimePlusExpr/DateTimeMinusExpr
-  (expression-ms overloads for .plus(varmsec)) in
-  expr_dt_resolution.go; DateTimeWithDateExpr/DateTimeWithTimeExpr
-  (nullable-arg overloads, null field keeps input value per
-  actionSetYMD/actionSetHMSM) + dateTimeFieldsNode/dateTimeFieldsEval
-  in expr_dt_calops.go; facade regenerated; focused tests
-  TestDateTimeWithFieldsExpr + TestDateTimeShiftExpr green.
-- [x] Assets552 delivered + integrated: Java trace 22 records, Go
-  replay 22 (16 listener + 6 types), `-diff` passing / 0 differences;
-  evidence + traces checked in. get('month') rep asymmetry modeled
-  runner-side via Add(+1) on LDT/ZDT columns; EPL-C POJO-get
-  excluded (not datetime DSL); TimePeriod folded to 3610020ms.
-- [x] Manifest: NEW case.expr-dt-remainder born-DV with the 6 IDs
-  (expr.core mapping); summary → 783 cases / 406 DV / 1620 DV
-  runtime IDs / 418 unreferenced.
+- Contract frozen (JavaContract553 + GoSurface553): ExprDTToDateCalMSec
+  ords 0-1, ExprDTDocSamples, ExprDTIntervalOpsCreateSchema,
+  ExprDTInvalid — 5 executions / 4 files.
+- [x] Shared core (primary): DateTimeToMillis (toMillisec),
+  DateTimeGetMonthOfYear (1-based ChronoField vs DateTimeGet's 0-based
+  Calendar.MONTH), DateTimePlusDuration/DateTimeMinusDuration
+  (duration-literal overloads) in expr_dt_resolution.go; facade
+  regenerated; TestDateTimeTailOps green. REJECTED a speculative
+  DateTimeAdd — Java's `.add()` in E1 is a method call on Calendar,
+  not a datetime chain op (contract value is null).
+- [x] Assets553 dispatched (runner expr_dt_tail_553.go, scenario
+  expr-dt-tail-553.json, oracle ExprDTTail553ScenarioOracle).
+- [x] Assets553 delivered + integrated: Java trace 57 records, Go
+  replay 57 (14 listener + 27 deployed + 4 count + 1 types + 11
+  compile-error), `-diff` passing / 0 differences; evidence + traces
+  checked in. tocalendar-chain emits null (Java .add() is a method
+  call, not a chain op); invalid probes 3/11 Go-verified rest
+  prefix-pinned; intervalops map+OA legs only.
+- [x] Manifest: NEW case.expr-dt-tail born-DV with the 5 IDs
+  (expr.core mapping); summary → 784 cases / 407 DV / 1625 DV
+  runtime IDs / 413 unreferenced.
 - [x] Gates: `make check` GREEN.
-- [x] ParityRev552 + JavaContract553 + GoSurface553 dispatched.
+- [x] ParityRev553 + JavaContract554 + GoSurface554 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+
+- Shipped: Draft 4.552 ('expr-dt-remainder') committed and pushed as
+  0302fcd36; Git owns identity. 6 executions born-DV (22 records, 0
+  differences); review FAIL -> fixed -> confirm PASS (Microseconds
+  join, Go-replay fixture, manifest goTests).
+
 
 - Shipped: Draft 4.551 ('expr-dt-format') committed and pushed as
   701614c56; Git owns identity. ExprDTFormat 2/2 born-DV (6 records,

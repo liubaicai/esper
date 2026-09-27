@@ -176,6 +176,58 @@ func TestDateTimeShiftExpr(t *testing.T) {
 	}
 }
 
+// TestDateTimeTailOps covers the tail-unit additions: toMillisec
+// (int64 passthrough, time.Time -> millis), the 1-based
+// getMonthOfYear, and duration-arg plus/minus.
+func TestDateTimeTailOps(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterMap(env, "DT", []FieldSpec{
+		{Name: "l", Type: reflect.TypeOf(int64(0))},
+		{Name: "t", Type: reflect.TypeOf(time.Time{})},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(FromAny(env, "DT").Select(
+		Alias("msLong", DateTimeToMillis[int64](Field[map[string]any, int64]("l"))),
+		Alias("msTime", DateTimeToMillis[time.Time](Field[map[string]any, time.Time]("t"))),
+		Alias("moy", DateTimeGetMonthOfYear[time.Time](Field[map[string]any, time.Time]("t"))),
+		Alias("cal", DateTimeGet[time.Time](Field[map[string]any, time.Time]("t"), "month")),
+		Alias("dur", DateTimeMinusDuration[time.Time](Field[map[string]any, time.Time]("t"),
+			DurationMinutes[int64](Literal(int64(2))))),
+	).Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+	rows := subscribeRows(t, engine, plan)
+
+	base := time.Date(2002, 5, 30, 9, 0, 0, 0, time.UTC)
+	if err := engine.SendRecord(context.Background(), "DT", map[string]any{"l": base.UnixMilli(), "t": base}); err != nil {
+		t.Fatal(err)
+	}
+	got := rows()
+	if len(got) != 1 {
+		t.Fatalf("rows = %d, want 1", len(got))
+	}
+	row := got[0]
+	if v := row.Get("msLong").Any(); v != base.UnixMilli() {
+		t.Fatalf("msLong = %#v, want %d", v, base.UnixMilli())
+	}
+	if v := row.Get("msTime").Any(); v != base.UnixMilli() {
+		t.Fatalf("msTime = %#v, want %d", v, base.UnixMilli())
+	}
+	if v := row.Get("moy").Any(); v != int64(5) {
+		t.Fatalf("moy = %#v, want 5 (1-based)", v)
+	}
+	if v := row.Get("cal").Any(); v != int64(4) {
+		t.Fatalf("cal month = %#v, want 4 (0-based)", v)
+	}
+	if v := row.Get("dur").Any(); v != base.Add(-2*time.Minute) {
+		t.Fatalf("dur = %#v, want %v", v, base.Add(-2*time.Minute))
+	}
+}
+
 // TestDateTimeWithMinMaxTransforms checks the withMax/withMin clamps on both
 // representations against the pinned ExprDTWithMax/ExprDTWithMin oracle
 // values: 'week' keeps the day-of-week under Java WEEK_OF_YEAR semantics,
