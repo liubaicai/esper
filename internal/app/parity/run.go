@@ -113,6 +113,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include expr-script-threading-556 and expr-script-threading-556-diff")
 		fmt.Fprintln(stderr, "runner modes include infra-nwtable-comparative-557 and infra-nwtable-comparative-557-diff")
 		fmt.Fprintln(stderr, "runner modes include infra-nwtable-widening-558 and infra-nwtable-widening-558-diff")
+		fmt.Fprintln(stderr, "runner modes include infra-nwtable-index-faf-559 and infra-nwtable-index-faf-559-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-enum-select-from and expr-enum-select-from-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-type-use and expr-class-type-use-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-for-epl-objects and expr-class-for-epl-objects-diff")
@@ -500,6 +501,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWTableComparative557Scenario(file)
 	} else if *mode == "infra-nwtable-widening-558" || *mode == "infra-nwtable-widening-558-diff" {
 		scenario, err = loadInfraNWTableWidening558Scenario(file)
+	} else if *mode == "infra-nwtable-index-faf-559" || *mode == "infra-nwtable-index-faf-559-diff" {
+		scenario, err = loadInfraNWTableIndexFAF559Scenario(file)
 	} else if *mode == "epl-contained-event-example" || *mode == "epl-contained-event-example-diff" {
 		scenario, err = loadEPLContainedEventExampleScenario(file)
 	} else if *mode == "epl-other-pattern-event-properties" || *mode == "epl-other-pattern-event-properties-diff" {
@@ -2265,6 +2268,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNWTableWidening558JavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNWTableWidening558JavaSources),
 				splitMetadata(*javaExecutions, infraNWTableWidening558JavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-nwtable-index-faf-559" || *mode == "infra-nwtable-index-faf-559-diff" {
+		trace, err := runInfraNWTableIndexFAF559Scenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-nwtable-index-faf-559-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNWTableIndexFAF559JavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNWTableIndexFAF559JavaSources),
+				splitMetadata(*javaExecutions, infraNWTableIndexFAF559JavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

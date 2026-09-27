@@ -41,28 +41,34 @@ activity or a single coverage percentage.
 
 
 
-## Current work unit
-Active: Draft 4.558 ('infra-nwtable-widening').
 
-- Contract frozen (JavaContract558 + GoSurface558): InfraNWTableCreateIndex
-  ords 2-5 — HashBTreeWidening{w±} + Widening{w±}; numeric widening on
-  FAF int literals vs long/short indexed columns; hash equality vs btree
-  range; SODA IX1/IX2 plan-only -> unrepresentable. Go surface complete:
-  NamedWindow.CreateIndex/Secondary(BTree)Index + ExecuteFireAndForget.
-- [x] Assets558 dispatched (runner infra_nwtable_widening_558.go, scenario
-  infra-nwtable-widening-558.json, oracle InfraNWTableWidening558ScenarioOracle).
-- [x] Assets558 delivered + integrated: Java trace 36 records, Go replay
-  36, `-diff` passing / 0 differences; evidence + traces checked in.
-  Spike confirmed numeric widening works in the Go index path (int literal
-  -> long/short indexed columns, hash + btree) with NO engine change.
-- [x] Manifest: NEW case.infra-nwtable-create-index-widening born-DV
-  (4 IDs); summary -> 792 cases / 412 DV / 1641 DV runtime IDs / 397
-  unreferenced (the two exec names share the same two static parents).
+## Current work unit
+Active: Draft 4.559 ('infra-nwtable-index-faf').
+
+- Contract frozen (JavaContract559 + GoSurface559): InfraNWTableCreateIndex
+  ords 6/7 CompositeIndex + ords 20/21 MultikeyIndexFAF — composite
+  (f2,f3,f1) hash index, f3-first prefix probes, FIREANDFORGET. Indexes
+  declared at creation time per the 4.558 P1 fix; non-leading-prefix index
+  matching spiked by worker.
+- [x] Assets559 dispatched (runner infra_nwtable_index_faf_559.go).
+- [x] Assets559 delivered + integrated: Java trace 28 records, Go replay
+  28, `-diff` passing / 0 differences; evidence + traces checked in.
+  Spike: Go composite hash requires leading-column predicates in
+  declaration order — f3/f3+f2 probes pinned as full-scan (Java hash
+  index has the same full-key requirement; row sets equal); f2+f3+f1
+  asserts IndexAccessEquality via ForSource(0).
+- [x] Manifest: NEW case.infra-nwtable-create-index-faf born-DV (4 IDs);
+  summary -> 793 cases / 413 DV / 1645 DV runtime IDs / 397 unreferenced.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev558 + JavaContract559 + GoSurface559 dispatched.
+- [x] ParityRev559 + JavaContract560 + GoSurface560 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.558 ('infra-nwtable-widening') committed and pushed as
+  `802991380`; Git owns identity. 4 executions born-DV (36 records each,
+  0 differences); review FAIL->fixed->PASS (P1: probes now exercise the
+  declared index path — plan.indexPlan is frozen at env.Build, indexes
+  declared at creation time + ForSource(0) non-FullScan assertion).
 - Shipped: Draft 4.557 ('infra-nwtable-comparative') committed and pushed as
   `253dbe630`; Git owns identity. 2 executions born-DV (2002 records each,
   0 differences); review PASS (P3 complexity wording unified).

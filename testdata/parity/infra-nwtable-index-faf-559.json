@@ -1,0 +1,119 @@
+{
+  "version": "esper-parity/v1",
+  "id": "infra-nwtable-index-faf-559",
+  "description": "InfraNWTableCreateIndex ordinals 6-7 and 20-21: InfraCompositeIndex (ords 6-7) deploys a keepall window or f1-keyed MyInfraCI(f1 string, f2 int, f3 string, f4 string) fed by a concat insert-into over SupportBean, a composite hash index MyInfraCIIndex on (f2, f3, f1) and three f3-leading FAF probes each returning {E1,-2,>E1<,?E1?}, then the plan-only SODA tail (undeployModuleContaining indexOne + eplToModelCompileDeploy IX2); InfraMultikeyIndexFAF (ords 20-21) runs the same fixture over MyInfra (.win:keepall() window form) with MyInfraIndex and milestone(0..2) between probes (harness no-ops carrying no steps). The f3-leading and f3+f2 probes resolve to a full scan on both engines (a composite hash index requires its full column set); only the complete {f2,f3,f1} predicate uses the declared index. Expected row {E1,-2,>E1<,?E1?} (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableCreateIndex.java).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableCreateIndex.java",
+  "javaRuntimes": [
+    "java-runtime-78145a646789e9674a38",
+    "java-runtime-694aacd1c09bee51ffda",
+    "java-runtime-4c0e49ebf2ae523ef825",
+    "java-runtime-dbe715ce8e9fbede1285"
+  ],
+  "javaNames": [
+    "InfraCompositeIndex{namedWindow=true}",
+    "InfraCompositeIndex{namedWindow=false}",
+    "InfraMultikeyIndexFAF{isNamedWindow=true}",
+    "InfraMultikeyIndexFAF{isNamedWindow=false}"
+  ],
+  "javaStaticIds": [
+    "java-06a59928c63cc7360d2b",
+    "java-06a59928c63cc7360d2b",
+    "java-06a59928c63cc7360d2b",
+    "java-06a59928c63cc7360d2b"
+  ],
+  "javaFlags": [
+    "FIREANDFORGET"
+  ],
+  "cases": [
+    {
+      "case": "composite-window",
+      "ordinal": 6,
+      "runtimeId": "java-runtime-78145a646789e9674a38",
+      "executionName": "InfraCompositeIndex{namedWindow=true}",
+      "observation": "deploy+snapshot+unrepresentable; MyInfraCI#keepall window with composite hash index (f2,f3,f1): the f3-leading and f3+f2 FAF probes resolve to a full scan (Java's hash index requires its full column set) while the complete {f2,f3,f1} predicate uses the declared index; each returns {E1,-2,>E1<,?E1?}; undeployModuleContaining(indexOne) and the SODA IX2 deploy are plan-only",
+      "epl": "@public create window MyInfraCI#keepall as (f1 string, f2 int, f3 string, f4 string)\ninsert into MyInfraCI(f1, f2, f3, f4) select theString, intPrimitive, '>'||theString||'<', '?'||theString||'?' from SupportBean\n@name('indexOne') create index MyInfraCIIndex on MyInfraCI(f2, f3, f1)\nselect * from MyInfraCI where f3='>E1<'\nselect * from MyInfraCI where f3='>E1<' and f2=-2\nselect * from MyInfraCI where f3='>E1<' and f2=-2 and f1='E1'\ncreate index MyInfraCIIndexTwo on MyInfraCI(f2, f3, f1)"
+    },
+    {
+      "case": "composite-table",
+      "ordinal": 7,
+      "runtimeId": "java-runtime-694aacd1c09bee51ffda",
+      "executionName": "InfraCompositeIndex{namedWindow=false}",
+      "observation": "deploy+snapshot+unrepresentable; f1-keyed MyInfraCI table with composite hash index (f2,f3,f1): the f3-leading and f3+f2 FAF probes resolve to a full scan (Java's hash index requires its full column set) while the complete {f2,f3,f1} predicate uses the declared index; each returns {E1,-2,>E1<,?E1?}; undeployModuleContaining(indexOne) and the SODA IX2 deploy are plan-only",
+      "epl": "@public create table MyInfraCI as (f1 string primary key, f2 int, f3 string, f4 string)\ninsert into MyInfraCI(f1, f2, f3, f4) select theString, intPrimitive, '>'||theString||'<', '?'||theString||'?' from SupportBean\n@name('indexOne') create index MyInfraCIIndex on MyInfraCI(f2, f3, f1)\nselect * from MyInfraCI where f3='>E1<'\nselect * from MyInfraCI where f3='>E1<' and f2=-2\nselect * from MyInfraCI where f3='>E1<' and f2=-2 and f1='E1'\ncreate index MyInfraCIIndexTwo on MyInfraCI(f2, f3, f1)"
+    },
+    {
+      "case": "multikey-window",
+      "ordinal": 20,
+      "runtimeId": "java-runtime-4c0e49ebf2ae523ef825",
+      "executionName": "InfraMultikeyIndexFAF{isNamedWindow=true}",
+      "observation": "deploy+snapshot; MyInfra.win:keepall() window with composite hash index MyInfraIndex (f2,f3,f1): the f3-leading and f3+f2 FAF probes resolve to a full scan while the complete {f2,f3,f1} predicate uses the declared index; each returns {E1,-2,>E1<,?E1?}; milestone(0..2) checkpoints carry no steps",
+      "epl": "@public create window MyInfra.win:keepall() as (f1 string, f2 int, f3 string, f4 string)\ninsert into MyInfra(f1, f2, f3, f4) select theString, intPrimitive, '>'||theString||'<', '?'||theString||'?' from SupportBean\ncreate index MyInfraIndex on MyInfra(f2, f3, f1)\nselect * from MyInfra where f3='>E1<'\nselect * from MyInfra where f3='>E1<' and f2=-2\nselect * from MyInfra where f3='>E1<' and f2=-2 and f1='E1'"
+    },
+    {
+      "case": "multikey-table",
+      "ordinal": 21,
+      "runtimeId": "java-runtime-dbe715ce8e9fbede1285",
+      "executionName": "InfraMultikeyIndexFAF{isNamedWindow=false}",
+      "observation": "deploy+snapshot; f1-keyed MyInfra table with composite hash index MyInfraIndex (f2,f3,f1): the f3-leading and f3+f2 FAF probes resolve to a full scan while the complete {f2,f3,f1} predicate uses the declared index; each returns {E1,-2,>E1<,?E1?}; milestone(0..2) checkpoints carry no steps",
+      "epl": "@public create table MyInfra as (f1 string primary key, f2 int, f3 string, f4 string)\ninsert into MyInfra(f1, f2, f3, f4) select theString, intPrimitive, '>'||theString||'<', '?'||theString||'?' from SupportBean\ncreate index MyInfraIndex on MyInfra(f2, f3, f1)\nselect * from MyInfra where f3='>E1<'\nselect * from MyInfra where f3='>E1<' and f2=-2\nselect * from MyInfra where f3='>E1<' and f2=-2 and f1='E1'"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "composite-window"},
+    {"op": "deploy", "case": "composite-window", "statement": "create", "epl": "@public create window MyInfraCI#keepall as (f1 string, f2 int, f3 string, f4 string)"},
+    {"op": "deployed", "case": "composite-window", "statement": "create"},
+    {"op": "deploy", "case": "composite-window", "statement": "insert", "epl": "insert into MyInfraCI(f1, f2, f3, f4) select theString, intPrimitive, '>'||theString||'<', '?'||theString||'?' from SupportBean"},
+    {"op": "deployed", "case": "composite-window", "statement": "insert"},
+    {"op": "deploy", "case": "composite-window", "statement": "index", "epl": "@name('indexOne') create index MyInfraCIIndex on MyInfraCI(f2, f3, f1)"},
+    {"op": "deployed", "case": "composite-window", "statement": "index"},
+    {"op": "send", "case": "composite-window", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": -2}},
+    {"op": "snapshot", "case": "composite-window", "statement": "select-f3", "mode": "any", "fields": ["f1", "f2", "f3", "f4"], "epl": "select * from MyInfraCI where f3='>E1<'"},
+    {"op": "snapshot", "case": "composite-window", "statement": "select-f3-f2", "mode": "any", "fields": ["f1", "f2", "f3", "f4"], "epl": "select * from MyInfraCI where f3='>E1<' and f2=-2"},
+    {"op": "snapshot", "case": "composite-window", "statement": "select-full", "mode": "any", "fields": ["f1", "f2", "f3", "f4"], "epl": "select * from MyInfraCI where f3='>E1<' and f2=-2 and f1='E1'"},
+    {"op": "unrepresentable", "case": "composite-window", "statement": "undeploy-index-one", "epl": "indexOne", "expectError": "undeployModuleContaining(indexOne): the Java execution retires the @name('indexOne') index module before the SODA probe; the Go secondary index is declared at creation time and the deploy step is a catalog check, so no deployment exists to undeploy and the record is plan-only"},
+    {"op": "unrepresentable", "case": "composite-window", "statement": "soda-index-two", "epl": "create index MyInfraCIIndexTwo on MyInfraCI(f2, f3, f1)", "expectError": "SODA create index MyInfraCIIndexTwo on MyInfraCI(f2, f3, f1): the Java execution replays eplToModelCompileDeploy (parse -> toEPL -> module compile -> deploy) then undeployAll; EPL-object-model deploy has no Go boundary so the record is plan-only"},
+    {"op": "undeploy-all", "case": "composite-window"},
+
+    {"op": "case", "case": "composite-table"},
+    {"op": "deploy", "case": "composite-table", "statement": "create", "epl": "@public create table MyInfraCI as (f1 string primary key, f2 int, f3 string, f4 string)"},
+    {"op": "deployed", "case": "composite-table", "statement": "create"},
+    {"op": "deploy", "case": "composite-table", "statement": "insert", "epl": "insert into MyInfraCI(f1, f2, f3, f4) select theString, intPrimitive, '>'||theString||'<', '?'||theString||'?' from SupportBean"},
+    {"op": "deployed", "case": "composite-table", "statement": "insert"},
+    {"op": "deploy", "case": "composite-table", "statement": "index", "epl": "@name('indexOne') create index MyInfraCIIndex on MyInfraCI(f2, f3, f1)"},
+    {"op": "deployed", "case": "composite-table", "statement": "index"},
+    {"op": "send", "case": "composite-table", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": -2}},
+    {"op": "snapshot", "case": "composite-table", "statement": "select-f3", "mode": "any", "fields": ["f1", "f2", "f3", "f4"], "epl": "select * from MyInfraCI where f3='>E1<'"},
+    {"op": "snapshot", "case": "composite-table", "statement": "select-f3-f2", "mode": "any", "fields": ["f1", "f2", "f3", "f4"], "epl": "select * from MyInfraCI where f3='>E1<' and f2=-2"},
+    {"op": "snapshot", "case": "composite-table", "statement": "select-full", "mode": "any", "fields": ["f1", "f2", "f3", "f4"], "epl": "select * from MyInfraCI where f3='>E1<' and f2=-2 and f1='E1'"},
+    {"op": "unrepresentable", "case": "composite-table", "statement": "undeploy-index-one", "epl": "indexOne", "expectError": "undeployModuleContaining(indexOne): the Java execution retires the @name('indexOne') index module before the SODA probe; the Go secondary index is declared at creation time and the deploy step is a catalog check, so no deployment exists to undeploy and the record is plan-only"},
+    {"op": "unrepresentable", "case": "composite-table", "statement": "soda-index-two", "epl": "create index MyInfraCIIndexTwo on MyInfraCI(f2, f3, f1)", "expectError": "SODA create index MyInfraCIIndexTwo on MyInfraCI(f2, f3, f1): the Java execution replays eplToModelCompileDeploy (parse -> toEPL -> module compile -> deploy) then undeployAll; EPL-object-model deploy has no Go boundary so the record is plan-only"},
+    {"op": "undeploy-all", "case": "composite-table"},
+
+    {"op": "case", "case": "multikey-window"},
+    {"op": "deploy", "case": "multikey-window", "statement": "create", "epl": "@public create window MyInfra.win:keepall() as (f1 string, f2 int, f3 string, f4 string)"},
+    {"op": "deployed", "case": "multikey-window", "statement": "create"},
+    {"op": "deploy", "case": "multikey-window", "statement": "insert", "epl": "insert into MyInfra(f1, f2, f3, f4) select theString, intPrimitive, '>'||theString||'<', '?'||theString||'?' from SupportBean"},
+    {"op": "deployed", "case": "multikey-window", "statement": "insert"},
+    {"op": "deploy", "case": "multikey-window", "statement": "index", "epl": "create index MyInfraIndex on MyInfra(f2, f3, f1)"},
+    {"op": "deployed", "case": "multikey-window", "statement": "index"},
+    {"op": "send", "case": "multikey-window", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": -2}},
+    {"op": "snapshot", "case": "multikey-window", "statement": "select-f3", "mode": "any", "fields": ["f1", "f2", "f3", "f4"], "epl": "select * from MyInfra where f3='>E1<'"},
+    {"op": "snapshot", "case": "multikey-window", "statement": "select-f3-f2", "mode": "any", "fields": ["f1", "f2", "f3", "f4"], "epl": "select * from MyInfra where f3='>E1<' and f2=-2"},
+    {"op": "snapshot", "case": "multikey-window", "statement": "select-full", "mode": "any", "fields": ["f1", "f2", "f3", "f4"], "epl": "select * from MyInfra where f3='>E1<' and f2=-2 and f1='E1'"},
+    {"op": "undeploy-all", "case": "multikey-window"},
+
+    {"op": "case", "case": "multikey-table"},
+    {"op": "deploy", "case": "multikey-table", "statement": "create", "epl": "@public create table MyInfra as (f1 string primary key, f2 int, f3 string, f4 string)"},
+    {"op": "deployed", "case": "multikey-table", "statement": "create"},
+    {"op": "deploy", "case": "multikey-table", "statement": "insert", "epl": "insert into MyInfra(f1, f2, f3, f4) select theString, intPrimitive, '>'||theString||'<', '?'||theString||'?' from SupportBean"},
+    {"op": "deployed", "case": "multikey-table", "statement": "insert"},
+    {"op": "deploy", "case": "multikey-table", "statement": "index", "epl": "create index MyInfraIndex on MyInfra(f2, f3, f1)"},
+    {"op": "deployed", "case": "multikey-table", "statement": "index"},
+    {"op": "send", "case": "multikey-table", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": -2}},
+    {"op": "snapshot", "case": "multikey-table", "statement": "select-f3", "mode": "any", "fields": ["f1", "f2", "f3", "f4"], "epl": "select * from MyInfra where f3='>E1<'"},
+    {"op": "snapshot", "case": "multikey-table", "statement": "select-f3-f2", "mode": "any", "fields": ["f1", "f2", "f3", "f4"], "epl": "select * from MyInfra where f3='>E1<' and f2=-2"},
+    {"op": "snapshot", "case": "multikey-table", "statement": "select-full", "mode": "any", "fields": ["f1", "f2", "f3", "f4"], "epl": "select * from MyInfra where f3='>E1<' and f2=-2 and f1='E1'"},
+    {"op": "undeploy-all", "case": "multikey-table"}
+  ]
+}

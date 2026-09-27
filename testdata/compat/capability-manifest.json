@@ -51278,6 +51278,59 @@
     "java-runtime-2bffd7c0683d9195c556"
    ],
    "notes": "Draft 4.558: 36 records each, 0 differences. Oracle pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c."
+  },
+  {
+   "id": "case.infra-nwtable-create-index-faf",
+   "javaRuntimeIds": [
+    "java-runtime-78145a646789e9674a38",
+    "java-runtime-694aacd1c09bee51ffda",
+    "java-runtime-4c0e49ebf2ae523ef825",
+    "java-runtime-dbe715ce8e9fbede1285"
+   ],
+   "javaStaticIds": [
+    "java-06a59928c63cc7360d2b"
+   ],
+   "javaNames": [
+    "InfraCompositeIndex{namedWindow=true}",
+    "InfraCompositeIndex{namedWindow=false}",
+    "InfraMultikeyIndexFAF{isNamedWindow=true}",
+    "InfraMultikeyIndexFAF{isNamedWindow=false}"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableCreateIndex.java"
+   ],
+   "goTests": [
+    "internal/app/parity/infra_nwtable_index_faf_559_test.go/TestRunInfraNWTableIndexFAF559DirectReplay",
+    "internal/app/parity/infra_nwtable_index_faf_559_test.go/TestRunInfraNWTableIndexFAF559PinnedArtifacts",
+    "internal/app/parity/infra_nwtable_index_faf_559_test.go/TestRunInfraNWTableIndexFAF559ScenarioLoader",
+    "internal/app/parity/infra_nwtable_index_faf_559_test.go/TestRunInfraNWTableIndexFAF559DiffWritesPassingEvidence",
+    "internal/app/parity/infra_nwtable_index_faf_559_test.go/TestRunInfraNWTableIndexFAF559DiffRejectsTraceMutations",
+    "internal/app/parity/infra_nwtable_index_faf_559_test.go/TestRunInfraNWTableIndexFAF559CheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/infra_nwtable_index_faf_559_test.go/TestRunInfraNWTableIndexFAF559RejectsMalformedRawScenario",
+    "internal/app/parity/infra_nwtable_index_faf_559_test.go/TestRunInfraNWTableIndexFAF559RuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "infra",
+    "differential",
+    "fire-and-forget"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-nwtable-index-faf-559.evidence.json"
+   ],
+   "difference": "Go declares the composite (f2,f3,f1) hash index at creation time (plan.indexPlan is frozen at env.Build, so a live CreateIndex would be invisible to FAF selection \u2014 observably identical here). Both engines require the full hash key: the f3 and f3+f2 prefix probes full-scan and the complete f2+f3+f1 predicate resolves to IndexAccessEquality (asserted by the runner via ForSource(0)); Java asserts row sets only. Composite SODA tail (undeployModuleContaining('indexOne') + eplToModelCompileDeploy) is plan-only/unrepresentable; milestones are harness-ordering no-ops.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-78145a646789e9674a38",
+    "java-runtime-694aacd1c09bee51ffda",
+    "java-runtime-4c0e49ebf2ae523ef825",
+    "java-runtime-dbe715ce8e9fbede1285"
+   ],
+   "notes": "Draft 4.559: 28 records each, 0 differences. Oracle pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c."
   }
  ],
  "mappings": [
@@ -54796,13 +54849,17 @@
   {
    "capabilityId": "infra.namedwindow.views",
    "caseId": "case.infra-nwtable-create-index-widening"
+  },
+  {
+   "capabilityId": "infra.namedwindow.views",
+   "caseId": "case.infra-nwtable-create-index-faf"
   }
  ],
  "summary": {
-  "inventoriedCases": 792,
-  "implementedCases": 790,
-  "differentialVerifiedCases": 412,
-  "differentialVerifiedRuntimeIds": 1641,
+  "inventoriedCases": 793,
+  "implementedCases": 791,
+  "differentialVerifiedCases": 413,
+  "differentialVerifiedRuntimeIds": 1645,
   "intentionallyDifferentCases": 39,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -54812,13 +54869,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4183,
+  "runtimeAssociationCount": 4187,
   "referencedJavaRuntimeIds": 3739,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 397,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 792,
+  "totalCases": 793,
   "totalCapabilities": 126
  }
 }
