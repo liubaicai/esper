@@ -1,0 +1,743 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-ae0b11741e8c17c55271",
+    "java-runtime-31d2b97272df49845355",
+    "java-runtime-ba5fc9c488e24b9bae78",
+    "java-runtime-386fcd9642ae114b58af"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableCreateIndex.java"
+  ],
+  "javaExecutions": [
+    "InfraLateCreate{namedWindow=true}",
+    "InfraLateCreate{namedWindow=false}",
+    "InfraLateCreateSceneTwo{namedWindow=true}",
+    "InfraLateCreateSceneTwo{namedWindow=false}"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-late-index-560",
+    "steps": [
+      {
+        "op": "case",
+        "case": "late-window"
+      },
+      {
+        "op": "deploy",
+        "case": "late-window",
+        "statement": "create",
+        "epl": "@Name('Create') @public create window MyInfra.win:keepall() as SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "late-window",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "late-window",
+        "statement": "insert",
+        "epl": "@Name('Insert') insert into MyInfra select theString, intPrimitive from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "late-window",
+        "statement": "insert"
+      },
+      {
+        "op": "send",
+        "case": "late-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "late-window",
+        "statement": "index",
+        "epl": "@Name('Index') create index MyInfra_IDX on MyInfra(theString)"
+      },
+      {
+        "op": "deployed",
+        "case": "late-window",
+        "statement": "index"
+      },
+      {
+        "op": "snapshot",
+        "case": "late-window",
+        "statement": "select",
+        "epl": "select * from MyInfra where theString = 'B2' order by intPrimitive asc",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "late-window"
+      },
+      {
+        "op": "case",
+        "case": "late-table"
+      },
+      {
+        "op": "deploy",
+        "case": "late-table",
+        "statement": "create",
+        "epl": "@Name('Create') @public create table MyInfra(theString string primary key, intPrimitive int primary key)"
+      },
+      {
+        "op": "deployed",
+        "case": "late-table",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "late-table",
+        "statement": "insert",
+        "epl": "@Name('Insert') insert into MyInfra select theString, intPrimitive from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "late-table",
+        "statement": "insert"
+      },
+      {
+        "op": "send",
+        "case": "late-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "late-table",
+        "statement": "index",
+        "epl": "@Name('Index') create index MyInfra_IDX on MyInfra(theString)"
+      },
+      {
+        "op": "deployed",
+        "case": "late-table",
+        "statement": "index"
+      },
+      {
+        "op": "snapshot",
+        "case": "late-table",
+        "statement": "select",
+        "epl": "select * from MyInfra where theString = 'B2' order by intPrimitive asc",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "late-table"
+      },
+      {
+        "op": "case",
+        "case": "scene-two-window"
+      },
+      {
+        "op": "deploy",
+        "case": "scene-two-window",
+        "statement": "create",
+        "epl": "@public create window MyInfraLC#keepall as (f1 string, f2 int, f3 string, f4 string)"
+      },
+      {
+        "op": "deployed",
+        "case": "scene-two-window",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "scene-two-window",
+        "statement": "insert",
+        "epl": "insert into MyInfraLC(f1, f2, f3, f4) select theString, intPrimitive, '\u003e'||theString||'\u003c', '?'||theString||'?' from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "scene-two-window",
+        "statement": "insert"
+      },
+      {
+        "op": "send",
+        "case": "scene-two-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": -4
+        }
+      },
+      {
+        "op": "send",
+        "case": "scene-two-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": -2
+        }
+      },
+      {
+        "op": "send",
+        "case": "scene-two-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": -3
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "scene-two-window",
+        "statement": "index",
+        "epl": "create index MyInfraLCIndex on MyInfraLC(f2, f3, f1)"
+      },
+      {
+        "op": "deployed",
+        "case": "scene-two-window",
+        "statement": "index"
+      },
+      {
+        "op": "snapshot",
+        "case": "scene-two-window",
+        "statement": "select",
+        "epl": "select * from MyInfraLC where f3='\u003eE1\u003c' order by f2 asc",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "scene-two-window"
+      },
+      {
+        "op": "case",
+        "case": "scene-two-table"
+      },
+      {
+        "op": "deploy",
+        "case": "scene-two-table",
+        "statement": "create",
+        "epl": "@public create table MyInfraLC as (f1 string primary key, f2 int primary key, f3 string primary key, f4 string primary key)"
+      },
+      {
+        "op": "deployed",
+        "case": "scene-two-table",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "scene-two-table",
+        "statement": "insert",
+        "epl": "insert into MyInfraLC(f1, f2, f3, f4) select theString, intPrimitive, '\u003e'||theString||'\u003c', '?'||theString||'?' from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "scene-two-table",
+        "statement": "insert"
+      },
+      {
+        "op": "send",
+        "case": "scene-two-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": -4
+        }
+      },
+      {
+        "op": "send",
+        "case": "scene-two-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": -2
+        }
+      },
+      {
+        "op": "send",
+        "case": "scene-two-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": -3
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "scene-two-table",
+        "statement": "index",
+        "epl": "create index MyInfraLCIndex on MyInfraLC(f2, f3, f1)"
+      },
+      {
+        "op": "deployed",
+        "case": "scene-two-table",
+        "statement": "index"
+      },
+      {
+        "op": "snapshot",
+        "case": "scene-two-table",
+        "statement": "select",
+        "epl": "select * from MyInfraLC where f3='\u003eE1\u003c' order by f2 asc",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "scene-two-table"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-late-index-560",
+    "records": [
+      {
+        "case": "late-window",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-window",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-window",
+        "operation": "deployed",
+        "statement": "index",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-window",
+        "operation": "snapshot",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "B2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "B2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "late-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-table",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-table",
+        "operation": "deployed",
+        "statement": "index",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-table",
+        "operation": "snapshot",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "B2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "B2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two-window",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-two-window",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-two-window",
+        "operation": "deployed",
+        "statement": "index",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-two-window",
+        "operation": "snapshot",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": "E1",
+              "f2": -4,
+              "f3": "\u003eE1\u003c",
+              "f4": "?E1?"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "f1": "E1",
+              "f2": -3,
+              "f3": "\u003eE1\u003c",
+              "f4": "?E1?"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "f1": "E1",
+              "f2": -2,
+              "f3": "\u003eE1\u003c",
+              "f4": "?E1?"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-two-table",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-two-table",
+        "operation": "deployed",
+        "statement": "index",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-two-table",
+        "operation": "snapshot",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": "E1",
+              "f2": -4,
+              "f3": "\u003eE1\u003c",
+              "f4": "?E1?"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "f1": "E1",
+              "f2": -3,
+              "f3": "\u003eE1\u003c",
+              "f4": "?E1?"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "f1": "E1",
+              "f2": -2,
+              "f3": "\u003eE1\u003c",
+              "f4": "?E1?"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-late-index-560",
+    "records": [
+      {
+        "case": "late-window",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-window",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-window",
+        "operation": "deployed",
+        "statement": "index",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-window",
+        "operation": "snapshot",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "B2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "B2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "late-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-table",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-table",
+        "operation": "deployed",
+        "statement": "index",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-table",
+        "operation": "snapshot",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "B2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "B2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two-window",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-two-window",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-two-window",
+        "operation": "deployed",
+        "statement": "index",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-two-window",
+        "operation": "snapshot",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": "E1",
+              "f2": -4,
+              "f3": "\u003eE1\u003c",
+              "f4": "?E1?"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "f1": "E1",
+              "f2": -3,
+              "f3": "\u003eE1\u003c",
+              "f4": "?E1?"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "f1": "E1",
+              "f2": -2,
+              "f3": "\u003eE1\u003c",
+              "f4": "?E1?"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-two-table",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-two-table",
+        "operation": "deployed",
+        "statement": "index",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-two-table",
+        "operation": "snapshot",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": "E1",
+              "f2": -4,
+              "f3": "\u003eE1\u003c",
+              "f4": "?E1?"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "f1": "E1",
+              "f2": -3,
+              "f3": "\u003eE1\u003c",
+              "f4": "?E1?"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "f1": "E1",
+              "f2": -2,
+              "f3": "\u003eE1\u003c",
+              "f4": "?E1?"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

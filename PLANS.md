@@ -42,28 +42,35 @@ activity or a single coverage percentage.
 
 
 
-## Current work unit
-Active: Draft 4.559 ('infra-nwtable-index-faf').
 
-- Contract frozen (JavaContract559 + GoSurface559): InfraNWTableCreateIndex
-  ords 6/7 CompositeIndex + ords 20/21 MultikeyIndexFAF — composite
-  (f2,f3,f1) hash index, f3-first prefix probes, FIREANDFORGET. Indexes
-  declared at creation time per the 4.558 P1 fix; non-leading-prefix index
-  matching spiked by worker.
-- [x] Assets559 dispatched (runner infra_nwtable_index_faf_559.go).
-- [x] Assets559 delivered + integrated: Java trace 28 records, Go replay
-  28, `-diff` passing / 0 differences; evidence + traces checked in.
-  Spike: Go composite hash requires leading-column predicates in
-  declaration order — f3/f3+f2 probes pinned as full-scan (Java hash
-  index has the same full-key requirement; row sets equal); f2+f3+f1
-  asserts IndexAccessEquality via ForSource(0).
-- [x] Manifest: NEW case.infra-nwtable-create-index-faf born-DV (4 IDs);
-  summary -> 793 cases / 413 DV / 1645 DV runtime IDs / 397 unreferenced.
+## Current work unit
+Active: Draft 4.560 ('infra-nwtable-late-index').
+
+- Contract frozen (JavaContract560 + GoSurface560): InfraNWTableCreateIndex
+  ords 8/9 LateCreate + 10/11 SceneTwo — late-create-serves-FAF, no flags.
+  Remaining after this: ords 12-15 (MultiColMultiIndex + DropCreate),
+  16-19 (OnSelectReUse + Invalid), 0-1 MultiRangeAndKey (blocked on
+  per-column mixed hash+btree composite index — engine gap).
+- [x] Assets560 dispatched (runner infra_nwtable_late_index_560.go).
+- [x] Assets560 delivered + integrated: Java trace 16 records, Go replay
+  16, `-diff` passing / 0 differences; evidence + traces checked in.
+  Ordered `order by` snapshots compared positionally; LateCreate asserts
+  IndexAccessEquality on the declared index, SceneTwo f3-leading probe
+  pins full-scan (Java hash needs the full key — row sets equal).
+- [x] Umbrella fix: the 4 runtime IDs were already referenced by
+  case.inventory.infra-nwtable-create-index; narrowed its `remaining`
+  (widening/composite/multikey/late now DV; MultiRange + DropCreate +
+  MCMI + OnSelectReUse + Invalid remain).
+- [x] Manifest: NEW case.infra-nwtable-create-index-late born-DV (4 IDs);
+  summary -> 794 cases / 414 DV / 1649 DV runtime IDs / 397 unreferenced.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev559 + JavaContract560 + GoSurface560 dispatched.
+- [x] ParityRev560 + JavaContract561 + GoSurface561 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.559 ('infra-nwtable-index-faf') committed and pushed as
+  `272065ad4`; Git owns identity. 4 executions born-DV (28 records each,
+  0 differences); review PASS (clean).
 - Shipped: Draft 4.558 ('infra-nwtable-widening') committed and pushed as
   `802991380`; Git owns identity. 4 executions born-DV (36 records each,
   0 differences); review FAIL->fixed->PASS (P1: probes now exercise the

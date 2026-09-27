@@ -1,0 +1,113 @@
+{
+  "version": "esper-parity/v1",
+  "id": "infra-nwtable-late-index-560",
+  "description": "InfraNWTableCreateIndex ordinals 8-11: InfraLateCreate (ords 8-9) deploys a SupportBean keepall window or (theString,intPrimitive)-keyed table MyInfra fed by `insert into MyInfra select theString, intPrimitive from SupportBean`, sends A1/1, B2/2, B2/1, then deploys `create index MyInfra_IDX on MyInfra(theString)` before the FAF probe `select * from MyInfra where theString = 'B2' order by intPrimitive asc` returns {B2,1},{B2,2} through the declared hash index; InfraLateCreateSceneTwo (ords 10-11) deploys a keepall window or fully-keyed table MyInfraLC(f1 string, f2 int, f3 string, f4 string) fed by the concat insert-into over SupportBean, sends E1/-4, E1/-2, E1/-3, then deploys `create index MyInfraLCIndex on MyInfraLC(f2, f3, f1)` before the FAF probe `select * from MyInfraLC where f3='>E1<' order by f2 asc` returns the three E1 rows in f2 order {-4,-3,-2}. The f3-leading probe resolves to a full scan on both engines (a composite hash index requires predicates on its leading columns); the late-create equality probe uses the declared MyInfra_IDX index. Java milestone checkpoints carry no steps (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableCreateIndex.java).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableCreateIndex.java",
+  "javaRuntimes": [
+    "java-runtime-ae0b11741e8c17c55271",
+    "java-runtime-31d2b97272df49845355",
+    "java-runtime-ba5fc9c488e24b9bae78",
+    "java-runtime-386fcd9642ae114b58af"
+  ],
+  "javaNames": [
+    "InfraLateCreate{namedWindow=true}",
+    "InfraLateCreate{namedWindow=false}",
+    "InfraLateCreateSceneTwo{namedWindow=true}",
+    "InfraLateCreateSceneTwo{namedWindow=false}"
+  ],
+  "javaStaticIds": [
+    "java-06a59928c63cc7360d2b",
+    "java-06a59928c63cc7360d2b",
+    "java-06a59928c63cc7360d2b",
+    "java-06a59928c63cc7360d2b"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "late-window",
+      "ordinal": 8,
+      "runtimeId": "java-runtime-ae0b11741e8c17c55271",
+      "executionName": "InfraLateCreate{namedWindow=true}",
+      "observation": "deploy+send+snapshot; MyInfra.win:keepall() SupportBean window fed by insert-into, three beans pre-index then the late MyInfra_IDX(theString) hash index: the ordered FAF probe `theString = 'B2'` resolves to the declared index and returns {B2,1},{B2,2} in intPrimitive order; milestone(0..1) checkpoints carry no steps",
+      "epl": "@Name('Create') @public create window MyInfra.win:keepall() as SupportBean\n@Name('Insert') insert into MyInfra select theString, intPrimitive from SupportBean\n@Name('Index') create index MyInfra_IDX on MyInfra(theString)\nselect * from MyInfra where theString = 'B2' order by intPrimitive asc"
+    },
+    {
+      "case": "late-table",
+      "ordinal": 9,
+      "runtimeId": "java-runtime-31d2b97272df49845355",
+      "executionName": "InfraLateCreate{namedWindow=false}",
+      "observation": "deploy+send+snapshot; (theString,intPrimitive)-keyed MyInfra table fed by insert-into, three beans pre-index then the late MyInfra_IDX(theString) hash index: the ordered FAF probe `theString = 'B2'` resolves to the declared index and returns {B2,1},{B2,2} in intPrimitive order; milestone(0..1) checkpoints carry no steps",
+      "epl": "@Name('Create') @public create table MyInfra(theString string primary key, intPrimitive int primary key)\n@Name('Insert') insert into MyInfra select theString, intPrimitive from SupportBean\n@Name('Index') create index MyInfra_IDX on MyInfra(theString)\nselect * from MyInfra where theString = 'B2' order by intPrimitive asc"
+    },
+    {
+      "case": "scene-two-window",
+      "ordinal": 10,
+      "runtimeId": "java-runtime-ba5fc9c488e24b9bae78",
+      "executionName": "InfraLateCreateSceneTwo{namedWindow=true}",
+      "observation": "deploy+send+snapshot; MyInfraLC#keepall window fed by the concat insert-into, three E1 beans pre-index then the late MyInfraLCIndex(f2,f3,f1) composite hash index: the ordered FAF probe `f3='>E1<'` leads with the non-leading column so both engines full-scan and return the three E1 rows in f2 order {-4,-3,-2}; milestone(0..1) checkpoints carry no steps",
+      "epl": "@public create window MyInfraLC#keepall as (f1 string, f2 int, f3 string, f4 string)\ninsert into MyInfraLC(f1, f2, f3, f4) select theString, intPrimitive, '>'||theString||'<', '?'||theString||'?' from SupportBean\ncreate index MyInfraLCIndex on MyInfraLC(f2, f3, f1)\nselect * from MyInfraLC where f3='>E1<' order by f2 asc"
+    },
+    {
+      "case": "scene-two-table",
+      "ordinal": 11,
+      "runtimeId": "java-runtime-386fcd9642ae114b58af",
+      "executionName": "InfraLateCreateSceneTwo{namedWindow=false}",
+      "observation": "deploy+send+snapshot; fully-keyed MyInfraLC table fed by the concat insert-into, three E1 beans pre-index then the late MyInfraLCIndex(f2,f3,f1) composite hash index: the ordered FAF probe `f3='>E1<'` leads with the non-leading column so both engines full-scan and return the three E1 rows in f2 order {-4,-3,-2}; milestone(0..1) checkpoints carry no steps",
+      "epl": "@public create table MyInfraLC as (f1 string primary key, f2 int primary key, f3 string primary key, f4 string primary key)\ninsert into MyInfraLC(f1, f2, f3, f4) select theString, intPrimitive, '>'||theString||'<', '?'||theString||'?' from SupportBean\ncreate index MyInfraLCIndex on MyInfraLC(f2, f3, f1)\nselect * from MyInfraLC where f3='>E1<' order by f2 asc"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "late-window"},
+    {"op": "deploy", "case": "late-window", "statement": "create", "epl": "@Name('Create') @public create window MyInfra.win:keepall() as SupportBean"},
+    {"op": "deployed", "case": "late-window", "statement": "create"},
+    {"op": "deploy", "case": "late-window", "statement": "insert", "epl": "@Name('Insert') insert into MyInfra select theString, intPrimitive from SupportBean"},
+    {"op": "deployed", "case": "late-window", "statement": "insert"},
+    {"op": "send", "case": "late-window", "eventType": "SupportBean", "payload": {"theString": "A1", "intPrimitive": 1}},
+    {"op": "send", "case": "late-window", "eventType": "SupportBean", "payload": {"theString": "B2", "intPrimitive": 2}},
+    {"op": "send", "case": "late-window", "eventType": "SupportBean", "payload": {"theString": "B2", "intPrimitive": 1}},
+    {"op": "deploy", "case": "late-window", "statement": "index", "epl": "@Name('Index') create index MyInfra_IDX on MyInfra(theString)"},
+    {"op": "deployed", "case": "late-window", "statement": "index"},
+    {"op": "snapshot", "case": "late-window", "statement": "select", "mode": "ordered", "fields": ["theString", "intPrimitive"], "epl": "select * from MyInfra where theString = 'B2' order by intPrimitive asc"},
+    {"op": "undeploy-all", "case": "late-window"},
+
+    {"op": "case", "case": "late-table"},
+    {"op": "deploy", "case": "late-table", "statement": "create", "epl": "@Name('Create') @public create table MyInfra(theString string primary key, intPrimitive int primary key)"},
+    {"op": "deployed", "case": "late-table", "statement": "create"},
+    {"op": "deploy", "case": "late-table", "statement": "insert", "epl": "@Name('Insert') insert into MyInfra select theString, intPrimitive from SupportBean"},
+    {"op": "deployed", "case": "late-table", "statement": "insert"},
+    {"op": "send", "case": "late-table", "eventType": "SupportBean", "payload": {"theString": "A1", "intPrimitive": 1}},
+    {"op": "send", "case": "late-table", "eventType": "SupportBean", "payload": {"theString": "B2", "intPrimitive": 2}},
+    {"op": "send", "case": "late-table", "eventType": "SupportBean", "payload": {"theString": "B2", "intPrimitive": 1}},
+    {"op": "deploy", "case": "late-table", "statement": "index", "epl": "@Name('Index') create index MyInfra_IDX on MyInfra(theString)"},
+    {"op": "deployed", "case": "late-table", "statement": "index"},
+    {"op": "snapshot", "case": "late-table", "statement": "select", "mode": "ordered", "fields": ["theString", "intPrimitive"], "epl": "select * from MyInfra where theString = 'B2' order by intPrimitive asc"},
+    {"op": "undeploy-all", "case": "late-table"},
+
+    {"op": "case", "case": "scene-two-window"},
+    {"op": "deploy", "case": "scene-two-window", "statement": "create", "epl": "@public create window MyInfraLC#keepall as (f1 string, f2 int, f3 string, f4 string)"},
+    {"op": "deployed", "case": "scene-two-window", "statement": "create"},
+    {"op": "deploy", "case": "scene-two-window", "statement": "insert", "epl": "insert into MyInfraLC(f1, f2, f3, f4) select theString, intPrimitive, '>'||theString||'<', '?'||theString||'?' from SupportBean"},
+    {"op": "deployed", "case": "scene-two-window", "statement": "insert"},
+    {"op": "send", "case": "scene-two-window", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": -4}},
+    {"op": "send", "case": "scene-two-window", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": -2}},
+    {"op": "send", "case": "scene-two-window", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": -3}},
+    {"op": "deploy", "case": "scene-two-window", "statement": "index", "epl": "create index MyInfraLCIndex on MyInfraLC(f2, f3, f1)"},
+    {"op": "deployed", "case": "scene-two-window", "statement": "index"},
+    {"op": "snapshot", "case": "scene-two-window", "statement": "select", "mode": "ordered", "fields": ["f1", "f2", "f3", "f4"], "epl": "select * from MyInfraLC where f3='>E1<' order by f2 asc"},
+    {"op": "undeploy-all", "case": "scene-two-window"},
+
+    {"op": "case", "case": "scene-two-table"},
+    {"op": "deploy", "case": "scene-two-table", "statement": "create", "epl": "@public create table MyInfraLC as (f1 string primary key, f2 int primary key, f3 string primary key, f4 string primary key)"},
+    {"op": "deployed", "case": "scene-two-table", "statement": "create"},
+    {"op": "deploy", "case": "scene-two-table", "statement": "insert", "epl": "insert into MyInfraLC(f1, f2, f3, f4) select theString, intPrimitive, '>'||theString||'<', '?'||theString||'?' from SupportBean"},
+    {"op": "deployed", "case": "scene-two-table", "statement": "insert"},
+    {"op": "send", "case": "scene-two-table", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": -4}},
+    {"op": "send", "case": "scene-two-table", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": -2}},
+    {"op": "send", "case": "scene-two-table", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": -3}},
+    {"op": "deploy", "case": "scene-two-table", "statement": "index", "epl": "create index MyInfraLCIndex on MyInfraLC(f2, f3, f1)"},
+    {"op": "deployed", "case": "scene-two-table", "statement": "index"},
+    {"op": "snapshot", "case": "scene-two-table", "statement": "select", "mode": "ordered", "fields": ["f1", "f2", "f3", "f4"], "epl": "select * from MyInfraLC where f3='>E1<' order by f2 asc"},
+    {"op": "undeploy-all", "case": "scene-two-table"}
+  ]
+}
