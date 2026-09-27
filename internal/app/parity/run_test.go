@@ -86765,3 +86765,377 @@ func TestRunExprEnumRemainder554CheckedInEvidenceMatchesTraceAndReplay(t *testin
 	assertExprEnumRemainder554Trace(t, javaTrace)
 	assertExprEnumRemainder554Trace(t, goTrace)
 }
+
+func TestRunExprDefineLocReport555DirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", exprDefineLocReport555ID,
+		"-scenario", filepath.Join(root, exprDefineLocReport555ID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertExprDefineLocReport555Trace(t, trace)
+}
+
+func TestRunExprDefineLocReport555RejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, exprDefineLocReport555ID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-ordinal-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "locreport",
+   "ordinal": 0`), []byte(`"case": "locreport",
+   "ordinal": 1`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-867dc2875052889e9df2"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "deploy-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`p.assetId=l.assetIdPassenger`), []byte(`p.assetIdPassenger=l.assetId`), 1)
+		}},
+		{name: "item-order-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"assetId": "L00000",
+      "location": {
+       "x": 99,
+       "y": 97`), []byte(`"assetId": "L00009",
+      "location": {
+       "x": 99,
+       "y": 97`), 1)
+		}},
+		{name: "item-field-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"type": "P",
+      "assetIdPassenger": null`), []byte(`"type": "P",
+      "assetIdPassenger": null,
+      "extra": 0`), 1)
+		}},
+		{name: "step-op-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "types",
+   "case": "locreport",
+   "statement": "s0"`), []byte(`"op": "send",
+   "case": "locreport",
+   "statement": "s0"`), 1)
+		}},
+		{name: "send-type-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "LocationReport"`), []byte(`"eventType": "WrongEvent"`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", exprDefineLocReport555ID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunExprDefineLocReport555RuntimeIDMappingMatchesScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, exprDefineLocReport555ID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenario struct {
+		JavaRuntimes  []string `json:"javaRuntimes"`
+		JavaNames     []string `json:"javaNames"`
+		JavaStaticIds []string `json:"javaStaticIds"`
+		Cases         []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &scenario); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenario.JavaRuntimes, exprDefineLocReport555JavaRuntimeIDs) {
+		t.Fatalf("javaRuntimes = %#v", scenario.JavaRuntimes)
+	}
+	if !reflect.DeepEqual(scenario.JavaNames, exprDefineLocReport555JavaExecutions) {
+		t.Fatalf("javaNames = %#v", scenario.JavaNames)
+	}
+	if !reflect.DeepEqual(scenario.JavaStaticIds, exprDefineLocReport555JavaStaticIDs) {
+		t.Fatalf("javaStaticIds = %#v", scenario.JavaStaticIds)
+	}
+	for index, definition := range scenario.Cases {
+		if definition.RuntimeID != exprDefineLocReport555JavaRuntimeIDs[index] {
+			t.Fatalf("case %q runtimeId = %q, want %q", definition.Case, definition.RuntimeID, exprDefineLocReport555JavaRuntimeIDs[index])
+		}
+	}
+}
+
+// TestRunExprDefineLocReport555FixtureMatchesJavaContract pins the runner's
+// makeLarge() fixture: the 21-item order is load-bearing for val1's
+// [L00000, L00007, L00008] ordering.
+func TestRunExprDefineLocReport555FixtureMatchesJavaContract(t *testing.T) {
+	fixture := makeExprDefineLocReport555Large()
+	if len(fixture.Items) != 21 {
+		t.Fatalf("makeLarge items = %d, want 21", len(fixture.Items))
+	}
+	want := []struct {
+		assetId          string
+		x, y             int
+		itemType         string
+		assetIdPassenger string
+	}{
+		{"P00002", 40, 40, "P", ""},
+		{"L00001", 42, 41, "L", "P00002"},
+		{"L00002", 43, 43, "L", "P00002"},
+		{"P00001", 10, 10, "P", ""},
+		{"L00000", 99, 97, "L", "P00001"},
+		{"P00004", 20, 20, "P", ""},
+		{"P00002", 40, 40, "P", ""},
+		{"L00003", 29, 26, "L", "P00004"},
+		{"E00011", 90, 95, "P", ""},
+		{"A00010", 104, 101, "L", "E00011"},
+		{"A00011", 96, 100, "L", "E00011"},
+		{"E00010", 90, 95, "P", ""},
+		{"L00009", 102, 101, "L", "E00010"},
+		{"P00005", 30, 30, "P", ""},
+		{"L00004", 26, 27, "L", "P00005"},
+		{"L00005", 30, 28, "L", "P00005"},
+		{"P00007", 90, 95, "P", ""},
+		{"L00006", 96, 100, "L", "P00007"},
+		{"P00008", 100, 100, "P", ""},
+		{"L00007", 10, 12, "L", "P00008"},
+		{"L00008", 10, 12, "L", "P00008"},
+	}
+	for index, item := range fixture.Items {
+		expected := want[index]
+		passenger := ""
+		if item.AssetIdPassenger != nil {
+			passenger = *item.AssetIdPassenger
+		}
+		if item.AssetId != expected.assetId || item.Location.X != expected.x ||
+			item.Location.Y != expected.y || item.Type != expected.itemType ||
+			passenger != expected.assetIdPassenger {
+			t.Fatalf("makeLarge item %d = %+v, want %+v", index, item, expected)
+		}
+	}
+}
+
+func assertExprDefineLocReport555Trace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != exprDefineLocReport555ID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 2 {
+		t.Fatalf("trace records = %d, want 2", len(trace.Records))
+	}
+	typesRecord := trace.Records[0]
+	if typesRecord.Case != "locreport" || typesRecord.Operation != "types" ||
+		typesRecord.Statement != "s0" {
+		t.Fatalf("types record = %#v", typesRecord)
+	}
+	properties, ok := typesRecord.Value.(map[string]any)["properties"].(map[string]any)
+	if !ok || properties["val1"] != "Collection" || properties["val2"] != "Map" {
+		t.Fatalf("types properties = %#v", typesRecord.Value)
+	}
+	listenerRecord := trace.Records[1]
+	if listenerRecord.Case != "locreport" || listenerRecord.Operation != "listener" ||
+		listenerRecord.Statement != "s0" || listenerRecord.Sequence != 1 ||
+		len(listenerRecord.New) != 1 || len(listenerRecord.Old) != 0 {
+		t.Fatalf("listener record = %#v", listenerRecord)
+	}
+	fields := listenerRecord.New[0].Fields
+	val1, ok := fields["val1"].([]any)
+	if !ok || len(val1) != 3 {
+		t.Fatalf("val1 = %#v", fields["val1"])
+	}
+	wantVal1 := []string{"L00000", "L00007", "L00008"}
+	for index, element := range val1 {
+		item, ok := element.(map[string]any)
+		if !ok || item["assetId"] != wantVal1[index] {
+			t.Fatalf("val1[%d] = %#v, want assetId %q", index, element, wantVal1[index])
+		}
+	}
+	val2, ok := fields["val2"].(map[string]any)
+	if !ok || len(val2) != 3 {
+		t.Fatalf("val2 = %#v", fields["val2"])
+	}
+	wantVal2 := map[string]string{"L00000": "P00008", "L00007": "P00001", "L00008": "P00001"}
+	for key, wantOwner := range wantVal2 {
+		owner, ok := val2[key].(map[string]any)
+		if !ok || owner["assetId"] != wantOwner {
+			t.Fatalf("val2[%q] = %#v, want assetId %q", key, val2[key], wantOwner)
+		}
+	}
+}
+
+func TestRunExprDefineLocReport555DiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTracePath := filepath.Join(root, exprDefineLocReport555ID+".trace.json")
+	evidencePath := filepath.Join(t.TempDir(), exprDefineLocReport555ID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", exprDefineLocReport555ID + "-diff",
+		"-scenario", filepath.Join(root, exprDefineLocReport555ID+".json"),
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != exprDefineLocReport555JavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, exprDefineLocReport555JavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, exprDefineLocReport555JavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, exprDefineLocReport555JavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertExprDefineLocReport555Trace(t, evidence.JavaTrace)
+	assertExprDefineLocReport555Trace(t, evidence.GoTrace)
+}
+
+func TestRunExprDefineLocReport555DiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "val1-order-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Operation == "listener" {
+						rec.New[0].Fields["val1"].([]any)[0].(map[string]any)["assetId"] = "L00007"
+						return
+					}
+				}
+				panic("no listener record")
+			},
+		},
+		{
+			name: "val2-owner-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Operation == "listener" {
+						rec.New[0].Fields["val2"].(map[string]any)["L00007"].(map[string]any)["assetId"] = "P00008"
+						return
+					}
+				}
+				panic("no listener record")
+			},
+		},
+		{
+			name: "types-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Operation == "types" {
+						if properties, ok := rec.Value.(map[string]any)["properties"].(map[string]any); ok {
+							properties["val2"] = "Collection"
+						}
+						return
+					}
+				}
+				panic("no types record")
+			},
+		},
+		{
+			name: "missing-record",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+		{
+			name: "record-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0], trace.Records[1] = trace.Records[1], trace.Records[0]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join(root, exprDefineLocReport555ID+".trace.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), exprDefineLocReport555ID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", exprDefineLocReport555ID + "-diff",
+				"-scenario", filepath.Join(root, exprDefineLocReport555ID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunExprDefineLocReport555CheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, exprDefineLocReport555ID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, exprDefineLocReport555ID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, exprDefineLocReport555ID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if evidence.JavaCommit != exprDefineLocReport555JavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, exprDefineLocReport555JavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, exprDefineLocReport555JavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, exprDefineLocReport555JavaExecutions) {
+		t.Fatalf("checked-in Java metadata = %#v", evidence)
+	}
+	assertExprDefineLocReport555Trace(t, javaTrace)
+	assertExprDefineLocReport555Trace(t, goTrace)
+}

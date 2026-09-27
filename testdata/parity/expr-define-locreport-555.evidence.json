@@ -1,0 +1,420 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-867dc2875052889e9df2"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/define/ExprDefineLambdaLocReport.java"
+  ],
+  "javaExecutions": [
+    "ExprDefineLambdaLocReport"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "expr-define-locreport-555",
+    "steps": [
+      {
+        "op": "case",
+        "case": "locreport"
+      },
+      {
+        "op": "deploy",
+        "case": "locreport",
+        "statement": "s0",
+        "epl": "@name('s0') expression lostLuggage {  lr =\u003e lr.items.where(l =\u003e l.type='L' and     lr.items.anyof(p =\u003e p.type='P' and p.assetId=l.assetIdPassenger and LRUtil.distance(l.location.x, l.location.y, p.location.x, p.location.y) \u003e 20))}expression passengers {  lr =\u003e lr.items.where(l =\u003e l.type='P')}expression nearestOwner {  lr =\u003e lostLuggage(lr).toMap(key =\u003e key.assetId,      value =\u003e passengers(lr).minBy(p =\u003e LRUtil.distance(value.location.x, value.location.y, p.location.x, p.location.y)))}select lostLuggage(lr) as val1, nearestOwner(lr) as val2 from LocationReport lr"
+      },
+      {
+        "op": "types",
+        "case": "locreport",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "locreport",
+        "eventType": "LocationReport",
+        "payload": {
+          "items": [
+            {
+              "assetId": "P00002",
+              "location": {
+                "x": 40,
+                "y": 40
+              },
+              "type": "P",
+              "assetIdPassenger": null
+            },
+            {
+              "assetId": "L00001",
+              "location": {
+                "x": 42,
+                "y": 41
+              },
+              "type": "L",
+              "assetIdPassenger": "P00002"
+            },
+            {
+              "assetId": "L00002",
+              "location": {
+                "x": 43,
+                "y": 43
+              },
+              "type": "L",
+              "assetIdPassenger": "P00002"
+            },
+            {
+              "assetId": "P00001",
+              "location": {
+                "x": 10,
+                "y": 10
+              },
+              "type": "P",
+              "assetIdPassenger": null
+            },
+            {
+              "assetId": "L00000",
+              "location": {
+                "x": 99,
+                "y": 97
+              },
+              "type": "L",
+              "assetIdPassenger": "P00001"
+            },
+            {
+              "assetId": "P00004",
+              "location": {
+                "x": 20,
+                "y": 20
+              },
+              "type": "P",
+              "assetIdPassenger": null
+            },
+            {
+              "assetId": "P00002",
+              "location": {
+                "x": 40,
+                "y": 40
+              },
+              "type": "P",
+              "assetIdPassenger": null
+            },
+            {
+              "assetId": "L00003",
+              "location": {
+                "x": 29,
+                "y": 26
+              },
+              "type": "L",
+              "assetIdPassenger": "P00004"
+            },
+            {
+              "assetId": "E00011",
+              "location": {
+                "x": 90,
+                "y": 95
+              },
+              "type": "P",
+              "assetIdPassenger": null
+            },
+            {
+              "assetId": "A00010",
+              "location": {
+                "x": 104,
+                "y": 101
+              },
+              "type": "L",
+              "assetIdPassenger": "E00011"
+            },
+            {
+              "assetId": "A00011",
+              "location": {
+                "x": 96,
+                "y": 100
+              },
+              "type": "L",
+              "assetIdPassenger": "E00011"
+            },
+            {
+              "assetId": "E00010",
+              "location": {
+                "x": 90,
+                "y": 95
+              },
+              "type": "P",
+              "assetIdPassenger": null
+            },
+            {
+              "assetId": "L00009",
+              "location": {
+                "x": 102,
+                "y": 101
+              },
+              "type": "L",
+              "assetIdPassenger": "E00010"
+            },
+            {
+              "assetId": "P00005",
+              "location": {
+                "x": 30,
+                "y": 30
+              },
+              "type": "P",
+              "assetIdPassenger": null
+            },
+            {
+              "assetId": "L00004",
+              "location": {
+                "x": 26,
+                "y": 27
+              },
+              "type": "L",
+              "assetIdPassenger": "P00005"
+            },
+            {
+              "assetId": "L00005",
+              "location": {
+                "x": 30,
+                "y": 28
+              },
+              "type": "L",
+              "assetIdPassenger": "P00005"
+            },
+            {
+              "assetId": "P00007",
+              "location": {
+                "x": 90,
+                "y": 95
+              },
+              "type": "P",
+              "assetIdPassenger": null
+            },
+            {
+              "assetId": "L00006",
+              "location": {
+                "x": 96,
+                "y": 100
+              },
+              "type": "L",
+              "assetIdPassenger": "P00007"
+            },
+            {
+              "assetId": "P00008",
+              "location": {
+                "x": 100,
+                "y": 100
+              },
+              "type": "P",
+              "assetIdPassenger": null
+            },
+            {
+              "assetId": "L00007",
+              "location": {
+                "x": 10,
+                "y": 12
+              },
+              "type": "L",
+              "assetIdPassenger": "P00008"
+            },
+            {
+              "assetId": "L00008",
+              "location": {
+                "x": 10,
+                "y": 12
+              },
+              "type": "L",
+              "assetIdPassenger": "P00008"
+            }
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "locreport"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-define-locreport-555",
+    "records": [
+      {
+        "case": "locreport",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "properties": {
+            "val1": "Collection",
+            "val2": "Map"
+          }
+        }
+      },
+      {
+        "case": "locreport",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val1": [
+                {
+                  "assetId": "L00000",
+                  "assetIdPassenger": "P00001",
+                  "location": {
+                    "x": 99,
+                    "y": 97
+                  },
+                  "type": "L"
+                },
+                {
+                  "assetId": "L00007",
+                  "assetIdPassenger": "P00008",
+                  "location": {
+                    "x": 10,
+                    "y": 12
+                  },
+                  "type": "L"
+                },
+                {
+                  "assetId": "L00008",
+                  "assetIdPassenger": "P00008",
+                  "location": {
+                    "x": 10,
+                    "y": 12
+                  },
+                  "type": "L"
+                }
+              ],
+              "val2": {
+                "L00000": {
+                  "assetId": "P00008",
+                  "assetIdPassenger": null,
+                  "location": {
+                    "x": 100,
+                    "y": 100
+                  },
+                  "type": "P"
+                },
+                "L00007": {
+                  "assetId": "P00001",
+                  "assetIdPassenger": null,
+                  "location": {
+                    "x": 10,
+                    "y": 10
+                  },
+                  "type": "P"
+                },
+                "L00008": {
+                  "assetId": "P00001",
+                  "assetIdPassenger": null,
+                  "location": {
+                    "x": 10,
+                    "y": 10
+                  },
+                  "type": "P"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-define-locreport-555",
+    "records": [
+      {
+        "case": "locreport",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "properties": {
+            "val1": "Collection",
+            "val2": "Map"
+          }
+        }
+      },
+      {
+        "case": "locreport",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val1": [
+                {
+                  "assetId": "L00000",
+                  "assetIdPassenger": "P00001",
+                  "location": {
+                    "x": 99,
+                    "y": 97
+                  },
+                  "type": "L"
+                },
+                {
+                  "assetId": "L00007",
+                  "assetIdPassenger": "P00008",
+                  "location": {
+                    "x": 10,
+                    "y": 12
+                  },
+                  "type": "L"
+                },
+                {
+                  "assetId": "L00008",
+                  "assetIdPassenger": "P00008",
+                  "location": {
+                    "x": 10,
+                    "y": 12
+                  },
+                  "type": "L"
+                }
+              ],
+              "val2": {
+                "L00000": {
+                  "assetId": "P00008",
+                  "assetIdPassenger": null,
+                  "location": {
+                    "x": 100,
+                    "y": 100
+                  },
+                  "type": "P"
+                },
+                "L00007": {
+                  "assetId": "P00001",
+                  "assetIdPassenger": null,
+                  "location": {
+                    "x": 10,
+                    "y": 10
+                  },
+                  "type": "P"
+                },
+                "L00008": {
+                  "assetId": "P00001",
+                  "assetIdPassenger": null,
+                  "location": {
+                    "x": 10,
+                    "y": 10
+                  },
+                  "type": "P"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

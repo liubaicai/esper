@@ -37,36 +37,45 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.540 ('expr-filter-optimizable-lookupable-limited') committed and pushed as ec613de94; Git owns identity.
 - Shipped: Draft 4.539 ('epl-other-invalid') committed and pushed as 3d2dd2720; Git owns identity.
 
-## Current work unit
-Active: Draft 4.554 ('expr-enum-remainder').
 
-- Contract frozen (JavaContract554 + GoSurface554): ExprEnumAverage
-  ords 2-3 (scalar-more/invalid), ExprEnumDistinct ords 2-3
-  (multikey-WArray events+scalar), ExprEnumAllOfAnyOf ord 2 (invalid),
-  ExprEnumInvalid ord 0 — 6 executions / 4 files. Go covers every
-  builder (EnumAverage*/Distinct/AllOf/AnyOf) — pure asset unit.
-- [x] Assets554 dispatched (runner expr_enum_remainder_554.go, scenario
-  expr-enum-remainder-554.json, oracle
-  ExprEnumRemainder554ScenarioOracle).
-- [x] Assets554 delivered + integrated: Java trace 32 records, Go
-  replay 32 (6 listener + 26 compile-error), `-diff` passing / 0
-  differences; evidence + traces checked in. BigDecimal avg columns
-  map to EnumAverageExactOf big.Rat; multikey-WArray composite keys;
-  SupportEventWithManyArray map-type both sides; 13/26 Go-verified
-  rejections, rest prefix-pinned.
-- [x] Manifest: NEW case.expr-enum-remainder born-DV with the 6 IDs
-  (expr.enum-collection-methods mapping); summary → 785 cases / 408
-  DV / 1631 DV runtime IDs / 407 unreferenced.
-- [x] Gates: `make check` GREEN.
-- [x] ParityRev554 + JavaContract555 + GoSurface555 dispatched.
+## Current work unit
+Active: Draft 4.555 ('expr-define-locreport + inlined-class/cache dispositions').
+
+- Contract frozen (JavaContract555 + GoSurface555): ExprDefineLambdaLocReport
+  (`java-runtime-867dc2875052889e9df2`) is the sole DV execution — nested
+  declared expressions + enum lambdas over the 21-item makeLarge fixture.
+  Intentionally-different (no traces): StaticMethod ord 4 (deploy-time
+  class-version binding), ord 11 (InlinedClassInspection callback),
+  ExprClassDisable (AllowInlinedClass knob), ExprDefineConfigurations
+  (DeclaredExprValueCacheSize invocation-count observable; Go re-evaluates
+  — decision A recorded).
+- [x] Assets555 dispatched (runner expr_define_locreport_555.go + fixture).
+- [x] Manifest: 3 intentionally-different cases added
+  (case.expr-class-static-method-dispositions, case.expr-class-disable-disposition,
+  case.expr-define-value-cache-disposition); 788 cases / 403 unreferenced.
+- [x] Assets555 delivered + integrated: Java trace 2 records, Go replay 2
+  (types + listener), `-diff` passing / 0 differences; evidence + traces
+  checked in. EPL correction: `p.assetId=l.assetIdPassenger` links
+  passenger->luggage (my inline prompt copy was wrong); E00011/E00010 are
+  type 'P', A00010/A00011/L00009 type 'L'. Nested ExpressionRef composition
+  works; 2 helper declared expressions carry the outer enum element where
+  Java leaks the outer lambda scope.
+- [x] Manifest: NEW case.expr-define-locreport born-DV + 3 dispositions;
+  summary -> 789 cases / 409 DV / 1632 DV runtime IDs / 402 unreferenced.
+- [x] Gates: `make check` GREEN (exit 0).
+- [x] ParityRev555 + JavaContract556 + GoSurface556 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
-
+- Shipped: Draft 4.554 ('expr-enum-remainder') committed and pushed as
+  `912f0eb4b`; Git owns identity. 6 executions born-DV (32 records each,
+  0 differences); review PASS, P3 doc nits + must-succeed probe tolerance
+  fixed.
 - Shipped: Draft 4.553 ('expr-dt-tail') committed and pushed as
-  680e7d76f; Git owns identity. 5 executions born-DV (57 records, 0
+  `680e7d76f`; Git owns identity. 5 executions born-DV (57 records, 0
   differences); review FAIL -> fixed -> confirm PASS (doc-set-month
   0->1-based arg, DEFAULT-leg exclusion docs + mutation needles).
+
 
 
 - Shipped: Draft 4.552 ('expr-dt-remainder') committed and pushed as

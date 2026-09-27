@@ -50999,6 +50999,137 @@
     "java-runtime-31307e312d939157b9d5",
     "java-runtime-6cd8336511345daaec7c"
    ]
+  },
+  {
+   "id": "case.expr-class-static-method-dispositions",
+   "javaRuntimeIds": [
+    "java-runtime-b8a3df9eb9f1855a0853",
+    "java-runtime-3d0c3d46a8bfc2d260b9"
+   ],
+   "javaStaticIds": [
+    "java-0dfcc33d45c87ec59235"
+   ],
+   "javaNames": [
+    "ExprClassStaticMethodCreateCompileVsRuntime",
+    "ExprClassCompilerInlinedClassInspectionOption"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/clazz/ExprClassStaticMethod.java"
+   ],
+   "goTests": [],
+   "tags": [
+    "expr",
+    "intentionally-different"
+   ],
+   "status": "intentionally-different",
+   "evidence": [],
+   "difference": "Java binds inlined-class static calls to the runtime-deployed class version (compile-path EPCompiled vs runtime deployment precedence) and exposes a compiler InlinedClassInspection callback that receives generated Janino class files. Go statically links Func*/DefineExpression closures, has no compiled-class artifact or deploy-time rebinding, and has no inspection surface; the value semantics are already verified under case.expr-class-static-method.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "intentionally-different"
+   ],
+   "differentialVerifiedRuntimeIds": []
+  },
+  {
+   "id": "case.expr-class-disable-disposition",
+   "javaRuntimeIds": [
+    "java-runtime-336ea2532d2ed1d7f322"
+   ],
+   "javaStaticIds": [
+    "java-a255a8e79eeccd1789eb"
+   ],
+   "javaNames": [
+    "ExprClassDisable"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/clazz/ExprClassDisable.java"
+   ],
+   "goTests": [],
+   "tags": [
+    "expr",
+    "intentionally-different"
+   ],
+   "status": "intentionally-different",
+   "evidence": [],
+   "difference": "Java rejects inlined_class compilation when getCompiler().getByteCode().setAllowInlinedClass(false) disables Janino compilation, producing the pinned message 'Inlined-class compilation has been disabled by configuration'. Go has no inlined-class EPL verb, no Janino to disable, and no AllowInlinedClass knob \u2014 nothing exists to disable.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "intentionally-different"
+   ],
+   "differentialVerifiedRuntimeIds": []
+  },
+  {
+   "id": "case.expr-define-value-cache-disposition",
+   "javaRuntimeIds": [
+    "java-runtime-9049996e0e2fddd6a37d"
+   ],
+   "javaStaticIds": [
+    "java-b264cae4e95786a7533d"
+   ],
+   "javaNames": [
+    "ExprDefineConfigurations"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/define/ExprDefineConfigurations.java"
+   ],
+   "goTests": [],
+   "tags": [
+    "expr",
+    "intentionally-different"
+   ],
+   "status": "intentionally-different",
+   "evidence": [],
+   "difference": "Java caches declared-expression results per parameter set via DeclaredExprValueCacheSize and observes the plugin single-row function invocation count drop 4->2 at size 2 (STATICHOOK alwaysTrue). Go evaluates typed DefineExpression/ExpressionRef closures without a declared-expression result cache or plugin single-row-function registry, so the invocation-count observable has no engine-side counterpart; decision: re-evaluation is the Go semantic (option A, no cache knob added).",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "intentionally-different"
+   ],
+   "differentialVerifiedRuntimeIds": []
+  },
+  {
+   "id": "case.expr-define-locreport",
+   "javaRuntimeIds": [
+    "java-runtime-867dc2875052889e9df2"
+   ],
+   "javaStaticIds": [
+    "java-1333311a1ef60ea35019"
+   ],
+   "javaNames": [
+    "ExprDefineLambdaLocReport"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/define/ExprDefineLambdaLocReport.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go/TestRunExprDefineLocReport555DirectReplay",
+    "internal/app/parity/run_test.go/TestRunExprDefineLocReport555RejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go/TestRunExprDefineLocReport555RuntimeIDMappingMatchesScenario",
+    "internal/app/parity/run_test.go/TestRunExprDefineLocReport555FixtureMatchesJavaContract",
+    "internal/app/parity/run_test.go/TestRunExprDefineLocReport555DiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go/TestRunExprDefineLocReport555DiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go/TestRunExprDefineLocReport555CheckedInEvidenceMatchesTraceAndReplay"
+   ],
+   "tags": [
+    "expr",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/expr-define-locreport-555.evidence.json"
+   ],
+   "difference": "Go composes nested declared expressions with enum lambdas via DefineExpression/ExpressionRef/ExpressionParam plus EnumWhere/EnumAnyOf/EnumMinBy/EnumToMap; two helper declared expressions carry the outer enum element as an explicit parameter where Java lets the outer lambda variable leak into the inner scope. Java trace uses the real regression-lib LocationReport/Item/Location beans; Go uses shape-identical runner-local structs.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-867dc2875052889e9df2"
+   ],
+   "notes": "Draft 4.555: 2 records each (types + listener), 0 differences. val1 = 3 lost-luggage items in fixture order [L00000, L00007, L00008]; val2 = map {L00000->P00008, L00007->P00001, L00008->P00001}. Fixture order is load-bearing; 21-item makeLarge copied verbatim."
   }
  ],
  "mappings": [
@@ -54489,14 +54620,30 @@
   {
    "capabilityId": "expr.enum-collection-methods",
    "caseId": "case.expr-enum-remainder"
+  },
+  {
+   "capabilityId": "client.extend.inlined-class",
+   "caseId": "case.expr-class-static-method-dispositions"
+  },
+  {
+   "capabilityId": "client.extend.inlined-class",
+   "caseId": "case.expr-class-disable-disposition"
+  },
+  {
+   "capabilityId": "expr.declared",
+   "caseId": "case.expr-define-value-cache-disposition"
+  },
+  {
+   "capabilityId": "expr.declared",
+   "caseId": "case.expr-define-locreport"
   }
  ],
  "summary": {
-  "inventoriedCases": 785,
-  "implementedCases": 783,
-  "differentialVerifiedCases": 408,
-  "differentialVerifiedRuntimeIds": 1631,
-  "intentionallyDifferentCases": 36,
+  "inventoriedCases": 789,
+  "implementedCases": 787,
+  "differentialVerifiedCases": 409,
+  "differentialVerifiedRuntimeIds": 1632,
+  "intentionallyDifferentCases": 39,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 126,
@@ -54505,13 +54652,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4169,
-  "referencedJavaRuntimeIds": 3729,
+  "runtimeAssociationCount": 4174,
+  "referencedJavaRuntimeIds": 3734,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 407,
+  "unreferencedJavaRuntimeIds": 402,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 785,
+  "totalCases": 789,
   "totalCapabilities": 126
  }
 }
