@@ -45,32 +45,38 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.563 ('infra-nwtable-create-ddl').
+Active: Draft 4.564 ('infra-namedwindow-om').
 
-- Contract frozen (JavaContract563 + GoSurface563): 3 executions —
-  InfraNWTableCreate ords 0/1 InfraCreateGenericColType (SERDEREQUIRED;
-  java-runtime-b7fab192ff4a0d2ff2ce / 48d80d017090dd3410b7, static
-  java-621032f62ef7cf1bc193) + InfraNWTableCreateIndexAdvancedSyntax ord 0
-  (java-runtime-bc1a897eca64b5da6df3, static java-b6b074549bedc2ab1767).
-  All unreferenced; create-DDL semantic + RegressionEnvironment harness.
-- Semantic: generic-col create window/table + merge-insert + iterator.
-  SODA eplToModel round-trips are a text/compile surface ->
-  unrepresentable; the parameterized EPType descriptor asserts have no Go
-  PropertyDescriptor metadata -> pin names/order/Kind/Optional, ride
-  unrepresentable for type-arg asserts; Optional<Integer> has no reflect
-  counterpart -> nearest Go type + unrepresentable note.
-- [x] Assets563 dispatched.
-- [x] Assets563 delivered + integrated: Java trace 16 records, Go replay
-  16, `-diff` passing / 0 differences; evidence + traces checked in.
-  Fixed: worker left both new files unformatted (check-layout caught
-  it). Types record pins all 8 generic columns; SODA/invalid probes
-  ride unrepresentable records with Go typed CreateIndex equivalents.
-- [x] Manifest: NEW case.infra-nwtable-create-ddl born-DV (3 IDs).
-  Summary -> 798 cases / 417 DV / 1660 DV runtime IDs / 394 unreferenced.
+- Contract frozen (JavaContract564 + GoSurface564): InfraNamedWindowOM
+  ords 0/1/2 — InfraCompile (java-runtime-2fadc5dd18bce73a28d5, static
+  java-10c000a768d7eb5776f7), InfraOM (java-runtime-2d6d5656b8c1bbec11ac,
+  static java-10c000a768d7eb5776f7), InfraOMCreateTableSyntax
+  (java-runtime-7521a52d49a6bc033264, static java-10c000a768d7eb5776f7);
+  all flags=[], all unreferenced, one SODA/OM compile-deploy semantic.
+- Semantic: keepall key/value window + insert + irstream select +
+  on-delete + on-select. OM-builder/toEPL text and eplToModel compile
+  paths are unrepresentable (Go Plan IS the object model); ord 2 is
+  compile-only -> all-unrepresentable. Ord 0 on-select is unconditional;
+  ord 1 is correlated (s0.id=s1.key) with E3+E4. Behavioral surface
+  fully representable via CreateNamedWindow/InsertInto/DeleteFrom/
+  SelectFromNamedWindow + FromNamedWindow WithOldStream.
+- [x] Assets564 delivered + integrated: Java trace 62 records, Go replay
+  62, `-diff` passing / 0 differences; evidence + traces checked in.
+  Dispatch-order note: Go merges deferred trigger dispatches into the
+  window delta wave by deployment order — the runner pre-deploys the
+  delete plan (no observable change; no market events precede it).
+- [x] Manifest: NEW case.infra-namedwindow-om born-DV (3 IDs); file
+  closed (3/3). Summary -> 799 cases / 418 DV / 1663 DV runtime IDs /
+  391 unreferenced.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev563 + JavaContract564 + GoSurface564 dispatched.
+- [x] ParityRev564 + JavaContract565 + GoSurface565 dispatched.
 - [ ] Review outcome, commit, push.
+
 ## Previous work units (shipped)
+- Shipped: Draft 4.563 ('infra-nwtable-create-ddl') committed and pushed
+  as `d291e4665`; Git owns identity. 3 executions born-DV (16 records
+  each, 0 differences); review FAIL->fixed->PASS (P1 mangled staticIds,
+  P2 non-byte-exact module EPL pins).
 - Shipped: Draft 4.562 ('infra-nwtable-create-index-mrak, file closed')
   committed and pushed as `ac405900a`; Git owns identity. 2 executions
   born-DV (20 records each, 0 differences); umbrella 22/22 dispositioned

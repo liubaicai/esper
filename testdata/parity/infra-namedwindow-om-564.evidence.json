@@ -1,0 +1,2177 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-2fadc5dd18bce73a28d5",
+    "java-runtime-2d6d5656b8c1bbec11ac",
+    "java-runtime-7521a52d49a6bc033264"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowOM.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_B.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportMarketDataBean.java"
+  ],
+  "javaExecutions": [
+    "InfraCompile",
+    "InfraOM",
+    "InfraOMCreateTableSyntax"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-namedwindow-om-564",
+    "steps": [
+      {
+        "op": "case",
+        "case": "compile"
+      },
+      {
+        "op": "deploy",
+        "case": "compile",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyWindow#keepall as select theString as key, longBoxed as value from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "compile",
+        "statement": "create"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "compile",
+        "statement": "toepl-create",
+        "expectError": "soda-EPStatementObjectModel.toEPL: @name('create') @public create window MyWindow#keepall as select theString as key, longBoxed as value from SupportBean - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart",
+        "epl": "@name('create') @public create window MyWindow#keepall as select theString as key, longBoxed as value from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "compile",
+        "statement": "onselect",
+        "epl": "@name('onselect') on SupportBean_B select mywin.* from MyWindow as mywin"
+      },
+      {
+        "op": "deployed",
+        "case": "compile",
+        "statement": "onselect"
+      },
+      {
+        "op": "deploy",
+        "case": "compile",
+        "statement": "insert",
+        "epl": "@name('insert') insert into MyWindow select theString as key, longBoxed as value from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "compile",
+        "statement": "insert"
+      },
+      {
+        "op": "deploy",
+        "case": "compile",
+        "statement": "select",
+        "epl": "@name('select') select irstream key, value*2 as value from MyWindow(key is not null)"
+      },
+      {
+        "op": "deployed",
+        "case": "compile",
+        "statement": "select"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "compile",
+        "statement": "toepl-select",
+        "expectError": "soda-EPStatementObjectModel.toEPL: @name('select') select irstream key, value*2 as value from MyWindow(key is not null) - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart",
+        "epl": "@name('select') select irstream key, value*2 as value from MyWindow(key is not null)"
+      },
+      {
+        "op": "send",
+        "case": "compile",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "longBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "compile",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "longBoxed": 20
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "compile",
+        "statement": "delete",
+        "epl": "@name('delete') on SupportMarketDataBean as s0 delete from MyWindow as s1 where s0.symbol=s1.key"
+      },
+      {
+        "op": "deployed",
+        "case": "compile",
+        "statement": "delete"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "compile",
+        "statement": "toepl-delete",
+        "expectError": "soda-EPStatementObjectModel.toEPL: @name('delete') on SupportMarketDataBean as s0 delete from MyWindow as s1 where s0.symbol=s1.key - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart",
+        "epl": "@name('delete') on SupportMarketDataBean as s0 delete from MyWindow as s1 where s0.symbol=s1.key"
+      },
+      {
+        "op": "send",
+        "case": "compile",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "compile",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "compile",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "compile",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "B1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "compile",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "longBoxed": 30
+        }
+      },
+      {
+        "op": "send",
+        "case": "compile",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "B2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "compile",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null,
+          "longBoxed": 99
+        }
+      },
+      {
+        "op": "send",
+        "case": "compile",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "BND",
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "compile",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "compile",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "BND"
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "compile",
+        "statement": "delete"
+      },
+      {
+        "op": "undeploy",
+        "case": "compile",
+        "statement": "onselect"
+      },
+      {
+        "op": "undeploy",
+        "case": "compile",
+        "statement": "select"
+      },
+      {
+        "op": "undeploy",
+        "case": "compile",
+        "statement": "insert"
+      },
+      {
+        "op": "undeploy",
+        "case": "compile",
+        "statement": "create"
+      },
+      {
+        "op": "case",
+        "case": "om"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "om",
+        "statement": "toepl-create",
+        "expectError": "soda-EPStatementObjectModel.toEPL: @name('create') @public create window MyWindow#keepall as select theString as key, longBoxed as value from SupportBean - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart",
+        "epl": "@name('create') @public create window MyWindow#keepall as select theString as key, longBoxed as value from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "om",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyWindow#keepall as select theString as key, longBoxed as value from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "om",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "om",
+        "statement": "insert",
+        "epl": "insert into MyWindow select theString as key, longBoxed as value from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "om",
+        "statement": "insert"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "om",
+        "statement": "toepl-select-om",
+        "expectError": "soda-EPStatementObjectModel.toEPL: select irstream key, value*2 as value from MyWindow(value is not null) - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart",
+        "epl": "select irstream key, value*2 as value from MyWindow(value is not null)"
+      },
+      {
+        "op": "deploy",
+        "case": "om",
+        "statement": "select",
+        "epl": "@name('select') select irstream key, value*2 as value from MyWindow(value is not null)"
+      },
+      {
+        "op": "deployed",
+        "case": "om",
+        "statement": "select"
+      },
+      {
+        "op": "send",
+        "case": "om",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "longBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "om",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "longBoxed": 20
+        }
+      },
+      {
+        "op": "unrepresentable",
+        "case": "om",
+        "statement": "toepl-ondelete",
+        "expectError": "soda-EPStatementObjectModel.toEPL: on SupportMarketDataBean as s0 delete from MyWindow as s1 where s0.symbol=s1.key - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart",
+        "epl": "on SupportMarketDataBean as s0 delete from MyWindow as s1 where s0.symbol=s1.key"
+      },
+      {
+        "op": "deploy",
+        "case": "om",
+        "statement": "delete",
+        "epl": "@name('ondelete') on SupportMarketDataBean as s0 delete from MyWindow as s1 where s0.symbol=s1.key"
+      },
+      {
+        "op": "deployed",
+        "case": "om",
+        "statement": "delete"
+      },
+      {
+        "op": "send",
+        "case": "om",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "om",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "om",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E2"
+        }
+      },
+      {
+        "op": "unrepresentable",
+        "case": "om",
+        "statement": "toepl-onselect",
+        "expectError": "soda-EPStatementObjectModel.toEPL: on SupportBean_B as s0 select s1.* from MyWindow as s1 where s0.id=s1.key - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart",
+        "epl": "on SupportBean_B as s0 select s1.* from MyWindow as s1 where s0.id=s1.key"
+      },
+      {
+        "op": "deploy",
+        "case": "om",
+        "statement": "onselect",
+        "epl": "@name('onselect') on SupportBean_B as s0 select s1.* from MyWindow as s1 where s0.id=s1.key"
+      },
+      {
+        "op": "deployed",
+        "case": "om",
+        "statement": "onselect"
+      },
+      {
+        "op": "send",
+        "case": "om",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "longBoxed": 30
+        }
+      },
+      {
+        "op": "send",
+        "case": "om",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "longBoxed": 40
+        }
+      },
+      {
+        "op": "send",
+        "case": "om",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "B1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "om",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "E3"
+        }
+      },
+      {
+        "op": "send",
+        "case": "om",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null,
+          "longBoxed": 99
+        }
+      },
+      {
+        "op": "send",
+        "case": "om",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "BND",
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "om",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "om",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "om",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "BND"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "om"
+      },
+      {
+        "op": "case",
+        "case": "create-table-syntax"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "create-table-syntax",
+        "statement": "toepl-create-window",
+        "expectError": "soda-EPStatementObjectModel.toEPL: create window MyWindowOM#keepall as (a1 string, a2 double, a3 int) - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart",
+        "epl": "create window MyWindowOM#keepall as (a1 string, a2 double, a3 int)"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-namedwindow-om-564",
+    "records": [
+      {
+        "case": "compile",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "compile",
+        "operation": "unrepresentable",
+        "statement": "toepl-create",
+        "sequence": 0,
+        "value": "soda-EPStatementObjectModel.toEPL: @name('create') @public create window MyWindow#keepall as select theString as key, longBoxed as value from SupportBean - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart"
+      },
+      {
+        "case": "compile",
+        "operation": "deployed",
+        "statement": "onselect",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "compile",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "compile",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "compile",
+        "operation": "unrepresentable",
+        "statement": "toepl-select",
+        "sequence": 0,
+        "value": "soda-EPStatementObjectModel.toEPL: @name('select') select irstream key, value*2 as value from MyWindow(key is not null) - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart"
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "insert",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 40
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "compile",
+        "operation": "unrepresentable",
+        "statement": "toepl-delete",
+        "sequence": 0,
+        "value": "soda-EPStatementObjectModel.toEPL: @name('delete') on SupportMarketDataBean as s0 delete from MyWindow as s1 where s0.symbol=s1.key - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart"
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "delete",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 40
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "insert",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 60
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "onselect",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "insert",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": {
+                "state": "null"
+              },
+              "value": 99
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": {
+                "state": "null"
+              },
+              "value": 99
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "insert",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "BND",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "BND",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "BND",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "BND",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "delete",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "BND",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "BND",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "unrepresentable",
+        "statement": "toepl-create",
+        "sequence": 0,
+        "value": "soda-EPStatementObjectModel.toEPL: @name('create') @public create window MyWindow#keepall as select theString as key, longBoxed as value from SupportBean - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart"
+      },
+      {
+        "case": "om",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "om",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "om",
+        "operation": "unrepresentable",
+        "statement": "toepl-select-om",
+        "sequence": 0,
+        "value": "soda-EPStatementObjectModel.toEPL: select irstream key, value*2 as value from MyWindow(value is not null) - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart"
+      },
+      {
+        "case": "om",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 40
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "unrepresentable",
+        "statement": "toepl-ondelete",
+        "sequence": 0,
+        "value": "soda-EPStatementObjectModel.toEPL: on SupportMarketDataBean as s0 delete from MyWindow as s1 where s0.symbol=s1.key - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart"
+      },
+      {
+        "case": "om",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "ondelete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "ondelete",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 40
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "unrepresentable",
+        "statement": "toepl-onselect",
+        "sequence": 0,
+        "value": "soda-EPStatementObjectModel.toEPL: on SupportBean_B as s0 select s1.* from MyWindow as s1 where s0.id=s1.key - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart"
+      },
+      {
+        "case": "om",
+        "operation": "deployed",
+        "statement": "onselect",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 60
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 40
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 80
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "onselect",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": {
+                "state": "null"
+              },
+              "value": 99
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": {
+                "state": "null"
+              },
+              "value": 198
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "BND",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "BND",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "ondelete",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "BND",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "create-table-syntax",
+        "operation": "unrepresentable",
+        "statement": "toepl-create-window",
+        "sequence": 0,
+        "value": "soda-EPStatementObjectModel.toEPL: create window MyWindowOM#keepall as (a1 string, a2 double, a3 int) - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-namedwindow-om-564",
+    "records": [
+      {
+        "case": "compile",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "compile",
+        "operation": "unrepresentable",
+        "statement": "toepl-create",
+        "sequence": 0,
+        "value": "soda-EPStatementObjectModel.toEPL: @name('create') @public create window MyWindow#keepall as select theString as key, longBoxed as value from SupportBean - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart"
+      },
+      {
+        "case": "compile",
+        "operation": "deployed",
+        "statement": "onselect",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "compile",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "compile",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "compile",
+        "operation": "unrepresentable",
+        "statement": "toepl-select",
+        "sequence": 0,
+        "value": "soda-EPStatementObjectModel.toEPL: @name('select') select irstream key, value*2 as value from MyWindow(key is not null) - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart"
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "insert",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 40
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "compile",
+        "operation": "unrepresentable",
+        "statement": "toepl-delete",
+        "sequence": 0,
+        "value": "soda-EPStatementObjectModel.toEPL: @name('delete') on SupportMarketDataBean as s0 delete from MyWindow as s1 where s0.symbol=s1.key - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart"
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "delete",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 40
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "insert",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 60
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "onselect",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "insert",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": {
+                "state": "null"
+              },
+              "value": 99
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": {
+                "state": "null"
+              },
+              "value": 99
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "insert",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "BND",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "BND",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "BND",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "BND",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "delete",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "BND",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "compile",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "BND",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "unrepresentable",
+        "statement": "toepl-create",
+        "sequence": 0,
+        "value": "soda-EPStatementObjectModel.toEPL: @name('create') @public create window MyWindow#keepall as select theString as key, longBoxed as value from SupportBean - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart"
+      },
+      {
+        "case": "om",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "om",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "om",
+        "operation": "unrepresentable",
+        "statement": "toepl-select-om",
+        "sequence": 0,
+        "value": "soda-EPStatementObjectModel.toEPL: select irstream key, value*2 as value from MyWindow(value is not null) - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart"
+      },
+      {
+        "case": "om",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 40
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "unrepresentable",
+        "statement": "toepl-ondelete",
+        "sequence": 0,
+        "value": "soda-EPStatementObjectModel.toEPL: on SupportMarketDataBean as s0 delete from MyWindow as s1 where s0.symbol=s1.key - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart"
+      },
+      {
+        "case": "om",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "ondelete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "ondelete",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 40
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "unrepresentable",
+        "statement": "toepl-onselect",
+        "sequence": 0,
+        "value": "soda-EPStatementObjectModel.toEPL: on SupportBean_B as s0 select s1.* from MyWindow as s1 where s0.id=s1.key - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart"
+      },
+      {
+        "case": "om",
+        "operation": "deployed",
+        "statement": "onselect",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 60
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 40
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 80
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "onselect",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": {
+                "state": "null"
+              },
+              "value": 99
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": {
+                "state": "null"
+              },
+              "value": 198
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "BND",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "BND",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "om",
+        "operation": "listener",
+        "statement": "ondelete",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "BND",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "create-table-syntax",
+        "operation": "unrepresentable",
+        "statement": "toepl-create-window",
+        "sequence": 0,
+        "value": "soda-EPStatementObjectModel.toEPL: create window MyWindowOM#keepall as (a1 string, a2 double, a3 int) - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

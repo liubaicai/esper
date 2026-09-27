@@ -51563,6 +51563,52 @@
     "java-runtime-bc1a897eca64b5da6df3"
    ],
    "notes": "Draft 4.563: 16 records each, 0 differences. Closes the infra-nwtable create-DDL cluster. Oracle pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c."
+  },
+  {
+   "id": "case.infra-namedwindow-om",
+   "javaRuntimeIds": [
+    "java-runtime-2fadc5dd18bce73a28d5",
+    "java-runtime-2d6d5656b8c1bbec11ac",
+    "java-runtime-7521a52d49a6bc033264"
+   ],
+   "javaStaticIds": [
+    "java-10c000a768d7eb5776f7"
+   ],
+   "javaNames": [
+    "InfraCompile",
+    "InfraOM",
+    "InfraOMCreateTableSyntax"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowOM.java"
+   ],
+   "goTests": [
+    "internal/app/parity/infra_namedwindow_om_564_test.go/TestRunInfraNWOM564ScenarioReplay",
+    "internal/app/parity/infra_namedwindow_om_564_test.go/TestRunInfraNWOM564PinnedArtifacts",
+    "internal/app/parity/infra_namedwindow_om_564_test.go/TestRunInfraNWOM564RejectsMalformedRawScenario",
+    "internal/app/parity/infra_namedwindow_om_564_test.go/TestRunInfraNWOM564RuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "infra",
+    "differential",
+    "named-window"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-namedwindow-om-564.evidence.json"
+   ],
+   "difference": "Java exercises the SODA object-model and eplToModel compile paths (model builders, toEPL round-trips) \u2014 an EPL-text/compile surface with no Go counterpart since the Go Plan is the object model; those pins ride unrepresentable records while all observable deliveries match. Ord 2 (InfraOMCreateTableSyntax) is compile-only with zero runtime behavior. Go's trigger dispatch merges deferred dispatches into the window delta wave by deployment order, so the market-delete wave ordering differs internally; the runner pre-deploys the delete plan to preserve Java's observable record order.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-2fadc5dd18bce73a28d5",
+    "java-runtime-2d6d5656b8c1bbec11ac",
+    "java-runtime-7521a52d49a6bc033264"
+   ],
+   "notes": "Draft 4.564: 62 records each, 0 differences. Closes InfraNamedWindowOM (3/3). Oracle pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c."
   }
  ],
  "mappings": [
@@ -55105,13 +55151,17 @@
   {
    "capabilityId": "infra.namedwindow.views",
    "caseId": "case.infra-nwtable-create-ddl"
+  },
+  {
+   "capabilityId": "infra.namedwindow.views",
+   "caseId": "case.infra-namedwindow-om"
   }
  ],
  "summary": {
-  "inventoriedCases": 798,
-  "implementedCases": 796,
-  "differentialVerifiedCases": 417,
-  "differentialVerifiedRuntimeIds": 1660,
+  "inventoriedCases": 799,
+  "implementedCases": 797,
+  "differentialVerifiedCases": 418,
+  "differentialVerifiedRuntimeIds": 1663,
   "intentionallyDifferentCases": 40,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -55121,13 +55171,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4204,
-  "referencedJavaRuntimeIds": 3742,
+  "runtimeAssociationCount": 4207,
+  "referencedJavaRuntimeIds": 3745,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 394,
+  "unreferencedJavaRuntimeIds": 391,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 798,
+  "totalCases": 799,
   "totalCapabilities": 126
  }
 }

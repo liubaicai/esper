@@ -118,6 +118,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include infra-nwtable-index-ops-561 and infra-nwtable-index-ops-561-diff")
 		fmt.Fprintln(stderr, "runner modes include infra-nwtable-mrak-562 and infra-nwtable-mrak-562-diff")
 		fmt.Fprintln(stderr, "runner modes include infra-nwtable-create-ddl-563 and infra-nwtable-create-ddl-563-diff")
+		fmt.Fprintln(stderr, "runner modes include infra-namedwindow-om-564 and infra-namedwindow-om-564-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-enum-select-from and expr-enum-select-from-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-type-use and expr-class-type-use-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-for-epl-objects and expr-class-for-epl-objects-diff")
@@ -515,6 +516,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWTableMRAK562Scenario(file)
 	} else if *mode == "infra-nwtable-create-ddl-563" || *mode == "infra-nwtable-create-ddl-563-diff" {
 		scenario, err = loadInfraNWTableCreateDDL563Scenario(file)
+	} else if *mode == "infra-namedwindow-om-564" || *mode == "infra-namedwindow-om-564-diff" {
+		scenario, err = loadInfraNWOM564Scenario(file)
 	} else if *mode == "epl-contained-event-example" || *mode == "epl-contained-event-example-diff" {
 		scenario, err = loadEPLContainedEventExampleScenario(file)
 	} else if *mode == "epl-other-pattern-event-properties" || *mode == "epl-other-pattern-event-properties-diff" {
@@ -2344,6 +2347,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNWTableCreateDDL563JavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNWTableCreateDDL563JavaSources),
 				splitMetadata(*javaExecutions, infraNWTableCreateDDL563JavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-namedwindow-om-564" || *mode == "infra-namedwindow-om-564-diff" {
+		trace, err := runInfraNWOM564Scenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-namedwindow-om-564-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNWOM564JavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNWOM564JavaSources),
+				splitMetadata(*javaExecutions, infraNWOM564JavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

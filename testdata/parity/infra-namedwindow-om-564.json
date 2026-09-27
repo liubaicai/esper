@@ -1,0 +1,482 @@
+{
+ "version": "esper-parity/v1",
+ "id": "infra-namedwindow-om-564",
+ "description": "InfraNamedWindowOM SODA/eplToModel compile-path slice (ords 0-2, all executions of the file): InfraCompile deploys five statements built by env.eplToModel — @name('create') @public create window MyWindow#keepall as select theString as key, longBoxed as value from SupportBean, an unconditional @name('onselect') on SupportBean_B select mywin.*, @name('insert') insert-into, @name('select') select irstream key, value*2 as value from MyWindow(key is not null) and a mid-scenario @name('delete') on SupportMarketDataBean delete where s0.symbol=s1.key — with toEPL equality asserts on create/select/delete, listener deliveries on all five statements and per-statement undeployModuleContaining teardown (delete/onselect/select/insert/create); InfraOM builds the same five statements as programmatic EPStatementObjectModels with toEPL asserts on create/select/ondelete/onselect, the select filter on value instead of key, a correlated on-select where s0.id=s1.key and undeployAll teardown; InfraOMCreateTableSyntax is compile-only (schema-column create-window OM asserted through toEPL). The Go runner replays the deployed key/value window, insert, irstream consumer, on-delete and on-select triggers through the typed chain — SODA model construction and toEPL round-trips have no Go counterpart (the immutable Plan is the object model) and ride unrepresentable records pinned to the asserted text; boundary sends pin the per-ord filters (null key skipped by the ord-0 key filter, null key emitted by the ord-1 value filter; null value projected as null by ord-0, filtered by ord-1) and the null-correlation delete probes (Java ' = ' is three-valued, so the null-key/null-symbol rows never match).",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowOM.java",
+ "javaSourceFiles": [
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowOM.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_B.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportMarketDataBean.java"
+ ],
+ "javaRuntimes": [
+  "java-runtime-2fadc5dd18bce73a28d5",
+  "java-runtime-2d6d5656b8c1bbec11ac",
+  "java-runtime-7521a52d49a6bc033264"
+ ],
+ "javaNames": [
+  "InfraCompile",
+  "InfraOM",
+  "InfraOMCreateTableSyntax"
+ ],
+ "javaStaticIds": [
+  "java-10c000a768d7eb5776f7",
+  "java-10c000a768d7eb5776f7",
+  "java-10c000a768d7eb5776f7"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "compile",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-2fadc5dd18bce73a28d5",
+   "executionName": "InfraCompile",
+   "observation": "listener+deployed+unrepresentable+undeploy; five eplToModel deploys in source order (create, onselect, insert, select, then delete after the E1/E2 sends) with toEPL pins on create/select/delete: each SupportBean delivers the insert row plus the create-window and filtered-irstream new rows, each matching market delete delivers the on-delete row plus create/select old rows, the second E1 delete stays silent, B1 probes the empty window silently and B2 emits the E3 row through mywin.*; null-key/null-value boundary beans pin the key-is-not-null filter and the null-symbol/null-key delete probes pin three-valued equals; per-statement undeploys run delete/onselect/select/insert/create",
+   "epl": "@name('create') @public create window MyWindow#keepall as select theString as key, longBoxed as value from SupportBean\n@name('create') @public create window MyWindow#keepall as select theString as key, longBoxed as value from SupportBean\n@name('onselect') on SupportBean_B select mywin.* from MyWindow as mywin\n@name('insert') insert into MyWindow select theString as key, longBoxed as value from SupportBean\n@name('select') select irstream key, value*2 as value from MyWindow(key is not null)\n@name('select') select irstream key, value*2 as value from MyWindow(key is not null)\n@name('delete') on SupportMarketDataBean as s0 delete from MyWindow as s1 where s0.symbol=s1.key\n@name('delete') on SupportMarketDataBean as s0 delete from MyWindow as s1 where s0.symbol=s1.key"
+  },
+  {
+   "case": "om",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-2d6d5656b8c1bbec11ac",
+   "executionName": "InfraOM",
+   "observation": "listener+deployed+unrepresentable+undeploy-all; programmatic EPStatementObjectModel builds of the same five statements with toEPL pins on create/select/ondelete/onselect: identical insert/delete behavior, the select filter reads value instead of key (the null-key boundary bean still emits {null,198}), the on-select correlates s0.id=s1.key so B1 and the null-id probe stay silent while the E3 trigger emits the matching s1.* row, and teardown is undeployAll",
+   "epl": "@name('create') @public create window MyWindow#keepall as select theString as key, longBoxed as value from SupportBean\n@name('create') @public create window MyWindow#keepall as select theString as key, longBoxed as value from SupportBean\ninsert into MyWindow select theString as key, longBoxed as value from SupportBean\nselect irstream key, value*2 as value from MyWindow(value is not null)\n@name('select') select irstream key, value*2 as value from MyWindow(value is not null)\non SupportMarketDataBean as s0 delete from MyWindow as s1 where s0.symbol=s1.key\n@name('ondelete') on SupportMarketDataBean as s0 delete from MyWindow as s1 where s0.symbol=s1.key\non SupportBean_B as s0 select s1.* from MyWindow as s1 where s0.id=s1.key\n@name('onselect') on SupportBean_B as s0 select s1.* from MyWindow as s1 where s0.id=s1.key"
+  },
+  {
+   "case": "create-table-syntax",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-7521a52d49a6bc033264",
+   "executionName": "InfraOMCreateTableSyntax",
+   "observation": "unrepresentable; compile-only object-model construction of a schema-column create window asserted through toEPL — zero deploys, events or listeners, so the single record pins the asserted text",
+   "epl": "create window MyWindowOM#keepall as (a1 string, a2 double, a3 int)"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "compile"
+  },
+  {
+   "op": "deploy",
+   "case": "compile",
+   "statement": "create",
+   "epl": "@name('create') @public create window MyWindow#keepall as select theString as key, longBoxed as value from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "compile",
+   "statement": "create"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "compile",
+   "statement": "toepl-create",
+   "epl": "@name('create') @public create window MyWindow#keepall as select theString as key, longBoxed as value from SupportBean",
+   "expectError": "soda-EPStatementObjectModel.toEPL: @name('create') @public create window MyWindow#keepall as select theString as key, longBoxed as value from SupportBean - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart"
+  },
+  {
+   "op": "deploy",
+   "case": "compile",
+   "statement": "onselect",
+   "epl": "@name('onselect') on SupportBean_B select mywin.* from MyWindow as mywin"
+  },
+  {
+   "op": "deployed",
+   "case": "compile",
+   "statement": "onselect"
+  },
+  {
+   "op": "deploy",
+   "case": "compile",
+   "statement": "insert",
+   "epl": "@name('insert') insert into MyWindow select theString as key, longBoxed as value from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "compile",
+   "statement": "insert"
+  },
+  {
+   "op": "deploy",
+   "case": "compile",
+   "statement": "select",
+   "epl": "@name('select') select irstream key, value*2 as value from MyWindow(key is not null)"
+  },
+  {
+   "op": "deployed",
+   "case": "compile",
+   "statement": "select"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "compile",
+   "statement": "toepl-select",
+   "epl": "@name('select') select irstream key, value*2 as value from MyWindow(key is not null)",
+   "expectError": "soda-EPStatementObjectModel.toEPL: @name('select') select irstream key, value*2 as value from MyWindow(key is not null) - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart"
+  },
+  {
+   "op": "send",
+   "case": "compile",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "longBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "compile",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "longBoxed": 20
+   }
+  },
+  {
+   "op": "deploy",
+   "case": "compile",
+   "statement": "delete",
+   "epl": "@name('delete') on SupportMarketDataBean as s0 delete from MyWindow as s1 where s0.symbol=s1.key"
+  },
+  {
+   "op": "deployed",
+   "case": "compile",
+   "statement": "delete"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "compile",
+   "statement": "toepl-delete",
+   "epl": "@name('delete') on SupportMarketDataBean as s0 delete from MyWindow as s1 where s0.symbol=s1.key",
+   "expectError": "soda-EPStatementObjectModel.toEPL: @name('delete') on SupportMarketDataBean as s0 delete from MyWindow as s1 where s0.symbol=s1.key - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart"
+  },
+  {
+   "op": "send",
+   "case": "compile",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "compile",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "compile",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "compile",
+   "eventType": "SupportBean_B",
+   "payload": {
+    "id": "B1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "compile",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "longBoxed": 30
+   }
+  },
+  {
+   "op": "send",
+   "case": "compile",
+   "eventType": "SupportBean_B",
+   "payload": {
+    "id": "B2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "compile",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": null,
+    "longBoxed": 99
+   }
+  },
+  {
+   "op": "send",
+   "case": "compile",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "BND",
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "compile",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "compile",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "BND"
+   }
+  },
+  {
+   "op": "undeploy",
+   "case": "compile",
+   "statement": "delete"
+  },
+  {
+   "op": "undeploy",
+   "case": "compile",
+   "statement": "onselect"
+  },
+  {
+   "op": "undeploy",
+   "case": "compile",
+   "statement": "select"
+  },
+  {
+   "op": "undeploy",
+   "case": "compile",
+   "statement": "insert"
+  },
+  {
+   "op": "undeploy",
+   "case": "compile",
+   "statement": "create"
+  },
+  {
+   "op": "case",
+   "case": "om"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "om",
+   "statement": "toepl-create",
+   "epl": "@name('create') @public create window MyWindow#keepall as select theString as key, longBoxed as value from SupportBean",
+   "expectError": "soda-EPStatementObjectModel.toEPL: @name('create') @public create window MyWindow#keepall as select theString as key, longBoxed as value from SupportBean - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart"
+  },
+  {
+   "op": "deploy",
+   "case": "om",
+   "statement": "create",
+   "epl": "@name('create') @public create window MyWindow#keepall as select theString as key, longBoxed as value from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "om",
+   "statement": "create"
+  },
+  {
+   "op": "deploy",
+   "case": "om",
+   "statement": "insert",
+   "epl": "insert into MyWindow select theString as key, longBoxed as value from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "om",
+   "statement": "insert"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "om",
+   "statement": "toepl-select-om",
+   "epl": "select irstream key, value*2 as value from MyWindow(value is not null)",
+   "expectError": "soda-EPStatementObjectModel.toEPL: select irstream key, value*2 as value from MyWindow(value is not null) - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart"
+  },
+  {
+   "op": "deploy",
+   "case": "om",
+   "statement": "select",
+   "epl": "@name('select') select irstream key, value*2 as value from MyWindow(value is not null)"
+  },
+  {
+   "op": "deployed",
+   "case": "om",
+   "statement": "select"
+  },
+  {
+   "op": "send",
+   "case": "om",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "longBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "om",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "longBoxed": 20
+   }
+  },
+  {
+   "op": "unrepresentable",
+   "case": "om",
+   "statement": "toepl-ondelete",
+   "epl": "on SupportMarketDataBean as s0 delete from MyWindow as s1 where s0.symbol=s1.key",
+   "expectError": "soda-EPStatementObjectModel.toEPL: on SupportMarketDataBean as s0 delete from MyWindow as s1 where s0.symbol=s1.key - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart"
+  },
+  {
+   "op": "deploy",
+   "case": "om",
+   "statement": "delete",
+   "epl": "@name('ondelete') on SupportMarketDataBean as s0 delete from MyWindow as s1 where s0.symbol=s1.key"
+  },
+  {
+   "op": "deployed",
+   "case": "om",
+   "statement": "delete"
+  },
+  {
+   "op": "send",
+   "case": "om",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "om",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "om",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2"
+   }
+  },
+  {
+   "op": "unrepresentable",
+   "case": "om",
+   "statement": "toepl-onselect",
+   "epl": "on SupportBean_B as s0 select s1.* from MyWindow as s1 where s0.id=s1.key",
+   "expectError": "soda-EPStatementObjectModel.toEPL: on SupportBean_B as s0 select s1.* from MyWindow as s1 where s0.id=s1.key - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart"
+  },
+  {
+   "op": "deploy",
+   "case": "om",
+   "statement": "onselect",
+   "epl": "@name('onselect') on SupportBean_B as s0 select s1.* from MyWindow as s1 where s0.id=s1.key"
+  },
+  {
+   "op": "deployed",
+   "case": "om",
+   "statement": "onselect"
+  },
+  {
+   "op": "send",
+   "case": "om",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "longBoxed": 30
+   }
+  },
+  {
+   "op": "send",
+   "case": "om",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "longBoxed": 40
+   }
+  },
+  {
+   "op": "send",
+   "case": "om",
+   "eventType": "SupportBean_B",
+   "payload": {
+    "id": "B1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "om",
+   "eventType": "SupportBean_B",
+   "payload": {
+    "id": "E3"
+   }
+  },
+  {
+   "op": "send",
+   "case": "om",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": null,
+    "longBoxed": 99
+   }
+  },
+  {
+   "op": "send",
+   "case": "om",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "BND",
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "om",
+   "eventType": "SupportBean_B",
+   "payload": {
+    "id": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "om",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": null
+   }
+  },
+  {
+   "op": "send",
+   "case": "om",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "BND"
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "om"
+  },
+  {
+   "op": "case",
+   "case": "create-table-syntax"
+  },
+  {
+   "op": "unrepresentable",
+   "case": "create-table-syntax",
+   "statement": "toepl-create-window",
+   "epl": "create window MyWindowOM#keepall as (a1 string, a2 double, a3 int)",
+   "expectError": "soda-EPStatementObjectModel.toEPL: create window MyWindowOM#keepall as (a1 string, a2 double, a3 int) - Java builds or parses a statement object model and asserts assertEquals(text, model.toEPL()); the Go surface has no statement object model or EPL-text parser (the immutable Plan is the object model), so the asserted text is pinned verbatim with no Go counterpart"
+  }
+ ]
+}
