@@ -45,31 +45,39 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.577 ('everydistinct compound-operator quintet').
+Active: Draft 4.578 ('everydistinct repeat/within/multikey quintet').
 
-- Contract frozen (JavaContract577 + GoSurface577):
-  case.pattern-operator-every-distinct continuation — static
-  java-073091a0b42ca8dd974f, ords 8-12 (each x2 expiry legs -> 10
-  cases): OverAnd (java-runtime-fa2df3aeba01a5eda1d2, composite
-  two-expr key a+b), OverOr (java-runtime-6aab27f9a29d3ad7188f,
-  coalesced Add key), OverNot (java-runtime-c23dddb4d0d001809ffd,
-  falsification respawn empties keyset -> A4 refires),
-  OverFollowedBy (java-runtime-c28f82ea566795672292, sum key),
-  WithinFollowedBy (java-runtime-58fcea53e80425896c2d, left
-  every-distinct then correlated b, one branch per fresh key).
-  The 1h/2h1m legs share identical sequences with the no-expiry legs
-  (clock never reaches expiry — ord3 precedent).
-- [x] Assets577 delivered + integrated: Java trace 34 records, Go
-  replay 34 (10 cases x2 legs), `-diff` passing / 0 differences;
-  evidence + traces checked in. Falsification-respawn A4 refire,
-  per-fresh-key branch, unbound {state:null} all verified.
-- [x] Manifest: case +5 DV IDs (8/17 ords). Summary -> 425 DV / 1708
-  DV runtime IDs.
-- [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev577 + JavaContract578 + GoSurface578 dispatched.
+- Contract frozen (JavaContract578 + GoSurface578):
+  case.pattern-operator-every-distinct remainder — static
+  java-073091a0b42ca8dd974f, ords 4/5/6/7 x2 legs + ord16 single leg:
+  RepeatOverDistinct (java-runtime-9ad19ee9b29674b08443, [2]
+  every-distinct repeat root, a[0]/a[1] tag-array projection),
+  EveryDistinctOverRepeat (java-runtime-d09d0786090e8a2e387e,
+  key = a[0].intPrimitive post-completion array projection; B2's
+  DOUBLED key expr intentional),
+  TimerWithinOverDistinct (java-runtime-56116a3e1351bcc4dc23,
+  outer within(10s) guard kills pending distinct at t=11000),
+  EveryDistinctOverTimerWithin (java-runtime-a0ae611c1bd46c4407d9,
+  inner within on the atom; long timer sequence),
+  MultikeyWArray (java-runtime-1c2ea40ffffe4e58a323, content-wise
+  int[] array keys incl. null own key, listenerFlag-only asserts).
+  Go mapping confirmed: chaining order picks nesting
+  (MatchUntil/Within AFTER EveryDistinct vs before); no new API.
+- [x] Assets578 delivered + integrated: Java trace 22 records, Go
+  replay 22 (9 cases), `-diff` passing / 0 differences; evidence +
+  traces checked in. Guard-death, keyset-reset refires, post-
+  completion a[0] key, array+null keys verified.
+- [x] Manifest: case +5 DV IDs (13/17); ords 5/7 runtime IDs added to
+  javaRuntimeIds (dual association — they were only under
+  case.pattern-every). Summary -> 425 DV / 1713 DV runtime IDs.
+- [x] Gates: `make check` GREEN (exit 0) after the association fix.
+- [x] ParityRev578 + JavaContract579 + GoSurface579 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.577 ('everydistinct compound-operator quintet')
+  committed and pushed as `fdc715fc4`; Git owns identity. case
+  extended to 8/17 DV (34 records, 0 differences); review PASS (1 P3).
 - Shipped: Draft 4.576 ('everydistinct single-filter expiry')
   committed and pushed as `f6ee9a51e`; Git owns identity. case
   promoted DV 3/17 ords (12 records, 0 differences); review PASS (2

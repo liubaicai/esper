@@ -1,0 +1,1917 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-9ad19ee9b29674b08443",
+    "java-runtime-56116a3e1351bcc4dc23",
+    "java-runtime-d09d0786090e8a2e387e",
+    "java-runtime-a0ae611c1bd46c4407d9",
+    "java-runtime-1c2ea40ffffe4e58a323"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorEveryDistinct.java",
+    "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportEventWithIntArray.java"
+  ],
+  "javaExecutions": [
+    "PatternRepeatOverDistinct",
+    "PatternTimerWithinOverDistinct",
+    "PatternEveryDistinctOverRepeat",
+    "PatternEveryDistinctOverTimerWithin",
+    "PatternEveryDistinctMultikeyWArray"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "pattern-everydistinct-nested-578",
+    "steps": [
+      {
+        "op": "case",
+        "case": "repeat-over-distinct"
+      },
+      {
+        "op": "deploy",
+        "case": "repeat-over-distinct",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [[2] every-distinct(a.intPrimitive) a=SupportBean]"
+      },
+      {
+        "op": "send",
+        "case": "repeat-over-distinct",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "repeat-over-distinct",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "repeat-over-distinct",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "repeat-over-distinct",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "repeat-over-distinct",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "repeat-over-distinct"
+      },
+      {
+        "op": "case",
+        "case": "repeat-over-distinct-expiry"
+      },
+      {
+        "op": "deploy",
+        "case": "repeat-over-distinct-expiry",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [[2] every-distinct(a.intPrimitive, 1 hour) a=SupportBean]"
+      },
+      {
+        "op": "send",
+        "case": "repeat-over-distinct-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "repeat-over-distinct-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "repeat-over-distinct-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "repeat-over-distinct-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "repeat-over-distinct-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "repeat-over-distinct-expiry"
+      },
+      {
+        "op": "case",
+        "case": "timer-within-over-distinct"
+      },
+      {
+        "op": "advance-time",
+        "case": "timer-within-over-distinct",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "timer-within-over-distinct",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [(every-distinct(a.intPrimitive) a=SupportBean) where timer:within(10 sec)]"
+      },
+      {
+        "op": "send",
+        "case": "timer-within-over-distinct",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "timer-within-over-distinct",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "timer-within-over-distinct",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "timer-within-over-distinct",
+        "at": "1970-01-01T00:00:11.000Z"
+      },
+      {
+        "op": "send",
+        "case": "timer-within-over-distinct",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "timer-within-over-distinct",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "timer-within-over-distinct"
+      },
+      {
+        "op": "case",
+        "case": "timer-within-over-distinct-expiry"
+      },
+      {
+        "op": "advance-time",
+        "case": "timer-within-over-distinct-expiry",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "timer-within-over-distinct-expiry",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [(every-distinct(a.intPrimitive, 2 days 2 minutes) a=SupportBean) where timer:within(10 sec)]"
+      },
+      {
+        "op": "send",
+        "case": "timer-within-over-distinct-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "timer-within-over-distinct-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "timer-within-over-distinct-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "timer-within-over-distinct-expiry",
+        "at": "1970-01-01T00:00:11.000Z"
+      },
+      {
+        "op": "send",
+        "case": "timer-within-over-distinct-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "timer-within-over-distinct-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "timer-within-over-distinct-expiry"
+      },
+      {
+        "op": "case",
+        "case": "everydistinct-over-repeat"
+      },
+      {
+        "op": "deploy",
+        "case": "everydistinct-over-repeat",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [every-distinct(a[0].intPrimitive) [2] a=SupportBean]"
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-repeat",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-repeat",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-repeat",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-repeat",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-repeat",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-repeat",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "everydistinct-over-repeat"
+      },
+      {
+        "op": "case",
+        "case": "everydistinct-over-repeat-expiry"
+      },
+      {
+        "op": "deploy",
+        "case": "everydistinct-over-repeat-expiry",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [every-distinct(a[0].intPrimitive, a[0].intPrimitive, 1 hour) [2] a=SupportBean]"
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-repeat-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-repeat-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-repeat-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-repeat-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-repeat-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-repeat-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "everydistinct-over-repeat-expiry"
+      },
+      {
+        "op": "case",
+        "case": "everydistinct-over-timerwithin"
+      },
+      {
+        "op": "advance-time",
+        "case": "everydistinct-over-timerwithin",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "everydistinct-over-timerwithin",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [every-distinct(a.intPrimitive) (a=SupportBean where timer:within(10 sec))]"
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "everydistinct-over-timerwithin",
+        "at": "1970-01-01T00:00:05.000Z"
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "everydistinct-over-timerwithin",
+        "at": "1970-01-01T00:00:10.000Z"
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "everydistinct-over-timerwithin",
+        "at": "1970-01-01T00:00:15.000Z"
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E7",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "everydistinct-over-timerwithin",
+        "at": "1970-01-01T00:00:20.000Z"
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E8",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "everydistinct-over-timerwithin",
+        "at": "1970-01-01T00:00:25.000Z"
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E9",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "everydistinct-over-timerwithin",
+        "at": "1970-01-01T00:00:50.000Z"
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E10",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E11",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E12",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E13",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "everydistinct-over-timerwithin"
+      },
+      {
+        "op": "case",
+        "case": "everydistinct-over-timerwithin-expiry"
+      },
+      {
+        "op": "advance-time",
+        "case": "everydistinct-over-timerwithin-expiry",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "everydistinct-over-timerwithin-expiry",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [every-distinct(a.intPrimitive, 1 hour) (a=SupportBean where timer:within(10 sec))]"
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "everydistinct-over-timerwithin-expiry",
+        "at": "1970-01-01T00:00:05.000Z"
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "everydistinct-over-timerwithin-expiry",
+        "at": "1970-01-01T00:00:10.000Z"
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "everydistinct-over-timerwithin-expiry",
+        "at": "1970-01-01T00:00:15.000Z"
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E7",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "everydistinct-over-timerwithin-expiry",
+        "at": "1970-01-01T00:00:20.000Z"
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E8",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "everydistinct-over-timerwithin-expiry",
+        "at": "1970-01-01T00:00:25.000Z"
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E9",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "everydistinct-over-timerwithin-expiry",
+        "at": "1970-01-01T00:00:50.000Z"
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E10",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E11",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E12",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "everydistinct-over-timerwithin-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E13",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "everydistinct-over-timerwithin-expiry"
+      },
+      {
+        "op": "case",
+        "case": "multikey-w-array"
+      },
+      {
+        "op": "deploy",
+        "case": "multikey-w-array",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern[every-distinct(a.array) a=SupportEventWithIntArray]"
+      },
+      {
+        "op": "send",
+        "case": "multikey-w-array",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "E1",
+          "array": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-w-array",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "E2",
+          "array": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-w-array",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "E3",
+          "array": [
+            1
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-w-array",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "E4",
+          "array": []
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-w-array",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "E5",
+          "array": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-w-array",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "E10",
+          "array": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-w-array",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "E11",
+          "array": [
+            1
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-w-array",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "E12",
+          "array": []
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-w-array",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "E13",
+          "array": null
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "multikey-w-array"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-everydistinct-nested-578",
+    "records": [
+      {
+        "case": "repeat-over-distinct",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "repeat-over-distinct-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "timer-within-over-distinct",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "timer-within-over-distinct",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "timer-within-over-distinct-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "timer-within-over-distinct-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "everydistinct-over-repeat",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "everydistinct-over-repeat",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "theString": "E5"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E6"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "everydistinct-over-repeat-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "everydistinct-over-repeat-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "theString": "E5"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E6"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "everydistinct-over-timerwithin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "everydistinct-over-timerwithin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "everydistinct-over-timerwithin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:50Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E10"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "everydistinct-over-timerwithin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:50Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "E12"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "everydistinct-over-timerwithin-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "everydistinct-over-timerwithin-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "everydistinct-over-timerwithin-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:50Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E10"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "everydistinct-over-timerwithin-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:50Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "E12"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "array": [
+                    1,
+                    2
+                  ],
+                  "id": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "array": [
+                    1
+                  ],
+                  "id": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "array": [],
+                  "id": "E4"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "array": null,
+                  "id": "E5"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-everydistinct-nested-578",
+    "records": [
+      {
+        "case": "repeat-over-distinct",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "repeat-over-distinct-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "timer-within-over-distinct",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "timer-within-over-distinct",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "timer-within-over-distinct-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "timer-within-over-distinct-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "everydistinct-over-repeat",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "everydistinct-over-repeat",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "theString": "E5"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E6"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "everydistinct-over-repeat-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "everydistinct-over-repeat-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "theString": "E5"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E6"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "everydistinct-over-timerwithin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "everydistinct-over-timerwithin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "everydistinct-over-timerwithin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:50Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E10"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "everydistinct-over-timerwithin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:50Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "E12"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "everydistinct-over-timerwithin-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "everydistinct-over-timerwithin-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "everydistinct-over-timerwithin-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:50Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E10"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "everydistinct-over-timerwithin-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:50Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "E12"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "array": [
+                    1,
+                    2
+                  ],
+                  "id": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "array": [
+                    1
+                  ],
+                  "id": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "array": [],
+                  "id": "E4"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "array": null,
+                  "id": "E5"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
