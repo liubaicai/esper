@@ -1,0 +1,181 @@
+{
+ "version": "esper-parity/v1",
+ "id": "pattern-guard-withinmax-589",
+ "description": "PatternGuardTimerWithinOrMax ord 0 — the single-execution 17-leg timer:withinmax W-harness over EventCollectionFactory.getEventSetOne(0,1000), replayed as ONE case: ONE deploy-all step (statement \"all\") expands to the harness's seventeen per-leg deployments of `@name(\"S<i>\") select * from pattern [<atom>]` (S0..S16 stand in for the name--<atom> labels, S3 carrying the SODA model's toEPL text), then twelve advance-before-send steps each advance the external clock to the event's pinned instant (+1000ms per send) BEFORE sendEventBean — a withinmax deadline expiring inside an advance attributes to the upcoming event's bucket (an expired guarded instance under every re-arms with a fresh timer at the advance instant, which is what lets S7 and S12..S16 deliver the D/D3 fires at the exact 4000ms expiry sends) — and every send's fires are grouped per leg+trigger as multiset rows. Expected fires: S0 silent (2 sec deadline expires at the B1 send before B1 is delivered), S1 B1{b:B1} (2001 msec bound covers B1@2000), S2 silent (1999 msec expires inside the B1 advance), S3 B3{b:B3} (10.001d SODA model leg, day bound never binds), S4 silent (count cap 0 suppresses every completion), S5 B1{b:B1}, S6 B1{b:B1}/B2{b:B2} (guard-over-every caps completions at 1/2; the 4.001 timer never binds), S7 B1{b:B1}/B2{b:B2}/B3{b:B3} (every spawns each guarded b instance, timer expiry re-arms a fresh instance inside the expiring advance), S8/S9/S10 B1{b:B1}/B2{b:B2}/B3{b:B3} (every (b where withinmax(2001 msec,N)) gives each spawn its own count cap), S11 silent (cap 0), S12 D1{b:B2,d:D1}/D3{b:B3,d:D3} (a single guarded d per b spawn; B1's instance expires at the exact D1 send), S13 D1{b:B1,d:D1}+D1{b:B2,d:D1}+D2{b:B1,d:D2}+D2{b:B2,d:D2}+D3{b:B1,d:D3}+D3{b:B2,d:D3}+D3{b:B3,d:D3} (guarded single d under every: cap 1 ends each instance after one d), S14 D1{b:B1,d:D1}+D1{b:B2,d:D1}+D2{b:B1,d:D2}+D2{b:B2,d:D2}+D3{b:B1,d:D3}+D3{b:B2,d:D3}+D3{b:B3,d:D3} (cap 3 on the parenthesized every-d never binds), S15 D1{b:B1,d:D1}+D1{b:B2,d:D1}+D2{b:B1,d:D2}+D2{b:B2,d:D2}+D3{b:B3,d:D3} (cap 2 drops the B1/B2 D3 fires), S16 D1{b:B1,d:D1}+D1{b:B2,d:D1}+D3{b:B3,d:D3} (cap 1 keeps only the first d per every-d instance). The COMPILE_TO_MODEL/COMPILE_TO_EPL/consume+suppress harness styles, env.milestone savepoints and the post-undeploy resend silence check are unrepresented harness machinery.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternGuardTimerWithinOrMax.java",
+ "javaSourceFiles": [
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternGuardTimerWithinOrMax.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/patternassert/EventCollectionFactory.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/patternassert/EventExpressionCase.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/patternassert/PatternTestHarness.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_A.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_B.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_C.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_D.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_E.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_F.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_G.java"
+ ],
+ "javaRuntimes": [
+  "java-runtime-78d9e9fcf78678c48ff9"
+ ],
+ "javaNames": [
+  "PatternGuardTimerWithinOrMax"
+ ],
+ "javaStaticIds": [
+  "java-0c023cc183e0d8221a0b"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "w-harness",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-78d9e9fcf78678c48ff9",
+   "executionName": "PatternGuardTimerWithinOrMax",
+   "observation": "listener; external clock +1000ms per send; all 17 legs deploy in ONE step before any send (harness deploy-all), then twelve advance-before-send replays of A1,B1,C1,B2,A2,D1,E1,F1,D2,B3,G1,D3 (advanceTime precedes sendEventBean so deadline expiries attribute to the upcoming bucket and every re-arms expired guarded instances there): S0 silent (2 sec expires at B1's send), S1 B1{b:B1}, S2 silent (1999 msec), S3 B3{b:B3} (SODA 10.001d model), S4 silent (cap 0 over every), S5 B1{b:B1}, S6 B1,B2 (cap 1/2 over every), S7 B1,B2,B3 (per-spawn guard instances), S8/S9/S10 B1,B2,B3 (per-instance caps 2/3/1 under every), S11 silent (cap 0), S12 (b:B2,d:D1) and (b:B3,d:D3) only (single-d guard expires at exact deadline sends), S13 seven rows B1/B2 x D1-D3 fan-out (every over guarded d), S14 seven rows (cap 3 on parenthesized every-d), S15 five rows (cap 2 drops B1/B2 D3), S16 three rows (cap 1 keeps first d); per leg+trigger the fires compare as a multiset like compareLists",
+   "epls": [
+    "@name(\"S0\") select * from pattern [b=SupportBean_B(id='B1') where timer:withinmax(2 sec,100)]",
+    "@name(\"S1\") select * from pattern [b=SupportBean_B(id='B1') where timer:withinmax(2001 msec,1)]",
+    "@name(\"S2\") select * from pattern [b=SupportBean_B(id='B1') where timer:withinmax(1999 msec,10)]",
+    "@name(\"S3\") select * from pattern [b=SupportBean_B(id='B3') where timer:withinmax(10.001d,1)]",
+    "@name(\"S4\") select * from pattern [(every b=SupportBean_B) where timer:withinmax(4.001, 0)]",
+    "@name(\"S5\") select * from pattern [(every b=SupportBean_B) where timer:withinmax(4.001, 1)]",
+    "@name(\"S6\") select * from pattern [(every b=SupportBean_B) where timer:withinmax(4.001, 2)]",
+    "@name(\"S7\") select * from pattern [every b=SupportBean_B where timer:withinmax(2.001, 4)]",
+    "@name(\"S8\") select * from pattern [every (b=SupportBean_B where timer:withinmax(2001 msec, 2))]",
+    "@name(\"S9\") select * from pattern [every (b=SupportBean_B where timer:withinmax(2001 msec, 3))]",
+    "@name(\"S10\") select * from pattern [every (b=SupportBean_B where timer:withinmax(2001 msec, 1))]",
+    "@name(\"S11\") select * from pattern [every (b=SupportBean_B where timer:withinmax(2001 msec, 0))]",
+    "@name(\"S12\") select * from pattern [every b=SupportBean_B -> d=SupportBean_D where timer:withinmax(4000 msec, 1)]",
+    "@name(\"S13\") select * from pattern [every b=SupportBean_B() -> every d=SupportBean_D where timer:withinmax(4000 msec, 1)]",
+    "@name(\"S14\") select * from pattern [every b=SupportBean_B() -> (every d=SupportBean_D) where timer:withinmax(1 day, 3)]",
+    "@name(\"S15\") select * from pattern [every b=SupportBean_B() -> (every d=SupportBean_D) where timer:withinmax(1 day, 2)]",
+    "@name(\"S16\") select * from pattern [every b=SupportBean_B() -> (every d=SupportBean_D) where timer:withinmax(1 day, 1)]"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "w-harness"
+  },
+  {
+   "op": "deploy",
+   "case": "w-harness",
+   "statement": "all"
+  },
+  {
+   "op": "send",
+   "case": "w-harness",
+   "at": "1970-01-01T00:00:01Z",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-harness",
+   "at": "1970-01-01T00:00:02Z",
+   "eventType": "SupportBean_B",
+   "payload": {
+    "id": "B1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-harness",
+   "at": "1970-01-01T00:00:03Z",
+   "eventType": "SupportBean_C",
+   "payload": {
+    "id": "C1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-harness",
+   "at": "1970-01-01T00:00:04Z",
+   "eventType": "SupportBean_B",
+   "payload": {
+    "id": "B2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-harness",
+   "at": "1970-01-01T00:00:05Z",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-harness",
+   "at": "1970-01-01T00:00:06Z",
+   "eventType": "SupportBean_D",
+   "payload": {
+    "id": "D1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-harness",
+   "at": "1970-01-01T00:00:07Z",
+   "eventType": "SupportBean_E",
+   "payload": {
+    "id": "E1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-harness",
+   "at": "1970-01-01T00:00:08Z",
+   "eventType": "SupportBean_F",
+   "payload": {
+    "id": "F1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-harness",
+   "at": "1970-01-01T00:00:09Z",
+   "eventType": "SupportBean_D",
+   "payload": {
+    "id": "D2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-harness",
+   "at": "1970-01-01T00:00:10Z",
+   "eventType": "SupportBean_B",
+   "payload": {
+    "id": "B3"
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-harness",
+   "at": "1970-01-01T00:00:11Z",
+   "eventType": "SupportBean_G",
+   "payload": {
+    "id": "G1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-harness",
+   "at": "1970-01-01T00:00:12Z",
+   "eventType": "SupportBean_D",
+   "payload": {
+    "id": "D3"
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "w-harness"
+  }
+ ]
+}

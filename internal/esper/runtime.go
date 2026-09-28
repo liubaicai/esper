@@ -20232,9 +20232,14 @@ func patternCanContinueAfterMatch(progress *patternProgress) bool {
 				return !right.quit && !patternCompletionPermanent(right)
 			}
 		case patternWithinNode:
-			// A timer guard delegates survival to its child: a followed-by
-			// whose every right leg keeps reporting stays resident inside the
-			// guard, exactly like EvalWithinStateNode forwarding isQuitted.
+			// A timer guard delegates survival to its child — unless the guard
+			// itself is terminal (cap spent or expired), where Esper's
+			// EvalWithinStateNode has already quitInternal'ed the child, so a
+			// still-live every leg underneath must not keep the branch
+			// resident.
+			if patternWithinTerminal(progress) {
+				return false
+			}
 			return patternCanContinueAfterMatch(progress.child)
 		case patternGuardWhileNode:
 			// An expression guard delegates survival to its child exactly
@@ -20302,6 +20307,14 @@ func patternCompletionPermanent(progress *patternProgress) bool {
 		// reporting matches (Esper EvalGuardStateNode.evaluateTrue).
 		return patternCompletionPermanent(progress.child)
 	case patternWithinNode:
+		// A within guard that has spent its completion cap (or expired)
+		// quits permanently: Esper's EvalWithinStateNode calls quitInternal
+		// at the boundary, which recursively kills the child — including an
+		// every child — so a capped every-within must not stay resident via
+		// its still-live repeating leg.
+		if patternWithinTerminal(progress) {
+			return true
+		}
 		if patternWithinCanContinue(progress) {
 			return false
 		}

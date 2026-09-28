@@ -45,36 +45,40 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.588 ('matchuntil ord1 52-case W-harness').
+Active: Draft 4.589 ('guard-timer-withinor-max file closer').
 
-- Contract frozen (JavaContract588 + GoSurface588): ord1
- PatternOp (java-runtime-0383244f373c8a0ffc8b, static
- java-d4cb4534ca508be87595) — PatternTestHarness deploys ALL 52
- EventExpressionCases SIMULTANEOUSLY (S0..S51), advanceTime-
- before-send over the 12-event mixed set (A1..D3, t=1000..12000),
- per-(stmt,event) multiset compareLists, timer legs 40/44/45
- attribute to the upcoming event, leg52 start-fire ignored,
- undeployAll silence check. Go side: ONE DeployPlans deployment
- with 52 plans + per-statement Subscribe buckets; existing
- test-corpus legs map 1:1, only the harness shape is new
- (no engine gaps per GoSurface588).
-- After this unit the file is DV-complete except ord6
- (dynamic-bounds subdomain).
-- [x] Assets588 delivered + integrated: Java trace 45 records,
-  Go replay 45, `-diff` passing / 0 differences; evidence +
-  traces checked in. Bucket-sort normalizer matches the harness's
-  compareLists multiset contract (per stmt,event).
-- [x] Manifest: case +1 DV ID (8/9 — only ord6 dynamic-bounds
-  remains). Summary -> 427 DV cases / 1734 DV runtime IDs.
-- [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev588 + JavaContract589 + GoSurface589 dispatched.
+- Contract frozen (JavaContract589 + GoSurface589):
+ PatternGuardTimerWithinOrMax ord0 (java-runtime-78d9e9fcf78678c48ff9,
+ static java-0c023cc183e0d8221a0b, flags []) — 17-leg
+ PatternTestHarness W-harness over EventSetOne (B/D beans,
+ clocked advance-before-send), all legs `timer:withinmax`
+ (time bound + completion cap) incl. SODA leg, variable-bound
+ legs, boundary msec legs and or/and compositions; deploy-all +
+ per-(stmt,event) multiset compareLists. Go surface: WithinOrMax/
+ WithinOrMaxExpr/WithinOrMaxCalendar + patternWithinCanContinue;
+ DeployPlans 17-plan deploy (same shape as 588).
+- [x] Assets589 delivered; exposed a REAL engine divergence:
+  capped `every-within` inside a followed-by stayed resident and
+  re-emitted stale rows (42 vs 30 records). Shared-core fix (this
+  agent owns it): `patternCompletionPermanent` +
+  `patternCanContinueAfterMatch` treat a terminal within (cap
+  spent/expired) as quitting permanently, mirroring
+  EvalWithinStateNode.quitInternal. Java trace 30, Go 30,
+  `-diff` passing / 0 differences; all four tests green.
+- [x] Manifest: case.pattern-every +1 DV ID. Summary -> 428 DV
+  cases / 1735 DV runtime IDs.
+- [x] Gates: `make check` GREEN (exit 0) incl. full pattern suite.
+- [x] ParityRev589 + JavaContract590 + GoSurface590 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.588 ('matchuntil 52-case W-harness')
+ committed and pushed as `8a7f0c2a3`; Git owns identity. case
+ 8/9 DV (ord6 dynamic-bounds deferred); review PASS after P3
+ (missing negative-path test) fixed.
 - Shipped: Draft 4.587 ('matchuntil repeat-use-tags trio')
  committed and pushed as `7702eaa32`; Git owns identity. case
- promoted to DV 7/9. Review PASS after P2 (leg-3 EPL whitespace
- `)-> [2] C`) fixed.
+ 7/9 DV; review PASS after P2 whitespace fix.
 - Shipped: Draft 4.586 ('matchuntil static remainder') committed
  and pushed as `cad3fdb4b`; Git owns identity. case 6/7+ DV;
  review PASS (1 P3).

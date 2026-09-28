@@ -16645,7 +16645,11 @@
     "TestPatternOperatorEveryFollowedByMatchesEsper",
     "TestPatternOperatorEveryFollowedByWithinMatchesEsper",
     "TestPatternOperatorEveryWithAndMatchesEsper",
-    "TestPatternOperatorEveryAndNotMatchesEsper"
+    "TestPatternOperatorEveryAndNotMatchesEsper",
+    "internal/app/parity/pattern_guard_withinmax_589_test.go/TestRunPatternGuardWithinMax589ScenarioReplay",
+    "internal/app/parity/pattern_guard_withinmax_589_test.go/TestRunPatternGuardWithinMax589PinnedArtifacts",
+    "internal/app/parity/pattern_guard_withinmax_589_test.go/TestRunPatternGuardWithinMax589RejectsMalformedRawScenario",
+    "internal/app/parity/pattern_guard_withinmax_589_test.go/TestRunPatternGuardWithinMax589RuntimeIDMappingMatchesScenario"
    ],
    "tags": [
     "correctness",
@@ -16655,13 +16659,19 @@
    "status": "implemented",
    "evidence": [
     "java-baseline",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/pattern-guard-withinmax-589.evidence.json"
    ],
    "difference": "Go covers outer Within versus inner Within().EveryDistinct() scope, distinct suppression with an AST-owned Every state, virtual-clock expiry via Within and explicit EveryDistinctFor, ordinary Pattern and Pattern Context lifecycle, scoped WithinOrMax guards, dynamic duration from captured tags, variables, deployment parameters and component expressions, repeated-tag property access including indexed fields from repeated event tags, component-wise fixed-duration parameters, variable reconfiguration for the next recurring timer period, microsecond precision, recurring month-calendar boundaries, mixed calendar-plus-fixed timer periods, exact-deadline tests, edge-scoped FollowedByMax capacity for nested/composed followed-by branches, and MatchUntil expression bounds resolved from variables, deployment parameters, null open bounds and captured outer tags. Bounded-until additionally preserves a capped repeated branch while waiting for a terminator, gives the terminator priority on the same event, and expires without output below the lower bound. Compound every (every (a and b), every (timer:interval and not X)) now materializes into the AST so the every state holds a single active attempt like Esper's EvalEveryStateNode, and restarted attempts inherit the every begin-state tags instead of the just-fired match tags (spawn-state snapshot). Nested Every levels now multiply matches exactly like Esper: every(every(b)) fires B2 twice and B3 four times, every^3 fires B2 three times and B3 nine times, every^4 fires B2 four times and B3 sixteen times, because a completed non-quitting child stays resident while a fresh sibling is spawned alongside it. Java additionally covers ISO period parsing, multi-key expiry, nested observer/guard/consumption combinations and exact execution trace parity; Go WithinOrMax, dynamic duration and dynamic MatchUntil support do not yet cover every nested parent transition, followed-by dynamic maxima or the complete consumption policy matrix.",
    "verification": [
     "inventoried",
-    "implemented"
-   ]
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-78d9e9fcf78678c48ff9"
+   ],
+   "notes": " Draft 4.589: PatternGuardTimerWithinOrMax ord0 DV (17-leg simultaneous W-harness, 30 records, 0 differences); required an internal/esper fix \u2014 a capped every-within inside a followed-by stayed resident and re-emitted stale rows (patternCompletionPermanent/patternCanContinueAfterMatch now treat a terminal within as quitting its child, mirroring EvalWithinStateNode.quitInternal)."
   },
   {
    "id": "case.pattern-guard-observer-prearmed",
@@ -55496,8 +55506,8 @@
  "summary": {
   "inventoriedCases": 801,
   "implementedCases": 799,
-  "differentialVerifiedCases": 427,
-  "differentialVerifiedRuntimeIds": 1734,
+  "differentialVerifiedCases": 428,
+  "differentialVerifiedRuntimeIds": 1735,
   "intentionallyDifferentCases": 40,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
