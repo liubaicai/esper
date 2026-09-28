@@ -10356,25 +10356,39 @@
     "TestPatternSubqueryFilterAndNamedWindowVariantsMatchesEsper",
     "TestEventStreamSubqueryAggregationWindowMatchesEsper",
     "TestPatternSubqueryNamedWindowFunctionMatchesEsper",
-    "TestPatternSubqueryInvalidDefinitionsMatchesEsper"
+    "TestPatternSubqueryInvalidDefinitionsMatchesEsper",
+    "internal/app/parity/epl_subselect_within_pattern_574_test.go/TestRunEplSubselectWithinPattern574ScenarioReplay",
+    "internal/app/parity/epl_subselect_within_pattern_574_test.go/TestRunEplSubselectWithinPattern574PinnedArtifacts",
+    "internal/app/parity/epl_subselect_within_pattern_574_test.go/TestRunEplSubselectWithinPattern574RejectsMalformedRawScenario",
+    "internal/app/parity/epl_subselect_within_pattern_574_test.go/TestRunEplSubselectWithinPattern574RuntimeIDMappingMatchesScenario"
    ],
    "tags": [
     "correctness",
     "query",
     "subquery",
     "pattern",
-    "correlation"
+    "correlation",
+    "differential"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
     "java-runtime-inventory",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/epl-subselect-within-pattern-574.evidence.json"
    ],
-   "difference": "The Go fluent PatternFrom(...).Every() rule supports a correlated SubqueryExists over a KeepAll event stream and SubqueryIn over a LastEvent event stream, with inner Field expressions and explicit current-event/OuterField scope. The Java filter execution's event-stream Filter, Named Window Filter and Named Window Pattern branches now share one exact tryAssertion trace; NamedWindowRetention(LastEvent()) replaces the previous row and dispatches the old/new state needed by the subquery. Event-stream SubquerySum over a length(2) source reproduces the Java rolling aggregate filter sequence across empty, replacement and exact-sum boundaries, while a chainable Func1 receives a Named Window SubqueryCount inside a Pattern predicate and verifies current Named Window state. Build-time validation now rejects unbounded non-aggregated event-stream subqueries, consumer-local data windows on Named Window subqueries, and incompatible IN/ANY/ALL operand types, matching the mapped EPLSubselectInvalid boundaries. Pattern aggregation, broader Pattern/Context/Dataflow combinations, full parser diagnostics and complete execution-trace/cardinality parity remain open.",
+   "difference": "ord0 EPLSubselectInvalid (java-runtime-57f90dfd1960035b1517) is compile-error-only: Java asserts verbatim EPCompileException texts for unwindowed exists-subquery, data-window-onto-named-window, and Integer/String coercion probes; the typed Go API rejects these structurally at Build (no EPL-text compile path), so wording is intentionally different.",
    "verification": [
     "inventoried",
-    "implemented"
-   ]
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-3d9d3a714bd642e784bd",
+    "java-runtime-9a15ec8213060ac0185c",
+    "java-runtime-3c1d7cc144c168f6a0d6",
+    "java-runtime-0db35509697665c0960e"
+   ],
+   "notes": " Draft 4.574: ords 1-4 DV (19 records across 9 spellings: correlated incl. tag-correlated followed-by-scalar 'Y+B', rolling-sum aggregation gate, NW-subquery-in-UDF-in-pattern untagged atom {} row, four NW/lastevent spellings). Shared-core: subquery eval ctx propagates pattern tag bindings; PatternFrom accepts untagged atoms. 4/5 DV + ord0 compile-only."
   },
   {
    "id": "case.join-basic",
@@ -55347,8 +55361,8 @@
  "summary": {
   "inventoriedCases": 801,
   "implementedCases": 799,
-  "differentialVerifiedCases": 422,
-  "differentialVerifiedRuntimeIds": 1693,
+  "differentialVerifiedCases": 423,
+  "differentialVerifiedRuntimeIds": 1697,
   "intentionallyDifferentCases": 40,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,

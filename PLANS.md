@@ -45,37 +45,43 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.573 ('view-expression remainder closer').
+Active: Draft 4.574 ('subquery-within-pattern').
 
-- Contract frozen (JavaContract573 + GoSurface573): three executions
-  closing both files — ViewExpressionWindow ord3 TimeWindow
-  (java-runtime-5d04258cf2eb6e0025fd, DV-able: irstream
-  `oldest_timestamp > newest_timestamp - 2000`, lazy expiry on send,
-  E7 double-old {E2,E3} discriminant, E8 mass-expiry {E4..E7}, virtual
-  clock E1..E8 t={0,1000,1500,2000,2500,3000,3499,3500,10000},
-  per-send iterator pins + milestone(0)/milestone(1)); plus the two
-  compile-error-only Invalid executions (Window ord5
-  java-runtime-984f59c809d70e02b3da, Batch ord4
-  java-runtime-ad02b23eda34efdfd83e) — disposition
-  intentionally-different on verbatim EPL diagnostics (EPL-text
-  compile path outside the typed Go API, cf. ResultSetQueryTypeInvalid
-  precedent); structural Build-error probes exist but the
-  prev-for-subselect substitution + batch null<0 probe stay
-  unrepresentable. Closes window to 12/13 DV + compile-only remainder.
-- [x] Assets573 delivered + integrated: Java trace 17 records, Go
-  replay 17 (deployed/8 listener/8 snapshot), `-diff` passing / 0
-  differences; evidence + traces checked in. E7 double-old {E2,E3},
-  E8 mass-expiry {E4..E7}, lazy expiry on send all verified. The two
-  Invalid executions recorded as intentionally-different rows inside
-  the cases (byte-exact Java diagnostics in runner header; structural
-  Go rejection is the representative check — no validator weakening).
-- [x] Manifest: window +1 (12/13); batch DV-complete except
-  compile-only ord4. Summary -> 422 DV / 1693 DV runtime IDs.
+- Contract frozen (JavaContract574 + GoSurface574): case.subquery-pattern
+  promotion — EPLSubselectWithinPattern static java-495107e31d1fe86086ab.
+  DV ords 1-4: EPLSubselectCorrelated
+  (java-runtime-3d9d3a714bd642e784bd, 3 spellings + two scenes),
+  EPLSubselectAggregation (java-runtime-9a15ec8213060ac0185c,
+  rolling-sum gate), EPLSubselectSubqueryAgainstNamedWindowInUDFInPattern
+  (java-runtime-3c1d7cc144c168f6a0d6, NW subquery inside UDF inside
+  pattern), EPLSubselectFilterPatternNamedWindowNoAlias
+  (java-runtime-0db35509697665c0960e, 4 spellings). Ord0
+  EPLSubselectInvalid (java-runtime-57f90dfd1960035b1517) compile-only
+  -> intentionally-different precedent (structural rejection only).
+  GoSurface574 confirmed the ContextInitTerm premise was stale (most
+  ords already DV); this is the densest true DV-able remainder.
+- [x] CorePatternSubquery landed: `evaluateSubqueryValues`/
+  `evaluateSubqueryGroups` now propagate the enclosing pattern's
+  PreviousTagEvents/Tags/TagValues (tag-correlated subqueries resolve
+  inside pattern limbs, transitively); `PatternFrom`/`PatternFromRecord`
+  accept an empty tag -> untagged atom (Java `pattern[S1(f)]` +
+  `select *` -> {} row). Facade doc-only regen.
+- [x] Assets574 rewired + re-verified: Java trace 19 records, Go
+  replay 19 across 9 spellings, `-diff` passing / 0 differences;
+  evidence + traces checked in. 'Y+B' tag-correlated delivery and {}
+  untagged-atom row confirmed.
+- [x] Manifest: case.subquery-pattern PROMOTED implemented->DV (4/5
+  ords; ord0 compile-only intentionally-different). Summary -> 423 DV
+  / 1697 DV runtime IDs.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev573 + JavaContract574 + GoSurface574 dispatched.
+- [x] ParityRev574 + JavaContract575 + GoSurface575 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.573 ('view-expression remainder closer') committed
+  and pushed as `f0f1149d9`; Git owns identity. Window ord3 DV (17
+  records, 0 differences); Invalids intentionally-different; review
+  PASS. View-expression DV-complete except compile-only probes.
 - Shipped: Draft 4.572 ('expression UDF + Prev quartet + Func3Ctx')
   committed and pushed as `6d9da36a2`; Git owns identity. batch 12/13
   + window 11/13 DV (16 records, 0 differences) + shared-core

@@ -1,0 +1,1528 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-3d9d3a714bd642e784bd",
+    "java-runtime-9a15ec8213060ac0185c",
+    "java-runtime-3c1d7cc144c168f6a0d6",
+    "java-runtime-0db35509697665c0960e"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectWithinPattern.java"
+  ],
+  "javaExecutions": [
+    "EPLSubselectCorrelated",
+    "EPLSubselectAggregation",
+    "EPLSubselectSubqueryAgainstNamedWindowInUDFInPattern",
+    "EPLSubselectFilterPatternNamedWindowNoAlias"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "epl-subselect-within-pattern-574",
+    "steps": [
+      {
+        "op": "case",
+        "case": "correlated-pattern-exists"
+      },
+      {
+        "op": "deploy",
+        "case": "correlated-pattern-exists",
+        "statement": "s0",
+        "epl": "@name('s0') select sp1.id as myid from pattern[every sp1=SupportBean_S0(exists (select * from SupportBean_S1#keepall as stream1 where stream1.p10 = sp1.p00))]"
+      },
+      {
+        "op": "send",
+        "case": "correlated-pattern-exists",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "A"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-pattern-exists",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 2,
+          "p10": "A"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-pattern-exists",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 3,
+          "p00": "B"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-pattern-exists",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 4,
+          "p10": "C"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-pattern-exists",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 5,
+          "p00": "C"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-pattern-exists",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 6,
+          "p00": "A"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-pattern-exists",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 7,
+          "p00": "D"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-pattern-exists",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 8,
+          "p10": "E"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-pattern-exists",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 9,
+          "p00": "C"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "correlated-pattern-exists"
+      },
+      {
+        "op": "case",
+        "case": "correlated-filter-exists"
+      },
+      {
+        "op": "deploy",
+        "case": "correlated-filter-exists",
+        "statement": "s0",
+        "epl": "@name('s0') select id as myid from SupportBean_S0(exists (select stream1.id from SupportBean_S1#keepall as stream1 where stream1.p10 = stream0.p00)) as stream0"
+      },
+      {
+        "op": "send",
+        "case": "correlated-filter-exists",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "A"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-filter-exists",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 2,
+          "p10": "A"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-filter-exists",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 3,
+          "p00": "B"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-filter-exists",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 4,
+          "p10": "C"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-filter-exists",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 5,
+          "p00": "C"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-filter-exists",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 6,
+          "p00": "A"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-filter-exists",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 7,
+          "p00": "D"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-filter-exists",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 8,
+          "p10": "E"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-filter-exists",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 9,
+          "p00": "C"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "correlated-filter-exists"
+      },
+      {
+        "op": "case",
+        "case": "correlated-followed-by-scalar"
+      },
+      {
+        "op": "deploy",
+        "case": "correlated-followed-by-scalar",
+        "statement": "s0",
+        "epl": "@name('s0') select sp0.p00||'+'||sp1.p10 as myid from pattern[every sp0=SupportBean_S0 -\u003e sp1=SupportBean_S1(p11 = (select stream2.p21 from SupportBean_S2#keepall as stream2 where stream2.p20 = sp0.p00))]"
+      },
+      {
+        "op": "send",
+        "case": "correlated-followed-by-scalar",
+        "eventType": "SupportBean_S2",
+        "payload": {
+          "id": 21,
+          "p20": "X",
+          "p21": "A"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-followed-by-scalar",
+        "eventType": "SupportBean_S2",
+        "payload": {
+          "id": 22,
+          "p20": "Y",
+          "p21": "B"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-followed-by-scalar",
+        "eventType": "SupportBean_S2",
+        "payload": {
+          "id": 23,
+          "p20": "Z",
+          "p21": "C"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-followed-by-scalar",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "A"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-followed-by-scalar",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 2,
+          "p00": "Y"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-followed-by-scalar",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 3,
+          "p00": "C"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-followed-by-scalar",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 4,
+          "p10": "B",
+          "p11": "B"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-followed-by-scalar",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 4,
+          "p10": "B",
+          "p11": "C"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-followed-by-scalar",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 5,
+          "p10": "C",
+          "p11": "B"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-followed-by-scalar",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 6,
+          "p10": "X",
+          "p11": "A"
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-followed-by-scalar",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 7,
+          "p10": "A",
+          "p11": "C"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "correlated-followed-by-scalar"
+      },
+      {
+        "op": "case",
+        "case": "aggregation"
+      },
+      {
+        "op": "deploy",
+        "case": "aggregation",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportBean_S0(id = (select sum(id) from SupportBean_S1#length(2)))"
+      },
+      {
+        "op": "send",
+        "case": "aggregation",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 5
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 13
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "aggregation"
+      },
+      {
+        "op": "case",
+        "case": "named-window-udf"
+      },
+      {
+        "op": "deploy",
+        "case": "named-window-udf",
+        "statement": "s0",
+        "epl": "create window MyWindowSNW#unique(p00)#keepall as SupportBean_S0;\n@name('s0') select * from pattern[SupportBean_S1(supportSingleRowFunction((select * from MyWindowSNW)))];\n"
+      },
+      {
+        "op": "send",
+        "case": "named-window-udf",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "named-window-udf"
+      },
+      {
+        "op": "case",
+        "case": "noalias-pattern-lastevent"
+      },
+      {
+        "op": "deploy",
+        "case": "noalias-pattern-lastevent",
+        "statement": "s0",
+        "epl": "@name('s0') select s.id as myid from pattern [every s=SupportBean_S0(p00 in (select p10 from SupportBean_S1#lastevent))]"
+      },
+      {
+        "op": "send",
+        "case": "noalias-pattern-lastevent",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "A"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-pattern-lastevent",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 2,
+          "p10": "A"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-pattern-lastevent",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 3,
+          "p00": "B"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-pattern-lastevent",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 4,
+          "p10": "C"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-pattern-lastevent",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 5,
+          "p00": "C"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-pattern-lastevent",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 6,
+          "p00": "A"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-pattern-lastevent",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 7,
+          "p00": "D"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-pattern-lastevent",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 8,
+          "p10": "E"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-pattern-lastevent",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 9,
+          "p00": "C"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-pattern-lastevent",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "E"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "noalias-pattern-lastevent"
+      },
+      {
+        "op": "case",
+        "case": "noalias-filter-lastevent"
+      },
+      {
+        "op": "deploy",
+        "case": "noalias-filter-lastevent",
+        "statement": "s0",
+        "epl": "@name('s0') select id as myid from SupportBean_S0(p00 in (select p10 from SupportBean_S1#lastevent))"
+      },
+      {
+        "op": "send",
+        "case": "noalias-filter-lastevent",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "A"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-filter-lastevent",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 2,
+          "p10": "A"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-filter-lastevent",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 3,
+          "p00": "B"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-filter-lastevent",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 4,
+          "p10": "C"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-filter-lastevent",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 5,
+          "p00": "C"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-filter-lastevent",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 6,
+          "p00": "A"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-filter-lastevent",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 7,
+          "p00": "D"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-filter-lastevent",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 8,
+          "p10": "E"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-filter-lastevent",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 9,
+          "p00": "C"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-filter-lastevent",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "E"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "noalias-filter-lastevent"
+      },
+      {
+        "op": "case",
+        "case": "noalias-filter-named-window"
+      },
+      {
+        "op": "deploy",
+        "case": "noalias-filter-named-window",
+        "statement": "s0",
+        "epl": "create window MyS1Window#lastevent as select * from SupportBean_S1;\ninsert into MyS1Window select * from SupportBean_S1;\n@name('s0') select id as myid from SupportBean_S0(p00 in (select p10 from MyS1Window))"
+      },
+      {
+        "op": "send",
+        "case": "noalias-filter-named-window",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "A"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-filter-named-window",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 2,
+          "p10": "A"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-filter-named-window",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 3,
+          "p00": "B"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-filter-named-window",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 4,
+          "p10": "C"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-filter-named-window",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 5,
+          "p00": "C"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-filter-named-window",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 6,
+          "p00": "A"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-filter-named-window",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 7,
+          "p00": "D"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-filter-named-window",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 8,
+          "p10": "E"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-filter-named-window",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 9,
+          "p00": "C"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-filter-named-window",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "E"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "noalias-filter-named-window"
+      },
+      {
+        "op": "case",
+        "case": "noalias-pattern-named-window"
+      },
+      {
+        "op": "deploy",
+        "case": "noalias-pattern-named-window",
+        "statement": "s0",
+        "epl": "create window MyS1Window#lastevent as select * from SupportBean_S1;\ninsert into MyS1Window select * from SupportBean_S1;\n@name('s0') select s.id as myid from pattern [every s=SupportBean_S0(p00 in (select p10 from MyS1Window))];\n"
+      },
+      {
+        "op": "send",
+        "case": "noalias-pattern-named-window",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "A"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-pattern-named-window",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 2,
+          "p10": "A"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-pattern-named-window",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 3,
+          "p00": "B"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-pattern-named-window",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 4,
+          "p10": "C"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-pattern-named-window",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 5,
+          "p00": "C"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-pattern-named-window",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 6,
+          "p00": "A"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-pattern-named-window",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 7,
+          "p00": "D"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-pattern-named-window",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 8,
+          "p10": "E"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-pattern-named-window",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 9,
+          "p00": "C"
+        }
+      },
+      {
+        "op": "send",
+        "case": "noalias-pattern-named-window",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "E"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "noalias-pattern-named-window"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-subselect-within-pattern-574",
+    "records": [
+      {
+        "case": "correlated-pattern-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-pattern-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-pattern-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 9
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-filter-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-filter-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-filter-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 9
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-followed-by-scalar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": "Y+B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 1,
+              "p00": {
+                "state": "null"
+              },
+              "p01": {
+                "state": "null"
+              },
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 4,
+              "p00": {
+                "state": "null"
+              },
+              "p01": {
+                "state": "null"
+              },
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 13,
+              "p00": {
+                "state": "null"
+              },
+              "p01": {
+                "state": "null"
+              },
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-window-udf",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "noalias-pattern-lastevent",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "noalias-pattern-lastevent",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "noalias-filter-lastevent",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "noalias-filter-lastevent",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "noalias-filter-named-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "noalias-filter-named-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "noalias-pattern-named-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "noalias-pattern-named-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 10
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-subselect-within-pattern-574",
+    "records": [
+      {
+        "case": "correlated-pattern-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-pattern-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-pattern-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 9
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-filter-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-filter-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-filter-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 9
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-followed-by-scalar",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": "Y+B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 1,
+              "p00": {
+                "state": "null"
+              },
+              "p01": {
+                "state": "null"
+              },
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 4,
+              "p00": {
+                "state": "null"
+              },
+              "p01": {
+                "state": "null"
+              },
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 13,
+              "p00": {
+                "state": "null"
+              },
+              "p01": {
+                "state": "null"
+              },
+              "p02": {
+                "state": "null"
+              },
+              "p03": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-window-udf",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "noalias-pattern-lastevent",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "noalias-pattern-lastevent",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "noalias-filter-lastevent",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "noalias-filter-lastevent",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "noalias-filter-named-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "noalias-filter-named-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "noalias-pattern-named-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "noalias-pattern-named-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myid": 10
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

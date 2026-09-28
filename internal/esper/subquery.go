@@ -2353,7 +2353,13 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 				Now:                  now,
 				Variables:            outer.Variables,
 				Parameters:           outer.Parameters,
-				aggregateEvaluation:  true,
+				// The subquery runs inside the enclosing statement's scope:
+				// pattern-limb filters may correlate inner WHERE expressions to
+				// tags bound earlier in the enclosing pattern.
+				PreviousTagEvents:   outer.PreviousTagEvents,
+				Tags:                outer.Tags,
+				TagValues:           outer.TagValues,
+				aggregateEvaluation: true,
 			}
 			if definition.grouped {
 				if definition.predicate != nil {
@@ -2417,6 +2423,9 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 					Now:                  now,
 					Variables:            outer.Variables,
 					Parameters:           outer.Parameters,
+					PreviousTagEvents:    outer.PreviousTagEvents,
+					Tags:                 outer.Tags,
+					TagValues:            outer.TagValues,
 				}))
 				if ok && matched {
 					filtered = append(filtered, event)
@@ -2436,6 +2445,9 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 			Now:                 now,
 			Variables:           outer.Variables,
 			Parameters:          outer.Parameters,
+			PreviousTagEvents:   outer.PreviousTagEvents,
+			Tags:                outer.Tags,
+			TagValues:           outer.TagValues,
 			aggregateEvaluation: true,
 		}
 		if len(aggregateGroup) > 0 {
@@ -2556,17 +2568,20 @@ func evaluateSubqueryGroups(definition *subqueryDefinition, candidates []subquer
 	values := make([]Value, 0, len(groups))
 	for _, group := range groups {
 		evaluation := EvalContext{
-			Engine:       engine,
-			JoinEvents:   append([]Event(nil), outer.JoinEvents...),
-			OuterEvent:   subqueryEnclosingEvent(outer),
-			Group:        group.events,
-			EverGroup:    group.events,
-			AllGroup:     group.events,
-			AllEverGroup: group.events,
-			History:      group.events,
-			Now:          now,
-			Variables:    outer.Variables,
-			Parameters:   outer.Parameters,
+			Engine:            engine,
+			JoinEvents:        append([]Event(nil), outer.JoinEvents...),
+			OuterEvent:        subqueryEnclosingEvent(outer),
+			Group:             group.events,
+			EverGroup:         group.events,
+			AllGroup:          group.events,
+			AllEverGroup:      group.events,
+			History:           group.events,
+			Now:               now,
+			Variables:         outer.Variables,
+			Parameters:        outer.Parameters,
+			PreviousTagEvents: outer.PreviousTagEvents,
+			Tags:              outer.Tags,
+			TagValues:         outer.TagValues,
 		}
 		if len(group.events) > 0 {
 			evaluation.Event = group.events[len(group.events)-1]

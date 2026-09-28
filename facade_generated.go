@@ -5480,6 +5480,13 @@ func PatternEvent(tag string) Expression[Event] {
 	return internalengine.PatternEvent(tag)
 }
 
+// PatternFrom starts an event-pattern atom over the stream. A non-empty tag
+// binds the matched event to that name (Esper's `name=Stream(filter)`); an
+// empty or whitespace tag creates an untagged atom (Esper's `Stream(filter)`)
+// that participates in the NFA but binds nothing, so select * over a wholly
+// untagged pattern projects an empty row. The predicate is required; a nil
+// predicate leaves the stream without a pattern step and Build reports
+// "pattern requires at least one step".
 func PatternFrom[T any](stream Stream[T], tag string, predicate Expression[bool]) PatternStream {
 	return internalengine.PatternFrom[T](stream, tag, predicate)
 }
@@ -5487,7 +5494,8 @@ func PatternFrom[T any](stream Stream[T], tag string, predicate Expression[bool]
 // PatternFromRecord is the dynamic-source counterpart to PatternFrom. It is
 // useful for Named Window and schema-driven sources whose Go event type is not
 // available at the call site; the predicate is still analyzed against the
-// source schema during Build.
+// source schema during Build. An empty tag creates an untagged atom exactly
+// like PatternFrom.
 func PatternFromRecord(stream RecordStream, tag string, predicate Expression[bool]) PatternStream {
 	return internalengine.PatternFromRecord(stream, tag, predicate)
 }
