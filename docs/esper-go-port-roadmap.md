@@ -1,4 +1,15 @@
 
+
+> 最新补充：Draft 4.593（2026-09-29），`pattern.basic` 的 `case.pattern-every` 补全固定 Java
+> `PatternObserverTimerInterval.java` ord 7 `PatternIntervalSpecExpressionWithPropertyArray`
+>（`java-runtime-6155a2b0181e2169f2a4`，static `java-1422565b568236b2bfea`，无 flags；
+> Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）——`[2] a=SupportBean ->
+> timer:interval(a[0].intPrimitive+a[1].intPrimitive seconds)` 的 repeated-tag "property array"
+> 区间 spec：arm 时求值一次（TimerIntervalObserverFactory computeDelta(beginState)），
+> E1(3)+E2(2) 在 t=10000 完成 repeat、手臂 5000ms，14999 静默、15000 恰好一行
+> {a0id:E1,a1id:E2}。Java/Go 各 1 条 record、0 differences；纯 asset 单元，无引擎改动。
+> manifest 801 cases / 429 DV / 1746 DV runtime IDs / unreferenced 386；`PatternObserverTimerInterval`
+> 八个 execution 全部 DV 完毕。
 > 最新补充：Draft 4.592（2026-09-29），`pattern.basic` 的 `case.pattern-every` 补全固定 Java
 > `PatternObserverTimerInterval.java` ord0 `PatternOp`（`java-runtime-9b41fb5951301c0de979`，
 > static `java-1422565b568236b2bfea`，无 flags；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）——

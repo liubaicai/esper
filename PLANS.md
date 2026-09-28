@@ -44,8 +44,38 @@ activity or a single coverage percentage.
 
 
 
+## Previous work units (shipped)
+
+- Shipped: Draft 4.592 (timer-interval W-harness) committed and pushed as
+ df78702b7 + plan marker d2dabe48e.
+
 ## Current work unit
-Active: Draft 4.592 ('timer-interval 31-leg W-harness').
+Active: Draft 4.593 ('timer:interval property-array spec — PatternObserverTimerInterval ord7').
+
+- [x] Contract frozen (agents JavaContract593 + GoSurface593): ord7
+ PatternIntervalSpecExpressionWithPropertyArray, java-runtime-6155a2b0181e2169f2a4,
+ static java-1422565b568236b2bfea, no flags, Java commit 9e1b9f1cc9117f.
+ EPL: `@name('s0') select a[0].theString as a0id, a[1].theString as a1id from
+ pattern [ [2] a=SupportBean -> timer:interval(a[0].intPrimitive+a[1].intPrimitive seconds)]`.
+ Sequence: advance(0), deploy+listener, advance(10000), send E1(3), send E2(2)
+ (repeat completes, arms 5000ms once), advance(14999) silent, milestone(0)
+ no-step, advance(15000) one row {a0id:E1,a1id:E2}, undeployAll.
+ Go: PatternFrom(...).MatchUntil(2,2).Then(TimerIntervalExpr(base,
+ DurationSeconds[int](Add[int](TagFieldAt("a",0,"intPrimitive"),
+ TagFieldAt("a",1,"intPrimitive"))))); pure asset work, no engine gap.
+- [x] Assets: scenario testdata/parity/pattern-timer-interval-property-array-593.json
+ (1 case / 8 steps), runner internal/app/parity/pattern_timerinterval_property_array_593.go,
+ run.go wiring, oracle tools/java-oracle/PatternTimerIntervalPropertyArray593ScenarioOracle.java
+ + run-pattern-timerinterval-property-array-593.sh.
+- [x] Java trace /tmp/593-java-trace.json (1 record); Go trace byte-identical;
+ diff `pattern-timer-interval-property-array-593-diff` passing / 0 differences;
+ evidence testdata/parity/pattern-timer-interval-property-array-593.evidence.json.
+- [x] Manifest: case.pattern-every gains the runtime in
+ differentialVerifiedRuntimeIds (now 8) + four 593 goTests + evidence path;
+ summary recomputed (1746 DV runtime IDs, 3750 referenced, 386 unreferenced).
+- [x] Roadmap + CHANGELOG entries.
+- [ ] Gates, review, commit.
+
 
 - Contract frozen (JavaContract592 + GoSurface592): ord0
  PatternOp (java-runtime-9b41fb5951301c0de979, static

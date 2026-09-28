@@ -1,0 +1,115 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-6155a2b0181e2169f2a4"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternObserverTimerInterval.java",
+    "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java"
+  ],
+  "javaExecutions": [
+    "PatternIntervalSpecExpressionWithPropertyArray"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "pattern-timer-interval-property-array-593",
+    "steps": [
+      {
+        "op": "case",
+        "case": "property-array"
+      },
+      {
+        "op": "advance-time",
+        "case": "property-array",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deploy",
+        "case": "property-array",
+        "statement": "s0",
+        "epl": "@name('s0') select a[0].theString as a0id, a[1].theString as a1id from pattern [ [2] a=SupportBean -\u003e timer:interval(a[0].intPrimitive+a[1].intPrimitive seconds)]"
+      },
+      {
+        "op": "send",
+        "case": "property-array",
+        "eventType": "SupportBean",
+        "at": "1970-01-01T00:00:10Z",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "property-array",
+        "eventType": "SupportBean",
+        "at": "1970-01-01T00:00:10Z",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "property-array",
+        "at": "1970-01-01T00:00:14.999Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "property-array",
+        "at": "1970-01-01T00:00:15Z"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "property-array"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-timer-interval-property-array-593",
+    "records": [
+      {
+        "case": "property-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:15Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a0id": "E1",
+              "a1id": "E2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-timer-interval-property-array-593",
+    "records": [
+      {
+        "case": "property-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:15Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a0id": "E1",
+              "a1id": "E2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

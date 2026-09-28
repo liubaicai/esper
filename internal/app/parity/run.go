@@ -589,6 +589,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadPatternMatchUntilRepeatTags587Scenario(file)
 	} else if *mode == "pattern-timer-interval-forms-591" || *mode == "pattern-timer-interval-forms-591-diff" {
 		scenario, err = loadPatternTimerIntervalForms591Scenario(file)
+	} else if *mode == "pattern-timer-interval-property-array-593" || *mode == "pattern-timer-interval-property-array-593-diff" {
+		scenario, err = loadPatternTimerIntervalPropertyArray593Scenario(file)
 	} else if *mode == "epl-contained-event-example" || *mode == "epl-contained-event-example-diff" {
 		scenario, err = loadEPLContainedEventExampleScenario(file)
 	} else if *mode == "epl-other-pattern-event-properties" || *mode == "epl-other-pattern-event-properties-diff" {
@@ -2886,6 +2888,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaSourceFiles, patternTimerIntervalWHarness592JavaSources),
 				splitMetadata(*javaExecutions, patternTimerIntervalWHarness592JavaExecutions), scenario, trace,
 				sortPatternTimerIntervalWHarness592Records)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "pattern-timer-interval-property-array-593" || *mode == "pattern-timer-interval-property-array-593-diff" {
+		trace, err := runPatternTimerIntervalPropertyArray593Scenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "pattern-timer-interval-property-array-593-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, patternTimerIntervalPropertyArray593JavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, patternTimerIntervalPropertyArray593JavaSources),
+				splitMetadata(*javaExecutions, patternTimerIntervalPropertyArray593JavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

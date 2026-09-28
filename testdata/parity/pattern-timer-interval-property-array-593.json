@@ -1,0 +1,44 @@
+{
+"version": "esper-parity/v1",
+"id": "pattern-timer-interval-property-array-593",
+"description": "PatternObserverTimerInterval ord 7 (PatternIntervalSpecExpressionWithPropertyArray) — timer:interval with a duration expression over the repeated-tag array `[2] a=SupportBean`: advanceTime(0), deploy `@name('s0') select a[0].theString as a0id, a[1].theString as a1id from pattern [ [2] a=SupportBean -> timer:interval(a[0].intPrimitive+a[1].intPrimitive seconds)]`, advanceTime(10000), send SupportBean E1 (intPrimitive=3 — first element captured, observer NOT armed), send SupportBean E2 (intPrimitive=2 — repeat completes, arms 3+2=5s once at the completion instant), advanceTime(14999) silent, milestone(0) savepoint (no step), advanceTime(15000) fires one row {a0id:E1,a1id:E2}, undeployAll. One-shot: no `every`, so the followed-by match completes and the pattern terminates.",
+"javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+"javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternObserverTimerInterval.java",
+"javaSourceFiles": [
+"regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternObserverTimerInterval.java",
+"common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java"
+],
+"javaRuntimes": [
+"java-runtime-6155a2b0181e2169f2a4"
+],
+"javaNames": [
+"PatternIntervalSpecExpressionWithPropertyArray"
+],
+"javaStaticIds": [
+"java-1422565b568236b2bfea"
+],
+"javaFlags": [
+],
+"cases": [
+{
+"case": "property-array",
+"ordinal": 7,
+"runtimeId": "java-runtime-6155a2b0181e2169f2a4",
+"executionName": "PatternIntervalSpecExpressionWithPropertyArray",
+"observation": "dynamic-interval",
+"epls": [
+"@name('s0') select a[0].theString as a0id, a[1].theString as a1id from pattern [ [2] a=SupportBean -> timer:interval(a[0].intPrimitive+a[1].intPrimitive seconds)]"
+]
+}
+],
+"steps": [
+{"op": "case", "case": "property-array"},
+{"op": "advance-time", "case": "property-array", "at": "1970-01-01T00:00:00Z"},
+{"op": "deploy", "case": "property-array", "statement": "s0", "epl": "@name('s0') select a[0].theString as a0id, a[1].theString as a1id from pattern [ [2] a=SupportBean -> timer:interval(a[0].intPrimitive+a[1].intPrimitive seconds)]"},
+{"op": "send", "case": "property-array", "at": "1970-01-01T00:00:10Z", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 3}},
+{"op": "send", "case": "property-array", "at": "1970-01-01T00:00:10Z", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+{"op": "advance-time", "case": "property-array", "at": "1970-01-01T00:00:14.999Z"},
+{"op": "advance-time", "case": "property-array", "at": "1970-01-01T00:00:15Z"},
+{"op": "undeploy-all", "case": "property-array"}
+]
+}

@@ -1,0 +1,1 @@
+{"version":"esper-parity/v1","id":"pattern-timer-interval-property-array-593","records":[{"case":"property-array","operation":"listener","statement":"s0","sequence":1,"time":"1970-01-01T00:00:15Z","new":[{"kind":"row","fields":{"a0id":"E1","a1id":"E2"}}]}]}
