@@ -1,0 +1,23 @@
+{
+ "version": "esper-parity/v1",
+ "id": "pattern-followedby-timer-584",
+ "description": "PatternOperatorFollowedBy ord 2 PatternFollowedByTimer — `every A=SupportCallEvent -> every B=SupportCallEvent(dest=A.dest, startTime in [A.startTime:A.endTime]) where timer:within (7200000)` plus the statement-level `where B.source != A.source` post-filter (byte-exact: `)]where` has NO space, `timer:within (7200000)` keeps its space). Three SupportCallEvent sends carry RELATIVE millisecond offsets (Java's dateToLong is timezone-dependent): e1(callId 2000002601, source 18, 0/41200) arms an every-A branch with no fire, e2(2000002607, source 20, 24100/65400) completes it — one record {A:e1,B:e2} — and e3(2000002610, source 22, 38100/78900) falls inside BOTH armed windows ([0:41200] and [24100:65400]), delivering ONE listener invocation carrying TWO rows [{A:e1,B:e3},{A:e2,B:e3}] (Java pins getNewDataList().size()==1 and getLastNewData().length==2). No clock ops: the timer:within guard never binds. select * projects both the A and B bean fragments (assertSame identity in Java; the five-property SupportCallEvent row shape in the trace).",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorFollowedBy.java",
+ "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorFollowedBy.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportCallEvent.java"],
+ "javaRuntimes": ["java-runtime-4759bc801b8c0be6c10a"],
+ "javaNames": ["PatternFollowedByTimer"],
+ "javaStaticIds": ["java-b96c718a6895cd0d80de"],
+ "javaFlags": [],
+ "cases": [
+  {"case": "timer", "ordinal": 2, "runtimeId": "java-runtime-4759bc801b8c0be6c10a", "executionName": "PatternFollowedByTimer", "observation": "listener; no clock ops (timer:within(7200000) never binds over the ~79s payload span); `every A -> every B(dest=A.dest, startTime in [A.startTime:A.endTime]) where timer:within (7200000)` + statement `where B.source != A.source`: e1 arms a branch, e2 delivers ONE record {A:e1,B:e2}, e3 falls inside both windows and delivers ONE invocation carrying TWO rows [{A:e1,B:e3},{A:e2,B:e3}] (Java pins getNewDataList().size()==1 and getLastNewData().length==2); select * projects both A and B fragments", "epl": "@name('s0') select * from pattern [every A=SupportCallEvent -> every B=SupportCallEvent(dest=A.dest, startTime in [A.startTime:A.endTime]) where timer:within (7200000)]where B.source != A.source"}
+ ],
+ "steps": [
+  {"op": "case", "case": "timer"},
+  {"op": "deploy", "case": "timer", "statement": "s0", "epl": "@name('s0') select * from pattern [every A=SupportCallEvent -> every B=SupportCallEvent(dest=A.dest, startTime in [A.startTime:A.endTime]) where timer:within (7200000)]where B.source != A.source"},
+  {"op": "send", "case": "timer", "eventType": "SupportCallEvent", "payload": {"callId": 2000002601, "source": "18", "dest": "123456789014795", "startTime": 0, "endTime": 41200}},
+  {"op": "send", "case": "timer", "eventType": "SupportCallEvent", "payload": {"callId": 2000002607, "source": "20", "dest": "123456789014795", "startTime": 24100, "endTime": 65400}},
+  {"op": "send", "case": "timer", "eventType": "SupportCallEvent", "payload": {"callId": 2000002610, "source": "22", "dest": "123456789014795", "startTime": 38100, "endTime": 78900}},
+  {"op": "undeploy-all", "case": "timer"}
+ ]
+}

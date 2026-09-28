@@ -343,7 +343,8 @@ func TestPatternFollowedByWithNotMatchesEsper(t *testing.T) {
 
 // TestPatternFollowedByTimerMatchesEsper covers PatternFollowedByTimer: every
 // A=SupportCallEvent -> every B=SupportCallEvent(dest=A.dest, startTime in
-// [A.startTime:A.endTime]) where timer:within (7200000), plus the
+// [A.startTime:A.endTime]) where timer:within (7200000) — seconds
+// under the pattern observer time abacus (~83 days, never binds here) — plus the
 // statement-level where B.source != A.source filter. Each later call pairs
 // with every earlier call whose window covers its start time.
 func TestPatternFollowedByTimerMatchesEsper(t *testing.T) {
@@ -359,7 +360,7 @@ func TestPatternFollowedByTimerMatchesEsper(t *testing.T) {
 		PatternFrom(call, "B", And(
 			Equal[string](Field[patternFollowedByCall, string]("dest"), TagField[string]("A", "dest")),
 			Between[int64](Field[patternFollowedByCall, int64]("startTime"), TagField[int64]("A", "startTime"), TagField[int64]("A", "endTime")),
-		)).Every().Within(7200000 * time.Millisecond),
+		)).Every().Within(7200000 * time.Second),
 	)
 	plan, err := env.Build(pattern.Select(
 		Alias("aId", TagField[int64]("A", "callId")),

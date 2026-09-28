@@ -45,33 +45,34 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.583 ('followed-by W-harness — ord0, 16 legs').
+Active: Draft 4.584 ('followed-by ord2 — file closer').
 
-- Contract frozen (JavaContract583 + GoSurface583):
-  PatternOpWHarness (java-runtime-d896ea164e3cebd5c27e, per-ord
-  static id java-971bf7dfac84756cdd0a, file dedup
-  java-089b2086c9945dff918f, flags []). EventCollectionFactory
-  getEventSetOne(0,1000): A1..D3 mixed set at +1000ms steps, 16 legs
-  covering or-not/ThenMax bounds/every fan-out/nested every/vacant-
-  right, multiset compare per trigger event, legs 10/15/16 carry
-  DUPLICATED rows (Java multiplicity). Go: all 16 encoded in
-  TestPatternOperatorFollowedByWHarnessMatchesEsper; gaps: identity
-  vs flattened id assertions, vacant-null rendering.
-  ord2 (CallEvent timer:within) deferred to its own micro-unit.
-- [x] Assets583 delivered + integrated: Java trace 29 records, Go
-  replay 29 (one case x16 legs, 43 steps), `-diff` passing / 0
-  differences; evidence + traces checked in. Legs 10/15/16
-  duplicated-row multiplicity and vacant-d nulls verified. Worker
-  found + normalized LIFO per-send listener dispatch (Java reverse
-  deploy order vs Go deploy order — runner buffers/re-emits);
-  reviewer to rule on normalization vs divergence.
-- [x] Manifest: case +1 DV ID (9/10). Summary -> 426 DV cases /
-  1725 DV runtime IDs.
+- Contract frozen (JavaContract584 + GoSurface584):
+  PatternFollowedByTimer (java-runtime-4759bc801b8c0be6c10a, per-ord
+  static java-b96c718a6895cd0d80de, flags []). Byte-exact EPL incl.
+  `)]where` no-space + `timer:within (7200000)` space; correlated
+  range-in `startTime in [A.startTime:A.endTime]` (Between int64,
+  reversed bounds normalized); `every B ... where timer:within` maps
+  to Every().Within (guard wraps every-leg); statement `where` =
+  PatternQuery.Where (suppression path UNEXERCISED — all sources
+  distinct); select * -> a+b fragments; dateToLong TZ-relative
+  offsets frozen (0/41200, 24100/65400, 38100/78900); expected 1+2
+  fires, e3 -> ONE delivery TWO rows.
+- [x] Assets584 delivered + integrated: Java trace 2 records, Go
+  replay 2 (e3 ONE delivery TWO rows), `-diff` passing / 0
+  differences; evidence + traces checked in.
+- [x] Manifest: case +1 DV ID = 10/10 FILE CLOSED; capability
+  pattern.operator-followed-by goRefs extended (status stays
+  implemented — remaining entries are out-of-scope harness styles).
+  Summary -> 426 DV cases / 1726 DV runtime IDs.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev583 + JavaContract584 + GoSurface584 dispatched.
+- [x] ParityRev584 + JavaContract585 + GoSurface585 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.583 ('followed-by W-harness') committed and
+  pushed as `151d8327a`; Git owns identity. case 9/10 DV; review
+  PASS (clean; LIFO normalization ruled faithful).
 - Shipped: Draft 4.582 ('followed-by chain pair') committed and
   pushed as `c19d843a4`; Git owns identity. case 8/10 DV; review
   PASS (2 P3s fixed).
