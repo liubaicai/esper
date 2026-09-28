@@ -24863,7 +24863,11 @@
     "TestPatternFollowedNotEveryMatchesEsper",
     "TestPatternFollowedEveryMultipleMatchesEsper",
     "TestPatternFilterGreaterThenMatchesEsper",
-    "TestPatternFollowedOrPermFalseMatchesEsper"
+    "TestPatternFollowedOrPermFalseMatchesEsper",
+    "internal/app/parity/pattern_followedby_rfid_580_test.go/TestRunPatternFollowedByRFID580ScenarioReplay",
+    "internal/app/parity/pattern_followedby_rfid_580_test.go/TestRunPatternFollowedByRFID580PinnedArtifacts",
+    "internal/app/parity/pattern_followedby_rfid_580_test.go/TestRunPatternFollowedByRFID580RejectsMalformedRawScenario",
+    "internal/app/parity/pattern_followedby_rfid_580_test.go/TestRunPatternFollowedByRFID580RuntimeIDMappingMatchesScenario"
    ],
    "tags": [
     "correctness",
@@ -24876,16 +24880,24 @@
     "within",
     "correlation"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
     "java-runtime-inventory",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/pattern-followedby-rfid-580.evidence.json"
    ],
    "difference": "Go parity tests replay the exact W-harness match sequences validated against the live Java engine (16 cases including the four-fire every (every a -> every b) B3 multiplicity, spawn-fired b -> (d or not d) with vacant d=null, and retained done-sequences that re-fire per fresh every-leg completion). ThenMax exposes bounded -[N]> edges with composite right sides; PatternQuery.Where is the fluent counterpart of the statement-level where after from pattern [...]. Harness consume/discard style and object-model round-trip styles are out of fluent-API scope.",
    "verification": [
     "inventoried",
-    "implemented"
-   ]
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-a477964502f64fe1b368",
+    "java-runtime-f8ac45e337f93e276ac3",
+    "java-runtime-6a045f5ae813471b32e8"
+   ],
+   "notes": " Draft 4.580: RFID trio ords 3/4/5 DV (4 records: memory-rfid zero-fire correlated not-cancel, zone-exit dup-cancel + per-mac isolation, zone-enter TagField(a,zoneID) conjunct + repeat-cancel; select * projects both a+b fragments). 3/10 ords DV."
   },
   {
    "id": "case.pattern-operator-and-or-harness",
@@ -55419,8 +55431,8 @@
  "summary": {
   "inventoriedCases": 801,
   "implementedCases": 799,
-  "differentialVerifiedCases": 425,
-  "differentialVerifiedRuntimeIds": 1716,
+  "differentialVerifiedCases": 426,
+  "differentialVerifiedRuntimeIds": 1719,
   "intentionallyDifferentCases": 40,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,

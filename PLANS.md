@@ -45,31 +45,36 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.579 ('everydistinct follow-up triplet — file closer').
+Active: Draft 4.580 ('pattern followed-by RFID trio').
 
-- Contract frozen (JavaContract579 + GoSurface579): static
-  java-073091a0b42ca8dd974f, ords 3/13/15 — OverFilter
-  (java-runtime-7d52c9e689e3eeca65d7, unqualified intPrimitive key,
-  x2 legs; eplToModel tail excluded per SODA precedent),
-  FollowedByWithDistinct (java-runtime-0fe853af533719599512,
-  per-branch right keysets: B fires on EACH retained left branch,
-  B7 two-row fan-out discriminant; leg B expiry on LEFT distinct
-  only), MonthScoped (java-runtime-d211795c3ecad71c297a,
-  EveryDistinctForCalendar(0,1,0) Feb1->Mar1 boundary, 1ms-before
-  silent + exact-mark fire). GoSurface: minor infidelity found —
-  existing Go expiry test applies expiry to BOTH sides; DV leg must
-  expire LEFT only per Java leg B.
-- [x] Assets579 delivered + integrated: Java trace 20 records, Go
-  replay 20 (5 cases), `-diff` passing / 0 differences; evidence +
-  traces checked in. B7 single-record two-row fan-out, left-only
-  expiry, month-boundary at exact mark verified.
-- [x] Manifest: case +3 DV IDs (16/17 — only ord14 compile-only
-  remains). Summary -> 425 DV / 1716 DV runtime IDs.
-- [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev579 + JavaContract580 + GoSurface580 dispatched.
+- Contract frozen (JavaContract580 + GoSurface580):
+  case.pattern-operator-followed-by — PatternOperatorFollowedBy
+  static java-089b2086c9945dff918f (NOT the everydistinct id), ords
+  3/4/5: PatternMemoryRFIDEvent (java-runtime-a477964502f64fe1b368,
+  every tagMayBeBroken -> (timer:interval(10 sec) and not same-mac);
+  10 same-mac pairs -> 0 fires), PatternRFIDZoneExit
+  (java-runtime-f8ac45e337f93e276ac3, zone '1'->!='1' with not-same-mac
+  -zone-1 cancel; 2 fires), PatternRFIDZoneEnter
+  (java-runtime-6a045f5ae813471b32e8, zone !='1'->'1' with not-
+  same-mac-same-zone cancel — second conjunct is zoneID=a.zoneID
+  TAG value not constant). SupportRFIDEvent(mac,zoneID) harness, no
+  clock, milestone-only splits. zoneID capital-ID property pin.
+- [x] Assets580 delivered + integrated: Java trace 4 records, Go
+  replay 4 (ord3 zero-record case carried), `-diff` passing / 0
+  differences; evidence + traces checked in. Worker corrected the
+  draft: `select *` projects BOTH a+b fragments (javac probe).
+- [x] Manifest: case +3 DV IDs + status -> differential-verified;
+  summary resynced -> 426 DV cases / 1719 DV runtime IDs (the
+  post-status resync caught a +1 the earlier script missed).
+- [x] Gates: `make check` GREEN (exit 0) after status promotion +
+  summary resync.
+- [x] ParityRev580 + JavaContract581 + GoSurface581 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.579 ('everydistinct follow-up triplet') committed
+  and pushed as `3fc86a883`; Git owns identity. case closed to 16/17
+  DV (20 records, 0 differences); review PASS (1 P3).
 - Shipped: Draft 4.578 ('everydistinct nested quintet') committed
   and pushed as `3dd21924f`; Git owns identity. case extended to
   13/17 DV (22 records, 0 differences) + ords 5/7 dual association;

@@ -1,0 +1,73 @@
+{
+ "version": "esper-parity/v1",
+ "id": "pattern-followedby-rfid-580",
+ "description": "PatternOperatorFollowedBy ords 3, 4 and 5 — the RFID trio: every-then followed-by with a per-branch correlated `and not` terminator over SupportRFIDEvent(mac,zoneID). memory-rfid (PatternMemoryRFIDEvent, ord 3) sends ten identical (a,111) pairs: each repeat cancels the pending same-mac branch before timer:interval(10 sec) can elapse, so the missing-heartbeat alert NEVER fires — zero listener records. zone-exit (PatternRFIDZoneExit, ord 4) arms an exit watch on zone-1 reports: (a,1) arms silently, (a,2) fires, (b,1) arms, the duplicate (b,1) cancels and re-arms only its own mac branch, (b,2) fires — 2 rows with per-mac branch isolation. zone-enter (PatternRFIDZoneEnter, ord 5) mirrors it with the not-conjunct keyed on TagField(a,zoneID) rather than a constant: (a,2) arms, (a,1) fires, (b,2) arms, the repeat (b,2) cancels the (b,2)-armed watch, (b,1) fires — 2 rows. select * on ords 4/5 projects every bound tag — both the a and b SupportRFIDEvent beans per Java fragment semantics. All milestone() savepoints are harness splits restoring identical state and are unrepresented; no clock ops exist (the 10-second timer never elapses).",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorFollowedBy.java",
+ "javaSourceFiles": [
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorFollowedBy.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportRFIDEvent.java"
+ ],
+ "javaRuntimes": [
+  "java-runtime-a477964502f64fe1b368",
+  "java-runtime-f8ac45e337f93e276ac3",
+  "java-runtime-6a045f5ae813471b32e8"
+ ],
+ "javaNames": [
+  "PatternMemoryRFIDEvent",
+  "PatternRFIDZoneExit",
+  "PatternRFIDZoneEnter"
+ ],
+ "javaStaticIds": [
+  "java-089b2086c9945dff918f",
+  "java-089b2086c9945dff918f",
+  "java-089b2086c9945dff918f"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {"case": "memory-rfid", "ordinal": 3, "runtimeId": "java-runtime-a477964502f64fe1b368", "executionName": "PatternMemoryRFIDEvent", "observation": "listener never invoked; no clock ops; `every tagMayBeBroken -> (timer:interval(10 sec) and not SupportRFIDEvent(mac=tagMayBeBroken.mac))`: ten identical (a,111) pairs — each repeat cancels the pending same-mac branch before the timer elapses — ZERO listener records", "epl": "@name('s0') select 'Tag May Be Broken' as alert, tagMayBeBroken.mac, tagMayBeBroken.zoneID from pattern [every tagMayBeBroken=SupportRFIDEvent -> (timer:interval(10 sec) and not SupportRFIDEvent(mac=tagMayBeBroken.mac))]"},
+  {"case": "zone-exit", "ordinal": 4, "runtimeId": "java-runtime-f8ac45e337f93e276ac3", "executionName": "PatternRFIDZoneExit", "observation": "listener; no clock; `every a=(zoneID='1') -> (b=(mac=a.mac,zoneID!='1') and not (mac=a.mac,zoneID='1'))`: (a,1) arms silently, (a,2) fires, (b,1) arms, duplicate (b,1) cancels and re-arms only its own mac branch, (b,2) fires — 2 rows, select * delivers both a and b RFID fragments", "epl": "@name('s0') select * from pattern [every a=SupportRFIDEvent(zoneID='1') -> (b=SupportRFIDEvent(mac=a.mac,zoneID!='1') and not SupportRFIDEvent(mac=a.mac,zoneID='1'))]"},
+  {"case": "zone-enter", "ordinal": 5, "runtimeId": "java-runtime-6a045f5ae813471b32e8", "executionName": "PatternRFIDZoneEnter", "observation": "listener; no clock; `every a=(zoneID!='1') -> (b=(mac=a.mac,zoneID='1') and not (mac=a.mac,zoneID=a.zoneID))` — the not-conjunct is TagField(a,zoneID), not a constant: (a,2) arms, (a,1) fires, (b,2) arms, repeat (b,2) cancels the armed watch, (b,1) fires — 2 rows, select * delivers both a and b RFID fragments", "epl": "@name('s0') select * from pattern [every a=SupportRFIDEvent(zoneID!='1') -> (b=SupportRFIDEvent(mac=a.mac,zoneID='1') and not SupportRFIDEvent(mac=a.mac,zoneID=a.zoneID))]"}
+ ],
+ "steps": [
+  {"op": "case", "case": "memory-rfid"},
+  {"op": "deploy", "case": "memory-rfid", "statement": "s0", "epl": "@name('s0') select 'Tag May Be Broken' as alert, tagMayBeBroken.mac, tagMayBeBroken.zoneID from pattern [every tagMayBeBroken=SupportRFIDEvent -> (timer:interval(10 sec) and not SupportRFIDEvent(mac=tagMayBeBroken.mac))]"},
+  {"op": "send", "case": "memory-rfid", "eventType": "SupportRFIDEvent", "payload": {"mac": "a", "zoneID": "111"}},
+  {"op": "send", "case": "memory-rfid", "eventType": "SupportRFIDEvent", "payload": {"mac": "a", "zoneID": "111"}},
+  {"op": "send", "case": "memory-rfid", "eventType": "SupportRFIDEvent", "payload": {"mac": "a", "zoneID": "111"}},
+  {"op": "send", "case": "memory-rfid", "eventType": "SupportRFIDEvent", "payload": {"mac": "a", "zoneID": "111"}},
+  {"op": "send", "case": "memory-rfid", "eventType": "SupportRFIDEvent", "payload": {"mac": "a", "zoneID": "111"}},
+  {"op": "send", "case": "memory-rfid", "eventType": "SupportRFIDEvent", "payload": {"mac": "a", "zoneID": "111"}},
+  {"op": "send", "case": "memory-rfid", "eventType": "SupportRFIDEvent", "payload": {"mac": "a", "zoneID": "111"}},
+  {"op": "send", "case": "memory-rfid", "eventType": "SupportRFIDEvent", "payload": {"mac": "a", "zoneID": "111"}},
+  {"op": "send", "case": "memory-rfid", "eventType": "SupportRFIDEvent", "payload": {"mac": "a", "zoneID": "111"}},
+  {"op": "send", "case": "memory-rfid", "eventType": "SupportRFIDEvent", "payload": {"mac": "a", "zoneID": "111"}},
+  {"op": "send", "case": "memory-rfid", "eventType": "SupportRFIDEvent", "payload": {"mac": "a", "zoneID": "111"}},
+  {"op": "send", "case": "memory-rfid", "eventType": "SupportRFIDEvent", "payload": {"mac": "a", "zoneID": "111"}},
+  {"op": "send", "case": "memory-rfid", "eventType": "SupportRFIDEvent", "payload": {"mac": "a", "zoneID": "111"}},
+  {"op": "send", "case": "memory-rfid", "eventType": "SupportRFIDEvent", "payload": {"mac": "a", "zoneID": "111"}},
+  {"op": "send", "case": "memory-rfid", "eventType": "SupportRFIDEvent", "payload": {"mac": "a", "zoneID": "111"}},
+  {"op": "send", "case": "memory-rfid", "eventType": "SupportRFIDEvent", "payload": {"mac": "a", "zoneID": "111"}},
+  {"op": "send", "case": "memory-rfid", "eventType": "SupportRFIDEvent", "payload": {"mac": "a", "zoneID": "111"}},
+  {"op": "send", "case": "memory-rfid", "eventType": "SupportRFIDEvent", "payload": {"mac": "a", "zoneID": "111"}},
+  {"op": "send", "case": "memory-rfid", "eventType": "SupportRFIDEvent", "payload": {"mac": "a", "zoneID": "111"}},
+  {"op": "send", "case": "memory-rfid", "eventType": "SupportRFIDEvent", "payload": {"mac": "a", "zoneID": "111"}},
+  {"op": "undeploy-all", "case": "memory-rfid"},
+  {"op": "case", "case": "zone-exit"},
+  {"op": "deploy", "case": "zone-exit", "statement": "s0", "epl": "@name('s0') select * from pattern [every a=SupportRFIDEvent(zoneID='1') -> (b=SupportRFIDEvent(mac=a.mac,zoneID!='1') and not SupportRFIDEvent(mac=a.mac,zoneID='1'))]"},
+  {"op": "send", "case": "zone-exit", "eventType": "SupportRFIDEvent", "payload": {"mac": "a", "zoneID": "1"}},
+  {"op": "send", "case": "zone-exit", "eventType": "SupportRFIDEvent", "payload": {"mac": "a", "zoneID": "2"}},
+  {"op": "send", "case": "zone-exit", "eventType": "SupportRFIDEvent", "payload": {"mac": "b", "zoneID": "1"}},
+  {"op": "send", "case": "zone-exit", "eventType": "SupportRFIDEvent", "payload": {"mac": "b", "zoneID": "1"}},
+  {"op": "send", "case": "zone-exit", "eventType": "SupportRFIDEvent", "payload": {"mac": "b", "zoneID": "2"}},
+  {"op": "undeploy-all", "case": "zone-exit"},
+  {"op": "case", "case": "zone-enter"},
+  {"op": "deploy", "case": "zone-enter", "statement": "s0", "epl": "@name('s0') select * from pattern [every a=SupportRFIDEvent(zoneID!='1') -> (b=SupportRFIDEvent(mac=a.mac,zoneID='1') and not SupportRFIDEvent(mac=a.mac,zoneID=a.zoneID))]"},
+  {"op": "send", "case": "zone-enter", "eventType": "SupportRFIDEvent", "payload": {"mac": "a", "zoneID": "2"}},
+  {"op": "send", "case": "zone-enter", "eventType": "SupportRFIDEvent", "payload": {"mac": "a", "zoneID": "1"}},
+  {"op": "send", "case": "zone-enter", "eventType": "SupportRFIDEvent", "payload": {"mac": "b", "zoneID": "2"}},
+  {"op": "send", "case": "zone-enter", "eventType": "SupportRFIDEvent", "payload": {"mac": "b", "zoneID": "2"}},
+  {"op": "send", "case": "zone-enter", "eventType": "SupportRFIDEvent", "payload": {"mac": "b", "zoneID": "1"}},
+  {"op": "undeploy-all", "case": "zone-enter"}
+ ]
+}
