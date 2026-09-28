@@ -45,39 +45,40 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.574 ('subquery-within-pattern').
+Active: Draft 4.575 ('pattern-complex-property-access').
 
-- Contract frozen (JavaContract574 + GoSurface574): case.subquery-pattern
-  promotion — EPLSubselectWithinPattern static java-495107e31d1fe86086ab.
-  DV ords 1-4: EPLSubselectCorrelated
-  (java-runtime-3d9d3a714bd642e784bd, 3 spellings + two scenes),
-  EPLSubselectAggregation (java-runtime-9a15ec8213060ac0185c,
-  rolling-sum gate), EPLSubselectSubqueryAgainstNamedWindowInUDFInPattern
-  (java-runtime-3c1d7cc144c168f6a0d6, NW subquery inside UDF inside
-  pattern), EPLSubselectFilterPatternNamedWindowNoAlias
-  (java-runtime-0db35509697665c0960e, 4 spellings). Ord0
-  EPLSubselectInvalid (java-runtime-57f90dfd1960035b1517) compile-only
-  -> intentionally-different precedent (structural rejection only).
-  GoSurface574 confirmed the ContextInitTerm premise was stale (most
-  ords already DV); this is the densest true DV-able remainder.
-- [x] CorePatternSubquery landed: `evaluateSubqueryValues`/
-  `evaluateSubqueryGroups` now propagate the enclosing pattern's
-  PreviousTagEvents/Tags/TagValues (tag-correlated subqueries resolve
-  inside pattern limbs, transitively); `PatternFrom`/`PatternFromRecord`
-  accept an empty tag -> untagged atom (Java `pattern[S1(f)]` +
-  `select *` -> {} row). Facade doc-only regen.
-- [x] Assets574 rewired + re-verified: Java trace 19 records, Go
-  replay 19 across 9 spellings, `-diff` passing / 0 differences;
-  evidence + traces checked in. 'Y+B' tag-correlated delivery and {}
-  untagged-atom row confirmed.
-- [x] Manifest: case.subquery-pattern PROMOTED implemented->DV (4/5
-  ords; ord0 compile-only intentionally-different). Summary -> 423 DV
-  / 1697 DV runtime IDs.
+- Contract frozen (JavaContract575 + GoSurface575):
+  case.pattern-complex-property-access — static outer id
+  java-9504034cfc1c929363d8; deduped static ids per ord
+  (java-be2858d5e4c76bbf7f85 ord0, java-ec97467eeb93b4ff0e67 ord1,
+  java-9504034cfc1c929363d8 ord2). DV ords 0/1/2: PatternComplexProperties
+  (java-runtime-5fd2cb676f155061c987, 16-case mapped/indexed/array/
+  nested/combined matrix incl. 6 no-fire null-safety subcases),
+  PatternIndexedFilterProp (java-runtime-5d046d758dced3b2d879,
+  every-atom indexed filter + captured-event check; Java assertSame ->
+  Go DeepEqual documented difference), PatternIndexedValueProp
+  (java-runtime-fd23ca72c8ba2aaf67ad, tag-correlated followed-by
+  every a -> b(indexed[0]=a.indexed[0])). Ords 3/4 (OM/Compile)
+  excluded per SODA/compile-text precedent. GoSurface575: no
+  functional gaps — fluent composition is intentionally different
+  (no EPL-text entry).
+- [x] Assets575 delivered + integrated: Java trace 11 records, Go
+  replay 11 across 18 cases, `-diff` passing / 0 differences;
+  evidence + traces checked in. 16-atom matrix incl. 8 no-fire legs
+  (3 exercising null-safety: missing-key, out-of-range, unknown-key);
+  assertSame->DeepEqual recorded as representation difference; ords
+  3/4 excluded per SODA/compile-text precedent.
+- [x] Manifest: case.pattern-complex-property-access PROMOTED
+  implemented->DV (3/5 ords). Summary -> 424 DV / 1700 DV runtime IDs.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev574 + JavaContract575 + GoSurface575 dispatched.
+- [x] ParityRev575 + JavaContract576 + GoSurface576 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.574 ('subquery-within-pattern') committed and
+  pushed as `8adab5d3a`; Git owns identity. case promoted DV 4/5
+  ords (19 records/9 spellings, 0 differences) + subquery tag-
+  propagation + untagged-atom core fixes; review PASS (1 P3).
 - Shipped: Draft 4.573 ('view-expression remainder closer') committed
   and pushed as `f0f1149d9`; Git owns identity. Window ord3 DV (17
   records, 0 differences); Invalids intentionally-different; review

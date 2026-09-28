@@ -25337,7 +25337,11 @@
    "goTests": [
     "TestPatternComplexPropertiesMatchesEsper",
     "TestPatternIndexedFilterPropMatchesEsper",
-    "TestPatternIndexedValuePropMatchesEsper"
+    "TestPatternIndexedValuePropMatchesEsper",
+    "internal/app/parity/pattern_complex_property_access_575_test.go/TestRunPatternComplexPropertyAccess575ScenarioReplay",
+    "internal/app/parity/pattern_complex_property_access_575_test.go/TestRunPatternComplexPropertyAccess575PinnedArtifacts",
+    "internal/app/parity/pattern_complex_property_access_575_test.go/TestRunPatternComplexPropertyAccess575RejectsMalformedRawScenario",
+    "internal/app/parity/pattern_complex_property_access_575_test.go/TestRunPatternComplexPropertyAccess575RuntimeIDMappingMatchesScenario"
    ],
    "tags": [
     "correctness",
@@ -25345,18 +25349,27 @@
     "complex-property",
     "mapped",
     "indexed",
-    "nested"
+    "nested",
+    "differential"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
     "java-runtime-inventory",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/pattern-complex-property-access-575.evidence.json"
    ],
-   "difference": "Esper property-path syntax in pattern filters maps to composed analyzable expressions rather than string paths: mapped('k') becomes MapValue, indexed[i] becomes ArrayAt, and nested.value chains use Property over struct-typed field expressions. Out-of-range and missing-key access evaluate to Null, matching Esper's safe getters. The PatternIndexedValuePropOM and Compile executions share the EPL expectations and are replayed through the same fluent form as three subtests. Go events are value types, so Java's assertSame identity checks are replaced by DeepEqual on the captured event value; the two identical {3} SupportBeanComplexProps events are distinguished by a simpleProperty marker so the followed-by correlation still observes which a-branch matched, without changing the pattern logic.",
+   "difference": "ords 3/4 (PatternIndexedValuePropOM java-runtime-e0804e3e156cf0ee3656, PatternIndexedValuePropCompile java-runtime-4364d60de0353a761ba1) are object-model/compile-text front-end variants excluded per the SODA/compile-text precedent (same observable runtime semantics as ord2). Captured-event identity: Java assertSame has no Go counterpart (Go events are values); the oracle records the send-payload projection and Go compares underlying value equality \u2014 representation difference, not semantic. Fluent composition replaces EPL text entry (no string-path filter syntax), intentionally different.",
    "verification": [
     "inventoried",
-    "implemented"
-   ]
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-5fd2cb676f155061c987",
+    "java-runtime-5d046d758dced3b2d879",
+    "java-runtime-fd23ca72c8ba2aaf67ad"
+   ],
+   "notes": " Draft 4.575: ords 0/1/2 DV (11 records over 18 cases: 16-atom complex/combined matrix incl. 8 null-safety no-fire legs, every-atom indexed filter, tag-correlated followed-by). 3/5 DV + 2 excluded front-end variants."
   },
   {
    "id": "case.pattern-operator-mix",
@@ -55361,8 +55374,8 @@
  "summary": {
   "inventoriedCases": 801,
   "implementedCases": 799,
-  "differentialVerifiedCases": 423,
-  "differentialVerifiedRuntimeIds": 1697,
+  "differentialVerifiedCases": 424,
+  "differentialVerifiedRuntimeIds": 1700,
   "intentionallyDifferentCases": 40,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,

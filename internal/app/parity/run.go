@@ -129,6 +129,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include view-expression-udf-prev-572 and view-expression-udf-prev-572-diff")
 		fmt.Fprintln(stderr, "runner modes include view-expression-window-time-573 and view-expression-window-time-573-diff")
 		fmt.Fprintln(stderr, "runner modes include epl-subselect-within-pattern-574 and epl-subselect-within-pattern-574-diff")
+		fmt.Fprintln(stderr, "runner modes include pattern-complex-property-access-575 and pattern-complex-property-access-575-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-enum-select-from and expr-enum-select-from-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-type-use and expr-class-type-use-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-for-epl-objects and expr-class-for-epl-objects-diff")
@@ -548,6 +549,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadViewExprWinTime573Scenario(file)
 	} else if *mode == "epl-subselect-within-pattern-574" || *mode == "epl-subselect-within-pattern-574-diff" {
 		scenario, err = loadEplSubselectWithinPattern574Scenario(file)
+	} else if *mode == "pattern-complex-property-access-575" || *mode == "pattern-complex-property-access-575-diff" {
+		scenario, err = loadPatternComplexPropertyAccess575Scenario(file)
 	} else if *mode == "epl-contained-event-example" || *mode == "epl-contained-event-example-diff" {
 		scenario, err = loadEPLContainedEventExampleScenario(file)
 	} else if *mode == "epl-other-pattern-event-properties" || *mode == "epl-other-pattern-event-properties-diff" {
@@ -2553,6 +2556,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, eplSubselectWithinPattern574JavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, eplSubselectWithinPattern574JavaSources),
 				splitMetadata(*javaExecutions, eplSubselectWithinPattern574JavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "pattern-complex-property-access-575" || *mode == "pattern-complex-property-access-575-diff" {
+		trace, err := runPatternComplexPropertyAccess575Scenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "pattern-complex-property-access-575-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, patternComplexPropertyAccess575JavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, patternComplexPropertyAccess575JavaSources),
+				splitMetadata(*javaExecutions, patternComplexPropertyAccess575JavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

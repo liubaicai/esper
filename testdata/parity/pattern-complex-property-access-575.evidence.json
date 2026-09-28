@@ -1,0 +1,3086 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-5fd2cb676f155061c987",
+    "java-runtime-5d046d758dced3b2d879",
+    "java-runtime-fd23ca72c8ba2aaf67ad"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternComplexPropertyAccess.java"
+  ],
+  "javaExecutions": [
+    "PatternComplexProperties",
+    "PatternIndexedFilterProp",
+    "PatternIndexedValueProp"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "pattern-complex-property-access-575",
+    "steps": [
+      {
+        "op": "case",
+        "case": "mapped-key"
+      },
+      {
+        "op": "deploy",
+        "case": "mapped-key",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [s=SupportBeanComplexProps(mapped('keyOne') = 'valueOne')]"
+      },
+      {
+        "op": "send",
+        "case": "mapped-key",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "nested": {
+            "nestedValue": "nestedValue",
+            "nestedNested": {
+              "nestedNestedValue": "nestedNestedValue"
+            }
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "mapped-key",
+        "eventType": "SupportBeanCombinedProps",
+        "payload": {
+          "indexed": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ],
+          "array": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "mapped-key"
+      },
+      {
+        "op": "case",
+        "case": "indexed-1-eq-2"
+      },
+      {
+        "op": "deploy",
+        "case": "indexed-1-eq-2",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [s=SupportBeanComplexProps(indexed[1] = 2)]"
+      },
+      {
+        "op": "send",
+        "case": "indexed-1-eq-2",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "nested": {
+            "nestedValue": "nestedValue",
+            "nestedNested": {
+              "nestedNestedValue": "nestedNestedValue"
+            }
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "indexed-1-eq-2",
+        "eventType": "SupportBeanCombinedProps",
+        "payload": {
+          "indexed": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ],
+          "array": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "indexed-1-eq-2"
+      },
+      {
+        "op": "case",
+        "case": "indexed-0-eq-2-no-fire"
+      },
+      {
+        "op": "deploy",
+        "case": "indexed-0-eq-2-no-fire",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [s=SupportBeanComplexProps(indexed[0] = 2)]"
+      },
+      {
+        "op": "send",
+        "case": "indexed-0-eq-2-no-fire",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "nested": {
+            "nestedValue": "nestedValue",
+            "nestedNested": {
+              "nestedNestedValue": "nestedNestedValue"
+            }
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "indexed-0-eq-2-no-fire",
+        "eventType": "SupportBeanCombinedProps",
+        "payload": {
+          "indexed": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ],
+          "array": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "indexed-0-eq-2-no-fire"
+      },
+      {
+        "op": "case",
+        "case": "array-1-eq-20"
+      },
+      {
+        "op": "deploy",
+        "case": "array-1-eq-20",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [s=SupportBeanComplexProps(arrayProperty[1] = 20)]"
+      },
+      {
+        "op": "send",
+        "case": "array-1-eq-20",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "nested": {
+            "nestedValue": "nestedValue",
+            "nestedNested": {
+              "nestedNestedValue": "nestedNestedValue"
+            }
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "array-1-eq-20",
+        "eventType": "SupportBeanCombinedProps",
+        "payload": {
+          "indexed": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ],
+          "array": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "array-1-eq-20"
+      },
+      {
+        "op": "case",
+        "case": "array-1-in-range"
+      },
+      {
+        "op": "deploy",
+        "case": "array-1-in-range",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [s=SupportBeanComplexProps(arrayProperty[1] in (10:30))]"
+      },
+      {
+        "op": "send",
+        "case": "array-1-in-range",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "nested": {
+            "nestedValue": "nestedValue",
+            "nestedNested": {
+              "nestedNestedValue": "nestedNestedValue"
+            }
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "array-1-in-range",
+        "eventType": "SupportBeanCombinedProps",
+        "payload": {
+          "indexed": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ],
+          "array": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "array-1-in-range"
+      },
+      {
+        "op": "case",
+        "case": "array-2-eq-20-no-fire"
+      },
+      {
+        "op": "deploy",
+        "case": "array-2-eq-20-no-fire",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [s=SupportBeanComplexProps(arrayProperty[2] = 20)]"
+      },
+      {
+        "op": "send",
+        "case": "array-2-eq-20-no-fire",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "nested": {
+            "nestedValue": "nestedValue",
+            "nestedNested": {
+              "nestedNestedValue": "nestedNestedValue"
+            }
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "array-2-eq-20-no-fire",
+        "eventType": "SupportBeanCombinedProps",
+        "payload": {
+          "indexed": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ],
+          "array": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "array-2-eq-20-no-fire"
+      },
+      {
+        "op": "case",
+        "case": "nested-value"
+      },
+      {
+        "op": "deploy",
+        "case": "nested-value",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [s=SupportBeanComplexProps(nested.nestedValue = 'nestedValue')]"
+      },
+      {
+        "op": "send",
+        "case": "nested-value",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "nested": {
+            "nestedValue": "nestedValue",
+            "nestedNested": {
+              "nestedNestedValue": "nestedNestedValue"
+            }
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "nested-value",
+        "eventType": "SupportBeanCombinedProps",
+        "payload": {
+          "indexed": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ],
+          "array": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nested-value"
+      },
+      {
+        "op": "case",
+        "case": "nested-value-no-fire"
+      },
+      {
+        "op": "deploy",
+        "case": "nested-value-no-fire",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [s=SupportBeanComplexProps(nested.nestedValue = 'dummy')]"
+      },
+      {
+        "op": "send",
+        "case": "nested-value-no-fire",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "nested": {
+            "nestedValue": "nestedValue",
+            "nestedNested": {
+              "nestedNestedValue": "nestedNestedValue"
+            }
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "nested-value-no-fire",
+        "eventType": "SupportBeanCombinedProps",
+        "payload": {
+          "indexed": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ],
+          "array": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nested-value-no-fire"
+      },
+      {
+        "op": "case",
+        "case": "nested-nested-value"
+      },
+      {
+        "op": "deploy",
+        "case": "nested-nested-value",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [s=SupportBeanComplexProps(nested.nestedNested.nestedNestedValue = 'nestedNestedValue')]"
+      },
+      {
+        "op": "send",
+        "case": "nested-nested-value",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "nested": {
+            "nestedValue": "nestedValue",
+            "nestedNested": {
+              "nestedNestedValue": "nestedNestedValue"
+            }
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "nested-nested-value",
+        "eventType": "SupportBeanCombinedProps",
+        "payload": {
+          "indexed": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ],
+          "array": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nested-nested-value"
+      },
+      {
+        "op": "case",
+        "case": "nested-nested-value-no-fire"
+      },
+      {
+        "op": "deploy",
+        "case": "nested-nested-value-no-fire",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [s=SupportBeanComplexProps(nested.nestedNested.nestedNestedValue = 'x')]"
+      },
+      {
+        "op": "send",
+        "case": "nested-nested-value-no-fire",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "nested": {
+            "nestedValue": "nestedValue",
+            "nestedNested": {
+              "nestedNestedValue": "nestedNestedValue"
+            }
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "nested-nested-value-no-fire",
+        "eventType": "SupportBeanCombinedProps",
+        "payload": {
+          "indexed": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ],
+          "array": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nested-nested-value-no-fire"
+      },
+      {
+        "op": "case",
+        "case": "combined-indexed-mapped"
+      },
+      {
+        "op": "deploy",
+        "case": "combined-indexed-mapped",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [s=SupportBeanCombinedProps(indexed[1].mapped('1mb').value = '1ma1')]"
+      },
+      {
+        "op": "send",
+        "case": "combined-indexed-mapped",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "nested": {
+            "nestedValue": "nestedValue",
+            "nestedNested": {
+              "nestedNestedValue": "nestedNestedValue"
+            }
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "combined-indexed-mapped",
+        "eventType": "SupportBeanCombinedProps",
+        "payload": {
+          "indexed": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ],
+          "array": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "combined-indexed-mapped"
+      },
+      {
+        "op": "case",
+        "case": "combined-indexed-mapped-no-fire"
+      },
+      {
+        "op": "deploy",
+        "case": "combined-indexed-mapped-no-fire",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [s=SupportBeanCombinedProps(indexed[0].mapped('1ma').value = 'x')]"
+      },
+      {
+        "op": "send",
+        "case": "combined-indexed-mapped-no-fire",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "nested": {
+            "nestedValue": "nestedValue",
+            "nestedNested": {
+              "nestedNestedValue": "nestedNestedValue"
+            }
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "combined-indexed-mapped-no-fire",
+        "eventType": "SupportBeanCombinedProps",
+        "payload": {
+          "indexed": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ],
+          "array": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "combined-indexed-mapped-no-fire"
+      },
+      {
+        "op": "case",
+        "case": "combined-array-mapped"
+      },
+      {
+        "op": "deploy",
+        "case": "combined-array-mapped",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [s=SupportBeanCombinedProps(array[0].mapped('0ma').value = '0ma0')]"
+      },
+      {
+        "op": "send",
+        "case": "combined-array-mapped",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "nested": {
+            "nestedValue": "nestedValue",
+            "nestedNested": {
+              "nestedNestedValue": "nestedNestedValue"
+            }
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "combined-array-mapped",
+        "eventType": "SupportBeanCombinedProps",
+        "payload": {
+          "indexed": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ],
+          "array": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "combined-array-mapped"
+      },
+      {
+        "op": "case",
+        "case": "combined-array-mapped-missing-key"
+      },
+      {
+        "op": "deploy",
+        "case": "combined-array-mapped-missing-key",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [s=SupportBeanCombinedProps(array[2].mapped('x').value = 'x')]"
+      },
+      {
+        "op": "send",
+        "case": "combined-array-mapped-missing-key",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "nested": {
+            "nestedValue": "nestedValue",
+            "nestedNested": {
+              "nestedNestedValue": "nestedNestedValue"
+            }
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "combined-array-mapped-missing-key",
+        "eventType": "SupportBeanCombinedProps",
+        "payload": {
+          "indexed": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ],
+          "array": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "combined-array-mapped-missing-key"
+      },
+      {
+        "op": "case",
+        "case": "combined-array-out-of-range"
+      },
+      {
+        "op": "deploy",
+        "case": "combined-array-out-of-range",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [s=SupportBeanCombinedProps(array[879787].mapped('x').value = 'x')]"
+      },
+      {
+        "op": "send",
+        "case": "combined-array-out-of-range",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "nested": {
+            "nestedValue": "nestedValue",
+            "nestedNested": {
+              "nestedNestedValue": "nestedNestedValue"
+            }
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "combined-array-out-of-range",
+        "eventType": "SupportBeanCombinedProps",
+        "payload": {
+          "indexed": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ],
+          "array": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "combined-array-out-of-range"
+      },
+      {
+        "op": "case",
+        "case": "combined-array-unknown-key"
+      },
+      {
+        "op": "deploy",
+        "case": "combined-array-unknown-key",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [s=SupportBeanCombinedProps(array[0].mapped('xxx').value = 'x')]"
+      },
+      {
+        "op": "send",
+        "case": "combined-array-unknown-key",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "nested": {
+            "nestedValue": "nestedValue",
+            "nestedNested": {
+              "nestedNestedValue": "nestedNestedValue"
+            }
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "combined-array-unknown-key",
+        "eventType": "SupportBeanCombinedProps",
+        "payload": {
+          "indexed": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ],
+          "array": [
+            {
+              "mapped": {
+                "0ma": {
+                  "value": "0ma0"
+                },
+                "0mb": {
+                  "value": "0ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "1ma": {
+                  "value": "1ma0"
+                },
+                "1mb": {
+                  "value": "1ma1"
+                }
+              }
+            },
+            {
+              "mapped": {
+                "2ma": {
+                  "value": "valueOne"
+                },
+                "2mb": {
+                  "value": "2ma1"
+                }
+              }
+            },
+            null
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "combined-array-unknown-key"
+      },
+      {
+        "op": "case",
+        "case": "indexed-filter-prop"
+      },
+      {
+        "op": "deploy",
+        "case": "indexed-filter-prop",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern[every a=SupportBeanComplexProps(indexed[0]=3)]"
+      },
+      {
+        "op": "send",
+        "case": "indexed-filter-prop",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "indexed": [
+            3,
+            4
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "indexed-filter-prop",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "indexed": [
+            6
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "indexed-filter-prop",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "indexed": [
+            3
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "indexed-filter-prop"
+      },
+      {
+        "op": "case",
+        "case": "indexed-value-prop"
+      },
+      {
+        "op": "deploy",
+        "case": "indexed-value-prop",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern[every a=SupportBeanComplexProps -\u003e b=SupportBeanComplexProps(indexed[0] = a.indexed[0])]"
+      },
+      {
+        "op": "send",
+        "case": "indexed-value-prop",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "simpleProperty": "eventOne",
+          "indexed": [
+            3
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "indexed-value-prop",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "indexed": [
+            6
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "indexed-value-prop",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "simpleProperty": "eventTwo",
+          "indexed": [
+            3
+          ]
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "indexed-value-prop"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-complex-property-access-575",
+    "records": [
+      {
+        "case": "mapped-key",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s": {
+                "fields": {
+                  "arrayProperty": [
+                    10,
+                    20,
+                    30
+                  ],
+                  "indexed": [
+                    1,
+                    2
+                  ],
+                  "mapProperty": {
+                    "xOne": "yOne",
+                    "xTwo": "yTwo"
+                  },
+                  "mapped": {
+                    "keyOne": "valueOne",
+                    "keyTwo": "valueTwo"
+                  },
+                  "nested": {
+                    "nestedNested": {
+                      "nestedNestedValue": "nestedNestedValue"
+                    },
+                    "nestedValue": "nestedValue"
+                  },
+                  "simpleProperty": "simple"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "indexed-1-eq-2",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s": {
+                "fields": {
+                  "arrayProperty": [
+                    10,
+                    20,
+                    30
+                  ],
+                  "indexed": [
+                    1,
+                    2
+                  ],
+                  "mapProperty": {
+                    "xOne": "yOne",
+                    "xTwo": "yTwo"
+                  },
+                  "mapped": {
+                    "keyOne": "valueOne",
+                    "keyTwo": "valueTwo"
+                  },
+                  "nested": {
+                    "nestedNested": {
+                      "nestedNestedValue": "nestedNestedValue"
+                    },
+                    "nestedValue": "nestedValue"
+                  },
+                  "simpleProperty": "simple"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "array-1-eq-20",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s": {
+                "fields": {
+                  "arrayProperty": [
+                    10,
+                    20,
+                    30
+                  ],
+                  "indexed": [
+                    1,
+                    2
+                  ],
+                  "mapProperty": {
+                    "xOne": "yOne",
+                    "xTwo": "yTwo"
+                  },
+                  "mapped": {
+                    "keyOne": "valueOne",
+                    "keyTwo": "valueTwo"
+                  },
+                  "nested": {
+                    "nestedNested": {
+                      "nestedNestedValue": "nestedNestedValue"
+                    },
+                    "nestedValue": "nestedValue"
+                  },
+                  "simpleProperty": "simple"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "array-1-in-range",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s": {
+                "fields": {
+                  "arrayProperty": [
+                    10,
+                    20,
+                    30
+                  ],
+                  "indexed": [
+                    1,
+                    2
+                  ],
+                  "mapProperty": {
+                    "xOne": "yOne",
+                    "xTwo": "yTwo"
+                  },
+                  "mapped": {
+                    "keyOne": "valueOne",
+                    "keyTwo": "valueTwo"
+                  },
+                  "nested": {
+                    "nestedNested": {
+                      "nestedNestedValue": "nestedNestedValue"
+                    },
+                    "nestedValue": "nestedValue"
+                  },
+                  "simpleProperty": "simple"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nested-value",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s": {
+                "fields": {
+                  "arrayProperty": [
+                    10,
+                    20,
+                    30
+                  ],
+                  "indexed": [
+                    1,
+                    2
+                  ],
+                  "mapProperty": {
+                    "xOne": "yOne",
+                    "xTwo": "yTwo"
+                  },
+                  "mapped": {
+                    "keyOne": "valueOne",
+                    "keyTwo": "valueTwo"
+                  },
+                  "nested": {
+                    "nestedNested": {
+                      "nestedNestedValue": "nestedNestedValue"
+                    },
+                    "nestedValue": "nestedValue"
+                  },
+                  "simpleProperty": "simple"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nested-nested-value",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s": {
+                "fields": {
+                  "arrayProperty": [
+                    10,
+                    20,
+                    30
+                  ],
+                  "indexed": [
+                    1,
+                    2
+                  ],
+                  "mapProperty": {
+                    "xOne": "yOne",
+                    "xTwo": "yTwo"
+                  },
+                  "mapped": {
+                    "keyOne": "valueOne",
+                    "keyTwo": "valueTwo"
+                  },
+                  "nested": {
+                    "nestedNested": {
+                      "nestedNestedValue": "nestedNestedValue"
+                    },
+                    "nestedValue": "nestedValue"
+                  },
+                  "simpleProperty": "simple"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "combined-indexed-mapped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s": {
+                "fields": {
+                  "array": [
+                    {
+                      "mapped": {
+                        "0ma": {
+                          "value": "0ma0"
+                        },
+                        "0mb": {
+                          "value": "0ma1"
+                        }
+                      }
+                    },
+                    {
+                      "mapped": {
+                        "1ma": {
+                          "value": "1ma0"
+                        },
+                        "1mb": {
+                          "value": "1ma1"
+                        }
+                      }
+                    },
+                    {
+                      "mapped": {
+                        "2ma": {
+                          "value": "valueOne"
+                        },
+                        "2mb": {
+                          "value": "2ma1"
+                        }
+                      }
+                    },
+                    null
+                  ],
+                  "indexed": [
+                    {
+                      "mapped": {
+                        "0ma": {
+                          "value": "0ma0"
+                        },
+                        "0mb": {
+                          "value": "0ma1"
+                        }
+                      }
+                    },
+                    {
+                      "mapped": {
+                        "1ma": {
+                          "value": "1ma0"
+                        },
+                        "1mb": {
+                          "value": "1ma1"
+                        }
+                      }
+                    },
+                    {
+                      "mapped": {
+                        "2ma": {
+                          "value": "valueOne"
+                        },
+                        "2mb": {
+                          "value": "2ma1"
+                        }
+                      }
+                    },
+                    null
+                  ]
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "combined-array-mapped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s": {
+                "fields": {
+                  "array": [
+                    {
+                      "mapped": {
+                        "0ma": {
+                          "value": "0ma0"
+                        },
+                        "0mb": {
+                          "value": "0ma1"
+                        }
+                      }
+                    },
+                    {
+                      "mapped": {
+                        "1ma": {
+                          "value": "1ma0"
+                        },
+                        "1mb": {
+                          "value": "1ma1"
+                        }
+                      }
+                    },
+                    {
+                      "mapped": {
+                        "2ma": {
+                          "value": "valueOne"
+                        },
+                        "2mb": {
+                          "value": "2ma1"
+                        }
+                      }
+                    },
+                    null
+                  ],
+                  "indexed": [
+                    {
+                      "mapped": {
+                        "0ma": {
+                          "value": "0ma0"
+                        },
+                        "0mb": {
+                          "value": "0ma1"
+                        }
+                      }
+                    },
+                    {
+                      "mapped": {
+                        "1ma": {
+                          "value": "1ma0"
+                        },
+                        "1mb": {
+                          "value": "1ma1"
+                        }
+                      }
+                    },
+                    {
+                      "mapped": {
+                        "2ma": {
+                          "value": "valueOne"
+                        },
+                        "2mb": {
+                          "value": "2ma1"
+                        }
+                      }
+                    },
+                    null
+                  ]
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "indexed-filter-prop",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "arrayProperty": null,
+                  "indexed": [
+                    3,
+                    4
+                  ],
+                  "mapProperty": null,
+                  "mapped": null,
+                  "nested": {
+                    "state": "null"
+                  },
+                  "simpleProperty": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "indexed-filter-prop",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "arrayProperty": null,
+                  "indexed": [
+                    3
+                  ],
+                  "mapProperty": null,
+                  "mapped": null,
+                  "nested": {
+                    "state": "null"
+                  },
+                  "simpleProperty": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "indexed-value-prop",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "arrayProperty": null,
+                  "indexed": [
+                    3
+                  ],
+                  "mapProperty": null,
+                  "mapped": null,
+                  "nested": {
+                    "state": "null"
+                  },
+                  "simpleProperty": "eventOne"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "arrayProperty": null,
+                  "indexed": [
+                    3
+                  ],
+                  "mapProperty": null,
+                  "mapped": null,
+                  "nested": {
+                    "state": "null"
+                  },
+                  "simpleProperty": "eventTwo"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-complex-property-access-575",
+    "records": [
+      {
+        "case": "mapped-key",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s": {
+                "fields": {
+                  "arrayProperty": [
+                    10,
+                    20,
+                    30
+                  ],
+                  "indexed": [
+                    1,
+                    2
+                  ],
+                  "mapProperty": {
+                    "xOne": "yOne",
+                    "xTwo": "yTwo"
+                  },
+                  "mapped": {
+                    "keyOne": "valueOne",
+                    "keyTwo": "valueTwo"
+                  },
+                  "nested": {
+                    "nestedNested": {
+                      "nestedNestedValue": "nestedNestedValue"
+                    },
+                    "nestedValue": "nestedValue"
+                  },
+                  "simpleProperty": "simple"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "indexed-1-eq-2",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s": {
+                "fields": {
+                  "arrayProperty": [
+                    10,
+                    20,
+                    30
+                  ],
+                  "indexed": [
+                    1,
+                    2
+                  ],
+                  "mapProperty": {
+                    "xOne": "yOne",
+                    "xTwo": "yTwo"
+                  },
+                  "mapped": {
+                    "keyOne": "valueOne",
+                    "keyTwo": "valueTwo"
+                  },
+                  "nested": {
+                    "nestedNested": {
+                      "nestedNestedValue": "nestedNestedValue"
+                    },
+                    "nestedValue": "nestedValue"
+                  },
+                  "simpleProperty": "simple"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "array-1-eq-20",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s": {
+                "fields": {
+                  "arrayProperty": [
+                    10,
+                    20,
+                    30
+                  ],
+                  "indexed": [
+                    1,
+                    2
+                  ],
+                  "mapProperty": {
+                    "xOne": "yOne",
+                    "xTwo": "yTwo"
+                  },
+                  "mapped": {
+                    "keyOne": "valueOne",
+                    "keyTwo": "valueTwo"
+                  },
+                  "nested": {
+                    "nestedNested": {
+                      "nestedNestedValue": "nestedNestedValue"
+                    },
+                    "nestedValue": "nestedValue"
+                  },
+                  "simpleProperty": "simple"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "array-1-in-range",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s": {
+                "fields": {
+                  "arrayProperty": [
+                    10,
+                    20,
+                    30
+                  ],
+                  "indexed": [
+                    1,
+                    2
+                  ],
+                  "mapProperty": {
+                    "xOne": "yOne",
+                    "xTwo": "yTwo"
+                  },
+                  "mapped": {
+                    "keyOne": "valueOne",
+                    "keyTwo": "valueTwo"
+                  },
+                  "nested": {
+                    "nestedNested": {
+                      "nestedNestedValue": "nestedNestedValue"
+                    },
+                    "nestedValue": "nestedValue"
+                  },
+                  "simpleProperty": "simple"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nested-value",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s": {
+                "fields": {
+                  "arrayProperty": [
+                    10,
+                    20,
+                    30
+                  ],
+                  "indexed": [
+                    1,
+                    2
+                  ],
+                  "mapProperty": {
+                    "xOne": "yOne",
+                    "xTwo": "yTwo"
+                  },
+                  "mapped": {
+                    "keyOne": "valueOne",
+                    "keyTwo": "valueTwo"
+                  },
+                  "nested": {
+                    "nestedNested": {
+                      "nestedNestedValue": "nestedNestedValue"
+                    },
+                    "nestedValue": "nestedValue"
+                  },
+                  "simpleProperty": "simple"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nested-nested-value",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s": {
+                "fields": {
+                  "arrayProperty": [
+                    10,
+                    20,
+                    30
+                  ],
+                  "indexed": [
+                    1,
+                    2
+                  ],
+                  "mapProperty": {
+                    "xOne": "yOne",
+                    "xTwo": "yTwo"
+                  },
+                  "mapped": {
+                    "keyOne": "valueOne",
+                    "keyTwo": "valueTwo"
+                  },
+                  "nested": {
+                    "nestedNested": {
+                      "nestedNestedValue": "nestedNestedValue"
+                    },
+                    "nestedValue": "nestedValue"
+                  },
+                  "simpleProperty": "simple"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "combined-indexed-mapped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s": {
+                "fields": {
+                  "array": [
+                    {
+                      "mapped": {
+                        "0ma": {
+                          "value": "0ma0"
+                        },
+                        "0mb": {
+                          "value": "0ma1"
+                        }
+                      }
+                    },
+                    {
+                      "mapped": {
+                        "1ma": {
+                          "value": "1ma0"
+                        },
+                        "1mb": {
+                          "value": "1ma1"
+                        }
+                      }
+                    },
+                    {
+                      "mapped": {
+                        "2ma": {
+                          "value": "valueOne"
+                        },
+                        "2mb": {
+                          "value": "2ma1"
+                        }
+                      }
+                    },
+                    null
+                  ],
+                  "indexed": [
+                    {
+                      "mapped": {
+                        "0ma": {
+                          "value": "0ma0"
+                        },
+                        "0mb": {
+                          "value": "0ma1"
+                        }
+                      }
+                    },
+                    {
+                      "mapped": {
+                        "1ma": {
+                          "value": "1ma0"
+                        },
+                        "1mb": {
+                          "value": "1ma1"
+                        }
+                      }
+                    },
+                    {
+                      "mapped": {
+                        "2ma": {
+                          "value": "valueOne"
+                        },
+                        "2mb": {
+                          "value": "2ma1"
+                        }
+                      }
+                    },
+                    null
+                  ]
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "combined-array-mapped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s": {
+                "fields": {
+                  "array": [
+                    {
+                      "mapped": {
+                        "0ma": {
+                          "value": "0ma0"
+                        },
+                        "0mb": {
+                          "value": "0ma1"
+                        }
+                      }
+                    },
+                    {
+                      "mapped": {
+                        "1ma": {
+                          "value": "1ma0"
+                        },
+                        "1mb": {
+                          "value": "1ma1"
+                        }
+                      }
+                    },
+                    {
+                      "mapped": {
+                        "2ma": {
+                          "value": "valueOne"
+                        },
+                        "2mb": {
+                          "value": "2ma1"
+                        }
+                      }
+                    },
+                    null
+                  ],
+                  "indexed": [
+                    {
+                      "mapped": {
+                        "0ma": {
+                          "value": "0ma0"
+                        },
+                        "0mb": {
+                          "value": "0ma1"
+                        }
+                      }
+                    },
+                    {
+                      "mapped": {
+                        "1ma": {
+                          "value": "1ma0"
+                        },
+                        "1mb": {
+                          "value": "1ma1"
+                        }
+                      }
+                    },
+                    {
+                      "mapped": {
+                        "2ma": {
+                          "value": "valueOne"
+                        },
+                        "2mb": {
+                          "value": "2ma1"
+                        }
+                      }
+                    },
+                    null
+                  ]
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "indexed-filter-prop",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "arrayProperty": null,
+                  "indexed": [
+                    3,
+                    4
+                  ],
+                  "mapProperty": null,
+                  "mapped": null,
+                  "nested": {
+                    "state": "null"
+                  },
+                  "simpleProperty": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "indexed-filter-prop",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "arrayProperty": null,
+                  "indexed": [
+                    3
+                  ],
+                  "mapProperty": null,
+                  "mapped": null,
+                  "nested": {
+                    "state": "null"
+                  },
+                  "simpleProperty": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "indexed-value-prop",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "arrayProperty": null,
+                  "indexed": [
+                    3
+                  ],
+                  "mapProperty": null,
+                  "mapped": null,
+                  "nested": {
+                    "state": "null"
+                  },
+                  "simpleProperty": "eventOne"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "arrayProperty": null,
+                  "indexed": [
+                    3
+                  ],
+                  "mapProperty": null,
+                  "mapped": null,
+                  "nested": {
+                    "state": "null"
+                  },
+                  "simpleProperty": "eventTwo"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
