@@ -1,0 +1,345 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-d5ad6ad9d226628f8383",
+    "java-runtime-bbb75d6bcc54f29c7652",
+    "java-runtime-97c5e6b5e4c46cc0adb4",
+    "java-runtime-ea394f5795b88ddd71c9",
+    "java-runtime-28fc7f508485cbc765a2"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternObserverTimerInterval.java",
+    "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java"
+  ],
+  "javaExecutions": [
+    "PatternIntervalSpec",
+    "PatternIntervalSpecVariables",
+    "PatternIntervalSpecExpression",
+    "PatternIntervalSpecPreparedStmt",
+    "PatternMonthScoped"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "pattern-timer-interval-forms-591",
+    "steps": [
+      {
+        "op": "case",
+        "case": "interval-spec"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-spec",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deploy",
+        "case": "interval-spec",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [timer:interval(1 minute 2 seconds)]"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-spec",
+        "at": "1970-01-01T00:01:01.999Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-spec",
+        "at": "1970-01-01T00:01:02Z"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "interval-spec"
+      },
+      {
+        "op": "case",
+        "case": "interval-spec-variables"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-spec-variables",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deploy",
+        "case": "interval-spec-variables",
+        "statement": "create-m_isv",
+        "epl": "@public create variable double M_isv=1"
+      },
+      {
+        "op": "deploy",
+        "case": "interval-spec-variables",
+        "statement": "create-s_isv",
+        "epl": "@public create variable double S_isv=2"
+      },
+      {
+        "op": "deploy",
+        "case": "interval-spec-variables",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [timer:interval(M_isv minute S_isv seconds)]"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-spec-variables",
+        "at": "1970-01-01T00:01:01.999Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-spec-variables",
+        "at": "1970-01-01T00:01:02Z"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "interval-spec-variables"
+      },
+      {
+        "op": "case",
+        "case": "interval-spec-expression"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-spec-expression",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deploy",
+        "case": "interval-spec-expression",
+        "statement": "create-mone",
+        "epl": "@public create variable double MOne=1"
+      },
+      {
+        "op": "deploy",
+        "case": "interval-spec-expression",
+        "statement": "create-sone",
+        "epl": "@public create variable double SOne=2"
+      },
+      {
+        "op": "deploy",
+        "case": "interval-spec-expression",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [timer:interval(MOne*60+SOne seconds)]"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-spec-expression",
+        "at": "1970-01-01T00:01:01.999Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-spec-expression",
+        "at": "1970-01-01T00:01:02Z"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "interval-spec-expression"
+      },
+      {
+        "op": "case",
+        "case": "interval-spec-prepared-stmt"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-spec-prepared-stmt",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deploy",
+        "case": "interval-spec-prepared-stmt",
+        "statement": "s0",
+        "payload": [
+          1,
+          2
+        ],
+        "epl": "@name('s0') select * from pattern [timer:interval(?::int minute ?::int seconds)]"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-spec-prepared-stmt",
+        "at": "1970-01-01T00:01:01.999Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "interval-spec-prepared-stmt",
+        "at": "1970-01-01T00:01:02Z"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "interval-spec-prepared-stmt"
+      },
+      {
+        "op": "case",
+        "case": "month-scoped"
+      },
+      {
+        "op": "advance-time",
+        "case": "month-scoped",
+        "at": "2002-02-01T09:00:00Z"
+      },
+      {
+        "op": "deploy",
+        "case": "month-scoped",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [timer:interval(1 month)]"
+      },
+      {
+        "op": "advance-time",
+        "case": "month-scoped",
+        "at": "2002-03-01T08:59:59.999Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "month-scoped",
+        "at": "2002-03-01T09:00:00Z"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "month-scoped"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-timer-interval-forms-591",
+    "records": [
+      {
+        "case": "interval-spec",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:01:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "interval-spec-variables",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:01:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "interval-spec-expression",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:01:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "interval-spec-prepared-stmt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:01:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "month-scoped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-03-01T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-timer-interval-forms-591",
+    "records": [
+      {
+        "case": "interval-spec",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:01:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "interval-spec-variables",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:01:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "interval-spec-expression",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:01:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "interval-spec-prepared-stmt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:01:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "month-scoped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-03-01T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

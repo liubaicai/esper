@@ -1,0 +1,125 @@
+{
+ "version": "esper-parity/v1",
+ "id": "pattern-timer-interval-forms-591",
+ "description": "PatternObserverTimerInterval ords 1/2/3/5/6 — the five static-spec-resolution forms sharing one external-clock harness, replayed as five cases on fresh runtimes: advanceTime(0) (sendCurrentTime(2002-02-01T09:00:00.000) for month-scoped) before deploy, then deploy the pinned s0 pattern statement and listener, advanceTime to one millisecond before the deadline (silent), milestone(0) (a savepoint carrying no step), advanceTime to the exact deadline (ONE fire) and undeployAll. (interval-spec) PatternIntervalSpec deploys `@name('s0') select * from pattern [timer:interval(1 minute 2 seconds)]` — a fixed 62000ms deadline. (interval-spec-variables) PatternIntervalSpecVariables deploys `@public create variable double M_isv=1` and `@public create variable double S_isv=2` (RegressionPath-scoped) then `@name('s0') select * from pattern [timer:interval(M_isv minute S_isv seconds)]` — the double variables are read once at arming. (interval-spec-expression) PatternIntervalSpecExpression deploys create-variable doubles MOne=1/SOne=2 then `@name('s0') select * from pattern [timer:interval(MOne*60+SOne seconds)]` — the same 62000ms deadline via double arithmetic. (interval-spec-prepared-stmt) PatternIntervalSpecPreparedStmt compiles `@name('s0') select * from pattern [timer:interval(?::int minute ?::int seconds)]` and deploys it with statement substitution parameters add(1,1).add(2,2) — deploy-time (not variable) binding. (month-scoped) PatternMonthScoped deploys `@name('s0') select * from pattern [timer:interval(1 month)]` at sendCurrentTime(2002-02-01T09:00:00.000): `1 month` is a calendar recurrence so the boundary is 2002-03-01T09:00:00.000 (Feb 1 + 1 month), not a fixed day span. The deadline contract is strictly-after arming: advancing to deadline minus one millisecond must not fire. select * over a tagless timer match projects one empty row per fire. env.milestone(0) savepoints carry no steps.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternObserverTimerInterval.java",
+ "javaSourceFiles": [
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternObserverTimerInterval.java",
+  "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java"
+ ],
+ "javaRuntimes": [
+  "java-runtime-d5ad6ad9d226628f8383",
+  "java-runtime-bbb75d6bcc54f29c7652",
+  "java-runtime-97c5e6b5e4c46cc0adb4",
+  "java-runtime-ea394f5795b88ddd71c9",
+  "java-runtime-28fc7f508485cbc765a2"
+ ],
+ "javaNames": [
+  "PatternIntervalSpec",
+  "PatternIntervalSpecVariables",
+  "PatternIntervalSpecExpression",
+  "PatternIntervalSpecPreparedStmt",
+  "PatternMonthScoped"
+ ],
+ "javaStaticIds": [
+  "java-1422565b568236b2bfea",
+  "java-1422565b568236b2bfea",
+  "java-1422565b568236b2bfea",
+  "java-1422565b568236b2bfea",
+  "java-1422565b568236b2bfea"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "interval-spec",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-d5ad6ad9d226628f8383",
+   "executionName": "PatternIntervalSpec",
+   "observation": "listener x1; advanceTime(0) arms, deploy s0 `timer:interval(1 minute 2 seconds)`, advanceTime(61999) silent, milestone(0) no-step, advanceTime(62000) fires ONE row (select * over a tagless timer match yields the empty row), undeployAll",
+   "epls": [
+    "@name('s0') select * from pattern [timer:interval(1 minute 2 seconds)]"
+   ]
+  },
+  {
+   "case": "interval-spec-variables",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-bbb75d6bcc54f29c7652",
+   "executionName": "PatternIntervalSpecVariables",
+   "observation": "listener x1; advanceTime(0) arms, deploy `@public create variable double M_isv=1` + `@public create variable double S_isv=2` on the shared path then s0 `timer:interval(M_isv minute S_isv seconds)` — variables read once at arming give the same 62000ms deadline; advanceTime(61999) silent, milestone(0) no-step, advanceTime(62000) fires ONE row, undeployAll",
+   "epls": [
+    "@public create variable double M_isv=1",
+    "@public create variable double S_isv=2",
+    "@name('s0') select * from pattern [timer:interval(M_isv minute S_isv seconds)]"
+   ]
+  },
+  {
+   "case": "interval-spec-expression",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-97c5e6b5e4c46cc0adb4",
+   "executionName": "PatternIntervalSpecExpression",
+   "observation": "listener x1; advanceTime(0) arms, deploy `@public create variable double MOne=1` + `@public create variable double SOne=2` then s0 `timer:interval(MOne*60+SOne seconds)` — double arithmetic yields the same 62000ms deadline; advanceTime(61999) silent, milestone(0) no-step, advanceTime(62000) fires ONE row, undeployAll",
+   "epls": [
+    "@public create variable double MOne=1",
+    "@public create variable double SOne=2",
+    "@name('s0') select * from pattern [timer:interval(MOne*60+SOne seconds)]"
+   ]
+  },
+  {
+   "case": "interval-spec-prepared-stmt",
+   "ordinal": 5,
+   "runtimeId": "java-runtime-ea394f5795b88ddd71c9",
+   "executionName": "PatternIntervalSpecPreparedStmt",
+   "observation": "listener x1; advanceTime(0) arms, compile `@name('s0') select * from pattern [timer:interval(?::int minute ?::int seconds)]` and deploy with statement substitution parameters add(1,1).add(2,2) (deploy-time binding, not variables); advanceTime(61999) silent, milestone(0) no-step, advanceTime(62000) fires ONE row, undeployAll",
+   "epls": [
+    "@name('s0') select * from pattern [timer:interval(?::int minute ?::int seconds)]"
+   ]
+  },
+  {
+   "case": "month-scoped",
+   "ordinal": 6,
+   "runtimeId": "java-runtime-28fc7f508485cbc765a2",
+   "executionName": "PatternMonthScoped",
+   "observation": "listener x1; sendCurrentTime(2002-02-01T09:00:00.000) arms, deploy s0 `timer:interval(1 month)` — calendar recurrence: the boundary is 2002-03-01T09:00:00.000 (Feb 1 + 1 calendar month, not a fixed day span); advanceTime(boundary-1ms) silent, milestone(0) no-step, advanceTime(boundary) fires ONE row, undeployAll",
+   "epls": [
+    "@name('s0') select * from pattern [timer:interval(1 month)]"
+   ]
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "interval-spec"},
+  {"op": "advance-time", "case": "interval-spec", "at": "1970-01-01T00:00:00Z"},
+  {"op": "deploy", "case": "interval-spec", "statement": "s0", "epl": "@name('s0') select * from pattern [timer:interval(1 minute 2 seconds)]"},
+  {"op": "advance-time", "case": "interval-spec", "at": "1970-01-01T00:01:01.999Z"},
+  {"op": "advance-time", "case": "interval-spec", "at": "1970-01-01T00:01:02Z"},
+  {"op": "undeploy-all", "case": "interval-spec"},
+  {"op": "case", "case": "interval-spec-variables"},
+  {"op": "advance-time", "case": "interval-spec-variables", "at": "1970-01-01T00:00:00Z"},
+  {"op": "deploy", "case": "interval-spec-variables", "statement": "create-m_isv", "epl": "@public create variable double M_isv=1"},
+  {"op": "deploy", "case": "interval-spec-variables", "statement": "create-s_isv", "epl": "@public create variable double S_isv=2"},
+  {"op": "deploy", "case": "interval-spec-variables", "statement": "s0", "epl": "@name('s0') select * from pattern [timer:interval(M_isv minute S_isv seconds)]"},
+  {"op": "advance-time", "case": "interval-spec-variables", "at": "1970-01-01T00:01:01.999Z"},
+  {"op": "advance-time", "case": "interval-spec-variables", "at": "1970-01-01T00:01:02Z"},
+  {"op": "undeploy-all", "case": "interval-spec-variables"},
+  {"op": "case", "case": "interval-spec-expression"},
+  {"op": "advance-time", "case": "interval-spec-expression", "at": "1970-01-01T00:00:00Z"},
+  {"op": "deploy", "case": "interval-spec-expression", "statement": "create-mone", "epl": "@public create variable double MOne=1"},
+  {"op": "deploy", "case": "interval-spec-expression", "statement": "create-sone", "epl": "@public create variable double SOne=2"},
+  {"op": "deploy", "case": "interval-spec-expression", "statement": "s0", "epl": "@name('s0') select * from pattern [timer:interval(MOne*60+SOne seconds)]"},
+  {"op": "advance-time", "case": "interval-spec-expression", "at": "1970-01-01T00:01:01.999Z"},
+  {"op": "advance-time", "case": "interval-spec-expression", "at": "1970-01-01T00:01:02Z"},
+  {"op": "undeploy-all", "case": "interval-spec-expression"},
+  {"op": "case", "case": "interval-spec-prepared-stmt"},
+  {"op": "advance-time", "case": "interval-spec-prepared-stmt", "at": "1970-01-01T00:00:00Z"},
+  {"op": "deploy", "case": "interval-spec-prepared-stmt", "statement": "s0", "epl": "@name('s0') select * from pattern [timer:interval(?::int minute ?::int seconds)]", "payload": [1, 2]},
+  {"op": "advance-time", "case": "interval-spec-prepared-stmt", "at": "1970-01-01T00:01:01.999Z"},
+  {"op": "advance-time", "case": "interval-spec-prepared-stmt", "at": "1970-01-01T00:01:02Z"},
+  {"op": "undeploy-all", "case": "interval-spec-prepared-stmt"},
+  {"op": "case", "case": "month-scoped"},
+  {"op": "advance-time", "case": "month-scoped", "at": "2002-02-01T09:00:00Z"},
+  {"op": "deploy", "case": "month-scoped", "statement": "s0", "epl": "@name('s0') select * from pattern [timer:interval(1 month)]"},
+  {"op": "advance-time", "case": "month-scoped", "at": "2002-03-01T08:59:59.999Z"},
+  {"op": "advance-time", "case": "month-scoped", "at": "2002-03-01T09:00:00Z"},
+  {"op": "undeploy-all", "case": "month-scoped"}
+ ]
+}

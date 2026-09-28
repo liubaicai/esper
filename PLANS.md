@@ -45,32 +45,37 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.590 ('guard-while four-execution cluster').
+Active: Draft 4.591 ('timer-interval spec-resolution forms').
 
-- Contract frozen (JavaContract590 + GoSurface590): all 4
- PatternGuardWhile ords under shared static java-2be6b5626499eeff834e:
- ord0 Simple (aa6c31e987ec865a8cf2, guard false quits root permanently),
- ord1 PatternOp (bf4b4c7d66f189e40a73, 5-leg W-harness incl. SODA leg +
- first-B1-falsifies zero-fire leg), ord2 PatternVariable
- (8808f29a3bfdd475589f, runtimeSetVariable flip falsifies all live
- branches), ord3 PatternInvalid (4416cc3367e38623077a, 2 compile-error
- legs — leg a is a Go type error, leg b a Build error). Semantics:
- inspectPatternWhileGuard evals only on child match; false = permanent
- quit + falsify to parent; null/non-bool swallows.
-- [x] Assets590 delivered + integrated: Java trace 12 records,
-  Go replay 12, `-diff` passing / 0 differences; evidence +
-  traces checked in. All four sibling tests green.
-- [x] Manifest: case.pattern-guard-while 4/4 DV. Summary ->
-  429 DV cases / 1739 DV runtime IDs.
+- Contract frozen (JavaContract591 + GoSurface591):
+ PatternObserverTimerInterval ords 1/2/3/5/6 (ords 0/7 deferred,
+ ord4 already DV) — collection java-1422565b568236b2bfea, all
+ flags []:
+ ord1 Spec d5ad6ad9d226628f8383 (literal `1 minute 2 seconds`),
+ ord2 Variables bbb75d6bcc54f29c7652 (M_isv/S_isv variables),
+ ord3 Expression 97c5e6b5e4c46cc0adb4 (MOne*60+SOne seconds),
+ ord5 Prepared ea394f5795b88ddd71c9 (?::int substitution params),
+ ord6 MonthScoped 28fc7f508485cbc765a2 (calendar `1 month`
+ Feb1->Mar1). Shared contract: arm at deploy under advanceTime(0),
+ strictly-after deadline (61999 silent / 62000 fires), milestone
+ between probes, undeploy-all. Ords 1/2/3/5 share the identical
+ sequence; ord6 is the calendar-approximate sibling on the same
+ harness shape.
+- [x] Assets591 delivered + integrated: Java trace 5 records,
+  Go replay 5, `-diff` passing / 0 differences; evidence +
+  traces checked in; all four sibling tests green.
+- [x] Manifest: case.pattern-every +5 DV IDs. Summary -> 429 DV
+  cases / 1739->1744 DV runtime IDs.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev590 + JavaContract591 + GoSurface591 dispatched.
+- [x] ParityRev591 + JavaContract592 + GoSurface592 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
-- Shipped: Draft 4.589 ('withinmax W-harness + capped every-within
- fix') committed and pushed as `b57bf6587`; Git owns identity.
- case.pattern-every +1 DV; engine fix for capped every-within
- residency; review PASS after P1 (dropped guard-while case) fixed.
+- Shipped: Draft 4.590 ('guard-while cluster') committed and
+ pushed as `f20b88aec`; Git owns identity. case.pattern-guard-while
+ 4/4 DV; review PASS after 2 P3 nits fixed.
+- Shipped: Draft 4.589 ('withinmax W-harness + every-within fix')
+ committed and pushed as `b57bf6587`; Git owns identity.
 - Shipped: Draft 4.588 ('matchuntil 52-case W-harness')
  committed and pushed as `8a7f0c2a3`; Git owns identity.
 - Shipped: Draft 4.587 ('matchuntil repeat-use-tags trio')

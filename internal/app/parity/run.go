@@ -587,6 +587,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadPatternMatchUntilStatic586Scenario(file)
 	} else if *mode == "pattern-matchuntil-repeattags-587" || *mode == "pattern-matchuntil-repeattags-587-diff" {
 		scenario, err = loadPatternMatchUntilRepeatTags587Scenario(file)
+	} else if *mode == "pattern-timer-interval-forms-591" || *mode == "pattern-timer-interval-forms-591-diff" {
+		scenario, err = loadPatternTimerIntervalForms591Scenario(file)
 	} else if *mode == "epl-contained-event-example" || *mode == "epl-contained-event-example-diff" {
 		scenario, err = loadEPLContainedEventExampleScenario(file)
 	} else if *mode == "epl-other-pattern-event-properties" || *mode == "epl-other-pattern-event-properties-diff" {
@@ -2851,6 +2853,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaSourceFiles, patternGuardWhile590JavaSources),
 				splitMetadata(*javaExecutions, patternGuardWhile590JavaExecutions), scenario, trace,
 				sortPatternGuardWhile590Records)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "pattern-timer-interval-forms-591" || *mode == "pattern-timer-interval-forms-591-diff" {
+		trace, err := runPatternTimerIntervalForms591Scenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "pattern-timer-interval-forms-591-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, patternTimerIntervalForms591JavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, patternTimerIntervalForms591JavaSources),
+				splitMetadata(*javaExecutions, patternTimerIntervalForms591JavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
