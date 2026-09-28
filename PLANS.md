@@ -45,36 +45,35 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.575 ('pattern-complex-property-access').
+Active: Draft 4.576 ('everydistinct single-filter expiry').
 
-- Contract frozen (JavaContract575 + GoSurface575):
-  case.pattern-complex-property-access — static outer id
-  java-9504034cfc1c929363d8; deduped static ids per ord
-  (java-be2858d5e4c76bbf7f85 ord0, java-ec97467eeb93b4ff0e67 ord1,
-  java-9504034cfc1c929363d8 ord2). DV ords 0/1/2: PatternComplexProperties
-  (java-runtime-5fd2cb676f155061c987, 16-case mapped/indexed/array/
-  nested/combined matrix incl. 6 no-fire null-safety subcases),
-  PatternIndexedFilterProp (java-runtime-5d046d758dced3b2d879,
-  every-atom indexed filter + captured-event check; Java assertSame ->
-  Go DeepEqual documented difference), PatternIndexedValueProp
-  (java-runtime-fd23ca72c8ba2aaf67ad, tag-correlated followed-by
-  every a -> b(indexed[0]=a.indexed[0])). Ords 3/4 (OM/Compile)
-  excluded per SODA/compile-text precedent. GoSurface575: no
-  functional gaps — fluent composition is intentionally different
-  (no EPL-text entry).
-- [x] Assets575 delivered + integrated: Java trace 11 records, Go
-  replay 11 across 18 cases, `-diff` passing / 0 differences;
-  evidence + traces checked in. 16-atom matrix incl. 8 no-fire legs
-  (3 exercising null-safety: missing-key, out-of-range, unknown-key);
-  assertSame->DeepEqual recorded as representation difference; ords
-  3/4 excluded per SODA/compile-text precedent.
-- [x] Manifest: case.pattern-complex-property-access PROMOTED
-  implemented->DV (3/5 ords). Summary -> 424 DV / 1700 DV runtime IDs.
+- Contract frozen (JavaContract576 + GoSurface576):
+  cap.pattern.operator-everydistinct — PatternOperatorEveryDistinct
+  static java-073091a0b42ca8dd974f, 3 of 17 ords: PatternEveryDistinctSimple
+  (java-runtime-593adaf9d26cd35ab4c9, no clock, dup-suppression),
+  PatternEveryDistinctWTime (java-runtime-666dd3af9524272914d9, 5s
+  per-key expiry from first sighting; boundary pinned: key expires AT
+  first-seen+5000), PatternExpireSeenBeforeKey
+  (java-runtime-904c2139b52a7eaeedfb, filtered theString like 'A%',
+  intPrimitive key, per-key first-sighting expiry). Byte-exact EPLs
+  pinned incl. `@Name` (capital N) vs `@name` asymmetry.
+  Exclusions: ord3 SODA tail, ord14 compile-only, ord15 calendar
+  month scope, ords 4-13/16 compound variants -> follow-on slices.
+- [x] Assets576 delivered + integrated: Java trace 12 records, Go
+  replay 12, `-diff` passing / 0 differences; evidence + traces
+  checked in. Per-key expiry boundaries verified (t=19999 no-fire /
+  t=20000 fire; t=1999/2000); @Name/@name asymmetry pinned; oracle
+  bean uses real SupportBean class (kind:row projection precedent).
+- [x] Manifest: case.pattern-operator-every-distinct PROMOTED
+  implemented->DV (3/17 ords). Summary -> 425 DV / 1703 DV runtime IDs.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev575 + JavaContract576 + GoSurface576 dispatched.
+- [x] ParityRev576 + JavaContract577 + GoSurface577 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.575 ('pattern-complex-property-access') committed
+  and pushed as `abdc6f4f7`; Git owns identity. case promoted DV 3/5
+  ords (11 records/18 cases, 0 differences); review PASS (2 P3s).
 - Shipped: Draft 4.574 ('subquery-within-pattern') committed and
   pushed as `8adab5d3a`; Git owns identity. case promoted DV 4/5
   ords (19 records/9 spellings, 0 differences) + subquery tag-

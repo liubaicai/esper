@@ -1,0 +1,102 @@
+{
+ "version": "esper-parity/v1",
+ "id": "pattern-everydistinct-576",
+ "description": "PatternOperatorEveryDistinct ords 0-2 — the single-filter every-distinct slice over SupportBean. every-distinct-simple (PatternEveryDistinctSimple, ord 0) replays `@Name('s0') select a.theString as c0 from pattern [every-distinct(a.theString) a=SupportBean]` with no clock: E1 fires c0=E1, two E1 duplicates are swallowed, E2 fires c0=E2, the E1/E2 dup pairs stay silent and E3 fires c0=E3. every-distinct-w-time (PatternEveryDistinctWTime, ord 1) replays the same statement with `, 5 sec` expiry over the virtual clock: advanceTime(0) before deploy, then E1@15000 fires (dup swallowed); at t=18000 E1 stays swallowed and E2 fires; at t=19999 E1 still does not fire — the key expires AT first-seen+5000, so E1@20000 fires while E2 (first-seen 18000) stays swallowed, then the E1/E2 dups are silent and E3 fires c0=E3. expire-seen-before-key (PatternExpireSeenBeforeKey, ord 2) replays `@name('s0') select * from pattern [every-distinct(a.intPrimitive, 1 sec) a=SupportBean(theString like 'A%')]`: the key is intPrimitive, the filter gates on theString like 'A%' and select * delivers the captured bean; A1(1)/A3(2) fire at t=0, A4(1)/A5(2) are swallowed, then at t=1000 both keys expire so A4(1)/A5(2) fire, A6(1) is swallowed, A7(2)@1999 stays swallowed and A7(2)@2000 fires — per-key expiry measured from each key's first sighting. Statement names keep the Java asymmetry verbatim: @Name('s0') for ords 0-1 vs @name('s0') for ord 2; Java milestone() savepoints are omitted (they restore identical state for these non-contextual executions).",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorEveryDistinct.java",
+ "javaSourceFiles": [
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorEveryDistinct.java",
+  "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java"
+ ],
+ "javaRuntimes": [
+  "java-runtime-593adaf9d26cd35ab4c9",
+  "java-runtime-666dd3af9524272914d9",
+  "java-runtime-904c2139b52a7eaeedfb"
+ ],
+ "javaNames": [
+  "PatternEveryDistinctSimple",
+  "PatternEveryDistinctWTime",
+  "PatternExpireSeenBeforeKey"
+ ],
+ "javaStaticIds": [
+  "java-073091a0b42ca8dd974f",
+  "java-073091a0b42ca8dd974f",
+  "java-073091a0b42ca8dd974f"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "every-distinct-simple",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-593adaf9d26cd35ab4c9",
+   "executionName": "PatternEveryDistinctSimple",
+   "observation": "listener; no clock; the first event per distinct theString key fires c0 and later duplicates are swallowed: E1 fires, E1 x2 silent, E2 fires, E1+E2 and E1+E2 silent, E3 fires",
+   "epl": "@Name('s0') select a.theString as c0 from pattern [every-distinct(a.theString) a=SupportBean]"
+  },
+  {
+   "case": "every-distinct-w-time",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-666dd3af9524272914d9",
+   "executionName": "PatternEveryDistinctWTime",
+   "observation": "listener; 5-second per-key expiry from first sighting over the virtual clock: E1@15000 fires (dup swallowed), E1@18000 swallowed and E2 fires, E1@19999 still swallowed (the key expires AT first-seen+5000=20000), E1@20000 fires while E2 (first-seen 18000) stays swallowed, E1/E2 dups silent, E3 fires c0=E3",
+   "epl": "@Name('s0') select a.theString as c0 from pattern [every-distinct(a.theString, 5 sec) a=SupportBean]"
+  },
+  {
+   "case": "expire-seen-before-key",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-904c2139b52a7eaeedfb",
+   "executionName": "PatternExpireSeenBeforeKey",
+   "observation": "listener; theString like 'A%' filter with the distinct key on intPrimitive and 1-second per-key expiry from each key's first sighting; select * projects the captured tag's bean (the a.theString the Java assertions pin): A1(1)/A3(2) fire at t=0, A4(1)/A5(2) swallowed, at t=1000 both keys expired so A4(1)/A5(2) fire, A6(1) silent, A7(2)@1999 swallowed, A7(2)@2000 fires",
+   "epl": "@name('s0') select * from pattern [every-distinct(a.intPrimitive, 1 sec) a=SupportBean(theString like 'A%')]"
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "every-distinct-simple"},
+  {"op": "deploy", "case": "every-distinct-simple", "statement": "s0", "epl": "@Name('s0') select a.theString as c0 from pattern [every-distinct(a.theString) a=SupportBean]"},
+  {"op": "send", "case": "every-distinct-simple", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 0}},
+  {"op": "send", "case": "every-distinct-simple", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 0}},
+  {"op": "send", "case": "every-distinct-simple", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 0}},
+  {"op": "send", "case": "every-distinct-simple", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 0}},
+  {"op": "send", "case": "every-distinct-simple", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 0}},
+  {"op": "send", "case": "every-distinct-simple", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 0}},
+  {"op": "send", "case": "every-distinct-simple", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 0}},
+  {"op": "send", "case": "every-distinct-simple", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 0}},
+  {"op": "send", "case": "every-distinct-simple", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 0}},
+  {"op": "undeploy-all", "case": "every-distinct-simple"},
+  {"op": "case", "case": "every-distinct-w-time"},
+  {"op": "advance-time", "case": "every-distinct-w-time", "at": "1970-01-01T00:00:00.000Z"},
+  {"op": "deploy", "case": "every-distinct-w-time", "statement": "s0", "epl": "@Name('s0') select a.theString as c0 from pattern [every-distinct(a.theString, 5 sec) a=SupportBean]"},
+  {"op": "advance-time", "case": "every-distinct-w-time", "at": "1970-01-01T00:00:15.000Z"},
+  {"op": "send", "case": "every-distinct-w-time", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 0}},
+  {"op": "send", "case": "every-distinct-w-time", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 0}},
+  {"op": "advance-time", "case": "every-distinct-w-time", "at": "1970-01-01T00:00:18.000Z"},
+  {"op": "send", "case": "every-distinct-w-time", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 0}},
+  {"op": "send", "case": "every-distinct-w-time", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 0}},
+  {"op": "advance-time", "case": "every-distinct-w-time", "at": "1970-01-01T00:00:19.999Z"},
+  {"op": "send", "case": "every-distinct-w-time", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 0}},
+  {"op": "advance-time", "case": "every-distinct-w-time", "at": "1970-01-01T00:00:20.000Z"},
+  {"op": "send", "case": "every-distinct-w-time", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 0}},
+  {"op": "send", "case": "every-distinct-w-time", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 0}},
+  {"op": "send", "case": "every-distinct-w-time", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 0}},
+  {"op": "send", "case": "every-distinct-w-time", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 0}},
+  {"op": "send", "case": "every-distinct-w-time", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 0}},
+  {"op": "undeploy-all", "case": "every-distinct-w-time"},
+  {"op": "case", "case": "expire-seen-before-key"},
+  {"op": "advance-time", "case": "expire-seen-before-key", "at": "1970-01-01T00:00:00.000Z"},
+  {"op": "deploy", "case": "expire-seen-before-key", "statement": "s0", "epl": "@name('s0') select * from pattern [every-distinct(a.intPrimitive, 1 sec) a=SupportBean(theString like 'A%')]"},
+  {"op": "send", "case": "expire-seen-before-key", "eventType": "SupportBean", "payload": {"theString": "A1", "intPrimitive": 1}},
+  {"op": "send", "case": "expire-seen-before-key", "eventType": "SupportBean", "payload": {"theString": "A2", "intPrimitive": 1}},
+  {"op": "send", "case": "expire-seen-before-key", "eventType": "SupportBean", "payload": {"theString": "A3", "intPrimitive": 2}},
+  {"op": "send", "case": "expire-seen-before-key", "eventType": "SupportBean", "payload": {"theString": "A4", "intPrimitive": 1}},
+  {"op": "send", "case": "expire-seen-before-key", "eventType": "SupportBean", "payload": {"theString": "A5", "intPrimitive": 2}},
+  {"op": "advance-time", "case": "expire-seen-before-key", "at": "1970-01-01T00:00:01.000Z"},
+  {"op": "send", "case": "expire-seen-before-key", "eventType": "SupportBean", "payload": {"theString": "A4", "intPrimitive": 1}},
+  {"op": "send", "case": "expire-seen-before-key", "eventType": "SupportBean", "payload": {"theString": "A5", "intPrimitive": 2}},
+  {"op": "send", "case": "expire-seen-before-key", "eventType": "SupportBean", "payload": {"theString": "A6", "intPrimitive": 1}},
+  {"op": "advance-time", "case": "expire-seen-before-key", "at": "1970-01-01T00:00:01.999Z"},
+  {"op": "send", "case": "expire-seen-before-key", "eventType": "SupportBean", "payload": {"theString": "A7", "intPrimitive": 2}},
+  {"op": "advance-time", "case": "expire-seen-before-key", "at": "1970-01-01T00:00:02.000Z"},
+  {"op": "send", "case": "expire-seen-before-key", "eventType": "SupportBean", "payload": {"theString": "A7", "intPrimitive": 2}},
+  {"op": "undeploy-all", "case": "expire-seen-before-key"}
+ ]
+}

@@ -24987,7 +24987,11 @@
     "TestPatternFollowedByWithDistinctMatchesEsper",
     "TestPatternEveryDistinctInvalidMatchesEsper",
     "TestPatternEveryDistinctMonthScopedMatchesEsper",
-    "TestPatternEveryDistinctMultikeyWArrayMatchesEsper"
+    "TestPatternEveryDistinctMultikeyWArrayMatchesEsper",
+    "internal/app/parity/pattern_everydistinct_576_test.go/TestRunPatternEveryDistinct576ScenarioReplay",
+    "internal/app/parity/pattern_everydistinct_576_test.go/TestRunPatternEveryDistinct576PinnedArtifacts",
+    "internal/app/parity/pattern_everydistinct_576_test.go/TestRunPatternEveryDistinct576RejectsMalformedRawScenario",
+    "internal/app/parity/pattern_everydistinct_576_test.go/TestRunPatternEveryDistinct576RuntimeIDMappingMatchesScenario"
    ],
    "tags": [
     "correctness",
@@ -24997,18 +25001,27 @@
     "expiry",
     "calendar",
     "match-until",
-    "followed-by"
+    "followed-by",
+    "differential"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
     "java-runtime-inventory",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/pattern-everydistinct-576.evidence.json"
    ],
-   "difference": "Go parity tests replay the Java suite's exact event/time sequences for all 15 open executions (duplicate suppression per key, wtime expiry with re-admission, expire-seen-before-key ordering, repeat-over-distinct bounds, every-distinct over and/or/not/followed-by/within roots, followed-by with per-instance distinct, month-scoped calendar expiry, and multi-key with int-array events). The fluent API takes variadic keys and an explicit expiry duration or calendar period where EPL embeds them in the every-distinct syntax; validation errors (non-constant key, invalid calendar) surface at Build time instead of at statement creation.",
+   "difference": "ord14 PatternInvalid (java-runtime-2542b81b75a973a3cc38) is compile-error-only (Go Build rejection wording intentionally different); ords 3/15 SODA/calendar variants and ords 4-13/16 compound/multi-key forms remain implemented-not-DV for follow-on slices.",
    "verification": [
     "inventoried",
-    "implemented"
-   ]
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-593adaf9d26cd35ab4c9",
+    "java-runtime-666dd3af9524272914d9",
+    "java-runtime-904c2139b52a7eaeedfb"
+   ],
+   "notes": " Draft 4.576: ords 0/1/2 DV (12 records: no-clock dup suppression, 5s per-key expiry with boundary pinned at first-seen+5000, filtered intPrimitive-key 1s expiry). Per-key expiry semantics match exactly. 3/17 ords DV."
   },
   {
    "id": "case.pattern-operator-matchuntil",
@@ -55374,8 +55387,8 @@
  "summary": {
   "inventoriedCases": 801,
   "implementedCases": 799,
-  "differentialVerifiedCases": 424,
-  "differentialVerifiedRuntimeIds": 1700,
+  "differentialVerifiedCases": 425,
+  "differentialVerifiedRuntimeIds": 1703,
   "intentionallyDifferentCases": 40,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
