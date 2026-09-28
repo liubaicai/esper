@@ -45,38 +45,38 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.585 ('matchuntil untimed until-array quad').
+Active: Draft 4.586 ('matchuntil static remainder — ords 7/8').
 
-- Contract frozen (JavaContract585 + GoSurface585):
+- Contract frozen (JavaContract586 + GoSurface586):
   case.pattern-operator-matchuntil — file
-  java-2169accb9d43755e87e4, ords 0/2/3/5 (untimed until-array
-  semantics, no timers): ord0 PatternMatchUntilSimple
-  (java-runtime-93ea4ae0a2ca85d18a0d, @Name capital-N pin,
-  a[0]/a[1]/b projection + permanent single-shot); ord2
-  PatternSelectArray (java-runtime-bd06e4f21e0083fb261d, TWO legs
-  explicit-index + wildcard, a=[A1,A2] exact order, a2=null);
-  ord3 PatternUseFilter (java-runtime-4b8c99341f4a3af06ea9, FIVE
-  legs: concat/equals/in/not-in/between over a[i] array access);
-  ord5 PatternArrayFunctionRepeat
-  (java-runtime-602d438d756709deb50e, SupportStaticMethodLib.
-  arrayLength + Array.getLength over [1:] array). Per-ord statics:
-  ord2 java-c393b406de406e3ffd1f, ord3 java-bf3211b9b2822d0cbbf4,
-  ord5 java-7a5adcaeaa460c4641cb (ord0 shares file id).
-  GoSurface: all covered in pattern_matchuntil_parity_test.go;
-  gaps: trailing-null slot rendering, select-* fragment identity.
-- [x] Assets585 delivered + integrated: Java trace 9 records, Go
-  replay 9 (66 steps, 9 deploy legs), `-diff` passing / 0
-  differences; evidence + traces checked in. Oracle needed
-  CompilerArguments+Configuration + avro classpath for
-  SupportStaticMethodLib (documented).
-- [x] Manifest: case.pattern-operator-matchuntil promoted to
-  differential-verified +4 DV IDs (4/7). Summary -> 427 DV cases /
-  1730 DV runtime IDs.
-- [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev585 + JavaContract586 + GoSurface586 dispatched.
+  java-2169accb9d43755e87e4, ords 7/8 (untimed static):
+  ord7 PatternBoundRepeatWithNot
+  (java-runtime-f10e941aae4f3b003593, static
+  java-ada27e5f94fecc9ffce2, `every [2] (e=(theString='A') and not
+  (theString='B'))`: A(1),A(2)->fire{1,2},A(3),B(4) cancel,
+  A(5) no-fire, A(6) ->fire{5,6}; e[0]/e[1].intPrimitive);
+  ord8 PatternInvalid (java-runtime-50cec2b441fd878bf1f1, static
+  java-256196856cfafb3c17b7, 13 tryInvalidPattern compile-error
+  legs — Go-expressible subset: inverted/negative bounds,
+  duplicate tag across until/follow-on, nested-until tag reuse;
+  Java-only: zero-literals, [4:6] no-until, own-filter a[0],
+  non-numeric bounds). Compile-error DV precedent exists.
+  Deferred: ord4 timed 3-leg (next), ord1 52-case W-harness,
+  ord6 dynamic-bounds (separate subdomain).
+- [x] Assets586 delivered + integrated: Java trace 6 records (2
+  listener + 4 compile-error), Go replay equal, `-diff` passing / 0
+  differences; evidence + traces checked in.
+- [x] Manifest: case +2 DV IDs + associated the previously-missing
+  ords 6/7 javaRuntimeIds/javaNames. Summary -> 427 DV cases /
+  1732 DV runtime IDs / 3750 referenced.
+- [x] Gates: `make check` GREEN (exit 0) after the association fix.
+- [x] ParityRev586 + JavaContract587 + GoSurface587 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.585 ('matchuntil untimed until-array quad')
+  committed and pushed as `92b59784b`; Git owns identity. case
+  promoted to differential-verified 4/7; review PASS (clean).
 - Shipped: Draft 4.584 ('followed-by ord2 file closer') committed
   and pushed as `5466ae3ae`; Git owns identity. case
   pattern-operator-followed-by CLOSED 10/10; review PASS after P2

@@ -1,0 +1,32 @@
+{
+ "version": "esper-parity/v1",
+ "id": "pattern-matchuntil-static-586",
+ "description": "PatternOperatorMatchUntil ords 7/8 static remainder — ord 7 PatternBoundRepeatWithNot `@name('s0') select * from pattern [every [2] (e = SupportBean(theString='A') and not SupportBean(theString='B'))]` (A(1)/A(2) fire e={1,2}, A(3) arms a fresh atom, B(4) cancels only that pending partial, A(5)/A(6) fire e={5,6} — each repeat atom carries its own not-guard and the completed first delivery survives); ord 8 PatternInvalid pins the four Go-expressible tryInvalidCompile legs (inverted [10:4], negative [-1], duplicate tag across until/follow-on, nested-until tag reuse) as compile-error records carrying the Java message prefixes — the other nine legs are documented Java-only exclusions (zero-valued literals are the legal Go [:M]/[N:] forms, [4:6]-without-until has no EPL-text surface, a[0] own/follow-on filter refs and non-numeric bound expressions are compile-text concerns) and carry no steps. No clock ops; milestone() savepoints carry no steps.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorMatchUntil.java",
+ "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorMatchUntil.java", "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_A.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_B.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_C.java"],
+ "javaRuntimes": ["java-runtime-f10e941aae4f3b003593", "java-runtime-50cec2b441fd878bf1f1"],
+ "javaNames": ["PatternBoundRepeatWithNot", "PatternInvalid"],
+ "javaStaticIds": ["java-ada27e5f94fecc9ffce2", "java-256196856cfafb3c17b7"],
+ "javaFlags": [],
+ "cases": [
+  {"case": "bound-repeat-with-not", "ordinal": 7, "runtimeId": "java-runtime-f10e941aae4f3b003593", "executionName": "PatternBoundRepeatWithNot", "observation": "listener x2; no clock ops (milestone 0-3 savepoints carry no steps); every [2] (e=SupportBean(theString='A') and not SupportBean(theString='B')): A(1)/A(2) complete the first pair and fire {e:[(A,1),(A,2)]}; A(3) arms a fresh repeat atom; B(4) cancels ONLY that pending partial — the completed first delivery already left the engine; A(5) arms a new pair which A(6) completes, firing {e:[(A,5),(A,6)]}; each pending repeat atom carries its own not-guard", "epl": "@name('s0') select * from pattern [every [2] (e = SupportBean(theString='A') and not SupportBean(theString='B'))]"},
+  {"case": "invalid", "ordinal": 8, "runtimeId": "java-runtime-50cec2b441fd878bf1f1", "executionName": "PatternInvalid", "observation": "compile-error; four tryInvalidCompile probes pin the Go-expressible legs — inverted [10:4] (lower bound higher than upper), negative [-1] bound, duplicate tag 'c' redeclared across until and follow-on, tag 'a' reused inside a nested until — recording the pinned Java message prefixes; the remaining nine legs are documented Java-only exclusions (zero-valued [:0]/[0:0]/[0] literals are legal Go [:M]/[N:] forms, [4:6]-without-until is EPL-text-only, a[0].id own/follow-on filter refs and the non-numeric bound expressions are compile-text surfaces) with no steps and no records", "epl": "select * from pattern[[10:4] SupportBean_A]"}
+ ],
+ "steps": [
+  {"op": "case", "case": "bound-repeat-with-not"},
+  {"op": "deploy", "case": "bound-repeat-with-not", "statement": "s0", "epl": "@name('s0') select * from pattern [every [2] (e = SupportBean(theString='A') and not SupportBean(theString='B'))]"},
+  {"op": "send", "case": "bound-repeat-with-not", "eventType": "SupportBean", "payload": {"theString": "A", "intPrimitive": 1}},
+  {"op": "send", "case": "bound-repeat-with-not", "eventType": "SupportBean", "payload": {"theString": "A", "intPrimitive": 2}},
+  {"op": "send", "case": "bound-repeat-with-not", "eventType": "SupportBean", "payload": {"theString": "A", "intPrimitive": 3}},
+  {"op": "send", "case": "bound-repeat-with-not", "eventType": "SupportBean", "payload": {"theString": "B", "intPrimitive": 4}},
+  {"op": "send", "case": "bound-repeat-with-not", "eventType": "SupportBean", "payload": {"theString": "A", "intPrimitive": 5}},
+  {"op": "send", "case": "bound-repeat-with-not", "eventType": "SupportBean", "payload": {"theString": "A", "intPrimitive": 6}},
+  {"op": "undeploy-all", "case": "bound-repeat-with-not"},
+  {"op": "case", "case": "invalid"},
+  {"op": "build-error", "case": "invalid", "statement": "inverted-bounds", "epl": "select * from pattern[[10:4] SupportBean_A]", "expectError": "Incorrect range specification, lower bounds value '10' is higher then higher bounds '4'"},
+  {"op": "build-error", "case": "invalid", "statement": "negative-bounds", "epl": "select * from pattern[[-1] SupportBean_A]", "expectError": "Incorrect range specification, a bounds value of zero or negative value is not allowed"},
+  {"op": "build-error", "case": "invalid", "statement": "tag-redeclared-across-until", "epl": "select * from pattern[(a=SupportBean_A until c=SupportBean_B) -> c=SupportBean_C]", "expectError": "Tag 'c' for event 'SupportBean_C' has already been declared for events of type com.espertech.esper.regressionlib.support.bean.SupportBean_B"},
+  {"op": "build-error", "case": "invalid", "statement": "tag-reused-inside-nested-until", "epl": "select * from pattern[((a=SupportBean_A until b=SupportBean_B) until a=SupportBean_A)]", "expectError": "Tag 'a' for event 'SupportBean_A' used in the repeat-until operator cannot also appear in other filter expressions"}
+ ]
+}

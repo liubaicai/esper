@@ -140,6 +140,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include pattern-followedby-wharness-583 and pattern-followedby-wharness-583-diff")
 		fmt.Fprintln(stderr, "runner modes include pattern-followedby-timer-584 and pattern-followedby-timer-584-diff")
 		fmt.Fprintln(stderr, "runner modes include pattern-matchuntil-untimed-585 and pattern-matchuntil-untimed-585-diff")
+		fmt.Fprintln(stderr, "runner modes include pattern-matchuntil-static-586 and pattern-matchuntil-static-586-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-enum-select-from and expr-enum-select-from-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-type-use and expr-class-type-use-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-for-epl-objects and expr-class-for-epl-objects-diff")
@@ -581,6 +582,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadPatternFollowedByTimer584Scenario(file)
 	} else if *mode == "pattern-matchuntil-untimed-585" || *mode == "pattern-matchuntil-untimed-585-diff" {
 		scenario, err = loadPatternMatchUntilUntimed585Scenario(file)
+	} else if *mode == "pattern-matchuntil-static-586" || *mode == "pattern-matchuntil-static-586-diff" {
+		scenario, err = loadPatternMatchUntilStatic586Scenario(file)
 	} else if *mode == "epl-contained-event-example" || *mode == "epl-contained-event-example-diff" {
 		scenario, err = loadEPLContainedEventExampleScenario(file)
 	} else if *mode == "epl-other-pattern-event-properties" || *mode == "epl-other-pattern-event-properties-diff" {
@@ -2762,6 +2765,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, patternMatchUntilUntimed585JavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, patternMatchUntilUntimed585JavaSources),
 				splitMetadata(*javaExecutions, patternMatchUntilUntimed585JavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "pattern-matchuntil-static-586" || *mode == "pattern-matchuntil-static-586-diff" {
+		trace, err := runPatternMatchUntilStatic586Scenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "pattern-matchuntil-static-586-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, patternMatchUntilStatic586JavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, patternMatchUntilStatic586JavaSources),
+				splitMetadata(*javaExecutions, patternMatchUntilStatic586JavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

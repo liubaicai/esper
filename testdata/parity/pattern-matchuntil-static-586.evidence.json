@@ -1,0 +1,315 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-f10e941aae4f3b003593",
+    "java-runtime-50cec2b441fd878bf1f1"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorMatchUntil.java",
+    "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_A.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_B.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_C.java"
+  ],
+  "javaExecutions": [
+    "PatternBoundRepeatWithNot",
+    "PatternInvalid"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "pattern-matchuntil-static-586",
+    "steps": [
+      {
+        "op": "case",
+        "case": "bound-repeat-with-not"
+      },
+      {
+        "op": "deploy",
+        "case": "bound-repeat-with-not",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [every [2] (e = SupportBean(theString='A') and not SupportBean(theString='B'))]"
+      },
+      {
+        "op": "send",
+        "case": "bound-repeat-with-not",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "bound-repeat-with-not",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "bound-repeat-with-not",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "bound-repeat-with-not",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "bound-repeat-with-not",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "send",
+        "case": "bound-repeat-with-not",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 6
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "bound-repeat-with-not"
+      },
+      {
+        "op": "case",
+        "case": "invalid"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "inverted-bounds",
+        "expectError": "Incorrect range specification, lower bounds value '10' is higher then higher bounds '4'",
+        "epl": "select * from pattern[[10:4] SupportBean_A]"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "negative-bounds",
+        "expectError": "Incorrect range specification, a bounds value of zero or negative value is not allowed",
+        "epl": "select * from pattern[[-1] SupportBean_A]"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "tag-redeclared-across-until",
+        "expectError": "Tag 'c' for event 'SupportBean_C' has already been declared for events of type com.espertech.esper.regressionlib.support.bean.SupportBean_B",
+        "epl": "select * from pattern[(a=SupportBean_A until c=SupportBean_B) -\u003e c=SupportBean_C]"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "tag-reused-inside-nested-until",
+        "expectError": "Tag 'a' for event 'SupportBean_A' used in the repeat-until operator cannot also appear in other filter expressions",
+        "epl": "select * from pattern[((a=SupportBean_A until b=SupportBean_B) until a=SupportBean_A)]"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-matchuntil-static-586",
+    "records": [
+      {
+        "case": "bound-repeat-with-not",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "A"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "theString": "A"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-repeat-with-not",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e": [
+                {
+                  "fields": {
+                    "intPrimitive": 5,
+                    "theString": "A"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 6,
+                    "theString": "A"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "inverted-bounds",
+        "sequence": 0,
+        "value": "Incorrect range specification, lower bounds value '10' is higher then higher bounds '4'"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "negative-bounds",
+        "sequence": 0,
+        "value": "Incorrect range specification, a bounds value of zero or negative value is not allowed"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "tag-redeclared-across-until",
+        "sequence": 0,
+        "value": "Tag 'c' for event 'SupportBean_C' has already been declared for events of type com.espertech.esper.regressionlib.support.bean.SupportBean_B"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "tag-reused-inside-nested-until",
+        "sequence": 0,
+        "value": "Tag 'a' for event 'SupportBean_A' used in the repeat-until operator cannot also appear in other filter expressions"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-matchuntil-static-586",
+    "records": [
+      {
+        "case": "bound-repeat-with-not",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "A"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "theString": "A"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-repeat-with-not",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e": [
+                {
+                  "fields": {
+                    "intPrimitive": 5,
+                    "theString": "A"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 6,
+                    "theString": "A"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "inverted-bounds",
+        "sequence": 0,
+        "value": "Incorrect range specification, lower bounds value '10' is higher then higher bounds '4'"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "negative-bounds",
+        "sequence": 0,
+        "value": "Incorrect range specification, a bounds value of zero or negative value is not allowed"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "tag-redeclared-across-until",
+        "sequence": 0,
+        "value": "Tag 'c' for event 'SupportBean_C' has already been declared for events of type com.espertech.esper.regressionlib.support.bean.SupportBean_B"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "tag-reused-inside-nested-until",
+        "sequence": 0,
+        "value": "Tag 'a' for event 'SupportBean_A' used in the repeat-until operator cannot also appear in other filter expressions"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
