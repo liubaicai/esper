@@ -135,6 +135,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include pattern-everydistinct-nested-578 and pattern-everydistinct-nested-578-diff")
 		fmt.Fprintln(stderr, "runner modes include pattern-everydistinct-followup-579 and pattern-everydistinct-followup-579-diff")
 		fmt.Fprintln(stderr, "runner modes include pattern-followedby-rfid-580 and pattern-followedby-rfid-580-diff")
+		fmt.Fprintln(stderr, "runner modes include pattern-followedby-timernot-581 and pattern-followedby-timernot-581-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-enum-select-from and expr-enum-select-from-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-type-use and expr-class-type-use-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-for-epl-objects and expr-class-for-epl-objects-diff")
@@ -566,6 +567,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadPatternEveryDistinctFollowup579Scenario(file)
 	} else if *mode == "pattern-followedby-rfid-580" || *mode == "pattern-followedby-rfid-580-diff" {
 		scenario, err = loadPatternFollowedByRFID580Scenario(file)
+	} else if *mode == "pattern-followedby-timernot-581" || *mode == "pattern-followedby-timernot-581-diff" {
+		scenario, err = loadPatternFollowedByTimerNot581Scenario(file)
 	} else if *mode == "epl-contained-event-example" || *mode == "epl-contained-event-example-diff" {
 		scenario, err = loadEPLContainedEventExampleScenario(file)
 	} else if *mode == "epl-other-pattern-event-properties" || *mode == "epl-other-pattern-event-properties-diff" {
@@ -2667,6 +2670,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, patternFollowedByRFID580JavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, patternFollowedByRFID580JavaSources),
 				splitMetadata(*javaExecutions, patternFollowedByRFID580JavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "pattern-followedby-timernot-581" || *mode == "pattern-followedby-timernot-581-diff" {
+		trace, err := runPatternFollowedByTimerNot581Scenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "pattern-followedby-timernot-581-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, patternFollowedByTimerNot581JavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, patternFollowedByTimerNot581JavaSources),
+				splitMetadata(*javaExecutions, patternFollowedByTimerNot581JavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

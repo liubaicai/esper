@@ -735,10 +735,12 @@ func TestPatternFilterGreaterThenMatchesEsper(t *testing.T) {
 }
 
 // TestPatternFollowedOrPermFalseMatchesEsper covers PatternFollowedOrPermFalse:
-// every s=SupportBean(theString='E') -> (timer:interval(10) and not
+// every s=SupportBean(theString='E') -> ((timer:interval(10) and not
 // SupportBean(theString='C1')) or (SupportBean(theString='C2') and not
-// timer:interval(10)). The right alternative's not-timer dies permanently at
-// t=10000; the left branch fires when its ten-second timer expires.
+// timer:interval(10))). `->` binds loosest in the EPL grammar, so the or sits
+// inside the followed-by's second leg: the right alternative arms only at the
+// E match and its not-timer dies at t=11000; the left branch fires when its
+// ten-second timer expires.
 func TestPatternFollowedOrPermFalseMatchesEsper(t *testing.T) {
 	env := newPatternOpEnv(t)
 	engine := NewEngine(env, WithStartTime(time.UnixMilli(0).UTC()))
@@ -748,12 +750,12 @@ func TestPatternFollowedOrPermFalseMatchesEsper(t *testing.T) {
 	}
 
 	sb := From[patternOpBean](env, "SupportBean")
-	left := PatternFrom(sb, "s", Equal[string](Field[patternOpBean, string]("theString"), Literal("E"))).Every().Then(
+	pattern := PatternFrom(sb, "s", Equal[string](Field[patternOpBean, string]("theString"), Literal("E"))).Every().Then(
 		TimerInterval(sb, 10*time.Second).And(
-			PatternFrom(sb, "c1", Equal[string](Field[patternOpBean, string]("theString"), Literal("C1"))).Not()))
-	right := PatternFrom(sb, "c2", Equal[string](Field[patternOpBean, string]("theString"), Literal("C2"))).
-		And(TimerInterval(sb, 10*time.Second).Not())
-	pattern := left.Or(right)
+			PatternFrom(sb, "c1", Equal[string](Field[patternOpBean, string]("theString"), Literal("C1"))).Not()).Or(
+			PatternFrom(sb, "c2", Equal[string](Field[patternOpBean, string]("theString"), Literal("C2"))).
+				And(TimerInterval(sb, 10*time.Second).Not())),
+	)
 	plan, err := env.Build(pattern.Select(
 		Alias("theString", TagField[string]("s", "theString")),
 	).Query(StatementName("s0")))

@@ -45,33 +45,38 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.580 ('pattern followed-by RFID trio').
+Active: Draft 4.581 ('followed-by timer+not trio').
 
-- Contract frozen (JavaContract580 + GoSurface580):
-  case.pattern-operator-followed-by — PatternOperatorFollowedBy
-  static java-089b2086c9945dff918f (NOT the everydistinct id), ords
-  3/4/5: PatternMemoryRFIDEvent (java-runtime-a477964502f64fe1b368,
-  every tagMayBeBroken -> (timer:interval(10 sec) and not same-mac);
-  10 same-mac pairs -> 0 fires), PatternRFIDZoneExit
-  (java-runtime-f8ac45e337f93e276ac3, zone '1'->!='1' with not-same-mac
-  -zone-1 cancel; 2 fires), PatternRFIDZoneEnter
-  (java-runtime-6a045f5ae813471b32e8, zone !='1'->'1' with not-
-  same-mac-same-zone cancel — second conjunct is zoneID=a.zoneID
-  TAG value not constant). SupportRFIDEvent(mac,zoneID) harness, no
-  clock, milestone-only splits. zoneID capital-ID property pin.
-- [x] Assets580 delivered + integrated: Java trace 4 records, Go
-  replay 4 (ord3 zero-record case carried), `-diff` passing / 0
-  differences; evidence + traces checked in. Worker corrected the
-  draft: `select *` projects BOTH a+b fragments (javac probe).
-- [x] Manifest: case +3 DV IDs + status -> differential-verified;
-  summary resynced -> 426 DV cases / 1719 DV runtime IDs (the
-  post-status resync caught a +1 the earlier script missed).
-- [x] Gates: `make check` GREEN (exit 0) after status promotion +
-  summary resync.
-- [x] ParityRev580 + JavaContract581 + GoSurface581 dispatched.
+- Contract frozen (JavaContract581 + GoSurface581):
+  case.pattern-operator-followed-by remainder — static
+  java-089b2086c9945dff918f, ords 1/6/9 sharing every ->
+  (timer:interval and not ...) with external clock:
+  ord1 PatternFollowedByWithNot (java-runtime-df0604ce4c4e286b3e6e,
+  correlated B-or-C id=a.id cancel, 2 fires A1/A4, 3 milestones);
+  ord6 PatternFollowedNotEvery (java-runtime-8631344fa90a6c397c84,
+  uncorrelated SupportBean_A terminator, ONE batch TWO rows pin);
+  ord9 PatternFollowedOrPermFalse (java-runtime-7682cbc4f27c52c33cce,
+  literal `)or(` no-space EPL, right alt dies at 10s, 1 fire). Timer
+  note: bare interval(10) is SECONDS per deltaForSecondsDoubleCodegen.
+  Excluded: ord0 W-harness x16, ord2 CallEvent+timer:within+where,
+  ords 7/8 chain pair (next bundle). GoSurface: no gaps, all encoded
+  in pattern_followedby_parity_test.go.
+- [x] Assets581 delivered + integrated: Java trace 4 records, Go
+  replay 4 (3 cases), `-diff` passing / 0 differences; evidence +
+  traces checked in. ord6 ONE-record/TWO-rows batch verified; worker
+  corrected the contract prose (bare interval = SECONDS per
+  deltaForSecondsDoubleCodegen).
+- [x] Manifest: case +3 DV IDs (6/10). Summary -> 426 DV cases /
+  1722 DV runtime IDs.
+- [x] Gates: `make check` GREEN (exit 0).
+- [x] ParityRev581 + JavaContract582 + GoSurface582 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.580 ('followed-by RFID trio') committed and
+  pushed as `28c0eb996`; Git owns identity. case promoted to
+  differential-verified 3/10 (4 records, 0 differences); review PASS
+  (clean).
 - Shipped: Draft 4.579 ('everydistinct follow-up triplet') committed
   and pushed as `3fc86a883`; Git owns identity. case closed to 16/17
   DV (20 records, 0 differences); review PASS (1 P3).

@@ -1,0 +1,450 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-df0604ce4c4e286b3e6e",
+    "java-runtime-8631344fa90a6c397c84",
+    "java-runtime-7682cbc4f27c52c33cce"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorFollowedBy.java",
+    "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_A.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_B.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_C.java"
+  ],
+  "javaExecutions": [
+    "PatternFollowedByWithNot",
+    "PatternFollowedNotEvery",
+    "PatternFollowedOrPermFalse"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "pattern-followedby-timernot-581",
+    "steps": [
+      {
+        "op": "case",
+        "case": "with-not"
+      },
+      {
+        "op": "advance-time",
+        "case": "with-not",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deploy",
+        "case": "with-not",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [ every a=SupportBean_A -\u003e (timer:interval(10 seconds) and not (SupportBean_B(id=a.id) or SupportBean_C(id=a.id)))] "
+      },
+      {
+        "op": "send",
+        "case": "with-not",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "with-not",
+        "at": "1970-01-01T00:00:09.999Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "with-not",
+        "at": "1970-01-01T00:00:10Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "with-not",
+        "at": "1970-01-01T00:00:20Z"
+      },
+      {
+        "op": "send",
+        "case": "with-not",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A2"
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "with-not",
+        "at": "1970-01-01T00:00:29.999Z"
+      },
+      {
+        "op": "send",
+        "case": "with-not",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "A2"
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "with-not",
+        "at": "1970-01-01T00:00:30Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "with-not",
+        "at": "1970-01-01T00:00:30Z"
+      },
+      {
+        "op": "send",
+        "case": "with-not",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A3"
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "with-not",
+        "at": "1970-01-01T00:00:30Z"
+      },
+      {
+        "op": "send",
+        "case": "with-not",
+        "eventType": "SupportBean_C",
+        "payload": {
+          "id": "A3"
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "with-not",
+        "at": "1970-01-01T00:00:40Z"
+      },
+      {
+        "op": "send",
+        "case": "with-not",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A4"
+        }
+      },
+      {
+        "op": "send",
+        "case": "with-not",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "B4"
+        }
+      },
+      {
+        "op": "send",
+        "case": "with-not",
+        "eventType": "SupportBean_C",
+        "payload": {
+          "id": "A5"
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "with-not",
+        "at": "1970-01-01T00:00:50Z"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "with-not"
+      },
+      {
+        "op": "case",
+        "case": "not-every"
+      },
+      {
+        "op": "advance-time",
+        "case": "not-every",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deploy",
+        "case": "not-every",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [every A=SupportBean -\u003e (timer:interval(1 seconds) and not SupportBean_A)]"
+      },
+      {
+        "op": "send",
+        "case": "not-every",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null,
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "not-every",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null,
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "not-every",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "not-every"
+      },
+      {
+        "op": "case",
+        "case": "or-perm-false"
+      },
+      {
+        "op": "advance-time",
+        "case": "or-perm-false",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deploy",
+        "case": "or-perm-false",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [every s=SupportBean(theString='E') -\u003e (timer:interval(10) and not SupportBean(theString='C1'))or(SupportBean(theString='C2') and not timer:interval(10))]"
+      },
+      {
+        "op": "advance-time",
+        "case": "or-perm-false",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "send",
+        "case": "or-perm-false",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "or-perm-false",
+        "at": "1970-01-01T00:00:10.999Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "or-perm-false",
+        "at": "1970-01-01T00:00:11Z"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "or-perm-false"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-followedby-timernot-581",
+    "records": [
+      {
+        "case": "with-not",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-not",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:50Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A4"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "not-every",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "A": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "theString": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "A": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "theString": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "or-perm-false",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "theString": "E"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-followedby-timernot-581",
+    "records": [
+      {
+        "case": "with-not",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-not",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:50Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A4"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "not-every",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "A": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "theString": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "A": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "theString": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "or-perm-false",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "theString": "E"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

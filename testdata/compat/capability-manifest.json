@@ -24867,7 +24867,11 @@
     "internal/app/parity/pattern_followedby_rfid_580_test.go/TestRunPatternFollowedByRFID580ScenarioReplay",
     "internal/app/parity/pattern_followedby_rfid_580_test.go/TestRunPatternFollowedByRFID580PinnedArtifacts",
     "internal/app/parity/pattern_followedby_rfid_580_test.go/TestRunPatternFollowedByRFID580RejectsMalformedRawScenario",
-    "internal/app/parity/pattern_followedby_rfid_580_test.go/TestRunPatternFollowedByRFID580RuntimeIDMappingMatchesScenario"
+    "internal/app/parity/pattern_followedby_rfid_580_test.go/TestRunPatternFollowedByRFID580RuntimeIDMappingMatchesScenario",
+    "internal/app/parity/pattern_followedby_timernot_581_test.go/TestRunPatternFollowedByTimerNot581ScenarioReplay",
+    "internal/app/parity/pattern_followedby_timernot_581_test.go/TestRunPatternFollowedByTimerNot581PinnedArtifacts",
+    "internal/app/parity/pattern_followedby_timernot_581_test.go/TestRunPatternFollowedByTimerNot581RejectsMalformedRawScenario",
+    "internal/app/parity/pattern_followedby_timernot_581_test.go/TestRunPatternFollowedByTimerNot581RuntimeIDMappingMatchesScenario"
    ],
    "tags": [
     "correctness",
@@ -24884,7 +24888,8 @@
    "evidence": [
     "java-runtime-inventory",
     "go-unit",
-    "testdata/parity/pattern-followedby-rfid-580.evidence.json"
+    "testdata/parity/pattern-followedby-rfid-580.evidence.json",
+    "testdata/parity/pattern-followedby-timernot-581.evidence.json"
    ],
    "difference": "Go parity tests replay the exact W-harness match sequences validated against the live Java engine (16 cases including the four-fire every (every a -> every b) B3 multiplicity, spawn-fired b -> (d or not d) with vacant d=null, and retained done-sequences that re-fire per fresh every-leg completion). ThenMax exposes bounded -[N]> edges with composite right sides; PatternQuery.Where is the fluent counterpart of the statement-level where after from pattern [...]. Harness consume/discard style and object-model round-trip styles are out of fluent-API scope.",
    "verification": [
@@ -24895,9 +24900,12 @@
    "differentialVerifiedRuntimeIds": [
     "java-runtime-a477964502f64fe1b368",
     "java-runtime-f8ac45e337f93e276ac3",
-    "java-runtime-6a045f5ae813471b32e8"
+    "java-runtime-6a045f5ae813471b32e8",
+    "java-runtime-df0604ce4c4e286b3e6e",
+    "java-runtime-8631344fa90a6c397c84",
+    "java-runtime-7682cbc4f27c52c33cce"
    ],
-   "notes": " Draft 4.580: RFID trio ords 3/4/5 DV (4 records: memory-rfid zero-fire correlated not-cancel, zone-exit dup-cancel + per-mac isolation, zone-enter TagField(a,zoneID) conjunct + repeat-cancel; select * projects both a+b fragments). 3/10 ords DV."
+   "notes": " Draft 4.580: RFID trio ords 3/4/5 DV (4 records: memory-rfid zero-fire correlated not-cancel, zone-exit dup-cancel + per-mac isolation, zone-enter TagField(a,zoneID) conjunct + repeat-cancel; select * projects both a+b fragments). 3/10 ords DV. Draft 4.581: timer+not trio ords 1/6/9 DV (4 records: correlated B-or-C cancel A1/A4, ord6 ONE delivery TWO rows, or-perm-false `)or(` bare-seconds timer). 6/10 ords DV; remaining ord0 W-harness x16, ord2 CallEvent timer:within, ords 7/8 chain pair."
   },
   {
    "id": "case.pattern-operator-and-or-harness",
@@ -55432,7 +55440,7 @@
   "inventoriedCases": 801,
   "implementedCases": 799,
   "differentialVerifiedCases": 426,
-  "differentialVerifiedRuntimeIds": 1719,
+  "differentialVerifiedRuntimeIds": 1722,
   "intentionallyDifferentCases": 40,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
