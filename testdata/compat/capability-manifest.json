@@ -25856,7 +25856,11 @@
     "internal/app/parity/view_expression_batch_agg_569_test.go/TestRunViewExprBatchAgg569ScenarioReplay",
     "internal/app/parity/view_expression_batch_agg_569_test.go/TestRunViewExprBatchAgg569PinnedArtifacts",
     "internal/app/parity/view_expression_batch_agg_569_test.go/TestRunViewExprBatchAgg569RejectsMalformedRawScenario",
-    "internal/app/parity/view_expression_batch_agg_569_test.go/TestRunViewExprBatchAgg569RuntimeIDMappingMatchesScenario"
+    "internal/app/parity/view_expression_batch_agg_569_test.go/TestRunViewExprBatchAgg569RuntimeIDMappingMatchesScenario",
+    "internal/app/parity/view_expression_batch_core_570_test.go/TestRunViewExprBatchCore570ScenarioReplay",
+    "internal/app/parity/view_expression_batch_core_570_test.go/TestRunViewExprBatchCore570PinnedArtifacts",
+    "internal/app/parity/view_expression_batch_core_570_test.go/TestRunViewExprBatchCore570RejectsMalformedRawScenario",
+    "internal/app/parity/view_expression_batch_core_570_test.go/TestRunViewExprBatchCore570RuntimeIDMappingMatchesScenario"
    ],
    "tags": [
     "correctness",
@@ -25876,7 +25880,8 @@
    "evidence": [
     "java-runtime-inventory",
     "go-unit",
-    "testdata/parity/view-expression-batch-agg-569.evidence.json"
+    "testdata/parity/view-expression-batch-agg-569.evidence.json",
+    "testdata/parity/view-expression-batch-core-570.evidence.json"
    ],
    "difference": "",
    "verification": [
@@ -25888,9 +25893,13 @@
     "java-runtime-c6280a36141e2f9ac8c7",
     "java-runtime-6301447e4e4eaa27af22",
     "java-runtime-a8e7fc62db8793496c86",
-    "java-runtime-36fb2be2ea2ba4270df5"
+    "java-runtime-36fb2be2ea2ba4270df5",
+    "java-runtime-a4012797b6db56fc35ed",
+    "java-runtime-bc9403566ad19ca73ed9",
+    "java-runtime-d68cff5ac536057a77b8",
+    "java-runtime-cfb5c3a23c3ab8bf2029"
    ],
-   "notes": " Draft 4.569: ords 7-10 DV (20 records total: batch flush delivers whole accumulated batch + prior batch as old; per-group independent accumulation; delete-triggered re-evaluation). 4/13 ords DV."
+   "notes": " Draft 4.569: ords 7-10 DV (20 records total: batch flush delivers whole accumulated batch + prior batch as old; per-group independent accumulation; delete-triggered re-evaluation). 4/13 ords DV. Draft 4.570: ords 0/1/2/6 DV (18 records total: exclude/include-trigger two-phase, length-batch triples, timestamp-span non-flush-on-advance, retained negative row). 8/13 ords DV."
   },
   {
    "id": "case.expr-filter-optimizable",
@@ -55305,7 +55314,7 @@
   "inventoriedCases": 801,
   "implementedCases": 799,
   "differentialVerifiedCases": 422,
-  "differentialVerifiedRuntimeIds": 1680,
+  "differentialVerifiedRuntimeIds": 1684,
   "intentionallyDifferentCases": 40,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,

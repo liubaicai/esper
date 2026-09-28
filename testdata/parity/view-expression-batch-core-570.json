@@ -1,0 +1,134 @@
+{
+ "version": "esper-parity/v1",
+ "id": "view-expression-batch-core-570",
+ "description": "ViewExpressionBatch ords 0/1/2/6 — the non-aggregate-trigger quartet. newest-oldest (ViewExpressionBatchNewestEventOldestEvent, ord 0) runs TWO deployments of `@name('s0') select irstream * from SupportBean#expr_batch(newest_event.intPrimitive != oldest_event.intPrimitive, ...)`: the exclude-trigger-event (`false`) phase accumulates E1/1, keeps E2/1 silent, flushes new {E1,E2} at E3/2 and new {E3}/old {E1,E2} at E4/3, keeps E5/3+E6/3 silent and flushes new {E4,E5,E6}/old {E3} at E7/2; after undeployAll the include-trigger-event (`true`) phase keeps E1/1+E2/1 silent, flushes new {E1,E2,E3} at E3/2, keeps E4/3+E5/3+E6/3 silent and flushes new {E4,E5,E6,E7}/old {E1,E2,E3} at E7/2. length-batch (ord 1) replays `@name('s0') select irstream * from SupportBean#expr_batch(current_count >= 3, true)`: E1/1+E2/2 stay silent, E3/3 flushes new {E1,E2,E3}, E4/4+E5/5 stay silent, E6/6 flushes new {E4,E5,E6}/old {E1,E2,E3}, E7/7+E8/8 stay silent and E9/9 flushes new {E7,E8,E9}/old {E4,E5,E6}. time-batch (ord 2) replays `@name('s0') select irstream * from SupportBean#expr_batch(newest_timestamp - oldest_timestamp > 2000)` under a virtual clock starting at advanceTime(0): sends land at E1@1000, E2@1500, E3@1500, E4@3000, the lone advance to t=3100 flushes nothing, E5@3100 flushes new {E1,E2,E3,E4,E5}, E6@3100 starts the next batch, E7@5100 queues, the lone advance to t=5101 flushes nothing and E8@5101 flushes new {E6,E7,E8}/old {E1,E2,E3,E4,E5}; a clock advance alone never evaluates the trigger. event-prop-batch (ord 6) replays `@name('s0') select irstream theString as val0 from SupportBean#expr_batch(intPrimitive > 0)`: E1/1 flushes new {E1}, E2/1 flushes new {E2}/old {E1}, E3/-1 stays silent but is retained in the pending batch and E4/2 flushes new {E3,E4}/old {E2}. Java milestone() calls are regression-harness savepoints with identical restored state for these executions, so the scenario omits them.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewExpressionBatch.java",
+ "javaSourceFiles": [
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewExpressionBatch.java",
+  "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java"
+ ],
+ "javaRuntimes": [
+  "java-runtime-a4012797b6db56fc35ed",
+  "java-runtime-bc9403566ad19ca73ed9",
+  "java-runtime-d68cff5ac536057a77b8",
+  "java-runtime-cfb5c3a23c3ab8bf2029"
+ ],
+ "javaNames": [
+  "ViewExpressionBatchNewestEventOldestEvent",
+  "ViewExpressionBatchLengthBatch",
+  "ViewExpressionBatchTimeBatch",
+  "ViewExpressionBatchEventPropBatch"
+ ],
+ "javaStaticIds": [
+  "java-20551a17cb2af08c67fc",
+  "java-20551a17cb2af08c67fc",
+  "java-20551a17cb2af08c67fc",
+  "java-20551a17cb2af08c67fc"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "newest-oldest",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-a4012797b6db56fc35ed",
+   "executionName": "ViewExpressionBatchNewestEventOldestEvent",
+   "observation": "deployed+listener; TWO deployments of #expr_batch(newest_event.intPrimitive != oldest_event.intPrimitive): the explicit exclude-trigger-event (`false`) phase flushes the batch accumulated BEFORE the triggering send (E3/2 posts new {E1,E2}, E4/3 posts new {E3}/old {E1,E2}, E7/2 posts new {E4,E5,E6}/old {E3}), then undeployAll swaps in the explicit include-trigger-event (`true`) EPL which folds the triggering send into the flushed batch (E3/2 posts new {E1,E2,E3}, E7/2 posts new {E4,E5,E6,E7}/old {E1,E2,E3}); the Java execution pins flattened IR pairs only, so no snapshots are recorded",
+   "epl": "@name('s0') select irstream * from SupportBean#expr_batch(newest_event.intPrimitive != oldest_event.intPrimitive, false)",
+   "deploys": ["s0", "s0"]
+  },
+  {
+   "case": "length-batch",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-bc9403566ad19ca73ed9",
+   "executionName": "ViewExpressionBatchLengthBatch",
+   "observation": "deployed+listener; #expr_batch(current_count >= 3, true) flushes every third send as one batch: E1/1 and E2/2 stay silent, E3/3 posts new {E1,E2,E3}, E4/4 and E5/5 stay silent, E6/6 posts new {E4,E5,E6}/old {E1,E2,E3}, E7/7 and E8/8 stay silent and E9/9 posts new {E7,E8,E9}/old {E4,E5,E6}; the Java execution pins flattened IR pairs only, so no snapshots are recorded",
+   "epl": "@name('s0') select irstream * from SupportBean#expr_batch(current_count >= 3, true)",
+   "deploys": ["s0"]
+  },
+  {
+   "case": "time-batch",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-d68cff5ac536057a77b8",
+   "executionName": "ViewExpressionBatchTimeBatch",
+   "observation": "deployed+listener; advanceTime(0) then #expr_batch(newest_timestamp - oldest_timestamp > 2000) under the virtual clock: sends land at E1@1000, E2@1500, E3@1500, E4@3000, the lone advance to t=3100 delivers nothing, E5@3100 posts new {E1,E2,E3,E4,E5}, E6@3100 starts the next batch, E7@5100 queues, the lone advance to t=5101 delivers nothing and E8@5101 posts new {E6,E7,E8}/old {E1,E2,E3,E4,E5}; a clock advance alone never evaluates the trigger",
+   "epl": "@name('s0') select irstream * from SupportBean#expr_batch(newest_timestamp - oldest_timestamp > 2000)",
+   "deploys": ["s0"]
+  },
+  {
+   "case": "event-prop-batch",
+   "ordinal": 6,
+   "runtimeId": "java-runtime-cfb5c3a23c3ab8bf2029",
+   "executionName": "ViewExpressionBatchEventPropBatch",
+   "observation": "deployed+listener; #expr_batch(intPrimitive > 0) over a theString as val0 projection: E1/1 posts new {E1}, E2/1 posts new {E2}/old {E1}, E3/-1 stays silent but is RETAINED in the pending batch and E4/2 posts new {E3,E4}/old {E2}; the Java execution pins flattened IR pairs only, so no snapshots are recorded",
+   "epl": "@name('s0') select irstream theString as val0 from SupportBean#expr_batch(intPrimitive > 0)",
+   "deploys": ["s0"]
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "newest-oldest"},
+  {"op": "deploy", "case": "newest-oldest", "statement": "s0", "epl": "@name('s0') select irstream * from SupportBean#expr_batch(newest_event.intPrimitive != oldest_event.intPrimitive, false)"},
+  {"op": "deployed", "case": "newest-oldest", "statement": "s0"},
+  {"op": "send", "case": "newest-oldest", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "case": "newest-oldest", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 1}},
+  {"op": "send", "case": "newest-oldest", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 2}},
+  {"op": "send", "case": "newest-oldest", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 3}},
+  {"op": "send", "case": "newest-oldest", "eventType": "SupportBean", "payload": {"theString": "E5", "intPrimitive": 3}},
+  {"op": "send", "case": "newest-oldest", "eventType": "SupportBean", "payload": {"theString": "E6", "intPrimitive": 3}},
+  {"op": "send", "case": "newest-oldest", "eventType": "SupportBean", "payload": {"theString": "E7", "intPrimitive": 2}},
+  {"op": "undeploy-all", "case": "newest-oldest"},
+  {"op": "deploy", "case": "newest-oldest", "statement": "s0", "epl": "@name('s0') select irstream * from SupportBean#expr_batch(newest_event.intPrimitive != oldest_event.intPrimitive, true)"},
+  {"op": "deployed", "case": "newest-oldest", "statement": "s0"},
+  {"op": "send", "case": "newest-oldest", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "case": "newest-oldest", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 1}},
+  {"op": "send", "case": "newest-oldest", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 2}},
+  {"op": "send", "case": "newest-oldest", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 3}},
+  {"op": "send", "case": "newest-oldest", "eventType": "SupportBean", "payload": {"theString": "E5", "intPrimitive": 3}},
+  {"op": "send", "case": "newest-oldest", "eventType": "SupportBean", "payload": {"theString": "E6", "intPrimitive": 3}},
+  {"op": "send", "case": "newest-oldest", "eventType": "SupportBean", "payload": {"theString": "E7", "intPrimitive": 2}},
+  {"op": "undeploy-all", "case": "newest-oldest"},
+
+  {"op": "case", "case": "length-batch"},
+  {"op": "deploy", "case": "length-batch", "statement": "s0", "epl": "@name('s0') select irstream * from SupportBean#expr_batch(current_count >= 3, true)"},
+  {"op": "deployed", "case": "length-batch", "statement": "s0"},
+  {"op": "send", "case": "length-batch", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "case": "length-batch", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+  {"op": "send", "case": "length-batch", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 3}},
+  {"op": "send", "case": "length-batch", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 4}},
+  {"op": "send", "case": "length-batch", "eventType": "SupportBean", "payload": {"theString": "E5", "intPrimitive": 5}},
+  {"op": "send", "case": "length-batch", "eventType": "SupportBean", "payload": {"theString": "E6", "intPrimitive": 6}},
+  {"op": "send", "case": "length-batch", "eventType": "SupportBean", "payload": {"theString": "E7", "intPrimitive": 7}},
+  {"op": "send", "case": "length-batch", "eventType": "SupportBean", "payload": {"theString": "E8", "intPrimitive": 8}},
+  {"op": "send", "case": "length-batch", "eventType": "SupportBean", "payload": {"theString": "E9", "intPrimitive": 9}},
+  {"op": "undeploy-all", "case": "length-batch"},
+
+  {"op": "case", "case": "time-batch"},
+  {"op": "advance-time", "case": "time-batch", "at": "1970-01-01T00:00:00.000Z"},
+  {"op": "deploy", "case": "time-batch", "statement": "s0", "epl": "@name('s0') select irstream * from SupportBean#expr_batch(newest_timestamp - oldest_timestamp > 2000)"},
+  {"op": "deployed", "case": "time-batch", "statement": "s0"},
+  {"op": "advance-time", "case": "time-batch", "at": "1970-01-01T00:00:01.000Z"},
+  {"op": "send", "case": "time-batch", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "advance-time", "case": "time-batch", "at": "1970-01-01T00:00:01.500Z"},
+  {"op": "send", "case": "time-batch", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+  {"op": "send", "case": "time-batch", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 3}},
+  {"op": "advance-time", "case": "time-batch", "at": "1970-01-01T00:00:03.000Z"},
+  {"op": "send", "case": "time-batch", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 4}},
+  {"op": "advance-time", "case": "time-batch", "at": "1970-01-01T00:00:03.100Z"},
+  {"op": "send", "case": "time-batch", "eventType": "SupportBean", "payload": {"theString": "E5", "intPrimitive": 5}},
+  {"op": "send", "case": "time-batch", "eventType": "SupportBean", "payload": {"theString": "E6", "intPrimitive": 6}},
+  {"op": "advance-time", "case": "time-batch", "at": "1970-01-01T00:00:05.100Z"},
+  {"op": "send", "case": "time-batch", "eventType": "SupportBean", "payload": {"theString": "E7", "intPrimitive": 7}},
+  {"op": "advance-time", "case": "time-batch", "at": "1970-01-01T00:00:05.101Z"},
+  {"op": "send", "case": "time-batch", "eventType": "SupportBean", "payload": {"theString": "E8", "intPrimitive": 8}},
+  {"op": "undeploy-all", "case": "time-batch"},
+
+  {"op": "case", "case": "event-prop-batch"},
+  {"op": "deploy", "case": "event-prop-batch", "statement": "s0", "epl": "@name('s0') select irstream theString as val0 from SupportBean#expr_batch(intPrimitive > 0)"},
+  {"op": "deployed", "case": "event-prop-batch", "statement": "s0"},
+  {"op": "send", "case": "event-prop-batch", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "case": "event-prop-batch", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 1}},
+  {"op": "send", "case": "event-prop-batch", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": -1}},
+  {"op": "send", "case": "event-prop-batch", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 2}},
+  {"op": "undeploy-all", "case": "event-prop-batch"}
+ ]
+}

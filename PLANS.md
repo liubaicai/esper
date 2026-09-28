@@ -45,32 +45,32 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.569 ('view-expression-batch aggregate/NW quartet').
+Active: Draft 4.570 ('view-expression-batch core quartet').
 
-- Contract frozen (JavaContract569 + GoSurface569 fallback): ViewExpressionBatch
-  ords 7/8/9/10 — AggregationUngrouped (java-runtime-c6280a36141e2f9ac8c7),
-  AggregationWGroupwin (java-runtime-6301447e4e4eaa27af22),
-  AggregationOnDelete (java-runtime-a8e7fc62db8793496c86),
-  NamedWindowDelete (java-runtime-36fb2be2ea2ba4270df5); all dedup static
-  java-20551a17cb2af08c67fc, flags[]. #expr_batch keep-predicate batch-
-  flush mirror of the 568 window quartet. case.view-expression-batch is
-  implemented-only (0 DV) -> extend to DV.
-- Go surface: ExpressionBatchWindowSpec + same builtins/aggregates +
-  NW retention. Per GoSurface569's broader survey, #expr* surfaces are
-  complete; gaps are leg-coverage (Go unit tests stop before later sends).
-- [x] Assets569 delivered + integrated: Java trace 20 records, Go
-  replay 20 (4/6/4/6 per case), `-diff` passing / 0 differences;
-  evidence + traces checked in. Batch flush delivers whole accumulated
-  batch as new + prior batch as old — matches Java exactly, no
-  workaround needed; per-group independent accumulation verified.
-- [x] Manifest: case.view-expression-batch PROMOTED implemented->DV
-  (4/13 ords, +4 runtime IDs). Summary -> 801 cases / 422 DV / 1680 DV
-  runtime IDs / 386 unreferenced.
+- Contract frozen (JavaContract570 + GoSurface570): ViewExpressionBatch
+  ords 0/1/2/6 — NewestEventOldestEvent (java-runtime-a4012797b6db56fc35ed,
+  TWO deployments: includeTrigger=false then true), LengthBatch
+  (java-runtime-bc9403566ad19ca73ed9, current_count>=3+includeTrigger),
+  TimeBatch (java-runtime-d68cff5ac536057a77b8, timestamp-span trigger
+  + virtual clock; clock advance alone never flushes),
+  EventPropBatch (java-runtime-cfb5c3a23c3ab8bf2029, intPrimitive>0 +
+  negative event retained not dropped). All dedup static
+  java-20551a17cb2af08c67fc, flags[] -> extend batch case to 8/13 DV.
+- [x] Assets570 delivered + integrated: Java trace 18 records, Go
+  replay 18, `-diff` passing / 0 differences; evidence + traces checked
+  in. Two-phase ord0 (exclude/include), clock-advance-never-flushes,
+  retained E3(-1) all verified; sequence counters persist across
+  undeploy-all on both sides.
+- [x] Manifest: case.view-expression-batch extended to 8/13 DV (+4
+  runtime IDs). Summary -> 422 DV / 1684 DV runtime IDs.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev569 + JavaContract570 + GoSurface570 dispatched.
+- [x] ParityRev570 + JavaContract571 + GoSurface571 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.569 ('view-expression-batch aggregate quartet')
+  committed and pushed as `a57fecfd6`; Git owns identity. case promoted
+  implemented->DV 4/13 (20 records, 0 differences); review PASS (1 P3).
 - Shipped: Draft 4.568 ('view-expression-window aggregate quartet')
   committed and pushed as `7acacb6b0`; Git owns identity. case extended
   to 7/13 DV (43 records, 0 differences); review PASS (1 P3).
