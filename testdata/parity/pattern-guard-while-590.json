@@ -1,0 +1,369 @@
+{
+ "version": "esper-parity/v1",
+ "id": "pattern-guard-while-590",
+ "description": "PatternGuardWhile ords 0-3 — the four expression-guard `while` executions replayed as four cases: (simple) PatternGuardWhileSimple deploys `@Name('s0') select a.theString as c0 from pattern [(every a=SupportBean) while (a.theString like 'E%')]` and sends E1,E2,X,E3,X — E1 and E2 fire new {c0:E1}/{c0:E2} while the first X match falsifies the while-guard permanently (ExpressionGuard.inspect returns FALSE -> guardQuit + evaluateFalse) so E3 and the trailing X stay silent; (pattern-op) PatternOp's five-leg PatternTestHarness over EventCollectionFactory.getEventSetOne(0,1000) replays as ONE deploy-all step (statement \"all\" expands to the five per-leg deployments of `@name(\"S<i>\") select * from pattern [<atom>]`, S3 carrying the SODA model's `select * from pattern [(every b=SupportBean_B) while (b.id!=\"B3\")]` toEPL text with double-quoted literal) then twelve advance-before-send steps (+1000ms each) and undeploy-all — S0 fires B1{a:A1,b:B1} then quits at B2 (b.id!='B2'), S1 fires B1{a:A1,b:B1}/B2{a:A1,b:B2} then quits at B3, S2 and S3 fire B1{b:B1}/B2{b:B2} then quit at B3, S4 stays silent (the very first B1 match fails b.id!='B1'); (pattern-variable) PatternVariable deploys `@name('var') @public create variable boolean myVariable = true` plus `@name('s0') select * from pattern [every a=SupportBean(theString like 'A%') -> (every b=SupportBean(theString like 'B%')) while (myVariable)]` — B1 delivers ONE listener batch of two rows (a:A1,b:B1)/(a:A2,b:B1), one per live every-a branch — then runtimeSetVariable('var','myVariable',false) falsifies every live branch so A3/A4/B2 stay silent; (pattern-invalid) PatternInvalid's two tryInvalidCompile probes record the pinned compile-error messages for the non-boolean literal guard `while ('abc')` and the unresolvable property guard `while (abc)`, each compiled without the runtime path. env.milestone savepoints, the COMPILE_TO_MODEL/COMPILE_TO_EPL/consume+suppress replay styles, the @Audit('pattern')/@Audit('pattern-instances') annotations and the post-undeploy statement lookup are unrepresented harness machinery.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternGuardWhile.java",
+ "javaSourceFiles": [
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternGuardWhile.java",
+  "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/patternassert/EventCollectionFactory.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/patternassert/EventExpressionCase.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/patternassert/PatternTestHarness.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_A.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_B.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_C.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_D.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_E.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_F.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_G.java"
+ ],
+ "javaRuntimes": [
+  "java-runtime-aa6c31e987ec865a8cf2",
+  "java-runtime-bf4b4c7d66f189e40a73",
+  "java-runtime-8808f29a3bfdd475589f",
+  "java-runtime-4416cc3367e38623077a"
+ ],
+ "javaNames": [
+  "PatternGuardWhileSimple",
+  "PatternOp",
+  "PatternVariable",
+  "PatternInvalid"
+ ],
+ "javaStaticIds": [
+  "java-2be6b5626499eeff834e",
+  "java-2be6b5626499eeff834e",
+  "java-2be6b5626499eeff834e",
+  "java-2be6b5626499eeff834e"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "simple",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-aa6c31e987ec865a8cf2",
+   "executionName": "PatternGuardWhileSimple",
+   "observation": "listener; deploy s0 then sends E1,E2,X,E3,X at the engine start instant (no external clock): E1 fires new {c0:E1}, E2 fires {c0:E2}, the first X sends' falsifying match quits the guarded every permanently so E3 and the second X deliver nothing; milestone(0/1/2) savepoints and undeployAll carry no records",
+   "epls": [
+    "@Name('s0') select a.theString as c0 from pattern [(every a=SupportBean) while (a.theString like 'E%')]"
+   ]
+  },
+  {
+   "case": "pattern-op",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-bf4b4c7d66f189e40a73",
+   "observation": "listener; external clock +1000ms per send; all five legs deploy in ONE step before any send (harness deploy-all), then twelve advance-before-send replays of A1,B1,C1,B2,A2,D1,E1,F1,D2,B3,G1,D3 (advanceTime precedes sendEventBean): S0 B1{a:A1,b:B1} only (`b.id != 'B2'` quits at B2), S1 B1{a:A1,b:B1}+B2{a:A1,b:B2} (`!= 'B3'` quits at B3), S2 B1{b:B1}+B2{b:B2}, S3 the SODA model leg `b.id!=\"B3\"` fires B1{b:B1}+B2{b:B2}, S4 silent (B1 falsifies `!= 'B1'` on the first match); per leg+trigger the fires compare as a multiset like compareLists; undeployAll resend silence",
+   "epls": [
+    "@name(\"S0\") select * from pattern [a=SupportBean_A -> (every b=SupportBean_B) while(b.id != 'B2')]",
+    "@name(\"S1\") select * from pattern [a=SupportBean_A -> (every b=SupportBean_B) while(b.id != 'B3')]",
+    "@name(\"S2\") select * from pattern [(every b=SupportBean_B) while(b.id != 'B3')]",
+    "@name(\"S3\") select * from pattern [(every b=SupportBean_B) while (b.id!=\"B3\")]",
+    "@name(\"S4\") select * from pattern [(every b=SupportBean_B) while(b.id != 'B1')]"
+   ],
+   "executionName": "PatternOp"
+  },
+  {
+   "case": "pattern-variable",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-8808f29a3bfdd475589f",
+   "observation": "listener; deploy var (`@public create variable boolean myVariable = true`, RegressionPath-scoped) then deploy s0: sends A1,A2 arm two every-a branches, B1 delivers ONE new batch of two rows (a:A1,b:B1)/(a:A2,b:B1) with the guard true; runtimeSetVariable('var','myVariable',false) falsifies every live branch permanently (guardQuit+evaluateFalse) so A3/A4/B2 deliver nothing; milestone(0/1) savepoints and undeployAll carry no records",
+   "epls": [
+    "@name('var') @public create variable boolean myVariable = true",
+    "@name('s0') select * from pattern [every a=SupportBean(theString like 'A%') -> (every b=SupportBean(theString like 'B%')) while (myVariable)]"
+   ],
+   "executionName": "PatternVariable"
+  },
+  {
+   "case": "pattern-invalid",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-4416cc3367e38623077a",
+   "executionName": "PatternInvalid",
+   "observation": "compile-error; two tryInvalidCompile probes compiled without the runtime path record the pinned Java messages: `while ('abc')` fails with 'Invalid parameter for pattern guard \"SupportBean while (\\\"abc\\\")\": Expression pattern guard requires a single expression as a parameter returning a true or false (boolean) value' and `while (abc)` fails with 'Failed to validate pattern guard expression \"abc\": Property named 'abc' is not valid in any stream'",
+   "epls": [
+    "select * from pattern [every SupportBean while ('abc')]",
+    "select * from pattern [every SupportBean while (abc)]"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "simple"
+  },
+  {
+   "op": "deploy",
+   "case": "simple",
+   "statement": "s0",
+   "epl": "@Name('s0') select a.theString as c0 from pattern [(every a=SupportBean) while (a.theString like 'E%')]"
+  },
+  {
+   "op": "send",
+   "case": "simple",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "simple",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "simple",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "X",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "simple",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "simple",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "X",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "simple"
+  },
+  {
+   "op": "case",
+   "case": "pattern-op"
+  },
+  {
+   "op": "deploy",
+   "case": "pattern-op",
+   "statement": "all"
+  },
+  {
+   "op": "send",
+   "case": "pattern-op",
+   "at": "1970-01-01T00:00:01Z",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "pattern-op",
+   "at": "1970-01-01T00:00:02Z",
+   "eventType": "SupportBean_B",
+   "payload": {
+    "id": "B1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "pattern-op",
+   "at": "1970-01-01T00:00:03Z",
+   "eventType": "SupportBean_C",
+   "payload": {
+    "id": "C1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "pattern-op",
+   "at": "1970-01-01T00:00:04Z",
+   "eventType": "SupportBean_B",
+   "payload": {
+    "id": "B2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "pattern-op",
+   "at": "1970-01-01T00:00:05Z",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "pattern-op",
+   "at": "1970-01-01T00:00:06Z",
+   "eventType": "SupportBean_D",
+   "payload": {
+    "id": "D1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "pattern-op",
+   "at": "1970-01-01T00:00:07Z",
+   "eventType": "SupportBean_E",
+   "payload": {
+    "id": "E1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "pattern-op",
+   "at": "1970-01-01T00:00:08Z",
+   "eventType": "SupportBean_F",
+   "payload": {
+    "id": "F1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "pattern-op",
+   "at": "1970-01-01T00:00:09Z",
+   "eventType": "SupportBean_D",
+   "payload": {
+    "id": "D2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "pattern-op",
+   "at": "1970-01-01T00:00:10Z",
+   "eventType": "SupportBean_B",
+   "payload": {
+    "id": "B3"
+   }
+  },
+  {
+   "op": "send",
+   "case": "pattern-op",
+   "at": "1970-01-01T00:00:11Z",
+   "eventType": "SupportBean_G",
+   "payload": {
+    "id": "G1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "pattern-op",
+   "at": "1970-01-01T00:00:12Z",
+   "eventType": "SupportBean_D",
+   "payload": {
+    "id": "D3"
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "pattern-op"
+  },
+  {
+   "op": "case",
+   "case": "pattern-variable"
+  },
+  {
+   "op": "deploy",
+   "case": "pattern-variable",
+   "statement": "var",
+   "epl": "@name('var') @public create variable boolean myVariable = true"
+  },
+  {
+   "op": "deploy",
+   "case": "pattern-variable",
+   "statement": "s0",
+   "epl": "@name('s0') select * from pattern [every a=SupportBean(theString like 'A%') -> (every b=SupportBean(theString like 'B%')) while (myVariable)]"
+  },
+  {
+   "op": "send",
+   "case": "pattern-variable",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "pattern-variable",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "pattern-variable",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "B1",
+    "intPrimitive": 100
+   }
+  },
+  {
+   "op": "set-variable",
+   "case": "pattern-variable",
+   "statement": "var",
+   "name": "myVariable",
+   "payload": false
+  },
+  {
+   "op": "send",
+   "case": "pattern-variable",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A3",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "case": "pattern-variable",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A4",
+    "intPrimitive": 4
+   }
+  },
+  {
+   "op": "send",
+   "case": "pattern-variable",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "B2",
+    "intPrimitive": 200
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "pattern-variable"
+  },
+  {
+   "op": "case",
+   "case": "pattern-invalid"
+  },
+  {
+   "op": "build-error",
+   "case": "pattern-invalid",
+   "statement": "non-boolean-literal-guard",
+   "epl": "select * from pattern [every SupportBean while ('abc')]",
+   "expectError": "Invalid parameter for pattern guard 'SupportBean while (\"abc\")': Expression pattern guard requires a single expression as a parameter returning a true or false (boolean) value [select * from pattern [every SupportBean while ('abc')]]"
+  },
+  {
+   "op": "build-error",
+   "case": "pattern-invalid",
+   "statement": "unresolvable-property-guard",
+   "epl": "select * from pattern [every SupportBean while (abc)]",
+   "expectError": "Failed to validate pattern guard expression 'abc': Property named 'abc' is not valid in any stream [select * from pattern [every SupportBean while (abc)]]"
+  }
+ ]
+}

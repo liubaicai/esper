@@ -2840,6 +2840,23 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "pattern-guard-while-590" || *mode == "pattern-guard-while-590-diff" {
+		trace, err := runPatternGuardWhile590Scenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "pattern-guard-while-590-diff" {
+			return runDifferentialModeWithNormalizer(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, patternGuardWhile590JavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, patternGuardWhile590JavaSources),
+				splitMetadata(*javaExecutions, patternGuardWhile590JavaExecutions), scenario, trace,
+				sortPatternGuardWhile590Records)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "infra-nwtable-mrak-562" || *mode == "infra-nwtable-mrak-562-diff" {
 		trace, err := runInfraNWTableMRAK562Scenario(context.Background(), scenario)
 		if err != nil {

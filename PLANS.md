@@ -45,37 +45,34 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.589 ('guard-timer-withinor-max file closer').
+Active: Draft 4.590 ('guard-while four-execution cluster').
 
-- Contract frozen (JavaContract589 + GoSurface589):
- PatternGuardTimerWithinOrMax ord0 (java-runtime-78d9e9fcf78678c48ff9,
- static java-0c023cc183e0d8221a0b, flags []) — 17-leg
- PatternTestHarness W-harness over EventSetOne (B/D beans,
- clocked advance-before-send), all legs `timer:withinmax`
- (time bound + completion cap) incl. SODA leg, variable-bound
- legs, boundary msec legs and or/and compositions; deploy-all +
- per-(stmt,event) multiset compareLists. Go surface: WithinOrMax/
- WithinOrMaxExpr/WithinOrMaxCalendar + patternWithinCanContinue;
- DeployPlans 17-plan deploy (same shape as 588).
-- [x] Assets589 delivered; exposed a REAL engine divergence:
-  capped `every-within` inside a followed-by stayed resident and
-  re-emitted stale rows (42 vs 30 records). Shared-core fix (this
-  agent owns it): `patternCompletionPermanent` +
-  `patternCanContinueAfterMatch` treat a terminal within (cap
-  spent/expired) as quitting permanently, mirroring
-  EvalWithinStateNode.quitInternal. Java trace 30, Go 30,
-  `-diff` passing / 0 differences; all four tests green.
-- [x] Manifest: case.pattern-every +1 DV ID. Summary -> 428 DV
-  cases / 1735 DV runtime IDs.
-- [x] Gates: `make check` GREEN (exit 0) incl. full pattern suite.
-- [x] ParityRev589 + JavaContract590 + GoSurface590 dispatched.
+- Contract frozen (JavaContract590 + GoSurface590): all 4
+ PatternGuardWhile ords under shared static java-2be6b5626499eeff834e:
+ ord0 Simple (aa6c31e987ec865a8cf2, guard false quits root permanently),
+ ord1 PatternOp (bf4b4c7d66f189e40a73, 5-leg W-harness incl. SODA leg +
+ first-B1-falsifies zero-fire leg), ord2 PatternVariable
+ (8808f29a3bfdd475589f, runtimeSetVariable flip falsifies all live
+ branches), ord3 PatternInvalid (4416cc3367e38623077a, 2 compile-error
+ legs — leg a is a Go type error, leg b a Build error). Semantics:
+ inspectPatternWhileGuard evals only on child match; false = permanent
+ quit + falsify to parent; null/non-bool swallows.
+- [x] Assets590 delivered + integrated: Java trace 12 records,
+  Go replay 12, `-diff` passing / 0 differences; evidence +
+  traces checked in. All four sibling tests green.
+- [x] Manifest: case.pattern-guard-while 4/4 DV. Summary ->
+  429 DV cases / 1739 DV runtime IDs.
+- [x] Gates: `make check` GREEN (exit 0).
+- [x] ParityRev590 + JavaContract591 + GoSurface591 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.589 ('withinmax W-harness + capped every-within
+ fix') committed and pushed as `b57bf6587`; Git owns identity.
+ case.pattern-every +1 DV; engine fix for capped every-within
+ residency; review PASS after P1 (dropped guard-while case) fixed.
 - Shipped: Draft 4.588 ('matchuntil 52-case W-harness')
- committed and pushed as `8a7f0c2a3`; Git owns identity. case
- 8/9 DV (ord6 dynamic-bounds deferred); review PASS after P3
- (missing negative-path test) fixed.
+ committed and pushed as `8a7f0c2a3`; Git owns identity.
 - Shipped: Draft 4.587 ('matchuntil repeat-use-tags trio')
  committed and pushed as `7702eaa32`; Git owns identity. case
  7/9 DV; review PASS after P2 whitespace fix.

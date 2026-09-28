@@ -1,0 +1,827 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-aa6c31e987ec865a8cf2",
+    "java-runtime-bf4b4c7d66f189e40a73",
+    "java-runtime-8808f29a3bfdd475589f",
+    "java-runtime-4416cc3367e38623077a"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternGuardWhile.java",
+    "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/patternassert/EventCollectionFactory.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/patternassert/EventExpressionCase.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/patternassert/PatternTestHarness.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_A.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_B.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_C.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_D.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_E.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_F.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_G.java"
+  ],
+  "javaExecutions": [
+    "PatternGuardWhileSimple",
+    "PatternOp",
+    "PatternVariable",
+    "PatternInvalid"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "pattern-guard-while-590",
+    "steps": [
+      {
+        "op": "case",
+        "case": "simple"
+      },
+      {
+        "op": "deploy",
+        "case": "simple",
+        "statement": "s0",
+        "epl": "@Name('s0') select a.theString as c0 from pattern [(every a=SupportBean) while (a.theString like 'E%')]"
+      },
+      {
+        "op": "send",
+        "case": "simple",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "simple",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "simple",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "X",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "simple",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "simple",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "X",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "simple"
+      },
+      {
+        "op": "case",
+        "case": "pattern-op"
+      },
+      {
+        "op": "deploy",
+        "case": "pattern-op",
+        "statement": "all"
+      },
+      {
+        "op": "send",
+        "case": "pattern-op",
+        "eventType": "SupportBean_A",
+        "at": "1970-01-01T00:00:01Z",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "pattern-op",
+        "eventType": "SupportBean_B",
+        "at": "1970-01-01T00:00:02Z",
+        "payload": {
+          "id": "B1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "pattern-op",
+        "eventType": "SupportBean_C",
+        "at": "1970-01-01T00:00:03Z",
+        "payload": {
+          "id": "C1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "pattern-op",
+        "eventType": "SupportBean_B",
+        "at": "1970-01-01T00:00:04Z",
+        "payload": {
+          "id": "B2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "pattern-op",
+        "eventType": "SupportBean_A",
+        "at": "1970-01-01T00:00:05Z",
+        "payload": {
+          "id": "A2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "pattern-op",
+        "eventType": "SupportBean_D",
+        "at": "1970-01-01T00:00:06Z",
+        "payload": {
+          "id": "D1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "pattern-op",
+        "eventType": "SupportBean_E",
+        "at": "1970-01-01T00:00:07Z",
+        "payload": {
+          "id": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "pattern-op",
+        "eventType": "SupportBean_F",
+        "at": "1970-01-01T00:00:08Z",
+        "payload": {
+          "id": "F1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "pattern-op",
+        "eventType": "SupportBean_D",
+        "at": "1970-01-01T00:00:09Z",
+        "payload": {
+          "id": "D2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "pattern-op",
+        "eventType": "SupportBean_B",
+        "at": "1970-01-01T00:00:10Z",
+        "payload": {
+          "id": "B3"
+        }
+      },
+      {
+        "op": "send",
+        "case": "pattern-op",
+        "eventType": "SupportBean_G",
+        "at": "1970-01-01T00:00:11Z",
+        "payload": {
+          "id": "G1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "pattern-op",
+        "eventType": "SupportBean_D",
+        "at": "1970-01-01T00:00:12Z",
+        "payload": {
+          "id": "D3"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "pattern-op"
+      },
+      {
+        "op": "case",
+        "case": "pattern-variable"
+      },
+      {
+        "op": "deploy",
+        "case": "pattern-variable",
+        "statement": "var",
+        "epl": "@name('var') @public create variable boolean myVariable = true"
+      },
+      {
+        "op": "deploy",
+        "case": "pattern-variable",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [every a=SupportBean(theString like 'A%') -\u003e (every b=SupportBean(theString like 'B%')) while (myVariable)]"
+      },
+      {
+        "op": "send",
+        "case": "pattern-variable",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "pattern-variable",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "pattern-variable",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B1",
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "set-variable",
+        "case": "pattern-variable",
+        "statement": "var",
+        "name": "myVariable",
+        "payload": false
+      },
+      {
+        "op": "send",
+        "case": "pattern-variable",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A3",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "pattern-variable",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A4",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "pattern-variable",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B2",
+          "intPrimitive": 200
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "pattern-variable"
+      },
+      {
+        "op": "case",
+        "case": "pattern-invalid"
+      },
+      {
+        "op": "build-error",
+        "case": "pattern-invalid",
+        "statement": "non-boolean-literal-guard",
+        "expectError": "Invalid parameter for pattern guard 'SupportBean while (\"abc\")': Expression pattern guard requires a single expression as a parameter returning a true or false (boolean) value [select * from pattern [every SupportBean while ('abc')]]",
+        "epl": "select * from pattern [every SupportBean while ('abc')]"
+      },
+      {
+        "op": "build-error",
+        "case": "pattern-invalid",
+        "statement": "unresolvable-property-guard",
+        "expectError": "Failed to validate pattern guard expression 'abc': Property named 'abc' is not valid in any stream [select * from pattern [every SupportBean while (abc)]]",
+        "epl": "select * from pattern [every SupportBean while (abc)]"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-guard-while-590",
+    "records": [
+      {
+        "case": "pattern-invalid",
+        "operation": "compile-error",
+        "statement": "non-boolean-literal-guard",
+        "sequence": 1,
+        "value": "Invalid parameter for pattern guard 'SupportBean while (\"abc\")': Expression pattern guard requires a single expression as a parameter returning a true or false (boolean) value [select * from pattern [every SupportBean while ('abc')]]"
+      },
+      {
+        "case": "pattern-invalid",
+        "operation": "compile-error",
+        "statement": "unresolvable-property-guard",
+        "sequence": 1,
+        "value": "Failed to validate pattern guard expression 'abc': Property named 'abc' is not valid in any stream [select * from pattern [every SupportBean while (abc)]]"
+      },
+      {
+        "case": "pattern-op",
+        "operation": "listener",
+        "statement": "S0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-op",
+        "operation": "listener",
+        "statement": "S1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-op",
+        "operation": "listener",
+        "statement": "S2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-op",
+        "operation": "listener",
+        "statement": "S3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-op",
+        "operation": "listener",
+        "statement": "S1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:04Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B2"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-op",
+        "operation": "listener",
+        "statement": "S2",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:04Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B2"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-op",
+        "operation": "listener",
+        "statement": "S3",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:04Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B2"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 100,
+                  "theString": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "A2"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 100,
+                  "theString": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-guard-while-590",
+    "records": [
+      {
+        "case": "pattern-invalid",
+        "operation": "compile-error",
+        "statement": "non-boolean-literal-guard",
+        "sequence": 1,
+        "value": "Invalid parameter for pattern guard 'SupportBean while (\"abc\")': Expression pattern guard requires a single expression as a parameter returning a true or false (boolean) value [select * from pattern [every SupportBean while ('abc')]]"
+      },
+      {
+        "case": "pattern-invalid",
+        "operation": "compile-error",
+        "statement": "unresolvable-property-guard",
+        "sequence": 1,
+        "value": "Failed to validate pattern guard expression 'abc': Property named 'abc' is not valid in any stream [select * from pattern [every SupportBean while (abc)]]"
+      },
+      {
+        "case": "pattern-op",
+        "operation": "listener",
+        "statement": "S0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-op",
+        "operation": "listener",
+        "statement": "S1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-op",
+        "operation": "listener",
+        "statement": "S2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-op",
+        "operation": "listener",
+        "statement": "S3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-op",
+        "operation": "listener",
+        "statement": "S1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:04Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B2"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-op",
+        "operation": "listener",
+        "statement": "S2",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:04Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B2"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-op",
+        "operation": "listener",
+        "statement": "S3",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:04Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B2"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 100,
+                  "theString": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "A2"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 100,
+                  "theString": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

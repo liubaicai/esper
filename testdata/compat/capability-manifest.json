@@ -25427,7 +25427,11 @@
     "TestPatternGuardWhileSimpleMatchesEsper",
     "TestPatternGuardWhileOpMatchesEsper",
     "TestPatternGuardWhileVariableMatchesEsper",
-    "TestPatternGuardWhileInvalidMatchesEsper"
+    "TestPatternGuardWhileInvalidMatchesEsper",
+    "internal/app/parity/pattern_guard_while_590_test.go/TestRunPatternGuardWhile590ScenarioReplay",
+    "internal/app/parity/pattern_guard_while_590_test.go/TestRunPatternGuardWhile590RejectsMalformedRawScenario",
+    "internal/app/parity/pattern_guard_while_590_test.go/TestRunPatternGuardWhile590PinnedArtifacts",
+    "internal/app/parity/pattern_guard_while_590_test.go/TestRunPatternGuardWhile590RuntimeIDMappingMatchesScenario"
    ],
    "tags": [
     "correctness",
@@ -25439,13 +25443,22 @@
    "status": "implemented",
    "evidence": [
     "java-runtime-inventory",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/pattern-guard-while-590.evidence.json"
    ],
    "difference": "The fluent counterpart of Esper's 'pattern while (expression)' guard is PatternStream.WhileGuard, an AST-level node with ExpressionGuard semantics: the guard inspects every match the guarded child reports - true passes, Boolean.FALSE quits the node permanently (guardQuit plus evaluateFalse to the parent, so a falsified root guard stops the whole pattern), and a null or absent result swallows the match without quitting. A pending definition-level Every materializes into the guarded AST child so '(every a=A) while (expr)' keeps the Java nesting. The pre-existing definition-level While remains a Go extension with clear-and-continue pre-filtering on raw events. Non-boolean literal guards are Go compile-time type errors via Expression[bool], the typed-API counterpart of Esper's boolean-guard parse error; unbound variable and field guards are rejected at Build. The SODA execution shares the EPL expectations and is replayed through the same fluent form.",
    "verification": [
     "inventoried",
-    "implemented"
-   ]
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-4416cc3367e38623077a",
+    "java-runtime-aa6c31e987ec865a8cf2",
+    "java-runtime-8808f29a3bfdd475589f",
+    "java-runtime-bf4b4c7d66f189e40a73"
+   ],
+   "notes": " Draft 4.590: all 4 ords DV (12 records, 0 differences) \u2014 simple false-quit permanence, 5-leg W-harness incl. SODA leg, runtime-variable flip falsifying all live branches, compile-error pair."
   },
   {
    "id": "case.pattern-complex-property-access",
@@ -55506,8 +55519,8 @@
  "summary": {
   "inventoriedCases": 801,
   "implementedCases": 799,
-  "differentialVerifiedCases": 428,
-  "differentialVerifiedRuntimeIds": 1735,
+  "differentialVerifiedCases": 429,
+  "differentialVerifiedRuntimeIds": 1739,
   "intentionallyDifferentCases": 40,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
