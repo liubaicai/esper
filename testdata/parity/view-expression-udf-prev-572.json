@@ -1,0 +1,107 @@
+{
+ "version": "esper-parity/v1",
+ "id": "view-expression-udf-prev-572",
+ "description": "ViewExpressionBatch ords 3/5 + ViewExpressionWindow ords 4/6 — the UDF+Prev quartet. udf-batch (ViewExpressionBatchUDFBuiltin, ord 3) replays `@name('s0') select * from SupportBean#expr_batch(udf(theString, view_reference, expired_count))` with the TestSuiteView udf plug-in single-row function (ViewExpressionWindow.LocalUDF.evaluateExpiryUDF(String key, Object viewref, Integer expiryCount) -> bool, registered via addPlugInSingleRowFunction with threadPoolCompilerNumThreads=0): result=true flushes E1 as new {E1} and E2 as new {E2} — plain-select istream statements surface NO remove stream, so the prior batch's {E1} rstream row never reaches the listener — and result=false keeps E3 silent; pinned UDF observations read key=E1 then key=E3, expiryCount=0 at both (expr_batch evaluates the arriving event only — batch expiry is a whole-batch flush, so expired_count never counts retained rows), viewref non-null. udf-window (ViewExpressionWindowUDFBuiltin, ord 4) replays `select * from SupportBean#expr(udf(theString, view_reference, expired_count))`: E1 and E2 are retained as new-only deliveries, then result=false at E3 delivers new {E3} alone — the mass-expiry {E1,E2,E3} flows on the remove stream the istream statement never surfaces — while the pinned observation reads key=E3 expiryCount=2 viewref non-null (the keep predicate fails for both retained rows before the arriving row's own evaluation). prev-batch (ViewExpressionBatchPrev, ord 5) replays `select prev(1, theString) as val0 from SupportBean#expr_batch(current_count > 2)`: E1 and E2 accumulate silently and E3 flushes the whole batch as one 3-row delivery with val0 {null,E1,E2} — prev is evaluated per output row inside the flushed batch. prev-window (ViewExpressionWindowPrev, ord 6) replays `select prev(1, theString) as val0 from SupportBean#expr(true)`: per-row deliveries carry val0 null at E1 then val0 E1 at E2; expr(true) never expires so no old data flows. Java milestone()/mileZero calls are regression-harness savepoints with identical restored state for these executions, so the scenario omits them; the Java executions assert LocalUDF statics only after E1 and E3, so udf-mode snapshots pin those two positions per UDF case.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view",
+ "javaSourceFiles": [
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewExpressionBatch.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewExpressionWindow.java",
+  "regression-run/src/test/java/com/espertech/esper/regressionrun/suite/view/TestSuiteView.java",
+  "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java"
+ ],
+ "javaRuntimes": [
+  "java-runtime-5804edaff708d2d83a5e",
+  "java-runtime-3bec407608d81eebcc12",
+  "java-runtime-2ea3302a92f786153790",
+  "java-runtime-9171e672cfde4fa06cb5"
+ ],
+ "javaNames": [
+  "ViewExpressionBatchUDFBuiltin",
+  "ViewExpressionBatchPrev",
+  "ViewExpressionWindowUDFBuiltin",
+  "ViewExpressionWindowPrev"
+ ],
+ "javaStaticIds": [
+  "java-20551a17cb2af08c67fc",
+  "java-20551a17cb2af08c67fc",
+  "java-06e6b1f6c905b8f12b82",
+  "java-06e6b1f6c905b8f12b82"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "udf-batch",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-5804edaff708d2d83a5e",
+   "executionName": "ViewExpressionBatchUDFBuiltin",
+   "observation": "deployed+listener+udf; #expr_batch(udf(theString, view_reference, expired_count)) with the TestSuiteView udf plug-in: result=true flushes E1 as new {E1} and E2 as new {E2} (plain-select istream statements surface no remove stream, so the prior batch's {E1} rstream row never reaches the listener), result=false keeps E3 silent; the pinned observations read key=E1/key=E3 with expiryCount=0 at both (expr_batch evaluates the arriving event only, so expired_count never counts retained rows) and viewref non-null; the Java execution asserts listener shape never, so no iterator snapshots are recorded",
+   "epl": "@name('s0') select * from SupportBean#expr_batch(udf(theString, view_reference, expired_count))",
+   "deploys": ["s0"]
+  },
+  {
+   "case": "prev-batch",
+   "ordinal": 5,
+   "runtimeId": "java-runtime-3bec407608d81eebcc12",
+   "executionName": "ViewExpressionBatchPrev",
+   "observation": "deployed+listener; select prev(1, theString) as val0 over #expr_batch(current_count > 2): E1 and E2 accumulate silently and E3 flushes the whole batch as ONE 3-row delivery with val0 {null,E1,E2} — prev is evaluated per output row inside the flushed batch; the Java execution pins the flattened IR pair only, so no snapshots are recorded",
+   "epl": "@name('s0') select prev(1, theString) as val0 from SupportBean#expr_batch(current_count > 2)",
+   "deploys": ["s0"]
+  },
+  {
+   "case": "udf-window",
+   "ordinal": 4,
+   "runtimeId": "java-runtime-2ea3302a92f786153790",
+   "executionName": "ViewExpressionWindowUDFBuiltin",
+   "observation": "deployed+listener+udf; #expr(udf(theString, view_reference, expired_count)) with the TestSuiteView udf plug-in: E1 and E2 are retained as new-only deliveries, result=false at E3 delivers new {E3} alone — the mass-expiry {E1,E2,E3} flows on the remove stream the istream statement never surfaces; the pinned observations read key=E1 then key=E3 expiryCount=2 viewref non-null — the keep predicate fails for both retained rows before the arriving row's own evaluation; the Java execution asserts the statics only after E1 and E3, so no iterator snapshots are recorded",
+   "epl": "@name('s0') select * from SupportBean#expr(udf(theString, view_reference, expired_count))",
+   "deploys": ["s0"]
+  },
+  {
+   "case": "prev-window",
+   "ordinal": 6,
+   "runtimeId": "java-runtime-9171e672cfde4fa06cb5",
+   "executionName": "ViewExpressionWindowPrev",
+   "observation": "deployed+listener; select prev(1, theString) as val0 over #expr(true): deliveries are per-row, val0 null at E1 and val0 E1 at E2; expr(true) never expires so no old data flows; the Java execution pins assertPropsNew only, so no snapshots are recorded",
+   "epl": "@name('s0') select prev(1, theString) as val0 from SupportBean#expr(true)",
+   "deploys": ["s0"]
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "udf-batch"},
+  {"op": "deploy", "case": "udf-batch", "statement": "s0", "epl": "@name('s0') select * from SupportBean#expr_batch(udf(theString, view_reference, expired_count))"},
+  {"op": "deployed", "case": "udf-batch", "statement": "s0"},
+  {"op": "set-variable", "case": "udf-batch", "name": "udf-result", "payload": true},
+  {"op": "send", "case": "udf-batch", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 0}},
+  {"op": "snapshot", "case": "udf-batch", "statement": "s0", "mode": "udf"},
+  {"op": "send", "case": "udf-batch", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 0}},
+  {"op": "set-variable", "case": "udf-batch", "name": "udf-result", "payload": false},
+  {"op": "send", "case": "udf-batch", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 0}},
+  {"op": "snapshot", "case": "udf-batch", "statement": "s0", "mode": "udf"},
+  {"op": "undeploy-all", "case": "udf-batch"},
+  {"op": "case", "case": "prev-batch"},
+  {"op": "deploy", "case": "prev-batch", "statement": "s0", "epl": "@name('s0') select prev(1, theString) as val0 from SupportBean#expr_batch(current_count > 2)"},
+  {"op": "deployed", "case": "prev-batch", "statement": "s0"},
+  {"op": "send", "case": "prev-batch", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "case": "prev-batch", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+  {"op": "send", "case": "prev-batch", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 3}},
+  {"op": "undeploy-all", "case": "prev-batch"},
+  {"op": "case", "case": "udf-window"},
+  {"op": "deploy", "case": "udf-window", "statement": "s0", "epl": "@name('s0') select * from SupportBean#expr(udf(theString, view_reference, expired_count))"},
+  {"op": "deployed", "case": "udf-window", "statement": "s0"},
+  {"op": "set-variable", "case": "udf-window", "name": "udf-result", "payload": true},
+  {"op": "send", "case": "udf-window", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 0}},
+  {"op": "snapshot", "case": "udf-window", "statement": "s0", "mode": "udf"},
+  {"op": "send", "case": "udf-window", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 0}},
+  {"op": "set-variable", "case": "udf-window", "name": "udf-result", "payload": false},
+  {"op": "send", "case": "udf-window", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 0}},
+  {"op": "snapshot", "case": "udf-window", "statement": "s0", "mode": "udf"},
+  {"op": "undeploy-all", "case": "udf-window"},
+  {"op": "case", "case": "prev-window"},
+  {"op": "deploy", "case": "prev-window", "statement": "s0", "epl": "@name('s0') select prev(1, theString) as val0 from SupportBean#expr(true)"},
+  {"op": "deployed", "case": "prev-window", "statement": "s0"},
+  {"op": "send", "case": "prev-window", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "case": "prev-window", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+  {"op": "undeploy-all", "case": "prev-window"}
+ ]
+}

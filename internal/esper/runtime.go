@@ -18667,11 +18667,13 @@ func (r *statementRuntime) expireWindowState(spec WindowSpec, state *windowRunti
 		}
 	case ExpressionBatchWindowSpec:
 		// A variable change re-evaluates the trigger without a new event
-		// (Java ExpressionBatchView.update schedules a callback at delay 0).
-		// The engine's time-expire path doubles as that callback boundary for
-		// the chain API; a true trigger flushes the currently accumulating
+		// (Java ExpressionBatchView.update schedules a callback at delay 0
+		// and calls evaluateExpression(null, size): eventsPerStream[0]
+		// binds NULL, not the newest pending row). The engine's
+		// time-expire path doubles as that callback boundary for the
+		// chain API; a true trigger flushes the currently accumulating
 		// batch as new data and the previous batch as old data.
-		if windowPredicateEvents(window.Trigger, state.pendingNewEvents, now, r.variables, 0) {
+		if windowPredicateEvaluate(window.Trigger, state.pendingNewEvents, Event{}, now, r.variables, 0) {
 			result = mergeDelta(result, flushPendingBatch(state))
 		}
 	}
@@ -19364,12 +19366,23 @@ func windowPredicate(expression Expression[bool], entries []storedEvent, now tim
 	for _, stored := range entries {
 		group = append(group, stored.event)
 	}
-	return windowPredicateEvents(expression, group, now, variables, expiredCount)
+	// The keep/expire predicate tests the OLDEST retained event: Java
+	// ExpressionWindowView.checkEvent binds eventsPerStream[0] = first
+	// (getFirst) while it iterates the deque oldest-first, removing each
+	// failing row and stopping at the first passing one. Event-bound
+	// expressions (plain fields, UDF arguments) must see the row under
+	// test, not the newest retained row.
+	var current Event
+	if len(group) > 0 {
+		current = group[0]
+	}
+	return windowPredicateEvaluate(expression, group, current, now, variables, expiredCount)
 }
 
-// windowPredicateEvents evaluates an expression-window predicate over a
-// pre-built event group; callers that keep a cached event projection
-// (expression-batch pendingNewEvents) avoid the per-event rebuild.
+// windowPredicateEvents evaluates an expression-batch trigger over a
+// pre-built pending group. Java ExpressionBatchView binds
+// eventsPerStream[0] to the ARRIVING event; callers append the arriving
+// event before evaluating, so the bound event is the newest group row.
 func windowPredicateEvents(expression Expression[bool], group []Event, now time.Time, variables map[string]Value, expiredCount int64) bool {
 	if expression == nil {
 		return false
@@ -19378,6 +19391,10 @@ func windowPredicateEvents(expression Expression[bool], group []Event, now time.
 	if len(group) > 0 {
 		current = group[len(group)-1]
 	}
+	return windowPredicateEvaluate(expression, group, current, now, variables, expiredCount)
+}
+
+func windowPredicateEvaluate(expression Expression[bool], group []Event, current Event, now time.Time, variables map[string]Value, expiredCount int64) bool {
 	value := expression.eval(EvalContext{
 		Event:              current,
 		Group:              group,

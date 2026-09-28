@@ -3241,6 +3241,12 @@ func Func3[A, B, C, D any](name string, function func(A, B, C) D, first Expressi
 	return internalengine.Func3[A, B, C, D](name, function, first, second, third)
 }
 
+// Func3Ctx registers a named ternary function that also receives the current
+// EvalContext, mirroring Java's EPLMethodInvocationContext parameter.
+func Func3Ctx[A, B, C, D any](name string, function func(A, B, C, EvalContext) D, first Expression[A], second Expression[B], third Expression[C]) Expression[D] {
+	return internalengine.Func3Ctx[A, B, C, D](name, function, first, second, third)
+}
+
 // Func4 registers a named four-argument function and retains every argument
 // in the analyzable expression tree.
 func Func4[A, B, C, D, E any](name string, function func(A, B, C, D) E, first Expression[A], second Expression[B], third Expression[C], fourth Expression[D]) Expression[E] {

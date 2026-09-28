@@ -235,7 +235,9 @@ func TestViewExpressionWindowUDFBuiltinsParity(t *testing.T) {
 		t.Fatalf("first UDF observation = %#v", observed)
 	}
 	expressionSend(t, engine, "E2", 0)
-	if observed.key != "E2" || observed.expired != 0 || observed.refLen != 2 {
+	// Java binds eventsPerStream[0] to the OLDEST retained event under test
+	// (ExpressionWindowView.checkEvent): E2's arrival re-tests E1, not E2.
+	if observed.key != "E1" || observed.expired != 0 || observed.refLen != 2 {
 		t.Fatalf("second UDF observation = %#v", observed)
 	}
 	allow = false
@@ -619,7 +621,7 @@ func TestViewExpressionBatchTimeBatchParity(t *testing.T) {
 	expressionAssertNames(t, statement)
 }
 
-// Java: java-runtime-ad02b23eda34efdfd83e (ViewExpressionBatchUDFBuiltin).
+// Java: java-runtime-5804edaff708d2d83a5e (ViewExpressionBatchUDFBuiltin).
 func TestViewExpressionBatchUDFBuiltinsParity(t *testing.T) {
 	env, engine := newViewParityEnv(t)
 	defer func() { _ = engine.Close(context.Background()) }()
@@ -650,7 +652,7 @@ func TestViewExpressionBatchUDFBuiltinsParity(t *testing.T) {
 	expressionAssertBatch(t, (*batches)[1], []string{"E2"}, []string{"E1"})
 }
 
-// Java: java-runtime-3bec407608d81eebcc12 (ViewExpressionBatchInvalid).
+// Java: java-runtime-ad02b23eda34efdfd83e (ViewExpressionBatchInvalid).
 func TestViewExpressionBatchInvalidParity(t *testing.T) {
 	env, _ := newViewParityEnv(t)
 	invalid := typedExpr[bool]{
@@ -666,7 +668,7 @@ func TestViewExpressionBatchInvalidParity(t *testing.T) {
 	}
 }
 
-// Java: java-runtime-cfb5c3a23c3ab8bf2029 (ViewExpressionBatchPrev).
+// Java: java-runtime-3bec407608d81eebcc12 (ViewExpressionBatchPrev).
 func TestViewExpressionBatchPrevParity(t *testing.T) {
 	env, engine := newViewParityEnv(t)
 	defer func() { _ = engine.Close(context.Background()) }()
@@ -690,7 +692,7 @@ func TestViewExpressionBatchPrevParity(t *testing.T) {
 	expressionAssertRowValue(t, (*batches)[0].New[2], "val0", Present("E2"))
 }
 
-// Java: java-runtime-c6280a36141e2f9ac8c7 (ViewExpressionBatchEventPropBatch).
+// Java: java-runtime-cfb5c3a23c3ab8bf2029 (ViewExpressionBatchEventPropBatch).
 func TestViewExpressionBatchEventPropBatchParity(t *testing.T) {
 	env, engine := newViewParityEnv(t)
 	defer func() { _ = engine.Close(context.Background()) }()
@@ -710,7 +712,7 @@ func TestViewExpressionBatchEventPropBatchParity(t *testing.T) {
 	expressionAssertNames(t, statement)
 }
 
-// Java: java-runtime-6301447e4e4eaa27af22 (ViewExpressionBatchAggregationUngrouped).
+// Java: java-runtime-c6280a36141e2f9ac8c7 (ViewExpressionBatchAggregationUngrouped).
 func TestViewExpressionBatchAggregationUngroupedParity(t *testing.T) {
 	env, engine := newViewParityEnv(t)
 	defer func() { _ = engine.Close(context.Background()) }()
@@ -736,7 +738,7 @@ func TestViewExpressionBatchAggregationUngroupedParity(t *testing.T) {
 	expressionAssertNames(t, statement)
 }
 
-// Java: java-runtime-a8e7fc62db8793496c86 (ViewExpressionBatchAggregationWGroupwin).
+// Java: java-runtime-6301447e4e4eaa27af22 (ViewExpressionBatchAggregationWGroupwin).
 func TestViewExpressionBatchGroupedAggregationParity(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterStruct[expressionGroupedBean](env, "SupportBean"); err != nil {

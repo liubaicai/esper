@@ -1,0 +1,697 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-5804edaff708d2d83a5e",
+    "java-runtime-3bec407608d81eebcc12",
+    "java-runtime-2ea3302a92f786153790",
+    "java-runtime-9171e672cfde4fa06cb5"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewExpressionBatch.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewExpressionWindow.java",
+    "regression-run/src/test/java/com/espertech/esper/regressionrun/suite/view/TestSuiteView.java",
+    "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java"
+  ],
+  "javaExecutions": [
+    "ViewExpressionBatchUDFBuiltin",
+    "ViewExpressionBatchPrev",
+    "ViewExpressionWindowUDFBuiltin",
+    "ViewExpressionWindowPrev"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "view-expression-udf-prev-572",
+    "steps": [
+      {
+        "op": "case",
+        "case": "udf-batch"
+      },
+      {
+        "op": "deploy",
+        "case": "udf-batch",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportBean#expr_batch(udf(theString, view_reference, expired_count))"
+      },
+      {
+        "op": "deployed",
+        "case": "udf-batch",
+        "statement": "s0"
+      },
+      {
+        "op": "set-variable",
+        "case": "udf-batch",
+        "name": "udf-result",
+        "payload": true
+      },
+      {
+        "op": "send",
+        "case": "udf-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "udf-batch",
+        "statement": "s0",
+        "mode": "udf"
+      },
+      {
+        "op": "send",
+        "case": "udf-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "set-variable",
+        "case": "udf-batch",
+        "name": "udf-result",
+        "payload": false
+      },
+      {
+        "op": "send",
+        "case": "udf-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "udf-batch",
+        "statement": "s0",
+        "mode": "udf"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "udf-batch"
+      },
+      {
+        "op": "case",
+        "case": "prev-batch"
+      },
+      {
+        "op": "deploy",
+        "case": "prev-batch",
+        "statement": "s0",
+        "epl": "@name('s0') select prev(1, theString) as val0 from SupportBean#expr_batch(current_count \u003e 2)"
+      },
+      {
+        "op": "deployed",
+        "case": "prev-batch",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "prev-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "prev-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "prev-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "prev-batch"
+      },
+      {
+        "op": "case",
+        "case": "udf-window"
+      },
+      {
+        "op": "deploy",
+        "case": "udf-window",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportBean#expr(udf(theString, view_reference, expired_count))"
+      },
+      {
+        "op": "deployed",
+        "case": "udf-window",
+        "statement": "s0"
+      },
+      {
+        "op": "set-variable",
+        "case": "udf-window",
+        "name": "udf-result",
+        "payload": true
+      },
+      {
+        "op": "send",
+        "case": "udf-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "udf-window",
+        "statement": "s0",
+        "mode": "udf"
+      },
+      {
+        "op": "send",
+        "case": "udf-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "set-variable",
+        "case": "udf-window",
+        "name": "udf-result",
+        "payload": false
+      },
+      {
+        "op": "send",
+        "case": "udf-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "udf-window",
+        "statement": "s0",
+        "mode": "udf"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "udf-window"
+      },
+      {
+        "op": "case",
+        "case": "prev-window"
+      },
+      {
+        "op": "deploy",
+        "case": "prev-window",
+        "statement": "s0",
+        "epl": "@name('s0') select prev(1, theString) as val0 from SupportBean#expr(true)"
+      },
+      {
+        "op": "deployed",
+        "case": "prev-window",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "prev-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "prev-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "prev-window"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "view-expression-udf-prev-572",
+    "records": [
+      {
+        "case": "udf-batch",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "udf-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "udf-batch",
+        "operation": "observation",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "udf",
+        "value": {
+          "expiryCount": 0,
+          "key": "E1",
+          "viewref": true
+        }
+      },
+      {
+        "case": "udf-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "udf-batch",
+        "operation": "observation",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "udf",
+        "value": {
+          "expiryCount": 0,
+          "key": "E3",
+          "viewref": true
+        }
+      },
+      {
+        "case": "prev-batch",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "prev-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "val0": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "val0": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "udf-window",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "udf-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "udf-window",
+        "operation": "observation",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "udf",
+        "value": {
+          "expiryCount": 0,
+          "key": "E1",
+          "viewref": true
+        }
+      },
+      {
+        "case": "udf-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "udf-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "udf-window",
+        "operation": "observation",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "udf",
+        "value": {
+          "expiryCount": 2,
+          "key": "E3",
+          "viewref": true
+        }
+      },
+      {
+        "case": "prev-window",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "prev-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "prev-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": "E1"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "view-expression-udf-prev-572",
+    "records": [
+      {
+        "case": "udf-batch",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "udf-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "udf-batch",
+        "operation": "observation",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "udf",
+        "value": {
+          "expiryCount": 0,
+          "key": "E1",
+          "viewref": true
+        }
+      },
+      {
+        "case": "udf-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "udf-batch",
+        "operation": "observation",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "udf",
+        "value": {
+          "expiryCount": 0,
+          "key": "E3",
+          "viewref": true
+        }
+      },
+      {
+        "case": "prev-batch",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "prev-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "val0": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "val0": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "udf-window",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "udf-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "udf-window",
+        "operation": "observation",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "udf",
+        "value": {
+          "expiryCount": 0,
+          "key": "E1",
+          "viewref": true
+        }
+      },
+      {
+        "case": "udf-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "udf-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "udf-window",
+        "operation": "observation",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "udf",
+        "value": {
+          "expiryCount": 2,
+          "key": "E3",
+          "viewref": true
+        }
+      },
+      {
+        "case": "prev-window",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "prev-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "prev-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": "E1"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

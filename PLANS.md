@@ -45,33 +45,49 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.571 ('expression variable quartet').
+Active: Draft 4.572 ('expression UDF + Prev quartet').
 
-- Contract frozen (JavaContract571 + GoSurface571): variable-driven
-  expiry re-evaluation across two view kinds —
-  ViewExpressionBatch ords 11/12 (DynamicTimeBatch
-  java-runtime-ace804f86e16f62ae8f5; VariableBatch
-  java-runtime-afb34438de3f25c964cb; static
-  java-20551a17cb2af08c67fc) + ViewExpressionWindow ords 11/12
-  (Variable java-runtime-8f167cedfd9b5d56fe67; DynamicTimeWindow
-  java-runtime-5ccd88d79fe264701059; static java-06e6b1f6c905b8f12b82).
-  Pitfalls pinned: byte-exact EPLs incl. W12's MISSING trailing
-  `;\n` (asymmetry vs the other three); batch strict `>` on span vs
-  window `<`; variable shrink + advance flushes WITHOUT a send;
-  runtimeSetVariable scope (s0 for B12) vs global. Extends batch case
-  to 10/13 + window case to 9/13 DV.
-- [x] Assets571 delivered + integrated: Java trace 30 records, Go
-  replay 30 (4 deployed / 17 listener / 9 snapshot), `-diff` passing /
-  0 differences; evidence + traces checked in. Variable-trigger
-  re-evaluation on clock advance, shrink-flush-without-send, W12
-  lazy-eviction old-only record all verified — no gaps.
-- [x] Manifest: batch +2 (10/13) + window +2 (9/13). Summary -> 422 DV
-  / 1688 DV runtime IDs.
+- Contract frozen (JavaContract572 + GoSurface572): UDF pair + Prev
+  pair — ViewExpressionBatch ord3 UDFBuiltin
+  (java-runtime-5804edaff708d2d83a5e) + ord5 Prev
+  (java-runtime-3bec407608d81eebcc12); ViewExpressionWindow ord4
+  UDFBuiltin (java-runtime-2ea3302a92f786153790) + ord6 Prev
+  (java-runtime-9171e672cfde4fa06cb5). Discriminants: batch-UDF
+  expired_count stays 0 vs window-UDF expired_count=2; batch-Prev
+  single 3-row flush {null,E1,E2} vs window-Prev per-row {null}/{E1}.
+- BLOCKING gap (GoSurface572): Java UDF is 3-arg
+  udf(theString, view_reference, expired_count); Go has Func1/Func2/
+  Func3 (no ctx) + Func1Ctx/Func2Ctx only — NO Func3Ctx. Existing
+  tests emulate via side-channel; faithful port needs
+  Func3Ctx[A,B,C,D](name, fn(A,B,C,EvalContext)->D, e1,e2,e3).
+  Concurrent lanes: CoreFunc3Ctx (internal/esper) + Assets572 (assets).
+- [x] Func3Ctx landed (CoreFunc3Ctx): `Func3Ctx[A,B,C,D](name,
+  func(A,B,C,EvalContext) D, e1,e2,e3)` — no error return per the
+  ctx-UDF convention; facade regenerated (Func3Ctx-only diff); six
+  drifted runtime-ID pin comments corrected in the parity test.
+- [x] **Shared-core fix**: `windowPredicate` keep path bound
+  `ctx.Event` to the NEWEST retained row; Java
+  `ExpressionWindowView.checkEvent` binds `eventsPerStream[0]=first`
+  (the OLDEST row under test). Split into `windowPredicate` (oldest —
+  keep/expire), `windowPredicateEvents` (arriving/newest — batch send
+  trigger), `windowPredicateEvaluate` (shared eval); the batch
+  timer/variable re-eval path binds `Event{}` (Java passes
+  `eventsPerStream[0]=null`). One stale test expectation updated to
+  the Java sequence ({E1,0,2} post-E2); all suites green.
+- [x] Assets572 delivered + integrated: Java trace 16 records, Go
+  replay 16 (4 deployed / 8 listener / 4 observation), `-diff`
+  passing / 0 differences post-fix. Plain `select` (no irstream) ->
+  ISTREAM-only; batch expired_count=0 vs window=2 verified.
+- [x] Manifest: batch +2 (12/13) + window +2 (11/13). Summary -> 422
+  DV / 1692 DV runtime IDs.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev571 + JavaContract572 + GoSurface572 dispatched.
+- [x] ParityRev572 + JavaContract573 + GoSurface573 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.571 ('expression variable quartet') committed and
+  pushed as `d1bd95178`; Git owns identity. batch 10/13 + window 9/13
+  DV (30 records, 0 differences); review PASS (2 P3s fixed).
 - Shipped: Draft 4.570 ('view-expression-batch core quartet') committed
   and pushed as `d36d601fc`; Git owns identity. case extended to 8/13
   DV (18 records, 0 differences); review PASS (no findings).

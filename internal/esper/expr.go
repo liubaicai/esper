@@ -3520,6 +3520,37 @@ func Func2Ctx[A, B, C any](name string, function func(A, B, EvalContext) C, firs
 	})
 }
 
+// Func3Ctx registers a named ternary function that also receives the current
+// EvalContext, mirroring Java's EPLMethodInvocationContext parameter.
+func Func3Ctx[A, B, C, D any](name string, function func(A, B, C, EvalContext) D, first Expression[A], second Expression[B], third Expression[C]) Expression[D] {
+	children := udfChildren(first, second, third)
+	return makeUDFExpr[D](udfDescription(name, first, second, third), children, udfConfiguration(name, function == nil, first == nil, second == nil, third == nil), func(ctx EvalContext) (result Value) {
+		defer recoverUDF(&result)
+		if function == nil || first == nil || second == nil || third == nil {
+			return Null()
+		}
+		firstValue := first.eval(ctx)
+		secondValue := second.eval(ctx)
+		thirdValue := third.eval(ctx)
+		if !firstValue.IsPresent() || !secondValue.IsPresent() || !thirdValue.IsPresent() {
+			return Null()
+		}
+		firstArgument, err := As[A](firstValue)
+		if err != nil {
+			return Null()
+		}
+		secondArgument, err := As[B](secondValue)
+		if err != nil {
+			return Null()
+		}
+		thirdArgument, err := As[C](thirdValue)
+		if err != nil {
+			return Null()
+		}
+		return Present(function(firstArgument, secondArgument, thirdArgument, ctx))
+	})
+}
+
 // Func1Rethrow registers a named unary function whose panics are propagated
 // to the caller instead of being caught and turned into Null, mirroring
 // Java's @RethrowExceptions annotation on single-row functions.

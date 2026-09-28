@@ -4458,7 +4458,14 @@ func (w *NamedWindow) insertIntoState(state *namedWindowRuntime, event Event, no
 		// the previous delivered batch leaves as old data. The trigger
 		// event is included by default (Java default true).
 		candidate := append(append([]storedEvent(nil), state.entries...), entry)
-		if !windowPredicate(retention.Trigger, candidate, now, nil, 0) {
+		// #expr_batch trigger binds the ARRIVING event (Java
+		// ExpressionBatchView.evaluateExpression eventsPerStream[0]=newEvent),
+		// not the oldest retained row — the arriving row is the last candidate.
+		candidateEvents := make([]Event, 0, len(candidate))
+		for _, stored := range candidate {
+			candidateEvents = append(candidateEvents, stored.event)
+		}
+		if !windowPredicateEvents(retention.Trigger, candidateEvents, now, nil, 0) {
 			state.entries = candidate
 			return NamedWindowDelta{Time: now}, nil
 		}
