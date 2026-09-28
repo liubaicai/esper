@@ -1,4 +1,21 @@
 
+> 最新补充：Draft 4.592（2026-09-29），`pattern.basic` 的 `case.pattern-every` 补全固定 Java
+> `PatternObserverTimerInterval.java` ord0 `PatternOp`（`java-runtime-9b41fb5951301c0de979`，
+> static `java-1422565b568236b2bfea`，无 flags；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）——
+> 31 条 timer:interval leg 的 EventSetOne advance-before-send W-harness 重放为单一 deploy-all case：
+> 12 个 advance-before-send step 逐事件推进外时钟。Java/Go 各 32 条 records、0 differences。
+> 本单元修复三处 internal/esper 共享语义：(1) 满足的 one-shot timer 观察者永久 quit
+>（EvalObserverStateNode quitInternal；or 胜者/and 完成即终结模式）；(2) and-state 已满足但未 quit 的
+> 一侧保持驻留以缓存其匹配（EvalAndStateNode eventsPerChild），S28 的 1ms timer 在 B2 到达前缓存；
+> (3) event dispatch 内排空已到期的 timer 观察者（Esper 在 sendEvent 期间评估 due callback），
+> S14 的 `b -> timer:interval(0)` 在 B1 同一 send 内触发。S29/S30 `timer:within` no-match 边界通过。
+> 连带修复：`initiated by @Now and pattern [...]` 是条件并集而非 or-NFA——新增
+> `ContextDefinition.initiatedNow` 与 `CreateOverlappingPatternInitiatedTerminatedContextNow`
+> 在部署时直接物化 @Now 分区，pattern 成员按自身计划继续发起（修复 permanence
+> 变更导致的 context-init-term-with-now 回归，runner 重写为 Java-faithful 形状）。
+> manifest 更新为 801 cases / 429 DV cases / 1745 DV runtime IDs；capability `pattern.basic` DV
+> runtime +1。
+
 > 最新补充:Draft 4.549(2026-09-27),`expr.core` 新增 `case.expr-dt-with-minmax`(born-DV),完成 ExprDTWithMax + ExprDTWithMin 两文件全部 4 个 execution:`ExprDTWithMaxInput`(`java-runtime-097a5db3742ae25c3b0b`,5 种 rep 'month')、`ExprDTWithMaxFields`(`-c6bba43af400a7375075`,8 字段含 'week'/'year')、`ExprDTWithMinInput`(`-3f79b4bf903cca74fe6a`)、`ExprDTWithMinFields`(`-8ca773479bf038c94597`);static `java-d4afe3864ba41bfd7918`/`java-d87f60ced41e2a52719f`/`java-2224592eef4aca9b4e7b`/`java-f3bf884f776301d91900`;flags 均 []。共享核心新增 `DateTimeWithMax`/`DateTimeWithMin[V int64|time.Time]`(rep 保持):'week' 按 Java WEEK_OF_YEAR(Sunday-start, minDays 1) 保留 day-of-week;'year' 用 GregorianCalendar actual bounds(max 292278994 → int64 溢出值 9223372030035600000 原样回放;min year-1 落 cutover 前走 Julian JDN 仿真 `dateTimeJavaToMillis`,修复 oracle 验证暴露的真实分歧 -62122863537997)。Java/Go 各 8 条 records、0 differences。manifest 780 cases / 403 DV / 1609 DV runtime IDs / unreferenced 429。
 
 > 最新补充:Draft 4.548(2026-09-27),`event.avro-record` 新增 `case.event-avro-hook`(born-DV),完成 EventAvroHook.java 全部 4 个 execution(hook 机制 TypeRepresentationMapper/WidenerFactory/widenCodegen/STATICHOOK 均无 Go 对应,登记 intentionally-different;Go 用预声明 Avro schema + 显式 Func1 UDF 复现可观测行为):`EventAvroHookSimpleWriteablePropertyCoerce`(`java-runtime-34ec4dc8abe4f2443930`,invalid-compile 文本 oracle-only + LDT→ISO 精确钉定)、`EventAvroHookSchemaFromClass`(`-c80f13d8b1a53d4ff458`,now()-in-UDF 仅 shape:MyEventOut schema JSON + length>10)、`EventAvroHookPopulate`(`-20190c427227521c092b`,STATICHOOK,flat avroToJson byte-exact)、`EventAvroHookNamedWindowPropertyAssignment`(`-85c9c44d4baae883febe`,STATICHOOK,union-null seed + on-update,double-nested union JSON 不展平);static `java-281ee8b5adc379b62b2c`;Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`。Java/Go 各 14 条 records、0 differences。manifest 779 cases / 402 DV / 1605 DV runtime IDs / unreferenced 433。

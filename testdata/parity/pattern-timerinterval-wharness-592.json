@@ -1,0 +1,195 @@
+{
+ "version": "esper-parity/v1",
+ "id": "pattern-timerinterval-wharness-592",
+ "description": "PatternObserverTimerInterval ord 0 PatternOp — the shared 31-leg timer:interval W-harness over EventCollectionFactory.getEventSetOne(0,1000), replayed as ONE case: ONE deploy-all step (statement \"all\") expands to the harness's thirty-one per-leg deployments of `@name(\"S<i>\") select * from pattern [<atom>]` (S0..S30 stand in for the name--<atom> labels, S1 carrying the SODA model's toEPL text `timer:interval(1.999d)`), then twelve advance-before-send steps each advance the external clock to the event's pinned instant (+1000ms per send) BEFORE sendEventBean — timer expirations inside an advance attribute to the upcoming event's bucket (an every-interval observer whose expiry lands inside an advance re-arms from the advance instant, which is what lets S7 reach F1/D3 and S8 reach B3) — and every send's fires are grouped per leg+trigger as multiset rows. Expected fires: S0/S1/S2 B1{} (1999 msec, the SODA 1.999d double-literal leg and the boundary-inclusive 2 sec), S3/S4/S5 C1{} (2001/2999/3000 msec expiries inside the C1 advance), S6 B2{} (3.001 seconds), S7 B2{}/F1{}/D3{} (every 3.001 sec re-arms at each advance instant: 3001/7001/11001), S8 A2{}/B3{} (every 5000 msec: 5000/10000), S9 B2{b:B2} (3.999 second expiry arms b inside the B2 advance), S10 B2{b:B2} (4 sec expiry at the exact B2 advance instant), S11 B3{b:B3} (4.001 sec expiry arms b inside the B3 advance), S12 B1{b:B1} (interval 0 pre-arms b at deploy), S13 C1{b:B1} (B1 arms a 0.001 timer that expires inside the C1 advance), S14 B1{b:B1} (B1's zero-interval timer fires inside the same send), S15 C1{b:B1} (B1's 1 sec timer expires inside the C1 advance), S16 B2{b:B1} (B1's 1.001 timer expires inside the B2 advance), S17 D2{b:B1,d:D2} (B1's 6.000 timer arms d inside the E1 advance), S18 D1{b:B1,d:D1} (serial every respawn: B2's 2.001 timer expires inside the E1 advance so D1 pairs only with B1, and B3's timer expires inside the D3 advance), S19 D1{b:B1,d:D1}+D3{b:B3,d:D3} (the 2.000 timers expire at the exact D1/D3 send instants), S20 B1{b unbound} (the 1.001 or-timer expires inside the B1 advance before B1 arrives), S21 B1{b:B1} (B1 wins the or before the 2.001 timer), S22 D2{b unbound} (the B3-filtered b never matches before the 8.500 or-timer expires inside the D2 advance), S23 F1{} (the 7.500 timer wins inside the F1 advance), S24 G1{g:G1} (the 999999 msec timer never binds), S25 B2{b:B1} (B1 plus the 4000 msec timer expiring at the exact B2 advance), S26 A2{b:B1} (B1 plus the 4001 msec timer inside the A2 advance), S27 silent (the 9999999 msec timer never fires), S28 B2{b:B2} (the 1 msec timer expires inside the A1 advance; the B2-filtered b completes the and at B2), S29 silent (timer:within(2.000) quits the 3.000 timer inside the B1 advance), S30 silent (timer:within (3.000) — spaced spelling — quits at the exact 3000 deadline inside the C1 advance). The COMPILE_TO_MODEL/COMPILE_TO_EPL/consume+suppress harness styles, env.milestone savepoints and the post-undeploy resend silence check are unrepresented harness machinery.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternObserverTimerInterval.java",
+ "javaSourceFiles": [
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternObserverTimerInterval.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/patternassert/EventCollectionFactory.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/patternassert/EventExpressionCase.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/patternassert/PatternTestHarness.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_A.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_B.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_C.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_D.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_E.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_F.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_G.java"
+ ],
+ "javaRuntimes": [
+  "java-runtime-9b41fb5951301c0de979"
+ ],
+ "javaNames": [
+  "PatternOp"
+ ],
+ "javaStaticIds": [
+  "java-1422565b568236b2bfea"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "w-harness",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-9b41fb5951301c0de979",
+   "executionName": "PatternOp",
+   "observation": "listener; external clock +1000ms per send; all 31 legs deploy in ONE step before any send (harness deploy-all), then twelve advance-before-send replays of A1,B1,C1,B2,A2,D1,E1,F1,D2,B3,G1,D3 (advanceTime precedes sendEventBean so timer expiries attribute to the upcoming bucket and every-interval observers re-arm at the advance instant): S0/S1/S2 B1, S3/S4/S5 C1, S6 B2, S7 B2/F1/D3 (every 3.001 sec re-arm 3001/7001/11001), S8 A2/B3 (every 5000 msec), S9/S10 B2{b:B2}, S11 B3{b:B3}, S12 B1{b:B1} (zero pre-armed), S13 C1{b:B1}, S14 B1{b:B1} (zero same-send), S15 C1{b:B1}, S16 B2{b:B1}, S17 D2{b:B1,d:D2}, S18 D1{b:B1,d:D1} only (serial every), S19 D1+D3, S20 B1 with b unbound (1.001 or-timer wins), S21 B1{b:B1}, S22 D2 with b unbound (8.500 or-timer wins), S23 F1 (7.500 wins), S24 G1{g:G1}, S25 B2{b:B1}, S26 A2{b:B1}, S27 silent, S28 B2{b:B2}, S29/S30 silent (within guards quit at/inside the 3.000 deadline); per leg+trigger the fires compare as a multiset like compareLists",
+   "epls": [
+    "@name(\"S0\") select * from pattern [timer:interval(1999 msec)]",
+    "@name(\"S1\") select * from pattern [timer:interval(1.999d)]",
+    "@name(\"S2\") select * from pattern [timer:interval(2 sec)]",
+    "@name(\"S3\") select * from pattern [timer:interval(2.001)]",
+    "@name(\"S4\") select * from pattern [timer:interval(2999 milliseconds)]",
+    "@name(\"S5\") select * from pattern [timer:interval(3 seconds)]",
+    "@name(\"S6\") select * from pattern [timer:interval(3.001 seconds)]",
+    "@name(\"S7\") select * from pattern [every timer:interval(3.001 sec)]",
+    "@name(\"S8\") select * from pattern [every timer:interval(5000 msec)]",
+    "@name(\"S9\") select * from pattern [timer:interval(3.999 second) -> b=SupportBean_B]",
+    "@name(\"S10\") select * from pattern [timer:interval(4 sec) -> b=SupportBean_B]",
+    "@name(\"S11\") select * from pattern [timer:interval(4.001 sec) -> b=SupportBean_B]",
+    "@name(\"S12\") select * from pattern [timer:interval(0) -> b=SupportBean_B]",
+    "@name(\"S13\") select * from pattern [b=SupportBean_B -> timer:interval(0.001)]",
+    "@name(\"S14\") select * from pattern [b=SupportBean_B -> timer:interval(0)]",
+    "@name(\"S15\") select * from pattern [b=SupportBean_B -> timer:interval(1 sec)]",
+    "@name(\"S16\") select * from pattern [b=SupportBean_B -> timer:interval(1.001)]",
+    "@name(\"S17\") select * from pattern [b=SupportBean_B() -> timer:interval(6.000) -> d=SupportBean_D]",
+    "@name(\"S18\") select * from pattern [every (b=SupportBean_B() -> timer:interval(2.001) -> d=SupportBean_D())]",
+    "@name(\"S19\") select * from pattern [every (b=SupportBean_B() -> timer:interval(2.000) -> d=SupportBean_D())]",
+    "@name(\"S20\") select * from pattern [b=SupportBean_B() or timer:interval(1.001)]",
+    "@name(\"S21\") select * from pattern [b=SupportBean_B() or timer:interval(2.001)]",
+    "@name(\"S22\") select * from pattern [b=SupportBean_B(id='B3') or timer:interval(8.500)]",
+    "@name(\"S23\") select * from pattern [timer:interval(8.500) or timer:interval(7.500)]",
+    "@name(\"S24\") select * from pattern [timer:interval(999999 msec) or g=SupportBean_G]",
+    "@name(\"S25\") select * from pattern [b=SupportBean_B() and timer:interval(4000 msec)]",
+    "@name(\"S26\") select * from pattern [b=SupportBean_B() and timer:interval(4001 msec)]",
+    "@name(\"S27\") select * from pattern [timer:interval(9999999 msec) and b=SupportBean_B]",
+    "@name(\"S28\") select * from pattern [timer:interval(1 msec) and b=SupportBean_B(id='B2')]",
+    "@name(\"S29\") select * from pattern [timer:interval(3.000) where timer:within(2.000)]",
+    "@name(\"S30\") select * from pattern [timer:interval(3.000) where timer:within (3.000)]"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "w-harness"
+  },
+  {
+   "op": "deploy",
+   "case": "w-harness",
+   "statement": "all"
+  },
+  {
+   "op": "send",
+   "case": "w-harness",
+   "at": "1970-01-01T00:00:01Z",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-harness",
+   "at": "1970-01-01T00:00:02Z",
+   "eventType": "SupportBean_B",
+   "payload": {
+    "id": "B1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-harness",
+   "at": "1970-01-01T00:00:03Z",
+   "eventType": "SupportBean_C",
+   "payload": {
+    "id": "C1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-harness",
+   "at": "1970-01-01T00:00:04Z",
+   "eventType": "SupportBean_B",
+   "payload": {
+    "id": "B2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-harness",
+   "at": "1970-01-01T00:00:05Z",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-harness",
+   "at": "1970-01-01T00:00:06Z",
+   "eventType": "SupportBean_D",
+   "payload": {
+    "id": "D1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-harness",
+   "at": "1970-01-01T00:00:07Z",
+   "eventType": "SupportBean_E",
+   "payload": {
+    "id": "E1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-harness",
+   "at": "1970-01-01T00:00:08Z",
+   "eventType": "SupportBean_F",
+   "payload": {
+    "id": "F1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-harness",
+   "at": "1970-01-01T00:00:09Z",
+   "eventType": "SupportBean_D",
+   "payload": {
+    "id": "D2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-harness",
+   "at": "1970-01-01T00:00:10Z",
+   "eventType": "SupportBean_B",
+   "payload": {
+    "id": "B3"
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-harness",
+   "at": "1970-01-01T00:00:11Z",
+   "eventType": "SupportBean_G",
+   "payload": {
+    "id": "G1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-harness",
+   "at": "1970-01-01T00:00:12Z",
+   "eventType": "SupportBean_D",
+   "payload": {
+    "id": "D3"
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "w-harness"
+  }
+ ]
+}

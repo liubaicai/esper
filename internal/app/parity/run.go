@@ -2875,6 +2875,23 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "pattern-timerinterval-wharness-592" || *mode == "pattern-timerinterval-wharness-592-diff" {
+		trace, err := runPatternTimerIntervalWHarness592Scenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "pattern-timerinterval-wharness-592-diff" {
+			return runDifferentialModeWithNormalizer(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, patternTimerIntervalWHarness592JavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, patternTimerIntervalWHarness592JavaSources),
+				splitMetadata(*javaExecutions, patternTimerIntervalWHarness592JavaExecutions), scenario, trace,
+				sortPatternTimerIntervalWHarness592Records)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "infra-nwtable-mrak-562" || *mode == "infra-nwtable-mrak-562-diff" {
 		trace, err := runInfraNWTableMRAK562Scenario(context.Background(), scenario)
 		if err != nil {

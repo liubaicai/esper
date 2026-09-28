@@ -1089,6 +1089,15 @@ func CreateOverlappingPatternInitiatedTerminatedContextInclusive(env *Environmen
 	return internalengine.CreateOverlappingPatternInitiatedTerminatedContextInclusive(env, name, start, end)
 }
 
+// CreateOverlappingPatternInitiatedTerminatedContextNow registers the
+// overlapping pattern lifecycle combined with Esper's `@Now` initiation: a
+// partition is materialized at deployment time while the start pattern keeps
+// initiating overlapping partitions on its own schedule (`initiated by @Now
+// and pattern [...] terminated ...`).
+func CreateOverlappingPatternInitiatedTerminatedContextNow(env *Environment, name string, start, end PatternStream) (ContextDefinition, error) {
+	return internalengine.CreateOverlappingPatternInitiatedTerminatedContextNow(env, name, start, end)
+}
+
 // CreateOverlappingPatternTerminatedContext registers the overlapping mixed
 // filter-start pattern-end context form in env.
 func CreateOverlappingPatternTerminatedContext(env *Environment, name string, key Expr, start Expression[bool], end PatternStream) (ContextDefinition, error) {
@@ -4685,6 +4694,16 @@ func NewOverlappingPatternInitiatedTerminatedContext(name string, start, end Pat
 // the Go API for non-overlapping declarations where the routing is opt-in.
 func NewOverlappingPatternInitiatedTerminatedContextInclusive(name string, start, end PatternStream) (ContextDefinition, error) {
 	return internalengine.NewOverlappingPatternInitiatedTerminatedContextInclusive(name, start, end)
+}
+
+// NewOverlappingPatternInitiatedTerminatedContextNow declares the overlapping
+// pattern lifecycle combined with Esper's `@Now` initiation: a partition is
+// materialized at deployment time and the start pattern keeps initiating
+// additional overlapping partitions on its own schedule. This mirrors the
+// `initiated by @Now and pattern [...] terminated ...` union, where @Now and
+// the pattern are independent conditions rather than an NFA or-branch.
+func NewOverlappingPatternInitiatedTerminatedContextNow(name string, start, end PatternStream) (ContextDefinition, error) {
+	return internalengine.NewOverlappingPatternInitiatedTerminatedContextNow(name, start, end)
 }
 
 // NewOverlappingPatternTerminatedContext declares the overlapping mixed

@@ -38,9 +38,14 @@ var contextInitTermWithNowJavaExecutions = []string{
 // runContextInitTermWithNowScenario replays the @now executions of
 // ContextInitTermWithNow: a time-period context starting immediately with
 // output last when terminated (including an empty cycle emitting a zero
-// count), a pattern context initiated by an immediate timer OR an
-// every-ten-seconds timer with ten-second duration termination, and a
-// never-ending immediate context accumulating counts.
+// count), a pattern context initiated by `@Now` (an immediate partition at
+// deploy) unioned with an every-ten-seconds timer and ten-second-duration
+// termination, and a never-ending immediate context accumulating counts.
+// The `initiated by @Now and pattern [...]` union is independent conditions,
+// not an NFA or-branch: Esper's ContextControllerCondition immediate member
+// fires once at activation while the pattern keeps its own lifecycle, so Go
+// models it via initiatedNow rather than an or-node whose timer leg would
+// quit the sibling.
 func runContextInitTermWithNowScenario(ctx context.Context, scenario compat.Scenario) (compat.Trace, error) {
 	trace := compat.Trace{Version: compat.ScenarioVersion, ID: scenario.ID}
 	for _, caseName := range []string{
@@ -83,9 +88,9 @@ func runContextInitTermWithNowCase(ctx context.Context, scenario compat.Scenario
 			return compat.Trace{}, err
 		}
 	case "initiated-now-pattern":
-		start := esper.TimerInterval(beanSource, 0).Or(esper.TimerInterval(beanSource, 10*time.Second).Every())
+		start := esper.TimerInterval(beanSource, 10*time.Second).Every()
 		end := esper.TimerInterval(beanSource, 10*time.Second)
-		if _, err := esper.CreateOverlappingPatternInitiatedTerminatedContext(env, "MyContext", start, end); err != nil {
+		if _, err := esper.CreateOverlappingPatternInitiatedTerminatedContextNow(env, "MyContext", start, end); err != nil {
 			return compat.Trace{}, err
 		}
 		query := beanSource.Aggregate(

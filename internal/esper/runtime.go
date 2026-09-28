@@ -6863,6 +6863,9 @@ type statementRuntime struct {
 	contextPatternTagValues  map[string][]Event
 	contextStartPatternState *patternRuntimeState
 	contextEndPatternState   *patternRuntimeState
+	// initiatedNowStarted marks a pattern-initiated context whose `@Now`
+	// union member already materialized its deploy-time partition.
+	initiatedNowStarted bool
 	// nestedParents tracks live parent-level partitions of a nested
 	// initiated-terminated context, keyed by the parent segment of the
 	// nested partition key. The stored event is the event that allocated
@@ -9729,94 +9732,20 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 		if !definition.initiatedOverlapping && len(s.runtime.partitions) > 0 {
 			continue
 		}
-		allocationKey := "initiated:pattern"
-		if definition.initiatedOverlapping {
-			// Timer-driven starts key by the firing instant: every statement
-			// observing this firing derives the same partition.
-			allocationKey = overlappingContextPartitionKey(allocationKey, Event{underlying: now}, s.runtime.partitions)
+		// Timer-driven starts key by the firing instant: every statement
+		// observing this firing derives the same partition.
+		if err := s.instantiatePatternContextPartition(definition, match, Event{underlying: now}, now, variables, &result, &changed); err != nil {
+			return ResultBatch{}, false
 		}
-		if _, exists := s.runtime.partitions[allocationKey]; exists {
-			continue
-		}
-		query := s.runtime.query
-		query.contextName = ""
-		partitionRuntime := newStatementRuntime(query)
-		partitionRuntime.engine = s.engine
-		partitionRuntime.rowRecogOwner = s.runtime.rowRecogOwner
-		partitionRuntime.partitionContextName = s.plan.query.contextName
-		partitionRuntime.partitionKey = allocationKey
-		partitionRuntime.partitionID = s.allocateContextPartitionID(allocationKey)
-		partitionRuntime.contextPatternTags = clonePatternTags(match.tags)
-		partitionRuntime.contextPatternTagValues = clonePatternTagValues(match.tagValues)
-		partitionRuntime.contextProperties = definition.contextPropertyValues(Event{}, now, variables, partitionRuntime.partitionID)
-		partitionRuntime.contextProperties["startTime"] = Present(now)
-		applyContextPatternProperties(&partitionRuntime, match.tags)
-		partitionRuntime.contextEndPatternState = &patternRuntimeState{distinct: make(map[string]struct{})}
-		// The end condition is armed at the start-completion instant (now),
-		// not at the retained match's original start: a repeating start
-		// timer completes at its due time, and a duration-based end such as
-		// timer:interval(10 sec) must run from the partition's actual start.
-		partitionRuntime.variables = partitionRuntime.withContextProperties(variables)
-		initializeContextPatternTimer(&partitionRuntime.contextEndPatternState, definition.endPattern, now, partitionRuntime.variables)
-		partitionRuntime.initializeAt(now)
-		partition := ptrStatementRuntime(partitionRuntime)
-		s.runtime.partitions[allocationKey] = partition
-		s.engine.retainContextPartitionLocked(s.plan.query.contextName, allocationKey, partition)
-		if definition.initiatedOverlapping || definition.startPatternInclusive {
-			// A time-completed start pattern carries the same match map as an
-			// event-completed one; @Inclusive and the overlapping controller
-			// route its tagged events through the new partition in tag order.
-			partitionVariables := s.contextPartitionVariables(partition, variables)
-			for _, tag := range patternTagOrder(definition.startPattern) {
-				if len(match.tagValues[tag]) > 1 {
-					for _, tagged := range match.tagValues[tag] {
-						batch, partitionChanged, processErr := partition.process(s.plan, tagged, now, partitionVariables, streamFilterVerdict{})
-						if processErr != nil {
-							return ResultBatch{}, false
-						}
-						result.New = append(result.New, batch.New...)
-						result.Old = append(result.Old, batch.Old...)
-						changed = changed || partitionChanged
-						if err := s.routePartitionInsertLocked(partition, batch, now, variables); err != nil {
-							return ResultBatch{}, false
-						}
-					}
-					continue
-				}
-				if tagged, ok := match.tags[tag]; ok {
-					batch, partitionChanged, processErr := partition.process(s.plan, tagged, now, partitionVariables, streamFilterVerdict{})
-					if processErr != nil {
-						return ResultBatch{}, false
-					}
-					result.New = append(result.New, batch.New...)
-					result.Old = append(result.Old, batch.Old...)
-					changed = changed || partitionChanged
-					if err := s.routePartitionInsertLocked(partition, batch, now, variables); err != nil {
-						return ResultBatch{}, false
-					}
-				}
-			}
-		}
-		if policy := s.plan.query.output; policy.When != nil && partition.outputWhenMatches(policy.When, now) {
-			// Esper evaluates the OUTPUT WHEN clause when a context
-			// partition starts: a satisfied condition (for example
-			// `output when true`) invokes the listener with an empty batch
-			// at the start instant and applies its then-set assignments.
-			startBatch := partition.applyOutputAssignments(policy, ResultBatch{Time: now, forced: true}, now)
-			if !startBatch.empty() {
-				result.New = append(result.New, startBatch.New...)
-				result.Old = append(result.Old, startBatch.Old...)
-				if err := s.routePartitionInsertLocked(partition, startBatch, now, variables); err != nil {
-					return ResultBatch{}, false
-				}
-			}
-			// Drain the start assignments immediately: the termination loop
-			// below flushes later partitions' pending assignments, and Esper
-			// applies the start output (then-set) before the termination
-			// output of the same clock instant.
-			s.runtime.pendingOutputAssignments = append(s.runtime.pendingOutputAssignments, partition.drainOutputAssignments()...)
-			result.forced = true
-			changed = true
+	}
+
+	// Esper's `@Now` initiation condition (an `initiated by @Now and pattern
+	// [...]` union member) materializes a partition the moment the statement
+	// deploys — the start pattern itself continues on its own schedule.
+	if definition.initiatedNow && !s.runtime.initiatedNowStarted {
+		s.runtime.initiatedNowStarted = true
+		if err := s.instantiatePatternContextPartition(definition, patternMatch{startedAt: now, current: Event{}}, Event{underlying: now}, now, variables, &result, &changed); err != nil {
+			return ResultBatch{}, false
 		}
 	}
 
@@ -9866,6 +9795,103 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 		result.Sequence = s.runtime.seq.Add(1)
 	}
 	return result, changed
+}
+
+// instantiatePatternContextPartition materializes one context partition for a
+// completed start-condition match (or the @Now immediate initiation, whose
+// match carries no captured tags). The trigger argument supplies the
+// partition-allocation identity for overlapping starts; an Event carrying only
+// a time value keys timer-driven starts by the firing instant.
+func (s *Statement) instantiatePatternContextPartition(definition ContextDefinition, match patternMatch, trigger Event, now time.Time, variables map[string]Value, result *ResultBatch, changed *bool) error {
+	allocationKey := "initiated:pattern"
+	if definition.initiatedOverlapping {
+		allocationKey = overlappingContextPartitionKey(allocationKey, trigger, s.runtime.partitions)
+	}
+	if _, exists := s.runtime.partitions[allocationKey]; exists {
+		return nil
+	}
+	query := s.runtime.query
+	query.contextName = ""
+	partitionRuntime := newStatementRuntime(query)
+	partitionRuntime.engine = s.engine
+	partitionRuntime.rowRecogOwner = s.runtime.rowRecogOwner
+	partitionRuntime.partitionContextName = s.plan.query.contextName
+	partitionRuntime.partitionKey = allocationKey
+	partitionRuntime.partitionID = s.allocateContextPartitionID(allocationKey)
+	partitionRuntime.contextPatternTags = clonePatternTags(match.tags)
+	partitionRuntime.contextPatternTagValues = clonePatternTagValues(match.tagValues)
+	partitionRuntime.contextProperties = definition.contextPropertyValues(Event{}, now, variables, partitionRuntime.partitionID)
+	partitionRuntime.contextProperties["startTime"] = Present(now)
+	applyContextPatternProperties(&partitionRuntime, match.tags)
+	partitionRuntime.contextEndPatternState = &patternRuntimeState{distinct: make(map[string]struct{})}
+	// The end condition is armed at the start-completion instant (now),
+	// not at the retained match's original start: a repeating start
+	// timer completes at its due time, and a duration-based end such as
+	// timer:interval(10 sec) must run from the partition's actual start.
+	partitionRuntime.variables = partitionRuntime.withContextProperties(variables)
+	initializeContextPatternTimer(&partitionRuntime.contextEndPatternState, definition.endPattern, now, partitionRuntime.variables)
+	partitionRuntime.initializeAt(now)
+	partition := ptrStatementRuntime(partitionRuntime)
+	s.runtime.partitions[allocationKey] = partition
+	s.engine.retainContextPartitionLocked(s.plan.query.contextName, allocationKey, partition)
+	if definition.initiatedOverlapping || definition.startPatternInclusive {
+		// A completed start pattern carries the same match map for both
+		// event-driven and time-driven completions; @Inclusive and the
+		// overlapping controller route its tagged events through the new
+		// partition in tag order.
+		partitionVariables := s.contextPartitionVariables(partition, variables)
+		for _, tag := range patternTagOrder(definition.startPattern) {
+			if len(match.tagValues[tag]) > 1 {
+				for _, tagged := range match.tagValues[tag] {
+					batch, partitionChanged, processErr := partition.process(s.plan, tagged, now, partitionVariables, streamFilterVerdict{})
+					if processErr != nil {
+						return processErr
+					}
+					result.New = append(result.New, batch.New...)
+					result.Old = append(result.Old, batch.Old...)
+					*changed = *changed || partitionChanged
+					if err := s.routePartitionInsertLocked(partition, batch, now, variables); err != nil {
+						return err
+					}
+				}
+				continue
+			}
+			if tagged, ok := match.tags[tag]; ok {
+				batch, partitionChanged, processErr := partition.process(s.plan, tagged, now, partitionVariables, streamFilterVerdict{})
+				if processErr != nil {
+					return processErr
+				}
+				result.New = append(result.New, batch.New...)
+				result.Old = append(result.Old, batch.Old...)
+				*changed = *changed || partitionChanged
+				if err := s.routePartitionInsertLocked(partition, batch, now, variables); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	if policy := s.plan.query.output; policy.When != nil && partition.outputWhenMatches(policy.When, now) {
+		// Esper evaluates the OUTPUT WHEN clause when a context
+		// partition starts: a satisfied condition (for example
+		// `output when true`) invokes the listener with an empty batch
+		// at the start instant and applies its then-set assignments.
+		startBatch := partition.applyOutputAssignments(policy, ResultBatch{Time: now, forced: true}, now)
+		if !startBatch.empty() {
+			result.New = append(result.New, startBatch.New...)
+			result.Old = append(result.Old, startBatch.Old...)
+			if err := s.routePartitionInsertLocked(partition, startBatch, now, variables); err != nil {
+				return err
+			}
+		}
+		// Drain the start assignments immediately: the termination loop
+		// below flushes later partitions' pending assignments, and Esper
+		// applies the start output (then-set) before the termination
+		// output of the same clock instant.
+		s.runtime.pendingOutputAssignments = append(s.runtime.pendingOutputAssignments, partition.drainOutputAssignments()...)
+		result.forced = true
+		*changed = true
+	}
+	return nil
 }
 
 // processNestedInitiatedParent drives a nested context whose PARENT level is
@@ -19926,6 +19952,37 @@ func clonePatternTagValues(values map[string][]Event) map[string][]Event {
 	return copyValues
 }
 
+// patternAnyDueTimer reports whether any active pattern progress still holds
+// a timer observer whose deadline has arrived, driving the post-event sweep
+// that lets an event-armed timer:interval(0) fire inside the same send the
+// way Esper evaluates due callbacks during event dispatch.
+func (r *statementRuntime) patternAnyDueTimer(now time.Time) bool {
+	if r == nil || r.patternState == nil {
+		return false
+	}
+	for _, match := range r.patternState.active {
+		if patternProgressHasDueTimer(match.state, now) {
+			return true
+		}
+	}
+	return false
+}
+
+func patternProgressHasDueTimer(progress *patternProgress, now time.Time) bool {
+	if progress == nil || progress.expired || progress.quit {
+		return false
+	}
+	switch progress.node.kind {
+	case patternTimerIntervalNode, patternTimerAtNode:
+		return !progress.done && patternTimerProgressDue(progress, now)
+	case patternTimerScheduleNode, patternTimerCronNode:
+		return patternTimerProgressDue(progress, now)
+	}
+	return patternProgressHasDueTimer(progress.left, now) ||
+		patternProgressHasDueTimer(progress.right, now) ||
+		patternProgressHasDueTimer(progress.child, now)
+}
+
 func mergePatternTags(parts ...map[string]Event) map[string]Event {
 	var count int
 	for _, part := range parts {
@@ -20070,7 +20127,14 @@ func patternProgressActive(progress *patternProgress) bool {
 		return progress.started || progress.armed
 	case patternSequenceNode:
 		return progress.phase > 0 || patternProgressActive(progress.left) || patternProgressActive(progress.right)
-	case patternAndNode, patternOrNode:
+	case patternAndNode:
+		// A satisfied side that has not quit keeps the and-state resident:
+		// Esper's EvalAndStateNode caches the completed side's matches
+		// (eventsPerChild) until the other side pairs with them — dropping the
+		// state loses a timer-side completion that fired before any event.
+		return patternSatisfied(progress.left) || patternSatisfied(progress.right) ||
+			patternProgressActive(progress.left) || patternProgressActive(progress.right)
+	case patternOrNode:
 		return patternProgressActive(progress.left) || patternProgressActive(progress.right)
 	case patternNotNode:
 		// A negative branch is meaningful even before its child has consumed an
@@ -20285,8 +20349,10 @@ func patternRepeatingLegAlive(progress *patternProgress) bool {
 // isQuitted=false because they restart their child. An or-expression quits
 // permanently exactly when one of its satisfied branches did, which is what
 // kills the sibling branches (including an every-branch) of the or. Timer
-// observers are excluded: their lifecycle is driven by the virtual-clock
-// paths, not by event completions.
+// observers report permanence when they cannot fire again: one-shot
+// interval/at observers on completion (EvalObserverStateNode quitInternal),
+// a schedule when its period went inactive or its instants are exhausted,
+// and a cron only in the one-shot at-form.
 func patternCompletionPermanent(progress *patternProgress) bool {
 	if progress == nil || progress.expired || !patternSatisfied(progress) {
 		return false
@@ -20341,8 +20407,23 @@ func patternCompletionPermanent(progress *patternProgress) bool {
 	case patternOrNode:
 		return (patternSatisfied(progress.left) && patternCompletionPermanent(progress.left)) ||
 			(patternSatisfied(progress.right) && patternCompletionPermanent(progress.right))
-	case patternTimerIntervalNode, patternTimerAtNode, patternTimerScheduleNode, patternTimerCronNode:
-		return false
+	case patternTimerIntervalNode, patternTimerAtNode:
+		// One-shot observers quit permanently when they fire: Esper's
+		// EvalObserverStateNode calls quitInternal on completion, so the
+		// enclosing or/and/sequence must treat the satisfied branch as quit
+		// — a timer branch that wins an or, or completes an and, closes the
+		// composite instead of leaving it resident for later events.
+		return progress.done
+	case patternTimerScheduleNode:
+		// A schedule is permanent only when it can produce no further
+		// occurrences: a period form that went inactive or an instants list
+		// that has been fully emitted.
+		if progress.schedulePeriod != nil {
+			return progress.done && !progress.schedulePeriod.active
+		}
+		return progress.done && progress.scheduleIndex >= len(progress.node.schedule)
+	case patternTimerCronNode:
+		return progress.done && progress.node.cronOneShot
 	default:
 		return true
 	}
@@ -21754,6 +21835,24 @@ func (r *statementRuntime) patternBatchFor(definition *patternDefinition, delta 
 		if definition.root != nil && definition.root.kind == patternWithinNode && (terminal || (len(nextActive) == 0 && completed)) {
 			r.patternState.patternStopped = true
 		}
+		if patternContainsTimer(definition.root) {
+			// Esper evaluates timer callbacks that are already due while
+			// dispatching an event: an observer armed by this event with a
+			// deadline at the current instant (timer:interval(0) and friends)
+			// fires inside this same send, not on the next AdvanceTime.
+			// The 64-iteration bound is a re-entrancy guard, not an Esper
+			// contract: Java recurses unboundedly and effectively livelocks
+			// on self-rearming zero timers, so a deeper serial timer chain
+			// here fires its residual timers on the next AdvanceTime.
+			// Context start/end patterns (advanceContextPattern) have no
+			// sweep — a follow-up gap, not a regression: `e -> timer:interval(0)`
+			// as a context condition still completes on the next advance.
+			for sweep := 0; sweep < 64 && r.patternAnyDueTimer(now); sweep++ {
+				timerBatch := r.patternCompositeTimeBatchFor(definition, plan, now)
+				batch.New = append(batch.New, timerBatch.New...)
+				batch.Old = append(batch.Old, timerBatch.Old...)
+			}
+		}
 	}
 	// Java's output-limit condition counts the match rows the pattern posts
 	// into the output process view (OutputProcessViewConditionDefault ->
@@ -22142,7 +22241,11 @@ func (r *statementRuntime) patternCompositeTimeBatchFor(definition *patternDefin
 				if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, candidate, definition, pool) {
 					nextActive = append(nextActive, candidate)
 				}
-				if patternWithinTerminal(transition.state) || transition.state.quit {
+				// Mirror the event path's permanence test: a completed
+				// composite whose branches all quit permanently (a one-shot
+				// timer that satisfied an and/or) is terminal even though
+				// nothing set the explicit quit flag.
+				if patternWithinTerminal(transition.state) || transition.state.quit || patternCompletionPermanent(transition.state) {
 					terminal = true
 				}
 				if definition.every {

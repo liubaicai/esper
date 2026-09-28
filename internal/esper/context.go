@@ -152,6 +152,7 @@ type ContextDefinition struct {
 	cronEndResolved       *resolvedCronSchedule
 	startPattern          *patternDefinition
 	endPattern            *patternDefinition
+	initiatedNow          bool
 	terminatedAfter       time.Duration
 	patternEnvironment    *Environment
 	parent                *ContextDefinition
@@ -2013,6 +2014,40 @@ func CreateOverlappingPatternInitiatedTerminatedContext(env *Environment, name s
 		return ContextDefinition{}, NewError(ErrorDependency, "nil environment")
 	}
 	definition, err := NewOverlappingPatternInitiatedTerminatedContext(name, start, end)
+	if err != nil {
+		return ContextDefinition{}, err
+	}
+	if definition.patternEnvironment != env {
+		return ContextDefinition{}, NewError(ErrorDependency, "pattern context belongs to a different environment")
+	}
+	return env.registerContextDefinition(definition)
+}
+
+// NewOverlappingPatternInitiatedTerminatedContextNow declares the overlapping
+// pattern lifecycle combined with Esper's `@Now` initiation: a partition is
+// materialized at deployment time and the start pattern keeps initiating
+// additional overlapping partitions on its own schedule. This mirrors the
+// `initiated by @Now and pattern [...] terminated ...` union, where @Now and
+// the pattern are independent conditions rather than an NFA or-branch.
+func NewOverlappingPatternInitiatedTerminatedContextNow(name string, start, end PatternStream) (ContextDefinition, error) {
+	definition, err := NewOverlappingPatternInitiatedTerminatedContext(name, start, end)
+	if err != nil {
+		return ContextDefinition{}, err
+	}
+	definition.initiatedNow = true
+	return definition, nil
+}
+
+// CreateOverlappingPatternInitiatedTerminatedContextNow registers the
+// overlapping pattern lifecycle combined with Esper's `@Now` initiation: a
+// partition is materialized at deployment time while the start pattern keeps
+// initiating overlapping partitions on its own schedule (`initiated by @Now
+// and pattern [...] terminated ...`).
+func CreateOverlappingPatternInitiatedTerminatedContextNow(env *Environment, name string, start, end PatternStream) (ContextDefinition, error) {
+	if env == nil {
+		return ContextDefinition{}, NewError(ErrorDependency, "nil environment")
+	}
+	definition, err := NewOverlappingPatternInitiatedTerminatedContextNow(name, start, end)
 	if err != nil {
 		return ContextDefinition{}, err
 	}

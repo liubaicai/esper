@@ -45,35 +45,61 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.591 ('timer-interval spec-resolution forms').
+Active: Draft 4.592 ('timer-interval 31-leg W-harness').
 
-- Contract frozen (JavaContract591 + GoSurface591):
- PatternObserverTimerInterval ords 1/2/3/5/6 (ords 0/7 deferred,
- ord4 already DV) — collection java-1422565b568236b2bfea, all
- flags []:
- ord1 Spec d5ad6ad9d226628f8383 (literal `1 minute 2 seconds`),
- ord2 Variables bbb75d6bcc54f29c7652 (M_isv/S_isv variables),
- ord3 Expression 97c5e6b5e4c46cc0adb4 (MOne*60+SOne seconds),
- ord5 Prepared ea394f5795b88ddd71c9 (?::int substitution params),
- ord6 MonthScoped 28fc7f508485cbc765a2 (calendar `1 month`
- Feb1->Mar1). Shared contract: arm at deploy under advanceTime(0),
- strictly-after deadline (61999 silent / 62000 fires), milestone
- between probes, undeploy-all. Ords 1/2/3/5 share the identical
- sequence; ord6 is the calendar-approximate sibling on the same
- harness shape.
-- [x] Assets591 delivered + integrated: Java trace 5 records,
-  Go replay 5, `-diff` passing / 0 differences; evidence +
-  traces checked in; all four sibling tests green.
-- [x] Manifest: case.pattern-every +5 DV IDs. Summary -> 429 DV
-  cases / 1739->1744 DV runtime IDs.
-- [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev591 + JavaContract592 + GoSurface592 dispatched.
-- [ ] Review outcome, commit, push.
+- Contract frozen (JavaContract592 + GoSurface592): ord0
+ PatternOp (java-runtime-9b41fb5951301c0de979, static
+ java-1422565b568236b2bfea) — 31 legs on the EventSetOne
+ advance-before-send harness: literal/sodas, every-timer,
+ timer->event / event->timer both directions, 3-way chains,
+ or/and compositions, and the two `timer:within` no-match legs
+ (3.0-within-2.0 and 3.0-within-3.0 boundary). SODA leg is
+ intentionally-different (EPL text is not the entry point;
+ covered as shape in expression-text parity). Within-on-timer-root
+ has builder support but zero existing coverage — new boundary
+ exercised here. Deploy-all as ONE DeployPlans + per-(stmt,event)
+ multiset buckets (588 precedent).
+- [x] Assets592 + Java trace (/tmp/592-java-trace.json, md5
+ 7fb395f1b36fb1bdbdb5c587f0547b56); Go replay 32 records; differential
+ diff passing/0 differences (evidence committed
+ testdata/parity/pattern-timerinterval-wharness-592.evidence.json).
+- [x] Engine fixes required: (1) satisfied one-shot timer branches are
+ permanent in patternCompletionPermanent (EvalObserverStateNode quitInternal)
+ — closes the S25-28 and-refire and the or-timer-winner residencies;
+ (2) patternProgressActive keeps a satisfied-but-unquitted `and` side
+ resident (eventsPerChild cache) so S28's early-fired 1ms timer pairs with
+ B2 instead of a fresh instance; (3) event dispatch drains timers already
+ due at the send instant (patternAnyDueTimer sweep in patternBatchFor) so
+ S14's `b -> timer:interval(0)` fires inside B1's send. The timer-path
+ terminal check in patternCompositeTimeBatchFor now mirrors the event
+ path's permanence test so a completed and/or ends the statement.
+- [x] Regression fix: the context-init-term-with-now `initiated-now-pattern`
+ case emulated `initiated by @Now and pattern [every timer:interval(10)]`
+ as a single or-NFA whose zombie every leg kept initiating; with the
+ permanence fix that emulation died. Now modeled Java-faithfully as a
+ condition union — new ContextDefinition.initiatedNow +
+ CreateOverlappingPatternInitiatedTerminatedContextNow materializes the
+ deploy-time @Now partition while `every timer(10s)` continues on its own
+ schedule (per ContextControllerInitTerm: @Now is an immediate condition,
+ not an or-branch). Runner rewritten accordingly; diff green again.
+- [x] Full gates green after every edit: `make check` exit 0
+ (check-layout incl. facade-drift, go vet, full go test — parity 152s,
+ internal/esper 119s); gofmt/`git diff --check` clean.
+- [x] Independent parity review (Review592): OVERALL PASS, no P0/P1/P2;
+ Java oracle re-derived (TimerIntervalObserver quitted=true sync fire,
+ EvalOrStateNode sibling quit on isQuitted, EvalAndStateNode
+ eventsPerChild + all-quit rule, `initiated by @Now and pattern` =
+ ContextConditionDescriptorImmediate union). Six P3s fixed: sweep-bound
+ comment, helper error propagation restored, context-sweep follow-up
+ noted, docstring updated, typo, manifest prose.
+- [ ] Commit + push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.591 ('timer-interval spec-resolution forms')
+ committed and pushed as `f76502639`; Git owns identity.
+ case.pattern-every +5 DV IDs; review PASS (1 P3).
 - Shipped: Draft 4.590 ('guard-while cluster') committed and
- pushed as `f20b88aec`; Git owns identity. case.pattern-guard-while
- 4/4 DV; review PASS after 2 P3 nits fixed.
+ pushed as `f20b88aec`; Git owns identity. case 4/4 DV.
 - Shipped: Draft 4.589 ('withinmax W-harness + every-within fix')
  committed and pushed as `b57bf6587`; Git owns identity.
 - Shipped: Draft 4.588 ('matchuntil 52-case W-harness')
