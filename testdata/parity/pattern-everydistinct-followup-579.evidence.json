@@ -1,0 +1,1539 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-7d52c9e689e3eeca65d7",
+    "java-runtime-0fe853af533719599512",
+    "java-runtime-d211795c3ecad71c297a"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorEveryDistinct.java",
+    "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java"
+  ],
+  "javaExecutions": [
+    "PatternEveryDistinctOverFilter",
+    "PatternFollowedByWithDistinct",
+    "PatternMonthScoped"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "pattern-everydistinct-followup-579",
+    "steps": [
+      {
+        "op": "case",
+        "case": "over-filter"
+      },
+      {
+        "op": "deploy",
+        "case": "over-filter",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [every-distinct(intPrimitive) a=SupportBean]"
+      },
+      {
+        "op": "send",
+        "case": "over-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "over-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "over-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "over-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "over-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "over-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "over-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E7",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "over-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E8",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "over-filter"
+      },
+      {
+        "op": "case",
+        "case": "over-filter-expiry"
+      },
+      {
+        "op": "deploy",
+        "case": "over-filter-expiry",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [every-distinct(intPrimitive,2 minutes) a=SupportBean]"
+      },
+      {
+        "op": "send",
+        "case": "over-filter-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "over-filter-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "over-filter-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "over-filter-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "over-filter-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "over-filter-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "over-filter-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E7",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "over-filter-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E8",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "over-filter-expiry"
+      },
+      {
+        "op": "case",
+        "case": "followedby-with-distinct"
+      },
+      {
+        "op": "deploy",
+        "case": "followedby-with-distinct",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [every-distinct(a.intPrimitive) a=SupportBean(theString like 'A%') -\u003e every-distinct(b.intPrimitive) b=SupportBean(theString like 'B%')]"
+      },
+      {
+        "op": "send",
+        "case": "followedby-with-distinct",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "followedby-with-distinct",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "followedby-with-distinct",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "followedby-with-distinct",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B3",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "followedby-with-distinct",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "followedby-with-distinct",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B4",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "followedby-with-distinct",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A3",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "followedby-with-distinct",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B5",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "followedby-with-distinct",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B6",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "followedby-with-distinct",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B7",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "followedby-with-distinct"
+      },
+      {
+        "op": "case",
+        "case": "followedby-with-distinct-expiry"
+      },
+      {
+        "op": "deploy",
+        "case": "followedby-with-distinct-expiry",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [every-distinct(a.intPrimitive, 1 day) a=SupportBean(theString like 'A%') -\u003e every-distinct(b.intPrimitive) b=SupportBean(theString like 'B%')]"
+      },
+      {
+        "op": "send",
+        "case": "followedby-with-distinct-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "followedby-with-distinct-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "followedby-with-distinct-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "followedby-with-distinct-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B3",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "followedby-with-distinct-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "followedby-with-distinct-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B4",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "followedby-with-distinct-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A3",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "followedby-with-distinct-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B5",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "followedby-with-distinct-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B6",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "followedby-with-distinct-expiry",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B7",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "followedby-with-distinct-expiry"
+      },
+      {
+        "op": "case",
+        "case": "month-scoped"
+      },
+      {
+        "op": "advance-time",
+        "case": "month-scoped",
+        "at": "2002-02-01T09:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "month-scoped",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [every-distinct(theString, 1 month) a=SupportBean]"
+      },
+      {
+        "op": "send",
+        "case": "month-scoped",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "month-scoped",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "month-scoped",
+        "at": "2002-03-01T08:59:59.999Z"
+      },
+      {
+        "op": "send",
+        "case": "month-scoped",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "month-scoped",
+        "at": "2002-03-01T09:00:00.000Z"
+      },
+      {
+        "op": "send",
+        "case": "month-scoped",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "month-scoped"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-everydistinct-followup-579",
+    "records": [
+      {
+        "case": "over-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "theString": "E4"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "theString": "E8"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-filter-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-filter-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-filter-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "theString": "E4"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-filter-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "theString": "E8"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "followedby-with-distinct",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "theString": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "followedby-with-distinct",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "B2"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "followedby-with-distinct",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "B4"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "followedby-with-distinct",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "A3"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "B5"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "followedby-with-distinct",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "theString": "B7"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "A3"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "theString": "B7"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "followedby-with-distinct-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "theString": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "followedby-with-distinct-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "B2"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "followedby-with-distinct-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "B4"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "followedby-with-distinct-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "A3"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "B5"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "followedby-with-distinct-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "theString": "B7"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "A3"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "theString": "B7"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "month-scoped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-02-01T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "month-scoped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-03-01T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 4,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-everydistinct-followup-579",
+    "records": [
+      {
+        "case": "over-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "theString": "E4"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "theString": "E8"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-filter-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-filter-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-filter-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "theString": "E4"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-filter-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "theString": "E8"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "followedby-with-distinct",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "theString": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "followedby-with-distinct",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "B2"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "followedby-with-distinct",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "B4"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "followedby-with-distinct",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "A3"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "B5"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "followedby-with-distinct",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "theString": "B7"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "A3"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "theString": "B7"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "followedby-with-distinct-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "theString": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "followedby-with-distinct-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "B2"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "followedby-with-distinct-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "B4"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "followedby-with-distinct-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "A3"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "B5"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "followedby-with-distinct-expiry",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "theString": "B7"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "theString": "A3"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "theString": "B7"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "month-scoped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-02-01T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "month-scoped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-03-01T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "intPrimitive": 4,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

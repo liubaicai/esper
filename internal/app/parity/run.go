@@ -133,6 +133,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include pattern-everydistinct-576 and pattern-everydistinct-576-diff")
 		fmt.Fprintln(stderr, "runner modes include pattern-everydistinct-compound-577 and pattern-everydistinct-compound-577-diff")
 		fmt.Fprintln(stderr, "runner modes include pattern-everydistinct-nested-578 and pattern-everydistinct-nested-578-diff")
+		fmt.Fprintln(stderr, "runner modes include pattern-everydistinct-followup-579 and pattern-everydistinct-followup-579-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-enum-select-from and expr-enum-select-from-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-type-use and expr-class-type-use-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-for-epl-objects and expr-class-for-epl-objects-diff")
@@ -560,6 +561,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadPatternEveryDistinctCompound577Scenario(file)
 	} else if *mode == "pattern-everydistinct-nested-578" || *mode == "pattern-everydistinct-nested-578-diff" {
 		scenario, err = loadPatternEveryDistinctNested578Scenario(file)
+	} else if *mode == "pattern-everydistinct-followup-579" || *mode == "pattern-everydistinct-followup-579-diff" {
+		scenario, err = loadPatternEveryDistinctFollowup579Scenario(file)
 	} else if *mode == "epl-contained-event-example" || *mode == "epl-contained-event-example-diff" {
 		scenario, err = loadEPLContainedEventExampleScenario(file)
 	} else if *mode == "epl-other-pattern-event-properties" || *mode == "epl-other-pattern-event-properties-diff" {
@@ -2629,6 +2632,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, patternEveryDistinctNested578JavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, patternEveryDistinctNested578JavaSources),
 				splitMetadata(*javaExecutions, patternEveryDistinctNested578JavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "pattern-everydistinct-followup-579" || *mode == "pattern-everydistinct-followup-579-diff" {
+		trace, err := runPatternEveryDistinctFollowup579Scenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "pattern-everydistinct-followup-579-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, patternEveryDistinctFollowup579JavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, patternEveryDistinctFollowup579JavaSources),
+				splitMetadata(*javaExecutions, patternEveryDistinctFollowup579JavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

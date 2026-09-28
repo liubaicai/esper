@@ -25003,7 +25003,11 @@
     "internal/app/parity/pattern_everydistinct_nested_578_test.go/TestRunPatternEveryDistinctNested578ScenarioReplay",
     "internal/app/parity/pattern_everydistinct_nested_578_test.go/TestRunPatternEveryDistinctNested578PinnedArtifacts",
     "internal/app/parity/pattern_everydistinct_nested_578_test.go/TestRunPatternEveryDistinctNested578RejectsMalformedRawScenario",
-    "internal/app/parity/pattern_everydistinct_nested_578_test.go/TestRunPatternEveryDistinctNested578RuntimeIDMappingMatchesScenario"
+    "internal/app/parity/pattern_everydistinct_nested_578_test.go/TestRunPatternEveryDistinctNested578RuntimeIDMappingMatchesScenario",
+    "internal/app/parity/pattern_everydistinct_followup_579_test.go/TestRunPatternEveryDistinctFollowup579ScenarioReplay",
+    "internal/app/parity/pattern_everydistinct_followup_579_test.go/TestRunPatternEveryDistinctFollowup579PinnedArtifacts",
+    "internal/app/parity/pattern_everydistinct_followup_579_test.go/TestRunPatternEveryDistinctFollowup579RejectsMalformedRawScenario",
+    "internal/app/parity/pattern_everydistinct_followup_579_test.go/TestRunPatternEveryDistinctFollowup579RuntimeIDMappingMatchesScenario"
    ],
    "tags": [
     "correctness",
@@ -25022,9 +25026,10 @@
     "go-unit",
     "testdata/parity/pattern-everydistinct-576.evidence.json",
     "testdata/parity/pattern-everydistinct-compound-577.evidence.json",
-    "testdata/parity/pattern-everydistinct-nested-578.evidence.json"
+    "testdata/parity/pattern-everydistinct-nested-578.evidence.json",
+    "testdata/parity/pattern-everydistinct-followup-579.evidence.json"
    ],
-   "difference": "ord14 PatternInvalid (java-runtime-2542b81b75a973a3cc38) is compile-error-only (Go Build rejection wording intentionally different); ords 3/15 SODA/calendar variants and ord13 followed-by-with-distinct remains implemented-not-DV for a follow-on slice.",
+   "difference": "ord14 PatternInvalid (java-runtime-2542b81b75a973a3cc38) remains the only non-DV execution: compile-error-only (Go Build rejection wording intentionally different). The file is DV-complete except ord14's compile-only probes; ord3's eplToModelCompileDeploy SODA tail is excluded per the compile-text precedent (no fluent front end).",
    "verification": [
     "inventoried",
     "implemented",
@@ -25043,9 +25048,12 @@
     "java-runtime-56116a3e1351bcc4dc23",
     "java-runtime-d09d0786090e8a2e387e",
     "java-runtime-a0ae611c1bd46c4407d9",
-    "java-runtime-1c2ea40ffffe4e58a323"
+    "java-runtime-1c2ea40ffffe4e58a323",
+    "java-runtime-7d52c9e689e3eeca65d7",
+    "java-runtime-0fe853af533719599512",
+    "java-runtime-d211795c3ecad71c297a"
    ],
-   "notes": " Draft 4.576: ords 0/1/2 DV (12 records: no-clock dup suppression, 5s per-key expiry with boundary pinned at first-seen+5000, filtered intPrimitive-key 1s expiry). Per-key expiry semantics match exactly. 3/17 ords DV. Draft 4.577: ords 8-12 DV (34 records over 10 cases x2 expiry legs: composite a+b key, coalesced Add key, falsification-respawn empty-keyset A4 refire, sum key, left-distinct correlated branch per fresh key). 8/17 ords DV. Draft 4.578: ords 4/5/6/7/16 DV (22 records over 9 cases: repeat-over-distinct tag-array, outer-within guard-death t=11000, post-completion a[0] key, inner-within keyset-reset refires, content-wise array+null keys). 13/17 ords DV. (ords 5/7 also associated from case.pattern-every \u2014 the executions live in PatternOperatorEveryDistinct, so their DV evidence lands here; pattern-every retains the implemented association.)"
+   "notes": " Draft 4.576: ords 0/1/2 DV (12 records: no-clock dup suppression, 5s per-key expiry with boundary pinned at first-seen+5000, filtered intPrimitive-key 1s expiry). Per-key expiry semantics match exactly. 3/17 ords DV. Draft 4.577: ords 8-12 DV (34 records over 10 cases x2 expiry legs: composite a+b key, coalesced Add key, falsification-respawn empty-keyset A4 refire, sum key, left-distinct correlated branch per fresh key). 8/17 ords DV. Draft 4.578: ords 4/5/6/7/16 DV (22 records over 9 cases: repeat-over-distinct tag-array, outer-within guard-death t=11000, post-completion a[0] key, inner-within keyset-reset refires, content-wise array+null keys). 13/17 ords DV. (ords 5/7 also associated from case.pattern-every \u2014 the executions live in PatternOperatorEveryDistinct, so their DV evidence lands here; pattern-every retains the implemented association.) Draft 4.579: ords 3/13/15 DV (20 records over 5 cases: unqualified-key over-filter, per-branch right keyset B7 two-row fan-out with left-only expiry asymmetry, calendar-month Feb1->Mar1 boundary at exact mark). 16/17 ords DV \u2014 only ord14 compile-only remains."
   },
   {
    "id": "case.pattern-operator-matchuntil",
@@ -55412,7 +55420,7 @@
   "inventoriedCases": 801,
   "implementedCases": 799,
   "differentialVerifiedCases": 425,
-  "differentialVerifiedRuntimeIds": 1713,
+  "differentialVerifiedRuntimeIds": 1716,
   "intentionallyDifferentCases": 40,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
