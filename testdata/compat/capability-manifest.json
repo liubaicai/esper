@@ -25765,7 +25765,11 @@
     "internal/app/parity/view_expression_window_agg_568_test.go/TestRunViewExprWin568ScenarioReplay",
     "internal/app/parity/view_expression_window_agg_568_test.go/TestRunViewExprWin568PinnedArtifacts",
     "internal/app/parity/view_expression_window_agg_568_test.go/TestRunViewExprWin568RejectsMalformedRawScenario",
-    "internal/app/parity/view_expression_window_agg_568_test.go/TestRunViewExprWin568RuntimeIDMappingMatchesScenario"
+    "internal/app/parity/view_expression_window_agg_568_test.go/TestRunViewExprWin568RuntimeIDMappingMatchesScenario",
+    "internal/app/parity/view_expression_variable_571_test.go/TestRunViewExprVar571ScenarioReplay",
+    "internal/app/parity/view_expression_variable_571_test.go/TestRunViewExprVar571PinnedArtifacts",
+    "internal/app/parity/view_expression_variable_571_test.go/TestRunViewExprVar571RejectsMalformedRawScenario",
+    "internal/app/parity/view_expression_variable_571_test.go/TestRunViewExprVar571RuntimeIDMappingMatchesScenario"
    ],
    "tags": [
     "correctness",
@@ -25785,7 +25789,8 @@
     "java-runtime-inventory",
     "go-unit",
     "testdata/parity/view-expression-window-567.evidence.json",
-    "testdata/parity/view-expression-window-agg-568.evidence.json"
+    "testdata/parity/view-expression-window-agg-568.evidence.json",
+    "testdata/parity/view-expression-variable-571.evidence.json"
    ],
    "difference": "",
    "verification": [
@@ -25800,9 +25805,11 @@
     "java-runtime-0201ff1e8d8eaabe883f",
     "java-runtime-bef7f02bfc8cb8b18b86",
     "java-runtime-d9281b1cc6d48c4984e1",
-    "java-runtime-e4c4569b44a3e479c37e"
+    "java-runtime-e4c4569b44a3e479c37e",
+    "java-runtime-8f167cedfd9b5d56fe67",
+    "java-runtime-5ccd88d79fe264701059"
    ],
-   "notes": " Draft 4.567: ords 0/1/2 promoted to DV (36 records total (14/15/7 per case), 0 differences) \u2014 full Java sequences incl. E6 mass-expiry and E7 full-flush; ord2's Go-side IR delivery pin is stronger than Java's iterator-only assertion (representation choice). Oracle pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c. Draft 4.568: ords 7-10 DV (43 records total: ungrouped-agg self-expiring inserts, groupwin per-group eviction, NW expr retention + on-delete re-evaluation). 7/13 ords DV."
+   "notes": " Draft 4.567: ords 0/1/2 promoted to DV (36 records total (14/15/7 per case), 0 differences) \u2014 full Java sequences incl. E6 mass-expiry and E7 full-flush; ord2's Go-side IR delivery pin is stronger than Java's iterator-only assertion (representation choice). Oracle pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c. Draft 4.568: ords 7-10 DV (43 records total: ungrouped-agg self-expiring inserts, groupwin per-group eviction, NW expr retention + on-delete re-evaluation). 7/13 ords DV. Draft 4.571: ords 11/12 DV (variable quartet shared with batch: KEEP-false expel + self-expiry + dynamic keep-window). 9/13 ords DV."
   },
   {
    "id": "case.view-expression-batch",
@@ -25860,7 +25867,11 @@
     "internal/app/parity/view_expression_batch_core_570_test.go/TestRunViewExprBatchCore570ScenarioReplay",
     "internal/app/parity/view_expression_batch_core_570_test.go/TestRunViewExprBatchCore570PinnedArtifacts",
     "internal/app/parity/view_expression_batch_core_570_test.go/TestRunViewExprBatchCore570RejectsMalformedRawScenario",
-    "internal/app/parity/view_expression_batch_core_570_test.go/TestRunViewExprBatchCore570RuntimeIDMappingMatchesScenario"
+    "internal/app/parity/view_expression_batch_core_570_test.go/TestRunViewExprBatchCore570RuntimeIDMappingMatchesScenario",
+    "internal/app/parity/view_expression_variable_571_test.go/TestRunViewExprVar571ScenarioReplay",
+    "internal/app/parity/view_expression_variable_571_test.go/TestRunViewExprVar571PinnedArtifacts",
+    "internal/app/parity/view_expression_variable_571_test.go/TestRunViewExprVar571RejectsMalformedRawScenario",
+    "internal/app/parity/view_expression_variable_571_test.go/TestRunViewExprVar571RuntimeIDMappingMatchesScenario"
    ],
    "tags": [
     "correctness",
@@ -25881,7 +25892,8 @@
     "java-runtime-inventory",
     "go-unit",
     "testdata/parity/view-expression-batch-agg-569.evidence.json",
-    "testdata/parity/view-expression-batch-core-570.evidence.json"
+    "testdata/parity/view-expression-batch-core-570.evidence.json",
+    "testdata/parity/view-expression-variable-571.evidence.json"
    ],
    "difference": "",
    "verification": [
@@ -25897,9 +25909,11 @@
     "java-runtime-a4012797b6db56fc35ed",
     "java-runtime-bc9403566ad19ca73ed9",
     "java-runtime-d68cff5ac536057a77b8",
-    "java-runtime-cfb5c3a23c3ab8bf2029"
+    "java-runtime-cfb5c3a23c3ab8bf2029",
+    "java-runtime-ace804f86e16f62ae8f5",
+    "java-runtime-afb34438de3f25c964cb"
    ],
-   "notes": " Draft 4.569: ords 7-10 DV (20 records total: batch flush delivers whole accumulated batch + prior batch as old; per-group independent accumulation; delete-triggered re-evaluation). 4/13 ords DV. Draft 4.570: ords 0/1/2/6 DV (18 records total: exclude/include-trigger two-phase, length-batch triples, timestamp-span non-flush-on-advance, retained negative row). 8/13 ords DV."
+   "notes": " Draft 4.569: ords 7-10 DV (20 records total: batch flush delivers whole accumulated batch + prior batch as old; per-group independent accumulation; delete-triggered re-evaluation). 4/13 ords DV. Draft 4.570: ords 0/1/2/6 DV (18 records total: exclude/include-trigger two-phase, length-batch triples, timestamp-span non-flush-on-advance, retained negative row). 8/13 ords DV. Draft 4.571: ords 11/12 DV (variable quartet shared with window: dynamic-time shrink-flush without send + POST-toggle batches). 10/13 ords DV."
   },
   {
    "id": "case.expr-filter-optimizable",
@@ -55314,7 +55328,7 @@
   "inventoriedCases": 801,
   "implementedCases": 799,
   "differentialVerifiedCases": 422,
-  "differentialVerifiedRuntimeIds": 1684,
+  "differentialVerifiedRuntimeIds": 1688,
   "intentionallyDifferentCases": 40,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,

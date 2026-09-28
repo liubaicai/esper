@@ -125,6 +125,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include view-expression-window-agg-568 and view-expression-window-agg-568-diff")
 		fmt.Fprintln(stderr, "runner modes include view-expression-batch-agg-569 and view-expression-batch-agg-569-diff")
 		fmt.Fprintln(stderr, "runner modes include view-expression-batch-core-570 and view-expression-batch-core-570-diff")
+		fmt.Fprintln(stderr, "runner modes include view-expression-variable-571 and view-expression-variable-571-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-enum-select-from and expr-enum-select-from-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-type-use and expr-class-type-use-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-for-epl-objects and expr-class-for-epl-objects-diff")
@@ -536,6 +537,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadViewExprBatchAgg569Scenario(file)
 	} else if *mode == "view-expression-batch-core-570" || *mode == "view-expression-batch-core-570-diff" {
 		scenario, err = loadViewExprBatchCore570Scenario(file)
+	} else if *mode == "view-expression-variable-571" || *mode == "view-expression-variable-571-diff" {
+		scenario, err = loadViewExprVar571Scenario(file)
 	} else if *mode == "epl-contained-event-example" || *mode == "epl-contained-event-example-diff" {
 		scenario, err = loadEPLContainedEventExampleScenario(file)
 	} else if *mode == "epl-other-pattern-event-properties" || *mode == "epl-other-pattern-event-properties-diff" {
@@ -2477,6 +2480,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, viewExprBatchCore570JavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, viewExprBatchCore570JavaSources),
 				splitMetadata(*javaExecutions, viewExprBatchCore570JavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "view-expression-variable-571" || *mode == "view-expression-variable-571-diff" {
+		trace, err := runViewExprVar571Scenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "view-expression-variable-571-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, viewExprVar571JavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, viewExprVar571JavaSources),
+				splitMetadata(*javaExecutions, viewExprVar571JavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

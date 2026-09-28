@@ -1,0 +1,1609 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-ace804f86e16f62ae8f5",
+    "java-runtime-afb34438de3f25c964cb",
+    "java-runtime-8f167cedfd9b5d56fe67",
+    "java-runtime-5ccd88d79fe264701059"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewExpressionBatch.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewExpressionWindow.java",
+    "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java"
+  ],
+  "javaExecutions": [
+    "ViewExpressionBatchDynamicTimeBatch",
+    "ViewExpressionBatchVariableBatch",
+    "ViewExpressionWindowVariable",
+    "ViewExpressionWindowDynamicTimeWindow"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "view-expression-variable-571",
+    "steps": [
+      {
+        "op": "case",
+        "case": "dynamic-time-batch"
+      },
+      {
+        "op": "advance-time",
+        "case": "dynamic-time-batch",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "dynamic-time-batch",
+        "statement": "s0",
+        "epl": "create variable long SIZE = 1000;\n@name('s0') select irstream * from SupportBean#expr_batch(newest_timestamp - oldest_timestamp \u003e SIZE);\n"
+      },
+      {
+        "op": "deployed",
+        "case": "dynamic-time-batch",
+        "statement": "s0"
+      },
+      {
+        "op": "advance-time",
+        "case": "dynamic-time-batch",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "send",
+        "case": "dynamic-time-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "dynamic-time-batch",
+        "at": "1970-01-01T00:00:01.900Z"
+      },
+      {
+        "op": "send",
+        "case": "dynamic-time-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "set-variable",
+        "case": "dynamic-time-batch",
+        "statement": "s0",
+        "name": "SIZE",
+        "payload": 500
+      },
+      {
+        "op": "advance-time",
+        "case": "dynamic-time-batch",
+        "at": "1970-01-01T00:00:01.901Z"
+      },
+      {
+        "op": "send",
+        "case": "dynamic-time-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "dynamic-time-batch",
+        "at": "1970-01-01T00:00:02.300Z"
+      },
+      {
+        "op": "send",
+        "case": "dynamic-time-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "dynamic-time-batch",
+        "at": "1970-01-01T00:00:02.500Z"
+      },
+      {
+        "op": "send",
+        "case": "dynamic-time-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "dynamic-time-batch",
+        "at": "1970-01-01T00:00:03.100Z"
+      },
+      {
+        "op": "send",
+        "case": "dynamic-time-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "set-variable",
+        "case": "dynamic-time-batch",
+        "statement": "s0",
+        "name": "SIZE",
+        "payload": 999
+      },
+      {
+        "op": "advance-time",
+        "case": "dynamic-time-batch",
+        "at": "1970-01-01T00:00:03.700Z"
+      },
+      {
+        "op": "send",
+        "case": "dynamic-time-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E7",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "dynamic-time-batch",
+        "at": "1970-01-01T00:00:04.100Z"
+      },
+      {
+        "op": "send",
+        "case": "dynamic-time-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E8",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "dynamic-time-batch"
+      },
+      {
+        "op": "case",
+        "case": "variable-batch"
+      },
+      {
+        "op": "advance-time",
+        "case": "variable-batch",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-batch",
+        "statement": "s0",
+        "epl": "create variable boolean POST = false;\n@name('s0') select irstream * from SupportBean#expr_batch(POST);\n"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-batch",
+        "statement": "s0"
+      },
+      {
+        "op": "advance-time",
+        "case": "variable-batch",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "send",
+        "case": "variable-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "set-variable",
+        "case": "variable-batch",
+        "statement": "s0",
+        "name": "POST",
+        "payload": true
+      },
+      {
+        "op": "advance-time",
+        "case": "variable-batch",
+        "at": "1970-01-01T00:00:01.001Z"
+      },
+      {
+        "op": "send",
+        "case": "variable-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "variable-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "set-variable",
+        "case": "variable-batch",
+        "statement": "s0",
+        "name": "POST",
+        "payload": false
+      },
+      {
+        "op": "send",
+        "case": "variable-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "variable-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "variable-batch",
+        "at": "1970-01-01T00:00:02.000Z"
+      },
+      {
+        "op": "set-variable",
+        "case": "variable-batch",
+        "statement": "s0",
+        "name": "POST",
+        "payload": true
+      },
+      {
+        "op": "advance-time",
+        "case": "variable-batch",
+        "at": "1970-01-01T00:00:02.001Z"
+      },
+      {
+        "op": "send",
+        "case": "variable-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "variable-batch"
+      },
+      {
+        "op": "case",
+        "case": "variable-window"
+      },
+      {
+        "op": "advance-time",
+        "case": "variable-window",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-window",
+        "statement": "s0",
+        "epl": "create variable boolean KEEP = true;\n@name('s0') select irstream * from SupportBean#expr(KEEP);\n"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-window",
+        "statement": "s0"
+      },
+      {
+        "op": "advance-time",
+        "case": "variable-window",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "send",
+        "case": "variable-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "variable-window",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "set-variable",
+        "case": "variable-window",
+        "statement": "s0",
+        "name": "KEEP",
+        "payload": false
+      },
+      {
+        "op": "snapshot",
+        "case": "variable-window",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "advance-time",
+        "case": "variable-window",
+        "at": "1970-01-01T00:00:01.001Z"
+      },
+      {
+        "op": "snapshot",
+        "case": "variable-window",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "variable-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "variable-window",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "set-variable",
+        "case": "variable-window",
+        "statement": "s0",
+        "name": "KEEP",
+        "payload": true
+      },
+      {
+        "op": "send",
+        "case": "variable-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "variable-window",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "variable-window"
+      },
+      {
+        "op": "case",
+        "case": "dynamic-time-window"
+      },
+      {
+        "op": "advance-time",
+        "case": "dynamic-time-window",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "dynamic-time-window",
+        "statement": "s0",
+        "epl": "create variable long SIZE = 1000;\n@name('s0') select irstream * from SupportBean#expr(newest_timestamp - oldest_timestamp \u003c SIZE)"
+      },
+      {
+        "op": "deployed",
+        "case": "dynamic-time-window",
+        "statement": "s0"
+      },
+      {
+        "op": "advance-time",
+        "case": "dynamic-time-window",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "send",
+        "case": "dynamic-time-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "dynamic-time-window",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "advance-time",
+        "case": "dynamic-time-window",
+        "at": "1970-01-01T00:00:02.000Z"
+      },
+      {
+        "op": "send",
+        "case": "dynamic-time-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "dynamic-time-window",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "set-variable",
+        "case": "dynamic-time-window",
+        "statement": "s0",
+        "name": "SIZE",
+        "payload": 10000
+      },
+      {
+        "op": "advance-time",
+        "case": "dynamic-time-window",
+        "at": "1970-01-01T00:00:05.000Z"
+      },
+      {
+        "op": "send",
+        "case": "dynamic-time-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "dynamic-time-window",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "set-variable",
+        "case": "dynamic-time-window",
+        "statement": "s0",
+        "name": "SIZE",
+        "payload": 2000
+      },
+      {
+        "op": "advance-time",
+        "case": "dynamic-time-window",
+        "at": "1970-01-01T00:00:06.000Z"
+      },
+      {
+        "op": "send",
+        "case": "dynamic-time-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "dynamic-time-window",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "dynamic-time-window"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "view-expression-variable-571",
+    "records": [
+      {
+        "case": "dynamic-time-batch",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "dynamic-time-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01.901Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "dynamic-time-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "dynamic-time-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:04.100Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E6"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E7"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E8"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-batch",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01.001Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:01.001Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:01.001Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:02.001Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:02.001Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E6"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-window",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:01.001Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01.001Z"
+      },
+      {
+        "case": "variable-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:01.001Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01.001Z"
+      },
+      {
+        "case": "variable-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:01.001Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01.001Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "dynamic-time-window",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "dynamic-time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "dynamic-time-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "dynamic-time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "dynamic-time-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "dynamic-time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "dynamic-time-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "dynamic-time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:06Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "dynamic-time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:06Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "dynamic-time-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:06Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "view-expression-variable-571",
+    "records": [
+      {
+        "case": "dynamic-time-batch",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "dynamic-time-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01.901Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "dynamic-time-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "dynamic-time-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:04.100Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E6"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E7"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E8"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-batch",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01.001Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:01.001Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:01.001Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:02.001Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:02.001Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E6"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-window",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:01.001Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01.001Z"
+      },
+      {
+        "case": "variable-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:01.001Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01.001Z"
+      },
+      {
+        "case": "variable-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:01.001Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01.001Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "dynamic-time-window",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "dynamic-time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "dynamic-time-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "dynamic-time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "dynamic-time-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "dynamic-time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "dynamic-time-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "dynamic-time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:06Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "dynamic-time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:06Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "dynamic-time-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:06Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

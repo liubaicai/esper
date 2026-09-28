@@ -45,29 +45,36 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.570 ('view-expression-batch core quartet').
+Active: Draft 4.571 ('expression variable quartet').
 
-- Contract frozen (JavaContract570 + GoSurface570): ViewExpressionBatch
-  ords 0/1/2/6 — NewestEventOldestEvent (java-runtime-a4012797b6db56fc35ed,
-  TWO deployments: includeTrigger=false then true), LengthBatch
-  (java-runtime-bc9403566ad19ca73ed9, current_count>=3+includeTrigger),
-  TimeBatch (java-runtime-d68cff5ac536057a77b8, timestamp-span trigger
-  + virtual clock; clock advance alone never flushes),
-  EventPropBatch (java-runtime-cfb5c3a23c3ab8bf2029, intPrimitive>0 +
-  negative event retained not dropped). All dedup static
-  java-20551a17cb2af08c67fc, flags[] -> extend batch case to 8/13 DV.
-- [x] Assets570 delivered + integrated: Java trace 18 records, Go
-  replay 18, `-diff` passing / 0 differences; evidence + traces checked
-  in. Two-phase ord0 (exclude/include), clock-advance-never-flushes,
-  retained E3(-1) all verified; sequence counters persist across
-  undeploy-all on both sides.
-- [x] Manifest: case.view-expression-batch extended to 8/13 DV (+4
-  runtime IDs). Summary -> 422 DV / 1684 DV runtime IDs.
+- Contract frozen (JavaContract571 + GoSurface571): variable-driven
+  expiry re-evaluation across two view kinds —
+  ViewExpressionBatch ords 11/12 (DynamicTimeBatch
+  java-runtime-ace804f86e16f62ae8f5; VariableBatch
+  java-runtime-afb34438de3f25c964cb; static
+  java-20551a17cb2af08c67fc) + ViewExpressionWindow ords 11/12
+  (Variable java-runtime-8f167cedfd9b5d56fe67; DynamicTimeWindow
+  java-runtime-5ccd88d79fe264701059; static java-06e6b1f6c905b8f12b82).
+  Pitfalls pinned: byte-exact EPLs incl. W12's MISSING trailing
+  `;\n` (asymmetry vs the other three); batch strict `>` on span vs
+  window `<`; variable shrink + advance flushes WITHOUT a send;
+  runtimeSetVariable scope (s0 for B12) vs global. Extends batch case
+  to 10/13 + window case to 9/13 DV.
+- [x] Assets571 delivered + integrated: Java trace 30 records, Go
+  replay 30 (4 deployed / 17 listener / 9 snapshot), `-diff` passing /
+  0 differences; evidence + traces checked in. Variable-trigger
+  re-evaluation on clock advance, shrink-flush-without-send, W12
+  lazy-eviction old-only record all verified — no gaps.
+- [x] Manifest: batch +2 (10/13) + window +2 (9/13). Summary -> 422 DV
+  / 1688 DV runtime IDs.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev570 + JavaContract571 + GoSurface571 dispatched.
+- [x] ParityRev571 + JavaContract572 + GoSurface572 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.570 ('view-expression-batch core quartet') committed
+  and pushed as `d36d601fc`; Git owns identity. case extended to 8/13
+  DV (18 records, 0 differences); review PASS (no findings).
 - Shipped: Draft 4.569 ('view-expression-batch aggregate quartet')
   committed and pushed as `a57fecfd6`; Git owns identity. case promoted
   implemented->DV 4/13 (20 records, 0 differences); review PASS (1 P3).
