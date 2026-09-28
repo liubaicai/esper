@@ -1,0 +1,288 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-25f948812c392841f1e5",
+    "java-runtime-4e9e6ad069be6a8e6074"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorFollowedBy.java",
+    "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_A.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_B.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_C.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_D.java"
+  ],
+  "javaExecutions": [
+    "PatternFollowedEveryMultiple",
+    "PatternFilterGreaterThen"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "pattern-followedby-chain-582",
+    "steps": [
+      {
+        "op": "case",
+        "case": "every-multiple"
+      },
+      {
+        "op": "deploy",
+        "case": "every-multiple",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [every a=SupportBean_A -\u003e b=SupportBean_B -\u003e c=SupportBean_C -\u003e d=SupportBean_D]"
+      },
+      {
+        "op": "send",
+        "case": "every-multiple",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "every-multiple",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "every-multiple",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "B1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "every-multiple",
+        "eventType": "SupportBean_C",
+        "payload": {
+          "id": "C1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "every-multiple",
+        "eventType": "SupportBean_D",
+        "payload": {
+          "id": "D1"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "every-multiple"
+      },
+      {
+        "op": "case",
+        "case": "filter-greater-then"
+      },
+      {
+        "op": "deploy",
+        "case": "filter-greater-then",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern[every a=SupportBean -\u003e b=SupportBean(b.intPrimitive \u003c= a.intPrimitive)]"
+      },
+      {
+        "op": "send",
+        "case": "filter-greater-then",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "filter-greater-then",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 11
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "filter-greater-then"
+      },
+      {
+        "op": "deploy",
+        "case": "filter-greater-then",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [every a=SupportBean -\u003e b=SupportBean(a.intPrimitive \u003e= b.intPrimitive)]"
+      },
+      {
+        "op": "send",
+        "case": "filter-greater-then",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "filter-greater-then",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 11
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "filter-greater-then"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-followedby-chain-582",
+    "records": [
+      {
+        "case": "every-multiple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "c": {
+                "fields": {
+                  "id": "C1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A2"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "c": {
+                "fields": {
+                  "id": "C1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-followedby-chain-582",
+    "records": [
+      {
+        "case": "every-multiple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "c": {
+                "fields": {
+                  "id": "C1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A2"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "c": {
+                "fields": {
+                  "id": "C1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

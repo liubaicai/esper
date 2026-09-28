@@ -45,34 +45,39 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.581 ('followed-by timer+not trio').
+Active: Draft 4.582 ('followed-by chain pair — ords 7/8').
 
-- Contract frozen (JavaContract581 + GoSurface581):
+- Contract frozen (JavaContract582 + GoSurface582):
   case.pattern-operator-followed-by remainder — static
-  java-089b2086c9945dff918f, ords 1/6/9 sharing every ->
-  (timer:interval and not ...) with external clock:
-  ord1 PatternFollowedByWithNot (java-runtime-df0604ce4c4e286b3e6e,
-  correlated B-or-C id=a.id cancel, 2 fires A1/A4, 3 milestones);
-  ord6 PatternFollowedNotEvery (java-runtime-8631344fa90a6c397c84,
-  uncorrelated SupportBean_A terminator, ONE batch TWO rows pin);
-  ord9 PatternFollowedOrPermFalse (java-runtime-7682cbc4f27c52c33cce,
-  literal `)or(` no-space EPL, right alt dies at 10s, 1 fire). Timer
-  note: bare interval(10) is SECONDS per deltaForSecondsDoubleCodegen.
-  Excluded: ord0 W-harness x16, ord2 CallEvent+timer:within+where,
-  ords 7/8 chain pair (next bundle). GoSurface: no gaps, all encoded
-  in pattern_followedby_parity_test.go.
-- [x] Assets581 delivered + integrated: Java trace 4 records, Go
-  replay 4 (3 cases), `-diff` passing / 0 differences; evidence +
-  traces checked in. ord6 ONE-record/TWO-rows batch verified; worker
-  corrected the contract prose (bare interval = SECONDS per
-  deltaForSecondsDoubleCodegen).
-- [x] Manifest: case +3 DV IDs (6/10). Summary -> 426 DV cases /
-  1722 DV runtime IDs.
+  java-089b2086c9945dff918f, ords 7/8 pure chains (no clock):
+  ord7 PatternFollowedEveryMultiple
+  (java-runtime-25f948812c392841f1e5, every a -> b -> c -> d,
+  outer-every fan-out over shared tail: [A1,B1,C1,D1]+[A2,B1,C1,D1],
+  A1 first); ord8 PatternFilterGreaterThen/ESPER-411
+  (java-runtime-4e9e6ad069be6a8e6074, TWO sequential deploys under
+  one runtimeId — phase1 `b.int <= a.int` no-space `pattern[`,
+  phase2 `a.int >= b.int` spaced `pattern [`; E1(10),E2(11) -> 0
+  fires both operand orders; correlated second-leg tag predicate).
+  GoSurface: direct mapping, no gaps; Alias-scalar vs select-*
+  fragment projection noted. Remainder after this: ord0 W-harness,
+  ord2 CallEvent timer:within.
+- [x] Assets582 delivered + integrated: Java trace 1 record/2 ordered
+  rows, Go replay identical, `-diff` passing / 0 differences;
+  evidence + traces checked in. ord8 modeled as ONE case carrying
+  `epls` array with two sequential deploys (matching undeployAll
+  semantics); listener sequence resets per deploy.
+- [x] Manifest: case +2 DV IDs (8/10). Summary -> 426 DV cases /
+  1724 DV runtime IDs.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev581 + JavaContract582 + GoSurface582 dispatched.
+- [x] ParityRev582 + JavaContract583 + GoSurface583 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.581 ('followed-by timer+not trio') committed and
+  pushed as `6e0a8758d`; Git owns identity. case 6/10 DV (4 records,
+  0 differences); review PASS after P2 topology fix (Or inside Then)
+  + P3 prose sync.
+
 - Shipped: Draft 4.580 ('followed-by RFID trio') committed and
   pushed as `28c0eb996`; Git owns identity. case promoted to
   differential-verified 3/10 (4 records, 0 differences); review PASS

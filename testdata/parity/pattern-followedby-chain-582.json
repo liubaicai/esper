@@ -1,0 +1,35 @@
+{
+ "version": "esper-parity/v1",
+ "id": "pattern-followedby-chain-582",
+ "description": "PatternOperatorFollowedBy ords 7 and 8 — the pure followed-by chain pair (no timers, no guards, no clock ops): every-head fan-out over a shared tail plus a correlated second-leg predicate. every-multiple (PatternFollowedEveryMultiple, ord 7) deploys `every a=SupportBean_A -> b=SupportBean_B -> c=SupportBean_C -> d=SupportBean_D`: sends A1, A2, B1, C1, D1 deliver ONE listener invocation carrying TWO rows — [A1,B1,C1,D1] first then [A2,B1,C1,D1] — both A-branches pair with the shared B1/C1/D1 tail, select * projecting the a/b/c/d fragments. filter-greater-then (PatternFilterGreaterThen, ord 8, ESPER-411) runs TWO sequential deploy/undeploy-all cycles under ONE runtimeId in a single execution: phase 1 `pattern[every a=SupportBean -> b=SupportBean(b.intPrimitive <= a.intPrimitive)]` (no space after pattern), phase 2 `pattern [every a=SupportBean -> b=SupportBean(a.intPrimitive >= b.intPrimitive)]` (with space) — each phase sends E1(10), E2(11) and fires ZERO times because the correlated second-leg predicate evaluates against the captured a event in either operand order. All env.milestone savepoints are harness splits restoring identical state and are unrepresented.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorFollowedBy.java",
+ "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorFollowedBy.java", "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_A.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_B.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_C.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_D.java"],
+ "javaRuntimes": ["java-runtime-25f948812c392841f1e5", "java-runtime-4e9e6ad069be6a8e6074"],
+ "javaNames": ["PatternFollowedEveryMultiple", "PatternFilterGreaterThen"],
+ "javaStaticIds": ["java-089b2086c9945dff918f", "java-089b2086c9945dff918f"],
+ "javaFlags": [],
+ "cases": [
+  {"case": "every-multiple", "ordinal": 7, "runtimeId": "java-runtime-25f948812c392841f1e5", "executionName": "PatternFollowedEveryMultiple", "observation": "listener; no clock; `every a=SupportBean_A -> b=SupportBean_B -> c=SupportBean_C -> d=SupportBean_D`: A1+A2 arm two branches that share the B1/C1/D1 tail, so D1 completes both — ONE listener invocation carrying TWO rows, [A1,B1,C1,D1] first then [A2,B1,C1,D1]; select * projects the a/b/c/d fragments", "epls": ["@name('s0') select * from pattern [every a=SupportBean_A -> b=SupportBean_B -> c=SupportBean_C -> d=SupportBean_D]"]},
+  {"case": "filter-greater-then", "ordinal": 8, "runtimeId": "java-runtime-4e9e6ad069be6a8e6074", "executionName": "PatternFilterGreaterThen", "observation": "listener; no clock; ESPER-411 — TWO sequential deploy/undeploy-all cycles under ONE runtimeId: `pattern[every a=SupportBean -> b=SupportBean(b.intPrimitive <= a.intPrimitive)]` (no space after pattern) then `pattern [every a=SupportBean -> b=SupportBean(a.intPrimitive >= b.intPrimitive)]` (with space); each phase sends E1(10), E2(11) and fires ZERO times in both operand orders — 0 records", "epls": ["@name('s0') select * from pattern[every a=SupportBean -> b=SupportBean(b.intPrimitive <= a.intPrimitive)]", "@name('s0') select * from pattern [every a=SupportBean -> b=SupportBean(a.intPrimitive >= b.intPrimitive)]"]}
+ ],
+ "steps": [
+  {"op": "case", "case": "every-multiple"},
+  {"op": "deploy", "case": "every-multiple", "statement": "s0", "epl": "@name('s0') select * from pattern [every a=SupportBean_A -> b=SupportBean_B -> c=SupportBean_C -> d=SupportBean_D]"},
+  {"op": "send", "case": "every-multiple", "eventType": "SupportBean_A", "payload": {"id": "A1"}},
+  {"op": "send", "case": "every-multiple", "eventType": "SupportBean_A", "payload": {"id": "A2"}},
+  {"op": "send", "case": "every-multiple", "eventType": "SupportBean_B", "payload": {"id": "B1"}},
+  {"op": "send", "case": "every-multiple", "eventType": "SupportBean_C", "payload": {"id": "C1"}},
+  {"op": "send", "case": "every-multiple", "eventType": "SupportBean_D", "payload": {"id": "D1"}},
+  {"op": "undeploy-all", "case": "every-multiple"},
+  {"op": "case", "case": "filter-greater-then"},
+  {"op": "deploy", "case": "filter-greater-then", "statement": "s0", "epl": "@name('s0') select * from pattern[every a=SupportBean -> b=SupportBean(b.intPrimitive <= a.intPrimitive)]"},
+  {"op": "send", "case": "filter-greater-then", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10}},
+  {"op": "send", "case": "filter-greater-then", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 11}},
+  {"op": "undeploy-all", "case": "filter-greater-then"},
+  {"op": "deploy", "case": "filter-greater-then", "statement": "s0", "epl": "@name('s0') select * from pattern [every a=SupportBean -> b=SupportBean(a.intPrimitive >= b.intPrimitive)]"},
+  {"op": "send", "case": "filter-greater-then", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10}},
+  {"op": "send", "case": "filter-greater-then", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 11}},
+  {"op": "undeploy-all", "case": "filter-greater-then"}
+ ]
+}
