@@ -1,0 +1,1199 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-93ea4ae0a2ca85d18a0d",
+    "java-runtime-bd06e4f21e0083fb261d",
+    "java-runtime-4b8c99341f4a3af06ea9",
+    "java-runtime-602d438d756709deb50e"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorMatchUntil.java",
+    "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_A.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_B.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_C.java"
+  ],
+  "javaExecutions": [
+    "PatternMatchUntilSimple",
+    "PatternSelectArray",
+    "PatternUseFilter",
+    "PatternArrayFunctionRepeat"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "pattern-matchuntil-untimed-585",
+    "steps": [
+      {
+        "op": "case",
+        "case": "simple"
+      },
+      {
+        "op": "deploy",
+        "case": "simple",
+        "statement": "s0",
+        "epl": "@Name('s0') select a[0].theString as c0, a[1].theString as c1, b.theString as c2 from pattern [a=SupportBean(intPrimitive=0) until b=SupportBean(intPrimitive=1)]"
+      },
+      {
+        "op": "send",
+        "case": "simple",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "simple",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "simple",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "simple",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "simple",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "simple"
+      },
+      {
+        "op": "case",
+        "case": "select-array"
+      },
+      {
+        "op": "deploy",
+        "case": "select-array",
+        "statement": "s0",
+        "epl": "@name('s0') select a, b, a[0] as a0, a[0].id as a0Id, a[1] as a1, a[1].id as a1Id, a[2] as a2, a[2].id as a2Id from pattern [a=SupportBean_A until b=SupportBean_B]"
+      },
+      {
+        "op": "send",
+        "case": "select-array",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "select-array",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "select-array",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "B1"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "select-array"
+      },
+      {
+        "op": "deploy",
+        "case": "select-array",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [a=SupportBean_A until b=SupportBean_B]"
+      },
+      {
+        "op": "send",
+        "case": "select-array",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "select-array",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "select-array",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "B1"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "select-array"
+      },
+      {
+        "op": "case",
+        "case": "use-filter"
+      },
+      {
+        "op": "deploy",
+        "case": "use-filter",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [a=SupportBean_A until b=SupportBean_B -\u003e c=SupportBean_C(id = ('C' || a[0].id || a[1].id || b.id))]"
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "B1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean_C",
+        "payload": {
+          "id": "C1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean_C",
+        "payload": {
+          "id": "CA1A2B1"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "use-filter"
+      },
+      {
+        "op": "deploy",
+        "case": "use-filter",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [a=SupportBean_A until b=SupportBean_B -\u003e c=SupportBean(theString = a[1].id)]"
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "B1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A3",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A2",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "use-filter"
+      },
+      {
+        "op": "deploy",
+        "case": "use-filter",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [a=SupportBean_A until b=SupportBean_B -\u003e c=SupportBean(theString in(a[2].id))]"
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A3"
+        }
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "B1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A2",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A3",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "use-filter"
+      },
+      {
+        "op": "deploy",
+        "case": "use-filter",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [a=SupportBean_A until b=SupportBean_B -\u003e c=SupportBean(theString!=a[0].id and theString!=a[1].id and theString!=a[2].id)]"
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A3"
+        }
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "B1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A2",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A6",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "use-filter"
+      },
+      {
+        "op": "deploy",
+        "case": "use-filter",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [a=SupportBean(theString like 'A%') until b=SupportBean(theString like 'B%') -\u003e c=SupportBean(intPrimitive between a[0].intPrimitive and a[1].intPrimitive)]"
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A2",
+          "intPrimitive": 8
+        }
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B1",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "use-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "use-filter"
+      },
+      {
+        "op": "case",
+        "case": "array-function-repeat"
+      },
+      {
+        "op": "deploy",
+        "case": "array-function-repeat",
+        "statement": "s0",
+        "epl": "@name('s0') select SupportStaticMethodLib.arrayLength(a) as length, java.lang.reflect.Array.getLength(a) as l2 from pattern [[1:] a=SupportBean_A until SupportBean_B]"
+      },
+      {
+        "op": "send",
+        "case": "array-function-repeat",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "array-function-repeat",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "array-function-repeat",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A3"
+        }
+      },
+      {
+        "op": "send",
+        "case": "array-function-repeat",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "A2"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "array-function-repeat"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-matchuntil-untimed-585",
+    "records": [
+      {
+        "case": "simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "A1",
+              "c1": "A2",
+              "c2": "B1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "select-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "id": "A1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "id": "A2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "a0": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "a0Id": "A1",
+              "a1": {
+                "fields": {
+                  "id": "A2"
+                },
+                "kind": "row"
+              },
+              "a1Id": "A2",
+              "a2": {
+                "state": "null"
+              },
+              "a2Id": {
+                "state": "null"
+              },
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "select-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "id": "A1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "id": "A2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "use-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "id": "A1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "id": "A2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "c": {
+                "fields": {
+                  "id": "CA1A2B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "use-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "id": "A1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "id": "A2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "c": {
+                "fields": {
+                  "intPrimitive": 10,
+                  "theString": "A2"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "use-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "id": "A1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "id": "A2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "id": "A3"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "c": {
+                "fields": {
+                  "intPrimitive": 5,
+                  "theString": "A3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "use-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "id": "A1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "id": "A2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "id": "A3"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "c": {
+                "fields": {
+                  "intPrimitive": 5,
+                  "theString": "A6"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "use-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "intPrimitive": 5,
+                    "theString": "A1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 8,
+                    "theString": "A2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "b": {
+                "fields": {
+                  "intPrimitive": -1,
+                  "theString": "B1"
+                },
+                "kind": "row"
+              },
+              "c": {
+                "fields": {
+                  "intPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "array-function-repeat",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "l2": 3,
+              "length": 3
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-matchuntil-untimed-585",
+    "records": [
+      {
+        "case": "simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "A1",
+              "c1": "A2",
+              "c2": "B1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "select-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "id": "A1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "id": "A2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "a0": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "a0Id": "A1",
+              "a1": {
+                "fields": {
+                  "id": "A2"
+                },
+                "kind": "row"
+              },
+              "a1Id": "A2",
+              "a2": {
+                "state": "null"
+              },
+              "a2Id": {
+                "state": "null"
+              },
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "select-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "id": "A1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "id": "A2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "use-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "id": "A1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "id": "A2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "c": {
+                "fields": {
+                  "id": "CA1A2B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "use-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "id": "A1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "id": "A2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "c": {
+                "fields": {
+                  "intPrimitive": 10,
+                  "theString": "A2"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "use-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "id": "A1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "id": "A2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "id": "A3"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "c": {
+                "fields": {
+                  "intPrimitive": 5,
+                  "theString": "A3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "use-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "id": "A1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "id": "A2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "id": "A3"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "c": {
+                "fields": {
+                  "intPrimitive": 5,
+                  "theString": "A6"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "use-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "intPrimitive": 5,
+                    "theString": "A1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 8,
+                    "theString": "A2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "b": {
+                "fields": {
+                  "intPrimitive": -1,
+                  "theString": "B1"
+                },
+                "kind": "row"
+              },
+              "c": {
+                "fields": {
+                  "intPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "array-function-repeat",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "l2": 3,
+              "length": 3
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
