@@ -92,7 +92,7 @@ Active: Draft 4.592 ('timer-interval 31-leg W-harness').
  ContextConditionDescriptorImmediate union). Six P3s fixed: sweep-bound
  comment, helper error propagation restored, context-sweep follow-up
  noted, docstring updated, typo, manifest prose.
-- [ ] Commit + push.
+- [x] Committed and pushed as `df78702b7` (master).
 
 ## Previous work units (shipped)
 - Shipped: Draft 4.591 ('timer-interval spec-resolution forms')
