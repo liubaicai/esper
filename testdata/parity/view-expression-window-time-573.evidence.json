@@ -1,0 +1,995 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-5d04258cf2eb6e0025fd"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewExpressionWindow.java",
+    "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java"
+  ],
+  "javaExecutions": [
+    "ViewExpressionWindowTimeWindow"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "view-expression-window-time-573",
+    "steps": [
+      {
+        "op": "case",
+        "case": "time-window"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-window",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "deploy",
+        "case": "time-window",
+        "statement": "s0",
+        "epl": "@name('s0') select irstream * from SupportBean#expr(oldest_timestamp \u003e newest_timestamp - 2000)"
+      },
+      {
+        "op": "deployed",
+        "case": "time-window",
+        "statement": "s0"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-window",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "send",
+        "case": "time-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-window",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-window",
+        "at": "1970-01-01T00:00:01.500Z"
+      },
+      {
+        "op": "send",
+        "case": "time-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-window",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "time-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-window",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-window",
+        "at": "1970-01-01T00:00:02.500Z"
+      },
+      {
+        "op": "send",
+        "case": "time-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-window",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-window",
+        "at": "1970-01-01T00:00:03.000Z"
+      },
+      {
+        "op": "send",
+        "case": "time-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-window",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-window",
+        "at": "1970-01-01T00:00:03.499Z"
+      },
+      {
+        "op": "send",
+        "case": "time-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6",
+          "intPrimitive": 6
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-window",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-window",
+        "at": "1970-01-01T00:00:03.500Z"
+      },
+      {
+        "op": "send",
+        "case": "time-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E7",
+          "intPrimitive": 7
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-window",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-window",
+        "at": "1970-01-01T00:00:10.000Z"
+      },
+      {
+        "op": "send",
+        "case": "time-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E8",
+          "intPrimitive": 8
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-window",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "time-window"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "view-expression-window-time-573",
+    "records": [
+      {
+        "case": "time-window",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:01.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:01.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:02.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:02.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:03Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:03Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:03.499Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:03.499Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:03.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E7"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:03.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E6"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E7"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E8"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E6"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E7"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E8"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "view-expression-window-time-573",
+    "records": [
+      {
+        "case": "time-window",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:01.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:01.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:02.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:02.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:03Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:03Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:03.499Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:03.499Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:03.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E7"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:03.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E6"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E7"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E8"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E6"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E7"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-window",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E8"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

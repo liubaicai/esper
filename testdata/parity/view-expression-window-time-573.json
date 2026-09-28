@@ -1,0 +1,62 @@
+{
+ "version": "esper-parity/v1",
+ "id": "view-expression-window-time-573",
+ "description": "ViewExpressionWindow ord 3 — the keep-form timestamp window. time-window (ViewExpressionWindowTimeWindow, ord 3) replays `@name('s0') select irstream * from SupportBean#expr(oldest_timestamp > newest_timestamp - 2000)` over virtual time: E1@1000, E2@1500, E3@1500 (the Java execution sends E3 with no advanceTime, so E2 and E3 share the 1500 arrival timestamp) and E4@2500 accumulate; E5@3000 evicts {E1} (oldest 1000 is not > newest 3000 - 2000); E6@3499 is retained (window {E2,E3,E4,E5,E6}); E7@3500 evicts the tied pair {E2,E3} (1500 is not > 1500) — the double-old discriminant; E8@10000 mass-expires {E4,E5,E6,E7}. Expiry is lazy on send — the advanceTime(10000) before E8 evicts nothing by itself. Every send posts an in-order iterator snapshot (the post-E2 pin is stronger than the Java assertions, which skip the iterator there). Java milestone() savepoints and the post-E4 listenerReset are omitted: milestones restore identical state for this non-contextual execution and the reset gates Java's assert helper only — the raw listener records every delivery. The sibling compile-error executions ViewExpressionWindowInvalid (ord 5) and ViewExpressionBatchInvalid (ord 4) carry no replayable steps and join the manifest as intentionally-different rows.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewExpressionWindow.java",
+ "javaSourceFiles": [
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewExpressionWindow.java",
+  "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java"
+ ],
+ "javaRuntimes": [
+  "java-runtime-5d04258cf2eb6e0025fd"
+ ],
+ "javaNames": [
+  "ViewExpressionWindowTimeWindow"
+ ],
+ "javaStaticIds": [
+  "java-06e6b1f6c905b8f12b82"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "time-window",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-5d04258cf2eb6e0025fd",
+   "executionName": "ViewExpressionWindowTimeWindow",
+   "observation": "deployed+listener+snapshot; keep-form timestamp window (oldest_timestamp > newest_timestamp - 2000 over row arrival timestamps; expiry is lazy — it re-evaluates on send, never on a bare advance): E1@1000, E2@1500, E3@1500 (tied arrival with E2), E4@2500 accumulate, E5@3000 evicts {E1}, E6@3499 is retained {E2..E6}, E7@3500 evicts the t=1500-tied pair {E2,E3} (double-old), E8@10000 mass-expires {E4,E5,E6,E7}; per-send in-order iterator snapshots project theString",
+   "epl": "@name('s0') select irstream * from SupportBean#expr(oldest_timestamp > newest_timestamp - 2000)",
+   "deploys": ["s0"]
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "time-window"},
+  {"op": "advance-time", "case": "time-window", "at": "1970-01-01T00:00:00.000Z"},
+  {"op": "deploy", "case": "time-window", "statement": "s0", "epl": "@name('s0') select irstream * from SupportBean#expr(oldest_timestamp > newest_timestamp - 2000)"},
+  {"op": "deployed", "case": "time-window", "statement": "s0"},
+  {"op": "advance-time", "case": "time-window", "at": "1970-01-01T00:00:01.000Z"},
+  {"op": "send", "case": "time-window", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "snapshot", "case": "time-window", "statement": "s0", "mode": "ordered"},
+  {"op": "advance-time", "case": "time-window", "at": "1970-01-01T00:00:01.500Z"},
+  {"op": "send", "case": "time-window", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+  {"op": "snapshot", "case": "time-window", "statement": "s0", "mode": "ordered"},
+  {"op": "send", "case": "time-window", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 3}},
+  {"op": "snapshot", "case": "time-window", "statement": "s0", "mode": "ordered"},
+  {"op": "advance-time", "case": "time-window", "at": "1970-01-01T00:00:02.500Z"},
+  {"op": "send", "case": "time-window", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 4}},
+  {"op": "snapshot", "case": "time-window", "statement": "s0", "mode": "ordered"},
+  {"op": "advance-time", "case": "time-window", "at": "1970-01-01T00:00:03.000Z"},
+  {"op": "send", "case": "time-window", "eventType": "SupportBean", "payload": {"theString": "E5", "intPrimitive": 5}},
+  {"op": "snapshot", "case": "time-window", "statement": "s0", "mode": "ordered"},
+  {"op": "advance-time", "case": "time-window", "at": "1970-01-01T00:00:03.499Z"},
+  {"op": "send", "case": "time-window", "eventType": "SupportBean", "payload": {"theString": "E6", "intPrimitive": 6}},
+  {"op": "snapshot", "case": "time-window", "statement": "s0", "mode": "ordered"},
+  {"op": "advance-time", "case": "time-window", "at": "1970-01-01T00:00:03.500Z"},
+  {"op": "send", "case": "time-window", "eventType": "SupportBean", "payload": {"theString": "E7", "intPrimitive": 7}},
+  {"op": "snapshot", "case": "time-window", "statement": "s0", "mode": "ordered"},
+  {"op": "advance-time", "case": "time-window", "at": "1970-01-01T00:00:10.000Z"},
+  {"op": "send", "case": "time-window", "eventType": "SupportBean", "payload": {"theString": "E8", "intPrimitive": 8}},
+  {"op": "snapshot", "case": "time-window", "statement": "s0", "mode": "ordered"},
+  {"op": "undeploy-all", "case": "time-window"}
+ ]
+}

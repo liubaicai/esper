@@ -45,46 +45,42 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.572 ('expression UDF + Prev quartet').
+Active: Draft 4.573 ('view-expression remainder closer').
 
-- Contract frozen (JavaContract572 + GoSurface572): UDF pair + Prev
-  pair — ViewExpressionBatch ord3 UDFBuiltin
-  (java-runtime-5804edaff708d2d83a5e) + ord5 Prev
-  (java-runtime-3bec407608d81eebcc12); ViewExpressionWindow ord4
-  UDFBuiltin (java-runtime-2ea3302a92f786153790) + ord6 Prev
-  (java-runtime-9171e672cfde4fa06cb5). Discriminants: batch-UDF
-  expired_count stays 0 vs window-UDF expired_count=2; batch-Prev
-  single 3-row flush {null,E1,E2} vs window-Prev per-row {null}/{E1}.
-- BLOCKING gap (GoSurface572): Java UDF is 3-arg
-  udf(theString, view_reference, expired_count); Go has Func1/Func2/
-  Func3 (no ctx) + Func1Ctx/Func2Ctx only — NO Func3Ctx. Existing
-  tests emulate via side-channel; faithful port needs
-  Func3Ctx[A,B,C,D](name, fn(A,B,C,EvalContext)->D, e1,e2,e3).
-  Concurrent lanes: CoreFunc3Ctx (internal/esper) + Assets572 (assets).
-- [x] Func3Ctx landed (CoreFunc3Ctx): `Func3Ctx[A,B,C,D](name,
-  func(A,B,C,EvalContext) D, e1,e2,e3)` — no error return per the
-  ctx-UDF convention; facade regenerated (Func3Ctx-only diff); six
-  drifted runtime-ID pin comments corrected in the parity test.
-- [x] **Shared-core fix**: `windowPredicate` keep path bound
-  `ctx.Event` to the NEWEST retained row; Java
-  `ExpressionWindowView.checkEvent` binds `eventsPerStream[0]=first`
-  (the OLDEST row under test). Split into `windowPredicate` (oldest —
-  keep/expire), `windowPredicateEvents` (arriving/newest — batch send
-  trigger), `windowPredicateEvaluate` (shared eval); the batch
-  timer/variable re-eval path binds `Event{}` (Java passes
-  `eventsPerStream[0]=null`). One stale test expectation updated to
-  the Java sequence ({E1,0,2} post-E2); all suites green.
-- [x] Assets572 delivered + integrated: Java trace 16 records, Go
-  replay 16 (4 deployed / 8 listener / 4 observation), `-diff`
-  passing / 0 differences post-fix. Plain `select` (no irstream) ->
-  ISTREAM-only; batch expired_count=0 vs window=2 verified.
-- [x] Manifest: batch +2 (12/13) + window +2 (11/13). Summary -> 422
-  DV / 1692 DV runtime IDs.
+- Contract frozen (JavaContract573 + GoSurface573): three executions
+  closing both files — ViewExpressionWindow ord3 TimeWindow
+  (java-runtime-5d04258cf2eb6e0025fd, DV-able: irstream
+  `oldest_timestamp > newest_timestamp - 2000`, lazy expiry on send,
+  E7 double-old {E2,E3} discriminant, E8 mass-expiry {E4..E7}, virtual
+  clock E1..E8 t={0,1000,1500,2000,2500,3000,3499,3500,10000},
+  per-send iterator pins + milestone(0)/milestone(1)); plus the two
+  compile-error-only Invalid executions (Window ord5
+  java-runtime-984f59c809d70e02b3da, Batch ord4
+  java-runtime-ad02b23eda34efdfd83e) — disposition
+  intentionally-different on verbatim EPL diagnostics (EPL-text
+  compile path outside the typed Go API, cf. ResultSetQueryTypeInvalid
+  precedent); structural Build-error probes exist but the
+  prev-for-subselect substitution + batch null<0 probe stay
+  unrepresentable. Closes window to 12/13 DV + compile-only remainder.
+- [x] Assets573 delivered + integrated: Java trace 17 records, Go
+  replay 17 (deployed/8 listener/8 snapshot), `-diff` passing / 0
+  differences; evidence + traces checked in. E7 double-old {E2,E3},
+  E8 mass-expiry {E4..E7}, lazy expiry on send all verified. The two
+  Invalid executions recorded as intentionally-different rows inside
+  the cases (byte-exact Java diagnostics in runner header; structural
+  Go rejection is the representative check — no validator weakening).
+- [x] Manifest: window +1 (12/13); batch DV-complete except
+  compile-only ord4. Summary -> 422 DV / 1693 DV runtime IDs.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev572 + JavaContract573 + GoSurface573 dispatched.
+- [x] ParityRev573 + JavaContract574 + GoSurface574 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.572 ('expression UDF + Prev quartet + Func3Ctx')
+  committed and pushed as `6d9da36a2`; Git owns identity. batch 12/13
+  + window 11/13 DV (16 records, 0 differences) + shared-core
+  predicate-binding fix (keep->oldest, trigger->arriving, re-eval->
+  absent); review FAIL->fixed->PASS (NW expr_batch consumer missed).
 - Shipped: Draft 4.571 ('expression variable quartet') committed and
   pushed as `d1bd95178`; Git owns identity. batch 10/13 + window 9/13
   DV (30 records, 0 differences); review PASS (2 P3s fixed).

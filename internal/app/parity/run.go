@@ -127,6 +127,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include view-expression-batch-core-570 and view-expression-batch-core-570-diff")
 		fmt.Fprintln(stderr, "runner modes include view-expression-variable-571 and view-expression-variable-571-diff")
 		fmt.Fprintln(stderr, "runner modes include view-expression-udf-prev-572 and view-expression-udf-prev-572-diff")
+		fmt.Fprintln(stderr, "runner modes include view-expression-window-time-573 and view-expression-window-time-573-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-enum-select-from and expr-enum-select-from-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-type-use and expr-class-type-use-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-for-epl-objects and expr-class-for-epl-objects-diff")
@@ -542,6 +543,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadViewExprVar571Scenario(file)
 	} else if *mode == "view-expression-udf-prev-572" || *mode == "view-expression-udf-prev-572-diff" {
 		scenario, err = loadViewExprUDFPrev572Scenario(file)
+	} else if *mode == "view-expression-window-time-573" || *mode == "view-expression-window-time-573-diff" {
+		scenario, err = loadViewExprWinTime573Scenario(file)
 	} else if *mode == "epl-contained-event-example" || *mode == "epl-contained-event-example-diff" {
 		scenario, err = loadEPLContainedEventExampleScenario(file)
 	} else if *mode == "epl-other-pattern-event-properties" || *mode == "epl-other-pattern-event-properties-diff" {
@@ -2515,6 +2518,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, viewExprUDFPrev572JavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, viewExprUDFPrev572JavaSources),
 				splitMetadata(*javaExecutions, viewExprUDFPrev572JavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "view-expression-window-time-573" || *mode == "view-expression-window-time-573-diff" {
+		trace, err := runViewExprWinTime573Scenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "view-expression-window-time-573-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, viewExprWinTime573JavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, viewExprWinTime573JavaSources),
+				splitMetadata(*javaExecutions, viewExprWinTime573JavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
