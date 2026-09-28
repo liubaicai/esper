@@ -1,0 +1,2269 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-d896ea164e3cebd5c27e"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorFollowedBy.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/patternassert/EventCollectionFactory.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/patternassert/PatternTestHarness.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_A.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_B.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_C.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_D.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_E.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_F.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_G.java"
+  ],
+  "javaExecutions": [
+    "PatternOpWHarness"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "pattern-followedby-wharness-583",
+    "steps": [
+      {
+        "op": "case",
+        "case": "w-harness"
+      },
+      {
+        "op": "advance-time",
+        "case": "w-harness",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deploy",
+        "case": "w-harness",
+        "statement": "name--b=SupportBean_B -\u003e (d=SupportBean_D or not d=SupportBean_D)",
+        "epl": "@name(\"name--b=SupportBean_B -\u003e (d=SupportBean_D or not d=SupportBean_D)\") @Audit('pattern') @Audit('pattern-instances') select * from pattern [b=SupportBean_B -\u003e (d=SupportBean_D or not d=SupportBean_D)]"
+      },
+      {
+        "op": "deploy",
+        "case": "w-harness",
+        "statement": "name--b=SupportBean_B -[1000]\u003e (d=SupportBean_D or not d=SupportBean_D)",
+        "epl": "@name(\"name--b=SupportBean_B -[1000]\u003e (d=SupportBean_D or not d=SupportBean_D)\") @Audit('pattern') @Audit('pattern-instances') select * from pattern [b=SupportBean_B -[1000]\u003e (d=SupportBean_D or not d=SupportBean_D)]"
+      },
+      {
+        "op": "deploy",
+        "case": "w-harness",
+        "statement": "name--b=SupportBean_B -\u003e every d=SupportBean_D",
+        "epl": "@name(\"name--b=SupportBean_B -\u003e every d=SupportBean_D\") @Audit('pattern') @Audit('pattern-instances') select * from pattern [b=SupportBean_B -\u003e every d=SupportBean_D]"
+      },
+      {
+        "op": "deploy",
+        "case": "w-harness",
+        "statement": "name--b=SupportBean_B -\u003e d=SupportBean_D",
+        "epl": "@name(\"name--b=SupportBean_B -\u003e d=SupportBean_D\") @Audit('pattern') @Audit('pattern-instances') select * from pattern [b=SupportBean_B -\u003e d=SupportBean_D]"
+      },
+      {
+        "op": "deploy",
+        "case": "w-harness",
+        "statement": "name--b=SupportBean_B -\u003e not d=SupportBean_D",
+        "epl": "@name(\"name--b=SupportBean_B -\u003e not d=SupportBean_D\") @Audit('pattern') @Audit('pattern-instances') select * from pattern [b=SupportBean_B -\u003e not d=SupportBean_D]"
+      },
+      {
+        "op": "deploy",
+        "case": "w-harness",
+        "statement": "name--b=SupportBean_B -[1000]\u003e not d=SupportBean_D",
+        "epl": "@name(\"name--b=SupportBean_B -[1000]\u003e not d=SupportBean_D\") @Audit('pattern') @Audit('pattern-instances') select * from pattern [b=SupportBean_B -[1000]\u003e not d=SupportBean_D]"
+      },
+      {
+        "op": "deploy",
+        "case": "w-harness",
+        "statement": "name--every b=SupportBean_B -\u003e every d=SupportBean_D",
+        "epl": "@name(\"name--every b=SupportBean_B -\u003e every d=SupportBean_D\") @Audit('pattern') @Audit('pattern-instances') select * from pattern [every b=SupportBean_B -\u003e every d=SupportBean_D]"
+      },
+      {
+        "op": "deploy",
+        "case": "w-harness",
+        "statement": "name--every b=SupportBean_B -\u003e d=SupportBean_D",
+        "epl": "@name(\"name--every b=SupportBean_B -\u003e d=SupportBean_D\") @Audit('pattern') @Audit('pattern-instances') select * from pattern [every b=SupportBean_B -\u003e d=SupportBean_D]"
+      },
+      {
+        "op": "deploy",
+        "case": "w-harness",
+        "statement": "name--every b=SupportBean_B -[10]\u003e d=SupportBean_D",
+        "epl": "@name(\"name--every b=SupportBean_B -[10]\u003e d=SupportBean_D\") @Audit('pattern') @Audit('pattern-instances') select * from pattern [every b=SupportBean_B -[10]\u003e d=SupportBean_D]"
+      },
+      {
+        "op": "deploy",
+        "case": "w-harness",
+        "statement": "name--every (b=SupportBean_B -\u003e every d=SupportBean_D)",
+        "epl": "@name(\"name--every (b=SupportBean_B -\u003e every d=SupportBean_D)\") @Audit('pattern') @Audit('pattern-instances') select * from pattern [every (b=SupportBean_B -\u003e every d=SupportBean_D)]"
+      },
+      {
+        "op": "deploy",
+        "case": "w-harness",
+        "statement": "name--every (a_1=SupportBean_A() -\u003e b=SupportBean_B -\u003e a_2=SupportBean_A)",
+        "epl": "@name(\"name--every (a_1=SupportBean_A() -\u003e b=SupportBean_B -\u003e a_2=SupportBean_A)\") @Audit('pattern') @Audit('pattern-instances') select * from pattern [every (a_1=SupportBean_A() -\u003e b=SupportBean_B -\u003e a_2=SupportBean_A)]"
+      },
+      {
+        "op": "deploy",
+        "case": "w-harness",
+        "statement": "name--c=SupportBean_C() -\u003e d=SupportBean_D -\u003e a=SupportBean_A",
+        "epl": "@name(\"name--c=SupportBean_C() -\u003e d=SupportBean_D -\u003e a=SupportBean_A\") @Audit('pattern') @Audit('pattern-instances') select * from pattern [c=SupportBean_C() -\u003e d=SupportBean_D -\u003e a=SupportBean_A]"
+      },
+      {
+        "op": "deploy",
+        "case": "w-harness",
+        "statement": "name--every (a_1=SupportBean_A() -\u003e b=SupportBean_B() -\u003e a_2=SupportBean_A())",
+        "epl": "@name(\"name--every (a_1=SupportBean_A() -\u003e b=SupportBean_B() -\u003e a_2=SupportBean_A())\") @Audit('pattern') @Audit('pattern-instances') select * from pattern [every (a_1=SupportBean_A() -\u003e b=SupportBean_B() -\u003e a_2=SupportBean_A())]"
+      },
+      {
+        "op": "deploy",
+        "case": "w-harness",
+        "statement": "name--every (a_1=SupportBean_A() -[10]\u003e b=SupportBean_B() -[10]\u003e a_2=SupportBean_A())",
+        "epl": "@name(\"name--every (a_1=SupportBean_A() -[10]\u003e b=SupportBean_B() -[10]\u003e a_2=SupportBean_A())\") @Audit('pattern') @Audit('pattern-instances') select * from pattern [every (a_1=SupportBean_A() -[10]\u003e b=SupportBean_B() -[10]\u003e a_2=SupportBean_A())]"
+      },
+      {
+        "op": "deploy",
+        "case": "w-harness",
+        "statement": "name--every ( every a=SupportBean_A -\u003e every b=SupportBean_B)",
+        "epl": "@name(\"name--every ( every a=SupportBean_A -\u003e every b=SupportBean_B)\") @Audit('pattern') @Audit('pattern-instances') select * from pattern [every ( every a=SupportBean_A -\u003e every b=SupportBean_B)]"
+      },
+      {
+        "op": "deploy",
+        "case": "w-harness",
+        "statement": "name--every (a=SupportBean_A() -\u003e every b=SupportBean_B())",
+        "epl": "@name(\"name--every (a=SupportBean_A() -\u003e every b=SupportBean_B())\") @Audit('pattern') @Audit('pattern-instances') select * from pattern [every (a=SupportBean_A() -\u003e every b=SupportBean_B())]"
+      },
+      {
+        "op": "advance-time",
+        "case": "w-harness",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "send",
+        "case": "w-harness",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "w-harness",
+        "at": "1970-01-01T00:00:02Z"
+      },
+      {
+        "op": "send",
+        "case": "w-harness",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "B1"
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "w-harness",
+        "at": "1970-01-01T00:00:03Z"
+      },
+      {
+        "op": "send",
+        "case": "w-harness",
+        "eventType": "SupportBean_C",
+        "payload": {
+          "id": "C1"
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "w-harness",
+        "at": "1970-01-01T00:00:04Z"
+      },
+      {
+        "op": "send",
+        "case": "w-harness",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "B2"
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "w-harness",
+        "at": "1970-01-01T00:00:05Z"
+      },
+      {
+        "op": "send",
+        "case": "w-harness",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A2"
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "w-harness",
+        "at": "1970-01-01T00:00:06Z"
+      },
+      {
+        "op": "send",
+        "case": "w-harness",
+        "eventType": "SupportBean_D",
+        "payload": {
+          "id": "D1"
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "w-harness",
+        "at": "1970-01-01T00:00:07Z"
+      },
+      {
+        "op": "send",
+        "case": "w-harness",
+        "eventType": "SupportBean_E",
+        "payload": {
+          "id": "E1"
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "w-harness",
+        "at": "1970-01-01T00:00:08Z"
+      },
+      {
+        "op": "send",
+        "case": "w-harness",
+        "eventType": "SupportBean_F",
+        "payload": {
+          "id": "F1"
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "w-harness",
+        "at": "1970-01-01T00:00:09Z"
+      },
+      {
+        "op": "send",
+        "case": "w-harness",
+        "eventType": "SupportBean_D",
+        "payload": {
+          "id": "D2"
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "w-harness",
+        "at": "1970-01-01T00:00:10Z"
+      },
+      {
+        "op": "send",
+        "case": "w-harness",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "B3"
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "w-harness",
+        "at": "1970-01-01T00:00:11Z"
+      },
+      {
+        "op": "send",
+        "case": "w-harness",
+        "eventType": "SupportBean_G",
+        "payload": {
+          "id": "G1"
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "w-harness",
+        "at": "1970-01-01T00:00:12Z"
+      },
+      {
+        "op": "send",
+        "case": "w-harness",
+        "eventType": "SupportBean_D",
+        "payload": {
+          "id": "D3"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "w-harness"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-followedby-wharness-583",
+    "records": [
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every (a=SupportBean_A() -\u003e every b=SupportBean_B())",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every ( every a=SupportBean_A -\u003e every b=SupportBean_B)",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--b=SupportBean_B -[1000]\u003e not d=SupportBean_D",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--b=SupportBean_B -\u003e not d=SupportBean_D",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--b=SupportBean_B -[1000]\u003e (d=SupportBean_D or not d=SupportBean_D)",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--b=SupportBean_B -\u003e (d=SupportBean_D or not d=SupportBean_D)",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every (a=SupportBean_A() -\u003e every b=SupportBean_B())",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:04Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B2"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every ( every a=SupportBean_A -\u003e every b=SupportBean_B)",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:04Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B2"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every (a_1=SupportBean_A() -[10]\u003e b=SupportBean_B() -[10]\u003e a_2=SupportBean_A())",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_1": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "a_2": {
+                "fields": {
+                  "id": "A2"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every (a_1=SupportBean_A() -\u003e b=SupportBean_B() -\u003e a_2=SupportBean_A())",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_1": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "a_2": {
+                "fields": {
+                  "id": "A2"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every (a_1=SupportBean_A() -\u003e b=SupportBean_B -\u003e a_2=SupportBean_A)",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_1": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "a_2": {
+                "fields": {
+                  "id": "A2"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every (b=SupportBean_B -\u003e every d=SupportBean_D)",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:06Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every b=SupportBean_B -[10]\u003e d=SupportBean_D",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:06Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B2"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every b=SupportBean_B -\u003e d=SupportBean_D",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:06Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B2"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every b=SupportBean_B -\u003e every d=SupportBean_D",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:06Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B2"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--b=SupportBean_B -\u003e d=SupportBean_D",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:06Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--b=SupportBean_B -\u003e every d=SupportBean_D",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:06Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--b=SupportBean_B -[1000]\u003e (d=SupportBean_D or not d=SupportBean_D)",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:06Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--b=SupportBean_B -\u003e (d=SupportBean_D or not d=SupportBean_D)",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:06Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every (b=SupportBean_B -\u003e every d=SupportBean_D)",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:09Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D2"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every b=SupportBean_B -\u003e every d=SupportBean_D",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:09Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D2"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B2"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D2"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--b=SupportBean_B -\u003e every d=SupportBean_D",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:09Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D2"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every (a=SupportBean_A() -\u003e every b=SupportBean_B())",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B3"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A2"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B3"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A2"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every ( every a=SupportBean_A -\u003e every b=SupportBean_B)",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B3"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A2"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B3"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A2"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B3"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A2"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every (b=SupportBean_B -\u003e every d=SupportBean_D)",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:12Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D3"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B3"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D3"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B3"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every b=SupportBean_B -[10]\u003e d=SupportBean_D",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:12Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B3"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every b=SupportBean_B -\u003e d=SupportBean_D",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:12Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B3"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every b=SupportBean_B -\u003e every d=SupportBean_D",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:12Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D3"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B2"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D3"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B3"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--b=SupportBean_B -\u003e every d=SupportBean_D",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:12Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-followedby-wharness-583",
+    "records": [
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every (a=SupportBean_A() -\u003e every b=SupportBean_B())",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every ( every a=SupportBean_A -\u003e every b=SupportBean_B)",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--b=SupportBean_B -[1000]\u003e not d=SupportBean_D",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--b=SupportBean_B -\u003e not d=SupportBean_D",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--b=SupportBean_B -[1000]\u003e (d=SupportBean_D or not d=SupportBean_D)",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--b=SupportBean_B -\u003e (d=SupportBean_D or not d=SupportBean_D)",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every (a=SupportBean_A() -\u003e every b=SupportBean_B())",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:04Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B2"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every ( every a=SupportBean_A -\u003e every b=SupportBean_B)",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:04Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B2"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every (a_1=SupportBean_A() -[10]\u003e b=SupportBean_B() -[10]\u003e a_2=SupportBean_A())",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_1": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "a_2": {
+                "fields": {
+                  "id": "A2"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every (a_1=SupportBean_A() -\u003e b=SupportBean_B() -\u003e a_2=SupportBean_A())",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_1": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "a_2": {
+                "fields": {
+                  "id": "A2"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every (a_1=SupportBean_A() -\u003e b=SupportBean_B -\u003e a_2=SupportBean_A)",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_1": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "a_2": {
+                "fields": {
+                  "id": "A2"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every (b=SupportBean_B -\u003e every d=SupportBean_D)",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:06Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every b=SupportBean_B -[10]\u003e d=SupportBean_D",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:06Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B2"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every b=SupportBean_B -\u003e d=SupportBean_D",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:06Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B2"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every b=SupportBean_B -\u003e every d=SupportBean_D",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:06Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B2"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--b=SupportBean_B -\u003e d=SupportBean_D",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:06Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--b=SupportBean_B -\u003e every d=SupportBean_D",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:06Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--b=SupportBean_B -[1000]\u003e (d=SupportBean_D or not d=SupportBean_D)",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:06Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--b=SupportBean_B -\u003e (d=SupportBean_D or not d=SupportBean_D)",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:06Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every (b=SupportBean_B -\u003e every d=SupportBean_D)",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:09Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D2"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every b=SupportBean_B -\u003e every d=SupportBean_D",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:09Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D2"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B2"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D2"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--b=SupportBean_B -\u003e every d=SupportBean_D",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:09Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D2"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every (a=SupportBean_A() -\u003e every b=SupportBean_B())",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B3"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A2"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B3"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A2"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every ( every a=SupportBean_A -\u003e every b=SupportBean_B)",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A1"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B3"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A2"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B3"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A2"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B3"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": {
+                "fields": {
+                  "id": "A2"
+                },
+                "kind": "row"
+              },
+              "b": {
+                "fields": {
+                  "id": "B3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every (b=SupportBean_B -\u003e every d=SupportBean_D)",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:12Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D3"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B3"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D3"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B3"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every b=SupportBean_B -[10]\u003e d=SupportBean_D",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:12Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B3"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every b=SupportBean_B -\u003e d=SupportBean_D",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:12Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B3"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--every b=SupportBean_B -\u003e every d=SupportBean_D",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:12Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D3"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B2"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D3"
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B3"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-harness",
+        "operation": "listener",
+        "statement": "name--b=SupportBean_B -\u003e every d=SupportBean_D",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:12Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "b": {
+                "fields": {
+                  "id": "B1"
+                },
+                "kind": "row"
+              },
+              "d": {
+                "fields": {
+                  "id": "D3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

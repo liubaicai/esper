@@ -24875,7 +24875,11 @@
     "internal/app/parity/pattern_followedby_chain_582_test.go/TestRunPatternFollowedByChain582ScenarioReplay",
     "internal/app/parity/pattern_followedby_chain_582_test.go/TestRunPatternFollowedByChain582PinnedArtifacts",
     "internal/app/parity/pattern_followedby_chain_582_test.go/TestRunPatternFollowedByChain582RejectsMalformedRawScenario",
-    "internal/app/parity/pattern_followedby_chain_582_test.go/TestRunPatternFollowedByChain582RuntimeIDMappingMatchesScenario"
+    "internal/app/parity/pattern_followedby_chain_582_test.go/TestRunPatternFollowedByChain582RuntimeIDMappingMatchesScenario",
+    "internal/app/parity/pattern_followedby_wharness_583_test.go/TestRunPatternFollowedByWHarness583ScenarioReplay",
+    "internal/app/parity/pattern_followedby_wharness_583_test.go/TestRunPatternFollowedByWHarness583PinnedArtifacts",
+    "internal/app/parity/pattern_followedby_wharness_583_test.go/TestRunPatternFollowedByWHarness583RejectsMalformedRawScenario",
+    "internal/app/parity/pattern_followedby_wharness_583_test.go/TestRunPatternFollowedByWHarness583RuntimeIDMappingMatchesScenario"
    ],
    "tags": [
     "correctness",
@@ -24894,7 +24898,8 @@
     "go-unit",
     "testdata/parity/pattern-followedby-rfid-580.evidence.json",
     "testdata/parity/pattern-followedby-timernot-581.evidence.json",
-    "testdata/parity/pattern-followedby-chain-582.evidence.json"
+    "testdata/parity/pattern-followedby-chain-582.evidence.json",
+    "testdata/parity/pattern-followedby-wharness-583.evidence.json"
    ],
    "difference": "Go parity tests replay the exact W-harness match sequences validated against the live Java engine (16 cases including the four-fire every (every a -> every b) B3 multiplicity, spawn-fired b -> (d or not d) with vacant d=null, and retained done-sequences that re-fire per fresh every-leg completion). ThenMax exposes bounded -[N]> edges with composite right sides; PatternQuery.Where is the fluent counterpart of the statement-level where after from pattern [...]. Harness consume/discard style and object-model round-trip styles are out of fluent-API scope.",
    "verification": [
@@ -24910,9 +24915,10 @@
     "java-runtime-8631344fa90a6c397c84",
     "java-runtime-7682cbc4f27c52c33cce",
     "java-runtime-25f948812c392841f1e5",
-    "java-runtime-4e9e6ad069be6a8e6074"
+    "java-runtime-4e9e6ad069be6a8e6074",
+    "java-runtime-d896ea164e3cebd5c27e"
    ],
-   "notes": " Draft 4.580: RFID trio ords 3/4/5 DV (4 records: memory-rfid zero-fire correlated not-cancel, zone-exit dup-cancel + per-mac isolation, zone-enter TagField(a,zoneID) conjunct + repeat-cancel; select * projects both a+b fragments). 3/10 ords DV. Draft 4.581: timer+not trio ords 1/6/9 DV (4 records: correlated B-or-C cancel A1/A4, ord6 ONE delivery TWO rows, or-perm-false `)or(` bare-seconds timer). 6/10 ords DV; remaining ord0 W-harness x16, ord2 CallEvent timer:within, ords 7/8 chain pair. Draft 4.582: chain pair ords 7/8 DV (1 record with ordered two-row every-fan-out over shared tail; ord8 one-execution/two-deploy under one runtimeId, 0-fire correlated predicate both operand orders). 8/10 ords DV; remaining ord0 W-harness x16 and ord2 CallEvent timer:within."
+   "notes": " Draft 4.580: RFID trio ords 3/4/5 DV (4 records: memory-rfid zero-fire correlated not-cancel, zone-exit dup-cancel + per-mac isolation, zone-enter TagField(a,zoneID) conjunct + repeat-cancel; select * projects both a+b fragments). 3/10 ords DV. Draft 4.581: timer+not trio ords 1/6/9 DV (4 records: correlated B-or-C cancel A1/A4, ord6 ONE delivery TWO rows, or-perm-false `)or(` bare-seconds timer). 6/10 ords DV; remaining ord0 W-harness x16, ord2 CallEvent timer:within, ords 7/8 chain pair. Draft 4.582: chain pair ords 7/8 DV (1 record with ordered two-row every-fan-out over shared tail; ord8 one-execution/two-deploy under one runtimeId, 0-fire correlated predicate both operand orders). 8/10 ords DV; remaining ord0 W-harness x16 and ord2 CallEvent timer:within. Draft 4.583: ord0 PatternOpWHarness DV \u2014 all 16 legs in one 43-step case (29 records): or-not/ThenMax/every fan-out incl. duplicated rows legs 10/15/16 and vacant-d nulls. Java per-send listener dispatch is reverse-deploy-order (runner buffers+re-emits newest-first); Go row-internal order exact. 9/10 ords DV; remaining ord2 CallEvent timer:within."
   },
   {
    "id": "case.pattern-operator-and-or-harness",
@@ -55447,7 +55453,7 @@
   "inventoriedCases": 801,
   "implementedCases": 799,
   "differentialVerifiedCases": 426,
-  "differentialVerifiedRuntimeIds": 1724,
+  "differentialVerifiedRuntimeIds": 1725,
   "intentionallyDifferentCases": 40,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,

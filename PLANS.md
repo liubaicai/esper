@@ -45,34 +45,36 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.582 ('followed-by chain pair — ords 7/8').
+Active: Draft 4.583 ('followed-by W-harness — ord0, 16 legs').
 
-- Contract frozen (JavaContract582 + GoSurface582):
-  case.pattern-operator-followed-by remainder — static
-  java-089b2086c9945dff918f, ords 7/8 pure chains (no clock):
-  ord7 PatternFollowedEveryMultiple
-  (java-runtime-25f948812c392841f1e5, every a -> b -> c -> d,
-  outer-every fan-out over shared tail: [A1,B1,C1,D1]+[A2,B1,C1,D1],
-  A1 first); ord8 PatternFilterGreaterThen/ESPER-411
-  (java-runtime-4e9e6ad069be6a8e6074, TWO sequential deploys under
-  one runtimeId — phase1 `b.int <= a.int` no-space `pattern[`,
-  phase2 `a.int >= b.int` spaced `pattern [`; E1(10),E2(11) -> 0
-  fires both operand orders; correlated second-leg tag predicate).
-  GoSurface: direct mapping, no gaps; Alias-scalar vs select-*
-  fragment projection noted. Remainder after this: ord0 W-harness,
-  ord2 CallEvent timer:within.
-- [x] Assets582 delivered + integrated: Java trace 1 record/2 ordered
-  rows, Go replay identical, `-diff` passing / 0 differences;
-  evidence + traces checked in. ord8 modeled as ONE case carrying
-  `epls` array with two sequential deploys (matching undeployAll
-  semantics); listener sequence resets per deploy.
-- [x] Manifest: case +2 DV IDs (8/10). Summary -> 426 DV cases /
-  1724 DV runtime IDs.
+- Contract frozen (JavaContract583 + GoSurface583):
+  PatternOpWHarness (java-runtime-d896ea164e3cebd5c27e, per-ord
+  static id java-971bf7dfac84756cdd0a, file dedup
+  java-089b2086c9945dff918f, flags []). EventCollectionFactory
+  getEventSetOne(0,1000): A1..D3 mixed set at +1000ms steps, 16 legs
+  covering or-not/ThenMax bounds/every fan-out/nested every/vacant-
+  right, multiset compare per trigger event, legs 10/15/16 carry
+  DUPLICATED rows (Java multiplicity). Go: all 16 encoded in
+  TestPatternOperatorFollowedByWHarnessMatchesEsper; gaps: identity
+  vs flattened id assertions, vacant-null rendering.
+  ord2 (CallEvent timer:within) deferred to its own micro-unit.
+- [x] Assets583 delivered + integrated: Java trace 29 records, Go
+  replay 29 (one case x16 legs, 43 steps), `-diff` passing / 0
+  differences; evidence + traces checked in. Legs 10/15/16
+  duplicated-row multiplicity and vacant-d nulls verified. Worker
+  found + normalized LIFO per-send listener dispatch (Java reverse
+  deploy order vs Go deploy order — runner buffers/re-emits);
+  reviewer to rule on normalization vs divergence.
+- [x] Manifest: case +1 DV ID (9/10). Summary -> 426 DV cases /
+  1725 DV runtime IDs.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev582 + JavaContract583 + GoSurface583 dispatched.
+- [x] ParityRev583 + JavaContract584 + GoSurface584 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.582 ('followed-by chain pair') committed and
+  pushed as `c19d843a4`; Git owns identity. case 8/10 DV; review
+  PASS (2 P3s fixed).
 - Shipped: Draft 4.581 ('followed-by timer+not trio') committed and
   pushed as `6e0a8758d`; Git owns identity. case 6/10 DV (4 records,
   0 differences); review PASS after P2 topology fix (Or inside Then)

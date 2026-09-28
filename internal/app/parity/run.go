@@ -137,6 +137,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include pattern-followedby-rfid-580 and pattern-followedby-rfid-580-diff")
 		fmt.Fprintln(stderr, "runner modes include pattern-followedby-timernot-581 and pattern-followedby-timernot-581-diff")
 		fmt.Fprintln(stderr, "runner modes include pattern-followedby-chain-582 and pattern-followedby-chain-582-diff")
+		fmt.Fprintln(stderr, "runner modes include pattern-followedby-wharness-583 and pattern-followedby-wharness-583-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-enum-select-from and expr-enum-select-from-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-type-use and expr-class-type-use-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-for-epl-objects and expr-class-for-epl-objects-diff")
@@ -572,6 +573,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadPatternFollowedByTimerNot581Scenario(file)
 	} else if *mode == "pattern-followedby-chain-582" || *mode == "pattern-followedby-chain-582-diff" {
 		scenario, err = loadPatternFollowedByChain582Scenario(file)
+	} else if *mode == "pattern-followedby-wharness-583" || *mode == "pattern-followedby-wharness-583-diff" {
+		scenario, err = loadPatternFollowedByWHarness583Scenario(file)
 	} else if *mode == "epl-contained-event-example" || *mode == "epl-contained-event-example-diff" {
 		scenario, err = loadEPLContainedEventExampleScenario(file)
 	} else if *mode == "epl-other-pattern-event-properties" || *mode == "epl-other-pattern-event-properties-diff" {
@@ -2705,6 +2708,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, patternFollowedByChain582JavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, patternFollowedByChain582JavaSources),
 				splitMetadata(*javaExecutions, patternFollowedByChain582JavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "pattern-followedby-wharness-583" || *mode == "pattern-followedby-wharness-583-diff" {
+		trace, err := runPatternFollowedByWHarness583Scenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "pattern-followedby-wharness-583-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, patternFollowedByWHarness583JavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, patternFollowedByWHarness583JavaSources),
+				splitMetadata(*javaExecutions, patternFollowedByWHarness583JavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
