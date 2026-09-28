@@ -45,35 +45,37 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.586 ('matchuntil static remainder — ords 7/8').
+Active: Draft 4.587 ('matchuntil ord4 repeat-use-tags trio').
 
-- Contract frozen (JavaContract586 + GoSurface586):
-  case.pattern-operator-matchuntil — file
-  java-2169accb9d43755e87e4, ords 7/8 (untimed static):
-  ord7 PatternBoundRepeatWithNot
-  (java-runtime-f10e941aae4f3b003593, static
-  java-ada27e5f94fecc9ffce2, `every [2] (e=(theString='A') and not
-  (theString='B'))`: A(1),A(2)->fire{1,2},A(3),B(4) cancel,
-  A(5) no-fire, A(6) ->fire{5,6}; e[0]/e[1].intPrimitive);
-  ord8 PatternInvalid (java-runtime-50cec2b441fd878bf1f1, static
-  java-256196856cfafb3c17b7, 13 tryInvalidPattern compile-error
-  legs — Go-expressible subset: inverted/negative bounds,
-  duplicate tag across until/follow-on, nested-until tag reuse;
-  Java-only: zero-literals, [4:6] no-until, own-filter a[0],
-  non-numeric bounds). Compile-error DV precedent exists.
-  Deferred: ord4 timed 3-leg (next), ord1 52-case W-harness,
-  ord6 dynamic-bounds (separate subdomain).
-- [x] Assets586 delivered + integrated: Java trace 6 records (2
-  listener + 4 compile-error), Go replay equal, `-diff` passing / 0
-  differences; evidence + traces checked in.
-- [x] Manifest: case +2 DV IDs + associated the previously-missing
-  ords 6/7 javaRuntimeIds/javaNames. Summary -> 427 DV cases /
-  1732 DV runtime IDs / 3750 referenced.
-- [x] Gates: `make check` GREEN (exit 0) after the association fix.
-- [x] ParityRev586 + JavaContract587 + GoSurface587 dispatched.
+- Contract frozen (JavaContract587 + GoSurface587): ord4
+  PatternRepeatUseTags (java-runtime-eb238a96331acf6fc30b, static
+  java-b2c644fc2f9603bd8568, flags []) — THREE sequential legs one
+  execution: leg1 `every [2] (a=A() -> b=B(id=a.id))` correlated
+  repeat fires once (per-iteration a correlation; empty parens +
+  unquoted id=a.id pins); leg2 TIMED until-chain lifecycle `every
+  ([2:]e1 until timer:interval(5))->([2:]e2 until timer:interval(2))`
+  — NO fire (expiry discards partial silently; GoSurface flagged
+  every-scope: Java `every (X->Y)` vs Go `every(X)->Y` — leg2
+  lifecycle-only so unobservable, must document); leg3 `every [2]
+  A('1') -> [2] B('2' and intPrimitive=A[0].intPrimitive) -> [2]
+  C('3' and ...)` DOUBLE SPACE after `[`, indexed A[0] first-element
+  correlation (data disambiguates A={10,20} vs B/C={10}).
+  Remainder: ord1 52-case W-harness, ord6 dynamic-bounds subdomain.
+- [x] Assets587 delivered + integrated: Java trace 3 records, Go
+  replay 3, `-diff` passing / 0 differences; evidence + traces
+  checked in. Worker CORRECTED the contract: leg2 is not silent —
+  oracle fires 1 record at t=10000 (until completes on terminator;
+  Java never asserted it). Go matches.
+- [x] Manifest: case +1 DV ID (7/9). Summary -> 427 DV cases /
+  1733 DV runtime IDs.
+- [x] Gates: `make check` GREEN (exit 0).
+- [x] ParityRev587 + JavaContract588 + GoSurface588 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.586 ('matchuntil static remainder') committed
+  and pushed as `cad3fdb4b`; Git owns identity. case 6/7+ DV + ords
+  6/7 association repaired; review PASS (1 P3).
 - Shipped: Draft 4.585 ('matchuntil untimed until-array quad')
   committed and pushed as `92b59784b`; Git owns identity. case
   promoted to differential-verified 4/7; review PASS (clean).

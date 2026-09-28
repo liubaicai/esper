@@ -25140,7 +25140,11 @@
     "internal/app/parity/pattern_matchuntil_static_586_test.go/TestRunPatternMatchUntilStatic586ScenarioReplay",
     "internal/app/parity/pattern_matchuntil_static_586_test.go/TestRunPatternMatchUntilStatic586PinnedArtifacts",
     "internal/app/parity/pattern_matchuntil_static_586_test.go/TestRunPatternMatchUntilStatic586RejectsMalformedRawScenario",
-    "internal/app/parity/pattern_matchuntil_static_586_test.go/TestRunPatternMatchUntilStatic586RuntimeIDMappingMatchesScenario"
+    "internal/app/parity/pattern_matchuntil_static_586_test.go/TestRunPatternMatchUntilStatic586RuntimeIDMappingMatchesScenario",
+    "internal/app/parity/pattern_matchuntil_repeattags_587_test.go/TestRunPatternMatchUntilRepeatTags587ScenarioReplay",
+    "internal/app/parity/pattern_matchuntil_repeattags_587_test.go/TestRunPatternMatchUntilRepeatTags587PinnedArtifacts",
+    "internal/app/parity/pattern_matchuntil_repeattags_587_test.go/TestRunPatternMatchUntilRepeatTags587RejectsMalformedRawScenario",
+    "internal/app/parity/pattern_matchuntil_repeattags_587_test.go/TestRunPatternMatchUntilRepeatTags587RuntimeIDMappingMatchesScenario"
    ],
    "tags": [
     "correctness",
@@ -25157,7 +25161,8 @@
     "java-runtime-inventory",
     "go-unit",
     "testdata/parity/pattern-matchuntil-untimed-585.evidence.json",
-    "testdata/parity/pattern-matchuntil-static-586.evidence.json"
+    "testdata/parity/pattern-matchuntil-static-586.evidence.json",
+    "testdata/parity/pattern-matchuntil-repeattags-587.evidence.json"
    ],
    "difference": "Go parity tests replay the Java suite's exact event/time sequences for all 7 open executions: the 52-case W-harness over the timed mixed event set (unbounded until, exact/tight/loose/open ranges, until-wins on shared events, terminator-below-minimum expiry, and/or/sequence compositions, timer terminators, every precedence ESPER-339, nested until array roll-up), select-clause array element access with out-of-range Null, follow-on correlation over a[0]/a[1]/a[2] elements (concat/equals/in/not-in/between), every-repeated correlated sequences, and the invalid-pattern validations the fluent API can express. Registered mappings: Java [:M]/[N:]/[0:M] range literals map to MatchUntil(0, M)/MatchUntil(N, 0)/MatchUntil(0, 1); untagged EPL filters use a surrogate tag in the fluent API; wildcard fragment EventBeans map to explicit TagEvents/TagFieldAt projections; arrayLength/Array.getLength map to TagCount.",
    "verification": [
@@ -25171,9 +25176,10 @@
     "java-runtime-4b8c99341f4a3af06ea9",
     "java-runtime-602d438d756709deb50e",
     "java-runtime-f10e941aae4f3b003593",
-    "java-runtime-50cec2b441fd878bf1f1"
+    "java-runtime-50cec2b441fd878bf1f1",
+    "java-runtime-eb238a96331acf6fc30b"
    ],
-   "notes": " Draft 4.585: untimed until-array quad ords 0/2/3/5 DV (9 records over 9 deploy legs: capital-@Name projection, explicit-index+wildcard select-array incl null a[2], 5-leg filter correlation over a[i], [1:] arrayLength/getLength). 4/7 DV-capable ords done; remaining ords 1 (52-case W-harness), 4 (repeat-use-tags), 6/7 out-of-scope boundaries + ord8 invalid. Draft 4.586: static remainder ords 7/8 DV (6 records: bound repeat carrying per-atom not-guard B-cancel-rearm + 4 Go-expressible compile-error legs modeled as build-error records with verbatim Java prefixes; 9 Java-only legs documented exclusions). 6/7+ DV; remaining ord1 52-case W-harness, ord4 timed repeat-tags, ord6 dynamic bounds (out-of-scope subdomain)."
+   "notes": " Draft 4.585: untimed until-array quad ords 0/2/3/5 DV (9 records over 9 deploy legs: capital-@Name projection, explicit-index+wildcard select-array incl null a[2], 5-leg filter correlation over a[i], [1:] arrayLength/getLength). 4/7 DV-capable ords done; remaining ords 1 (52-case W-harness), 4 (repeat-use-tags), 6/7 out-of-scope boundaries + ord8 invalid. Draft 4.586: static remainder ords 7/8 DV (6 records: bound repeat carrying per-atom not-guard B-cancel-rearm + 4 Go-expressible compile-error legs modeled as build-error records with verbatim Java prefixes; 9 Java-only legs documented exclusions). 6/7+ DV; remaining ord1 52-case W-harness, ord4 timed repeat-tags, ord6 dynamic bounds (out-of-scope subdomain). Draft 4.587: ord4 PatternRepeatUseTags DV (3 records: per-iteration correlated repeat, leg2 until-timer completion fire at t=10000 \u2014 contract's zero-record claim corrected by oracle (until completes on terminator, Java unasserted), leg3 indexed A[0] first-element correlation). 7/9 ords DV; remaining ord1 52-case W-harness and ord6 dynamic-bounds subdomain."
   },
   {
    "id": "case.pattern-observer-timer-interval-expression",
@@ -55485,7 +55491,7 @@
   "inventoriedCases": 801,
   "implementedCases": 799,
   "differentialVerifiedCases": 427,
-  "differentialVerifiedRuntimeIds": 1732,
+  "differentialVerifiedRuntimeIds": 1733,
   "intentionallyDifferentCases": 40,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,

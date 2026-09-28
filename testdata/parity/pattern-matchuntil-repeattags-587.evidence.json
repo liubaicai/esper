@@ -1,0 +1,576 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-eb238a96331acf6fc30b"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorMatchUntil.java",
+    "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_A.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_B.java"
+  ],
+  "javaExecutions": [
+    "PatternRepeatUseTags"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "pattern-matchuntil-repeattags-587",
+    "steps": [
+      {
+        "op": "case",
+        "case": "repeat-use-tags"
+      },
+      {
+        "op": "deploy",
+        "case": "repeat-use-tags",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [every [2] (a=SupportBean_A() -\u003e b=SupportBean_B(id=a.id))]"
+      },
+      {
+        "op": "send",
+        "case": "repeat-use-tags",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "repeat-use-tags",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "repeat-use-tags",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "repeat-use-tags",
+        "eventType": "SupportBean_B",
+        "payload": {
+          "id": "A2"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "repeat-use-tags"
+      },
+      {
+        "op": "advance-time",
+        "case": "repeat-use-tags",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deploy",
+        "case": "repeat-use-tags",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [every ([2:]e1=SupportBean(theString='2') until timer:interval(5))-\u003e([2:]e2=SupportBean(theString='3') until timer:interval(2))]"
+      },
+      {
+        "op": "send",
+        "case": "repeat-use-tags",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "repeat-use-tags",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "repeat-use-tags",
+        "at": "1970-01-01T00:00:05Z"
+      },
+      {
+        "op": "send",
+        "case": "repeat-use-tags",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "3",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "repeat-use-tags",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "3",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "repeat-use-tags",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "3",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "repeat-use-tags",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "3",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "repeat-use-tags",
+        "at": "1970-01-01T00:00:10Z"
+      },
+      {
+        "op": "send",
+        "case": "repeat-use-tags",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "repeat-use-tags",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "repeat-use-tags",
+        "at": "1970-01-01T00:00:15Z"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "repeat-use-tags"
+      },
+      {
+        "op": "deploy",
+        "case": "repeat-use-tags",
+        "statement": "s0",
+        "epl": "@name('s0') select * from pattern [ every [2] A=SupportBean(theString='1') -\u003e [2] B=SupportBean(theString='2' and intPrimitive=A[0].intPrimitive)-\u003e [2] C=SupportBean(theString='3' and intPrimitive=A[0].intPrimitive)]"
+      },
+      {
+        "op": "send",
+        "case": "repeat-use-tags",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "repeat-use-tags",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "1",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "case": "repeat-use-tags",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "2",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "repeat-use-tags",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "2",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "repeat-use-tags",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "3",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "repeat-use-tags",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "3",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "repeat-use-tags"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-matchuntil-repeattags-587",
+    "records": [
+      {
+        "case": "repeat-use-tags",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "id": "A1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "id": "A2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "b": [
+                {
+                  "fields": {
+                    "id": "A1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "id": "A2"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "repeat-use-tags",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e1": [
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "theString": "2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "theString": "2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "e2": [
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "theString": "3"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "theString": "3"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "theString": "3"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "theString": "3"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "repeat-use-tags",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:15Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "A": [
+                {
+                  "fields": {
+                    "intPrimitive": 10,
+                    "theString": "1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 20,
+                    "theString": "1"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "B": [
+                {
+                  "fields": {
+                    "intPrimitive": 10,
+                    "theString": "2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 10,
+                    "theString": "2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "C": [
+                {
+                  "fields": {
+                    "intPrimitive": 10,
+                    "theString": "3"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 10,
+                    "theString": "3"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-matchuntil-repeattags-587",
+    "records": [
+      {
+        "case": "repeat-use-tags",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": [
+                {
+                  "fields": {
+                    "id": "A1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "id": "A2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "b": [
+                {
+                  "fields": {
+                    "id": "A1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "id": "A2"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "repeat-use-tags",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e1": [
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "theString": "2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "theString": "2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "e2": [
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "theString": "3"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "theString": "3"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "theString": "3"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "theString": "3"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "repeat-use-tags",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:15Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "A": [
+                {
+                  "fields": {
+                    "intPrimitive": 10,
+                    "theString": "1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 20,
+                    "theString": "1"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "B": [
+                {
+                  "fields": {
+                    "intPrimitive": 10,
+                    "theString": "2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 10,
+                    "theString": "2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "C": [
+                {
+                  "fields": {
+                    "intPrimitive": 10,
+                    "theString": "3"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 10,
+                    "theString": "3"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
