@@ -1,0 +1,1317 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-c6280a36141e2f9ac8c7",
+    "java-runtime-6301447e4e4eaa27af22",
+    "java-runtime-a8e7fc62db8793496c86",
+    "java-runtime-36fb2be2ea2ba4270df5"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewExpressionBatch.java",
+    "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_A.java"
+  ],
+  "javaExecutions": [
+    "ViewExpressionBatchAggregationUngrouped",
+    "ViewExpressionBatchAggregationWGroupwin",
+    "ViewExpressionBatchAggregationOnDelete",
+    "ViewExpressionBatchNamedWindowDelete"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "view-expression-batch-agg-569",
+    "steps": [
+      {
+        "op": "case",
+        "case": "aggregation-ungrouped"
+      },
+      {
+        "op": "deploy",
+        "case": "aggregation-ungrouped",
+        "statement": "s0",
+        "epl": "@name('s0') select irstream theString from SupportBean#expr_batch(sum(intPrimitive) \u003e 100)"
+      },
+      {
+        "op": "deployed",
+        "case": "aggregation-ungrouped",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "aggregation-ungrouped",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation-ungrouped",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 90
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation-ungrouped",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation-ungrouped",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 101
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation-ungrouped",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation-ungrouped",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6",
+          "intPrimitive": 99
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation-ungrouped",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E7",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "aggregation-ungrouped"
+      },
+      {
+        "op": "case",
+        "case": "aggregation-groupwin"
+      },
+      {
+        "op": "deploy",
+        "case": "aggregation-groupwin",
+        "statement": "s0",
+        "epl": "@name('s0') select irstream theString from SupportBean#groupwin(intPrimitive)#expr_batch(sum(longPrimitive) \u003e 100)"
+      },
+      {
+        "op": "deployed",
+        "case": "aggregation-groupwin",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "aggregation-groupwin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation-groupwin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2,
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation-groupwin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 1,
+          "longPrimitive": 90
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation-groupwin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 2,
+          "longPrimitive": 80
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation-groupwin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 2,
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation-groupwin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6",
+          "intPrimitive": 2,
+          "longPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation-groupwin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E7",
+          "intPrimitive": 2,
+          "longPrimitive": 50
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation-groupwin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E8",
+          "intPrimitive": 1,
+          "longPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation-groupwin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E9",
+          "intPrimitive": 2,
+          "longPrimitive": 50
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation-groupwin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E10",
+          "intPrimitive": 1,
+          "longPrimitive": 101
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation-groupwin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E11",
+          "intPrimitive": 2,
+          "longPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation-groupwin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E12",
+          "intPrimitive": 1,
+          "longPrimitive": 102
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "aggregation-groupwin"
+      },
+      {
+        "op": "case",
+        "case": "aggregation-on-delete"
+      },
+      {
+        "op": "deploy",
+        "case": "aggregation-on-delete",
+        "statement": "s0",
+        "epl": "@name('s0') create window NW#expr_batch(sum(intPrimitive) \u003e= 10) as SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "aggregation-on-delete",
+        "statement": "insert",
+        "epl": "insert into NW select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "aggregation-on-delete",
+        "statement": "delete",
+        "epl": "on SupportBean_A delete from NW where theString = id"
+      },
+      {
+        "op": "deployed",
+        "case": "aggregation-on-delete",
+        "statement": "s0"
+      },
+      {
+        "op": "deployed",
+        "case": "aggregation-on-delete",
+        "statement": "insert"
+      },
+      {
+        "op": "deployed",
+        "case": "aggregation-on-delete",
+        "statement": "delete"
+      },
+      {
+        "op": "send",
+        "case": "aggregation-on-delete",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation-on-delete",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 8
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation-on-delete",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation-on-delete",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 8
+        }
+      },
+      {
+        "op": "send",
+        "case": "aggregation-on-delete",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "aggregation-on-delete"
+      },
+      {
+        "op": "case",
+        "case": "named-window-delete"
+      },
+      {
+        "op": "deploy",
+        "case": "named-window-delete",
+        "statement": "s0",
+        "epl": "@name('s0') create window NW#expr_batch(current_count \u003e 3) as SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "named-window-delete",
+        "statement": "insert",
+        "epl": "insert into NW select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "named-window-delete",
+        "statement": "delete",
+        "epl": "on SupportBean_A delete from NW where theString = id"
+      },
+      {
+        "op": "deployed",
+        "case": "named-window-delete",
+        "statement": "s0"
+      },
+      {
+        "op": "deployed",
+        "case": "named-window-delete",
+        "statement": "insert"
+      },
+      {
+        "op": "deployed",
+        "case": "named-window-delete",
+        "statement": "delete"
+      },
+      {
+        "op": "send",
+        "case": "named-window-delete",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "named-window-delete",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "named-window-delete",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "named-window-delete",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "named-window-delete",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "named-window-delete",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "named-window-delete",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "named-window-delete",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "named-window-delete"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "view-expression-batch-agg-569",
+    "records": [
+      {
+        "case": "aggregation-ungrouped",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "aggregation-ungrouped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregation-ungrouped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregation-ungrouped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E6"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E7"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregation-groupwin",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "aggregation-groupwin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregation-groupwin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E8"
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregation-groupwin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E10"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E8"
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregation-groupwin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E7"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E9"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E11"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregation-groupwin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E12"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E10"
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregation-on-delete",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "aggregation-on-delete",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "aggregation-on-delete",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "aggregation-on-delete",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-window-delete",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "named-window-delete",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "named-window-delete",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "named-window-delete",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-window-delete",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-window-delete",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "view-expression-batch-agg-569",
+    "records": [
+      {
+        "case": "aggregation-ungrouped",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "aggregation-ungrouped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregation-ungrouped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregation-ungrouped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E6"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E7"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregation-groupwin",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "aggregation-groupwin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregation-groupwin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E8"
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregation-groupwin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E10"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E8"
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregation-groupwin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E7"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E9"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E11"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregation-groupwin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E12"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E10"
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregation-on-delete",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "aggregation-on-delete",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "aggregation-on-delete",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "aggregation-on-delete",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-window-delete",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "named-window-delete",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "named-window-delete",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "named-window-delete",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-window-delete",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-window-delete",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

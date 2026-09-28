@@ -1,0 +1,130 @@
+{
+ "version": "esper-parity/v1",
+ "id": "view-expression-batch-agg-569",
+ "description": "ViewExpressionBatch ords 7/8/9/10 — the aggregate-trigger and named-window-delete quartet. aggregation-ungrouped (ViewExpressionBatchAggregationUngrouped, ord 7) replays `@name('s0') select irstream theString from SupportBean#expr_batch(sum(intPrimitive) > 100)`: E1/1 and E2/90 accumulate silently, E3/10 flushes the whole batch as new {E1,E2,E3}, E4/101 flushes new {E4} with old {E1,E2,E3}, E5/1 and E6/99 stay silent and E7/1 flushes new {E5,E6,E7} with old {E4}. aggregation-groupwin (ord 8) replays `@name('s0') select irstream theString from SupportBean#groupwin(intPrimitive)#expr_batch(sum(longPrimitive) > 100)`: each intPrimitive group accumulates an independent batch and only the triggering group flushes — E6 posts new {E2,E4,E5,E6}, E8 new {E1,E3,E8}, E10 new {E10}/old {E1,E3,E8}, E11 new {E7,E9,E11}/old {E2,E4,E5,E6} and E12 new {E12}/old {E10}. aggregation-on-delete (ord 9) and named-window-delete (ord 10) replay their three-statement modules `@name('s0') create window NW#expr_batch(sum(intPrimitive) >= 10)` / `NW#expr_batch(current_count > 3) as SupportBean` plus a wildcard insert-into and an on-SupportBean_A delete (theString = id): ord 9 accumulates E1/1 and E2/8 silently, the A(E2) delete removes the pending row without delivery and E4/1 flushes new {E1,E3,E4} (sum = 10); ord 10 pins ordered iterator snapshots {E1,E2,E3} and {E1,E3}, E4 stays silent and E5 flushes new {E1,E3,E4,E5} as the pending count passes three. Java milestone() calls are regression-harness savepoints with identical restored state, so the scenario omits them.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewExpressionBatch.java",
+ "javaSourceFiles": [
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewExpressionBatch.java",
+  "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportBean_A.java"
+ ],
+ "javaRuntimes": [
+  "java-runtime-c6280a36141e2f9ac8c7",
+  "java-runtime-6301447e4e4eaa27af22",
+  "java-runtime-a8e7fc62db8793496c86",
+  "java-runtime-36fb2be2ea2ba4270df5"
+ ],
+ "javaNames": [
+  "ViewExpressionBatchAggregationUngrouped",
+  "ViewExpressionBatchAggregationWGroupwin",
+  "ViewExpressionBatchAggregationOnDelete",
+  "ViewExpressionBatchNamedWindowDelete"
+ ],
+ "javaStaticIds": [
+  "java-20551a17cb2af08c67fc",
+  "java-20551a17cb2af08c67fc",
+  "java-20551a17cb2af08c67fc",
+  "java-20551a17cb2af08c67fc"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "aggregation-ungrouped",
+   "ordinal": 7,
+   "runtimeId": "java-runtime-c6280a36141e2f9ac8c7",
+   "executionName": "ViewExpressionBatchAggregationUngrouped",
+   "observation": "deployed+listener; ungrouped sum(intPrimitive) > 100 batch trigger: E1/1 and E2/90 accumulate silently, E3/10 flushes the whole accumulated batch as new {E1,E2,E3}, E4/101 flushes new {E4} with the prior batch old {E1,E2,E3}, E5/1 and E6/99 stay silent and E7/1 flushes new {E5,E6,E7} with old {E4}; the Java execution pins flattened IR pairs only, so no snapshots are recorded",
+   "epl": "@name('s0') select irstream theString from SupportBean#expr_batch(sum(intPrimitive) > 100)",
+   "deploys": ["s0"]
+  },
+  {
+   "case": "aggregation-groupwin",
+   "ordinal": 8,
+   "runtimeId": "java-runtime-6301447e4e4eaa27af22",
+   "executionName": "ViewExpressionBatchAggregationWGroupwin",
+   "observation": "deployed+listener; #groupwin(intPrimitive)#expr_batch(sum(longPrimitive) > 100) accumulates an independent batch per group and only the triggering group flushes: E6 posts new {E2,E4,E5,E6}, E8 new {E1,E3,E8}, E10 new {E10} with old {E1,E3,E8}, E11 new {E7,E9,E11} with old {E2,E4,E5,E6} and E12 new {E12} with old {E10}; the Java execution pins flattened IR pairs only, so no snapshots are recorded",
+   "epl": "@name('s0') select irstream theString from SupportBean#groupwin(intPrimitive)#expr_batch(sum(longPrimitive) > 100)",
+   "deploys": ["s0"]
+  },
+  {
+   "case": "aggregation-on-delete",
+   "ordinal": 9,
+   "runtimeId": "java-runtime-a8e7fc62db8793496c86",
+   "executionName": "ViewExpressionBatchAggregationOnDelete",
+   "observation": "deployed+listener; one three-statement module: @name('s0') create window NW#expr_batch(sum(intPrimitive) >= 10) as SupportBean, a wildcard insert-into and an on-SupportBean_A delete (theString = id); E1/1 and E2/8 accumulate silently, the A(E2) delete removes the pending row without delivery, E3/8 still stays silent and E4/1 flushes new {E1,E3,E4} (sum(intPrimitive) = 10 reaches >= 10); the Java execution pins flattened IR pairs only, so no snapshots are recorded",
+   "epl": "@name('s0') create window NW#expr_batch(sum(intPrimitive) >= 10) as SupportBean;\ninsert into NW select * from SupportBean;\non SupportBean_A delete from NW where theString = id;\n",
+   "deploys": ["s0", "insert", "delete"]
+  },
+  {
+   "case": "named-window-delete",
+   "ordinal": 10,
+   "runtimeId": "java-runtime-36fb2be2ea2ba4270df5",
+   "executionName": "ViewExpressionBatchNamedWindowDelete",
+   "observation": "deployed+listener+snapshot; the named-window-delete module with NW#expr_batch(current_count > 3) retention: E1-E3 accumulate and the ordered iterator pins {E1,E2,E3}, the A(E2) delete leaves {E1,E3} without a listener delivery, E4/4 keeps the batch at three and E5/5 flushes new {E1,E3,E4,E5} as the pending count passes three",
+   "epl": "@name('s0') create window NW#expr_batch(current_count > 3) as SupportBean;\ninsert into NW select * from SupportBean;\non SupportBean_A delete from NW where theString = id;\n",
+   "deploys": ["s0", "insert", "delete"]
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "aggregation-ungrouped"},
+  {"op": "deploy", "case": "aggregation-ungrouped", "statement": "s0", "epl": "@name('s0') select irstream theString from SupportBean#expr_batch(sum(intPrimitive) > 100)"},
+  {"op": "deployed", "case": "aggregation-ungrouped", "statement": "s0"},
+  {"op": "send", "case": "aggregation-ungrouped", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "case": "aggregation-ungrouped", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 90}},
+  {"op": "send", "case": "aggregation-ungrouped", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 10}},
+  {"op": "send", "case": "aggregation-ungrouped", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 101}},
+  {"op": "send", "case": "aggregation-ungrouped", "eventType": "SupportBean", "payload": {"theString": "E5", "intPrimitive": 1}},
+  {"op": "send", "case": "aggregation-ungrouped", "eventType": "SupportBean", "payload": {"theString": "E6", "intPrimitive": 99}},
+  {"op": "send", "case": "aggregation-ungrouped", "eventType": "SupportBean", "payload": {"theString": "E7", "intPrimitive": 1}},
+  {"op": "undeploy-all", "case": "aggregation-ungrouped"},
+
+  {"op": "case", "case": "aggregation-groupwin"},
+  {"op": "deploy", "case": "aggregation-groupwin", "statement": "s0", "epl": "@name('s0') select irstream theString from SupportBean#groupwin(intPrimitive)#expr_batch(sum(longPrimitive) > 100)"},
+  {"op": "deployed", "case": "aggregation-groupwin", "statement": "s0"},
+  {"op": "send", "case": "aggregation-groupwin", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1, "longPrimitive": 10}},
+  {"op": "send", "case": "aggregation-groupwin", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2, "longPrimitive": 10}},
+  {"op": "send", "case": "aggregation-groupwin", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 1, "longPrimitive": 90}},
+  {"op": "send", "case": "aggregation-groupwin", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 2, "longPrimitive": 80}},
+  {"op": "send", "case": "aggregation-groupwin", "eventType": "SupportBean", "payload": {"theString": "E5", "intPrimitive": 2, "longPrimitive": 10}},
+  {"op": "send", "case": "aggregation-groupwin", "eventType": "SupportBean", "payload": {"theString": "E6", "intPrimitive": 2, "longPrimitive": 1}},
+  {"op": "send", "case": "aggregation-groupwin", "eventType": "SupportBean", "payload": {"theString": "E7", "intPrimitive": 2, "longPrimitive": 50}},
+  {"op": "send", "case": "aggregation-groupwin", "eventType": "SupportBean", "payload": {"theString": "E8", "intPrimitive": 1, "longPrimitive": 2}},
+  {"op": "send", "case": "aggregation-groupwin", "eventType": "SupportBean", "payload": {"theString": "E9", "intPrimitive": 2, "longPrimitive": 50}},
+  {"op": "send", "case": "aggregation-groupwin", "eventType": "SupportBean", "payload": {"theString": "E10", "intPrimitive": 1, "longPrimitive": 101}},
+  {"op": "send", "case": "aggregation-groupwin", "eventType": "SupportBean", "payload": {"theString": "E11", "intPrimitive": 2, "longPrimitive": 1}},
+  {"op": "send", "case": "aggregation-groupwin", "eventType": "SupportBean", "payload": {"theString": "E12", "intPrimitive": 1, "longPrimitive": 102}},
+  {"op": "undeploy-all", "case": "aggregation-groupwin"},
+
+  {"op": "case", "case": "aggregation-on-delete"},
+  {"op": "deploy", "case": "aggregation-on-delete", "statement": "s0", "epl": "@name('s0') create window NW#expr_batch(sum(intPrimitive) >= 10) as SupportBean"},
+  {"op": "deploy", "case": "aggregation-on-delete", "statement": "insert", "epl": "insert into NW select * from SupportBean"},
+  {"op": "deploy", "case": "aggregation-on-delete", "statement": "delete", "epl": "on SupportBean_A delete from NW where theString = id"},
+  {"op": "deployed", "case": "aggregation-on-delete", "statement": "s0"},
+  {"op": "deployed", "case": "aggregation-on-delete", "statement": "insert"},
+  {"op": "deployed", "case": "aggregation-on-delete", "statement": "delete"},
+  {"op": "send", "case": "aggregation-on-delete", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "case": "aggregation-on-delete", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 8}},
+  {"op": "send", "case": "aggregation-on-delete", "eventType": "SupportBean_A", "payload": {"id": "E2"}},
+  {"op": "send", "case": "aggregation-on-delete", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 8}},
+  {"op": "send", "case": "aggregation-on-delete", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 1}},
+  {"op": "undeploy-all", "case": "aggregation-on-delete"},
+
+  {"op": "case", "case": "named-window-delete"},
+  {"op": "deploy", "case": "named-window-delete", "statement": "s0", "epl": "@name('s0') create window NW#expr_batch(current_count > 3) as SupportBean"},
+  {"op": "deploy", "case": "named-window-delete", "statement": "insert", "epl": "insert into NW select * from SupportBean"},
+  {"op": "deploy", "case": "named-window-delete", "statement": "delete", "epl": "on SupportBean_A delete from NW where theString = id"},
+  {"op": "deployed", "case": "named-window-delete", "statement": "s0"},
+  {"op": "deployed", "case": "named-window-delete", "statement": "insert"},
+  {"op": "deployed", "case": "named-window-delete", "statement": "delete"},
+  {"op": "send", "case": "named-window-delete", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "case": "named-window-delete", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+  {"op": "send", "case": "named-window-delete", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 3}},
+  {"op": "snapshot", "case": "named-window-delete", "statement": "s0", "mode": "ordered"},
+  {"op": "send", "case": "named-window-delete", "eventType": "SupportBean_A", "payload": {"id": "E2"}},
+  {"op": "snapshot", "case": "named-window-delete", "statement": "s0", "mode": "ordered"},
+  {"op": "send", "case": "named-window-delete", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 4}},
+  {"op": "send", "case": "named-window-delete", "eventType": "SupportBean", "payload": {"theString": "E5", "intPrimitive": 5}},
+  {"op": "undeploy-all", "case": "named-window-delete"}
+ ]
+}

@@ -45,32 +45,35 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.568 ('view-expression-window aggregate/NW quartet').
+Active: Draft 4.569 ('view-expression-batch aggregate/NW quartet').
 
-- Contract frozen (JavaContract568 + GoSurface568): ViewExpressionWindow
-  ords 7/8/9/10 — AggregationUngrouped (java-runtime-0201ff1e8d8eaabe883f),
-  AggregationWGroupwin (java-runtime-bef7f02bfc8cb8b18b86),
-  NamedWindowDelete (java-runtime-d9281b1cc6d48c4984e1),
-  AggregationWOnDelete (java-runtime-e4c4569b44a3e479c37e); all dedup
-  static java-06e6b1f6c905b8f12b82, flags[]. #expr keep-predicate with
-  aggregate state + named-window retention/delete.
-- Go surface complete (ExpressionWindow + Sum/groupwin/DeleteFrom). Gaps:
-  Go unit tests stop early on ord7 (E6-E9 legs uncovered -> scenario
-  pins full sequence) and ord5 (subselect leg + verbatim messages; ord5
-  stays excluded as Invalid this unit). ord4's UDF text form is
-  unrepresentable if added later.
-- [x] Assets568 delivered + integrated: Java trace 43 records, Go
-  replay 43, `-diff` passing / 0 differences; evidence + traces checked
-  in. Groupwin+expr eviction pairs correct (E5->{E2,E4}, E6->{E1});
-  delete-triggered keep-predicate re-evaluation works (ord10 E4/2 ->
-  new{E4}/old{E1}); ord7 self-expiring rows preserved.
-- [x] Manifest: case.view-expression-window DV extended to 7/13 ords
-  (+4 runtime IDs). Summary -> 801 cases / 421 DV / 1676 DV runtime IDs
-  / 386 unreferenced.
+- Contract frozen (JavaContract569 + GoSurface569 fallback): ViewExpressionBatch
+  ords 7/8/9/10 — AggregationUngrouped (java-runtime-c6280a36141e2f9ac8c7),
+  AggregationWGroupwin (java-runtime-6301447e4e4eaa27af22),
+  AggregationOnDelete (java-runtime-a8e7fc62db8793496c86),
+  NamedWindowDelete (java-runtime-36fb2be2ea2ba4270df5); all dedup static
+  java-20551a17cb2af08c67fc, flags[]. #expr_batch keep-predicate batch-
+  flush mirror of the 568 window quartet. case.view-expression-batch is
+  implemented-only (0 DV) -> extend to DV.
+- Go surface: ExpressionBatchWindowSpec + same builtins/aggregates +
+  NW retention. Per GoSurface569's broader survey, #expr* surfaces are
+  complete; gaps are leg-coverage (Go unit tests stop before later sends).
+- [x] Assets569 delivered + integrated: Java trace 20 records, Go
+  replay 20 (4/6/4/6 per case), `-diff` passing / 0 differences;
+  evidence + traces checked in. Batch flush delivers whole accumulated
+  batch as new + prior batch as old — matches Java exactly, no
+  workaround needed; per-group independent accumulation verified.
+- [x] Manifest: case.view-expression-batch PROMOTED implemented->DV
+  (4/13 ords, +4 runtime IDs). Summary -> 801 cases / 422 DV / 1680 DV
+  runtime IDs / 386 unreferenced.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev568 + JavaContract569 + GoSurface569 dispatched.
+- [x] ParityRev569 + JavaContract570 + GoSurface570 dispatched.
 - [ ] Review outcome, commit, push.
+
 ## Previous work units (shipped)
+- Shipped: Draft 4.568 ('view-expression-window aggregate quartet')
+  committed and pushed as `7acacb6b0`; Git owns identity. case extended
+  to 7/13 DV (43 records, 0 differences); review PASS (1 P3).
 - Shipped: Draft 4.567 ('view-expression-window trio') committed and
   pushed as `018811630`; Git owns identity. case promoted
   implemented->DV (36 records total, 0 differences); review PASS (1 P3).
