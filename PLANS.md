@@ -74,7 +74,9 @@ Active: Draft 4.593 ('timer:interval property-array spec — PatternObserverTime
  differentialVerifiedRuntimeIds (now 8) + four 593 goTests + evidence path;
  summary recomputed (1746 DV runtime IDs, 3750 referenced, 386 unreferenced).
 - [x] Roadmap + CHANGELOG entries.
-- [ ] Gates, review, commit.
+- [x] Gates: `make check` exit 0 (parity 153s, internal/esper 120s); gofmt/diff-clean.
+- [x] Review: Review593 OVERALL PASS (no P0-P2; one P3 goTests naming fixed).
+- [x] Committed and pushed as 7e208506b (master).
 
 
 - Contract frozen (JavaContract592 + GoSurface592): ord0
