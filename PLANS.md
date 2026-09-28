@@ -45,37 +45,39 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.587 ('matchuntil ord4 repeat-use-tags trio').
+Active: Draft 4.588 ('matchuntil ord1 52-case W-harness').
 
-- Contract frozen (JavaContract587 + GoSurface587): ord4
-  PatternRepeatUseTags (java-runtime-eb238a96331acf6fc30b, static
-  java-b2c644fc2f9603bd8568, flags []) — THREE sequential legs one
-  execution: leg1 `every [2] (a=A() -> b=B(id=a.id))` correlated
-  repeat fires once (per-iteration a correlation; empty parens +
-  unquoted id=a.id pins); leg2 TIMED until-chain lifecycle `every
-  ([2:]e1 until timer:interval(5))->([2:]e2 until timer:interval(2))`
-  — NO fire (expiry discards partial silently; GoSurface flagged
-  every-scope: Java `every (X->Y)` vs Go `every(X)->Y` — leg2
-  lifecycle-only so unobservable, must document); leg3 `every [2]
-  A('1') -> [2] B('2' and intPrimitive=A[0].intPrimitive) -> [2]
-  C('3' and ...)` DOUBLE SPACE after `[`, indexed A[0] first-element
-  correlation (data disambiguates A={10,20} vs B/C={10}).
-  Remainder: ord1 52-case W-harness, ord6 dynamic-bounds subdomain.
-- [x] Assets587 delivered + integrated: Java trace 3 records, Go
-  replay 3, `-diff` passing / 0 differences; evidence + traces
-  checked in. Worker CORRECTED the contract: leg2 is not silent —
-  oracle fires 1 record at t=10000 (until completes on terminator;
-  Java never asserted it). Go matches.
-- [x] Manifest: case +1 DV ID (7/9). Summary -> 427 DV cases /
-  1733 DV runtime IDs.
+- Contract frozen (JavaContract588 + GoSurface588): ord1
+ PatternOp (java-runtime-0383244f373c8a0ffc8b, static
+ java-d4cb4534ca508be87595) — PatternTestHarness deploys ALL 52
+ EventExpressionCases SIMULTANEOUSLY (S0..S51), advanceTime-
+ before-send over the 12-event mixed set (A1..D3, t=1000..12000),
+ per-(stmt,event) multiset compareLists, timer legs 40/44/45
+ attribute to the upcoming event, leg52 start-fire ignored,
+ undeployAll silence check. Go side: ONE DeployPlans deployment
+ with 52 plans + per-statement Subscribe buckets; existing
+ test-corpus legs map 1:1, only the harness shape is new
+ (no engine gaps per GoSurface588).
+- After this unit the file is DV-complete except ord6
+ (dynamic-bounds subdomain).
+- [x] Assets588 delivered + integrated: Java trace 45 records,
+  Go replay 45, `-diff` passing / 0 differences; evidence +
+  traces checked in. Bucket-sort normalizer matches the harness's
+  compareLists multiset contract (per stmt,event).
+- [x] Manifest: case +1 DV ID (8/9 — only ord6 dynamic-bounds
+  remains). Summary -> 427 DV cases / 1734 DV runtime IDs.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev587 + JavaContract588 + GoSurface588 dispatched.
+- [x] ParityRev588 + JavaContract589 + GoSurface589 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.587 ('matchuntil repeat-use-tags trio')
+ committed and pushed as `7702eaa32`; Git owns identity. case
+ promoted to DV 7/9. Review PASS after P2 (leg-3 EPL whitespace
+ `)-> [2] C`) fixed.
 - Shipped: Draft 4.586 ('matchuntil static remainder') committed
-  and pushed as `cad3fdb4b`; Git owns identity. case 6/7+ DV + ords
-  6/7 association repaired; review PASS (1 P3).
+ and pushed as `cad3fdb4b`; Git owns identity. case 6/7+ DV;
+ review PASS (1 P3).
 - Shipped: Draft 4.585 ('matchuntil untimed until-array quad')
   committed and pushed as `92b59784b`; Git owns identity. case
   promoted to differential-verified 4/7; review PASS (clean).
