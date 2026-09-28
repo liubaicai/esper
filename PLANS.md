@@ -45,32 +45,35 @@ activity or a single coverage percentage.
 
 
 ## Current work unit
-Active: Draft 4.576 ('everydistinct single-filter expiry').
+Active: Draft 4.577 ('everydistinct compound-operator quintet').
 
-- Contract frozen (JavaContract576 + GoSurface576):
-  cap.pattern.operator-everydistinct — PatternOperatorEveryDistinct
-  static java-073091a0b42ca8dd974f, 3 of 17 ords: PatternEveryDistinctSimple
-  (java-runtime-593adaf9d26cd35ab4c9, no clock, dup-suppression),
-  PatternEveryDistinctWTime (java-runtime-666dd3af9524272914d9, 5s
-  per-key expiry from first sighting; boundary pinned: key expires AT
-  first-seen+5000), PatternExpireSeenBeforeKey
-  (java-runtime-904c2139b52a7eaeedfb, filtered theString like 'A%',
-  intPrimitive key, per-key first-sighting expiry). Byte-exact EPLs
-  pinned incl. `@Name` (capital N) vs `@name` asymmetry.
-  Exclusions: ord3 SODA tail, ord14 compile-only, ord15 calendar
-  month scope, ords 4-13/16 compound variants -> follow-on slices.
-- [x] Assets576 delivered + integrated: Java trace 12 records, Go
-  replay 12, `-diff` passing / 0 differences; evidence + traces
-  checked in. Per-key expiry boundaries verified (t=19999 no-fire /
-  t=20000 fire; t=1999/2000); @Name/@name asymmetry pinned; oracle
-  bean uses real SupportBean class (kind:row projection precedent).
-- [x] Manifest: case.pattern-operator-every-distinct PROMOTED
-  implemented->DV (3/17 ords). Summary -> 425 DV / 1703 DV runtime IDs.
+- Contract frozen (JavaContract577 + GoSurface577):
+  case.pattern-operator-every-distinct continuation — static
+  java-073091a0b42ca8dd974f, ords 8-12 (each x2 expiry legs -> 10
+  cases): OverAnd (java-runtime-fa2df3aeba01a5eda1d2, composite
+  two-expr key a+b), OverOr (java-runtime-6aab27f9a29d3ad7188f,
+  coalesced Add key), OverNot (java-runtime-c23dddb4d0d001809ffd,
+  falsification respawn empties keyset -> A4 refires),
+  OverFollowedBy (java-runtime-c28f82ea566795672292, sum key),
+  WithinFollowedBy (java-runtime-58fcea53e80425896c2d, left
+  every-distinct then correlated b, one branch per fresh key).
+  The 1h/2h1m legs share identical sequences with the no-expiry legs
+  (clock never reaches expiry — ord3 precedent).
+- [x] Assets577 delivered + integrated: Java trace 34 records, Go
+  replay 34 (10 cases x2 legs), `-diff` passing / 0 differences;
+  evidence + traces checked in. Falsification-respawn A4 refire,
+  per-fresh-key branch, unbound {state:null} all verified.
+- [x] Manifest: case +5 DV IDs (8/17 ords). Summary -> 425 DV / 1708
+  DV runtime IDs.
 - [x] Gates: `make check` GREEN (exit 0).
-- [x] ParityRev576 + JavaContract577 + GoSurface577 dispatched.
+- [x] ParityRev577 + JavaContract578 + GoSurface578 dispatched.
 - [ ] Review outcome, commit, push.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.576 ('everydistinct single-filter expiry')
+  committed and pushed as `f6ee9a51e`; Git owns identity. case
+  promoted DV 3/17 ords (12 records, 0 differences); review PASS (2
+  P3s fixed).
 - Shipped: Draft 4.575 ('pattern-complex-property-access') committed
   and pushed as `abdc6f4f7`; Git owns identity. case promoted DV 3/5
   ords (11 records/18 cases, 0 differences); review PASS (2 P3s).

@@ -24991,7 +24991,11 @@
     "internal/app/parity/pattern_everydistinct_576_test.go/TestRunPatternEveryDistinct576ScenarioReplay",
     "internal/app/parity/pattern_everydistinct_576_test.go/TestRunPatternEveryDistinct576PinnedArtifacts",
     "internal/app/parity/pattern_everydistinct_576_test.go/TestRunPatternEveryDistinct576RejectsMalformedRawScenario",
-    "internal/app/parity/pattern_everydistinct_576_test.go/TestRunPatternEveryDistinct576RuntimeIDMappingMatchesScenario"
+    "internal/app/parity/pattern_everydistinct_576_test.go/TestRunPatternEveryDistinct576RuntimeIDMappingMatchesScenario",
+    "internal/app/parity/pattern_everydistinct_compound_577_test.go/TestRunPatternEveryDistinctCompound577ScenarioReplay",
+    "internal/app/parity/pattern_everydistinct_compound_577_test.go/TestRunPatternEveryDistinctCompound577PinnedArtifacts",
+    "internal/app/parity/pattern_everydistinct_compound_577_test.go/TestRunPatternEveryDistinctCompound577RejectsMalformedRawScenario",
+    "internal/app/parity/pattern_everydistinct_compound_577_test.go/TestRunPatternEveryDistinctCompound577RuntimeIDMappingMatchesScenario"
    ],
    "tags": [
     "correctness",
@@ -25008,9 +25012,10 @@
    "evidence": [
     "java-runtime-inventory",
     "go-unit",
-    "testdata/parity/pattern-everydistinct-576.evidence.json"
+    "testdata/parity/pattern-everydistinct-576.evidence.json",
+    "testdata/parity/pattern-everydistinct-compound-577.evidence.json"
    ],
-   "difference": "ord14 PatternInvalid (java-runtime-2542b81b75a973a3cc38) is compile-error-only (Go Build rejection wording intentionally different); ords 3/15 SODA/calendar variants and ords 4-13/16 compound/multi-key forms remain implemented-not-DV for follow-on slices.",
+   "difference": "ord14 PatternInvalid (java-runtime-2542b81b75a973a3cc38) is compile-error-only (Go Build rejection wording intentionally different); ords 3/15 SODA/calendar variants and ords 4/5/6/7/13/16 compound/multi-key/repeat/timer-within forms remain implemented-not-DV for follow-on slices.",
    "verification": [
     "inventoried",
     "implemented",
@@ -25019,9 +25024,14 @@
    "differentialVerifiedRuntimeIds": [
     "java-runtime-593adaf9d26cd35ab4c9",
     "java-runtime-666dd3af9524272914d9",
-    "java-runtime-904c2139b52a7eaeedfb"
+    "java-runtime-904c2139b52a7eaeedfb",
+    "java-runtime-fa2df3aeba01a5eda1d2",
+    "java-runtime-6aab27f9a29d3ad7188f",
+    "java-runtime-c23dddb4d0d001809ffd",
+    "java-runtime-c28f82ea566795672292",
+    "java-runtime-58fcea53e80425896c2d"
    ],
-   "notes": " Draft 4.576: ords 0/1/2 DV (12 records: no-clock dup suppression, 5s per-key expiry with boundary pinned at first-seen+5000, filtered intPrimitive-key 1s expiry). Per-key expiry semantics match exactly. 3/17 ords DV."
+   "notes": " Draft 4.576: ords 0/1/2 DV (12 records: no-clock dup suppression, 5s per-key expiry with boundary pinned at first-seen+5000, filtered intPrimitive-key 1s expiry). Per-key expiry semantics match exactly. 3/17 ords DV. Draft 4.577: ords 8-12 DV (34 records over 10 cases x2 expiry legs: composite a+b key, coalesced Add key, falsification-respawn empty-keyset A4 refire, sum key, left-distinct correlated branch per fresh key). 8/17 ords DV."
   },
   {
    "id": "case.pattern-operator-matchuntil",
@@ -55388,7 +55398,7 @@
   "inventoriedCases": 801,
   "implementedCases": 799,
   "differentialVerifiedCases": 425,
-  "differentialVerifiedRuntimeIds": 1703,
+  "differentialVerifiedRuntimeIds": 1708,
   "intentionallyDifferentCases": 40,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,

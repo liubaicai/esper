@@ -131,6 +131,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include epl-subselect-within-pattern-574 and epl-subselect-within-pattern-574-diff")
 		fmt.Fprintln(stderr, "runner modes include pattern-complex-property-access-575 and pattern-complex-property-access-575-diff")
 		fmt.Fprintln(stderr, "runner modes include pattern-everydistinct-576 and pattern-everydistinct-576-diff")
+		fmt.Fprintln(stderr, "runner modes include pattern-everydistinct-compound-577 and pattern-everydistinct-compound-577-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-enum-select-from and expr-enum-select-from-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-type-use and expr-class-type-use-diff")
 		fmt.Fprintln(stderr, "runner modes include expr-class-for-epl-objects and expr-class-for-epl-objects-diff")
@@ -554,6 +555,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadPatternComplexPropertyAccess575Scenario(file)
 	} else if *mode == "pattern-everydistinct-576" || *mode == "pattern-everydistinct-576-diff" {
 		scenario, err = loadPatternEveryDistinct576Scenario(file)
+	} else if *mode == "pattern-everydistinct-compound-577" || *mode == "pattern-everydistinct-compound-577-diff" {
+		scenario, err = loadPatternEveryDistinctCompound577Scenario(file)
 	} else if *mode == "epl-contained-event-example" || *mode == "epl-contained-event-example-diff" {
 		scenario, err = loadEPLContainedEventExampleScenario(file)
 	} else if *mode == "epl-other-pattern-event-properties" || *mode == "epl-other-pattern-event-properties-diff" {
@@ -2591,6 +2594,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, patternEveryDistinct576JavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, patternEveryDistinct576JavaSources),
 				splitMetadata(*javaExecutions, patternEveryDistinct576JavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "pattern-everydistinct-compound-577" || *mode == "pattern-everydistinct-compound-577-diff" {
+		trace, err := runPatternEveryDistinctCompound577Scenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "pattern-everydistinct-compound-577-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, patternEveryDistinctCompound577JavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, patternEveryDistinctCompound577JavaSources),
+				splitMetadata(*javaExecutions, patternEveryDistinctCompound577JavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
