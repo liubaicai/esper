@@ -167,114 +167,82 @@ Active: Draft 4.595 ('timer:within remainder — PatternGuardTimerWithin ords 1-
  parity review PASS (5 P3s, four fixed; P3.4 intentionally left).
 
 ## Current work unit
-Active: Draft 4.596 ('infra-nwtable-join-and-select-delete').
+Active: Draft 4.597 ('context init-term remainder').
 
-- Unit: 4 executions across two sibling oracle files, same
-  `infra.nwtable` store surface (namedWindow={true,false} pairs):
-  - `InfraNWTableJoin` ords 0/1 `InfraNWTableJoinSimple`
-    (`java-runtime-9aad0c9a0b81e251f6d4` /
-    `java-runtime-333f1a440da03d4b266a`, static
-    `java-675ca69dbc976b4c4448`): continuous join `from MyInfra as ce,
-    SupportBean#keepall() as sb where sb.theString = ce.cid` over a
-    keepall named window / a keyed table, listener rows only.
-  - `InfraNWTableOnSelectWDelete` ords 0/1
-    `InfraNWTableOnSelectWDeleteAssertion`
-    (`java-runtime-27d8980edc91c4593d34` /
-    `java-runtime-60c74e5e717dc6d9330e`, static
-    `java-5a29ff903cb7fd7a100d`): `on SupportBean_S0 select and delete
-    window(win.*).aggregate(0,(result,value)=>result+value.intPrimitive)
-    as c0 from MyInfra as win where s0.p00=win.theString` — correlated
-    select-AND-delete with an inline fold over matched store rows +
-    iterator probes on the 'create' statement.
-  - Java source read by primary agent (Java-contract scout aborted 3x
-    on infra cancel → serial fallback recorded); contract pins: schema
-    DDL `create schema MyEvent(cid string)` + `create window
-    MyInfra.win:keepall() as MyEvent` OR `create table
-    MyInfra(cid string primary key)` + `insert into MyInfra select *
-    from MyEvent`; join asserts 4 rows for E1-E4 sends; select-delete
-    asserts `assertPropsPerRowIteratorAnyOrder` for table /
-    ordered for window; S0 insert into statement created/undeployed
-    inside exec; supportbean/S0 fixtures registered in path.
-- [x] Go-surface contract: scout `GoSurfaceJoinSel596` (read-only)
-  mapped every surface: join infra×stream SUPPORTED via
-  `JoinMany(JoinRecordSource(FromNamedWindow|FromTable), JoinRecordSource(
-  From[bean].Window(KeepAll()).AsRecord())).On(OnSourcesEqual(...))`;
-  ungrouped trigger-select aggregate fold SUPPORTED
-  (`Sum[int32](NamedWindowField|TableField)`); DDL + `Statement.Snapshot`
-  probes SUPPORTED. Single GAP: select-AND-delete trigger action.
-- [x] **Engine addition (shared core)**: `triggerDefinition.deleteAfterSelect`
-  flag; new `TriggerStream.SelectDeleteFromNamedWindow` /
-  `SelectDeleteFromTable` builders keep `triggerSelectTable` semantics and
-  re-run the matched-set deletion inside the same candidate processing via
-  `executeTriggerActionWithTags` (nil-predicate table form maps to
-  delete-all). Engine tests `TestOnSelectDeleteNamedWindow|Table` cover the
-  exact Java sequence (sum fold + iterator empties) and pass.
-- [x] Scenario + oracle assets by `AssetJoinSel596` (parity-asset-worker):
-  `testdata/parity/infra-nwtable-join-select-delete.json` (4 cases / 30 steps),
-  `tools/java-oracle/InfraNWTableJoinSelectDeleteScenarioOracle.java` +
-  `run-infra-nwtable-join-select-delete.sh`. Two review-fix rounds via DM:
-  (1) run-script output jq asserted raw iterator order for `any`-mode
-  probes — fixed to `canonSnap` canonical sort (Java table emits {2,4,3});
-  (2) oracle now emits canonical-sorted `new` rows at emission time for
-  `any`-mode snapshot probes, so the checked-in raw trace equals the
-  comparator-canonicalized form (ordered probes keep engine iterator order).
-- [x] Go runner `internal/app/parity/infra_nwtable_join_select_delete.go`
-  + run.go wiring (mode `infra-nwtable-join-select-delete` / `-diff`).
-  Strict payload decoder now enforces exact key sets per event type
-  (payload-extra rejection). Root + step field sets reuse
-  `requireInfraNWTableOnDeleteFields` incl. `javaSourceFiles`.
-- [x] Java trace via run script (30 records, canonical any-mode order) →
-  Go replay 30 records → `-mode ...-diff` status `passing` / 0 differences;
-  checked-in `go.trace.json` + `evidence.json` written.
-- [x] Six-test family in run_test.go green (direct replay, diff evidence,
-  4 trace mutations, checked-in equality, 9 raw-scenario mutations,
-  runtime-ID mapping): `go test -run TestRunInfraNWTableJoinSelectDelete`
-  PASS.
-- [x] Manifest/roadmap/CHANGELOG: new `case.infra-nwtable-join-select-delete`
-  (born-DV, 4 runtime IDs), mapping → `trigger.table-named-window` + 2
-  goRefs; summary 802 cases / 800 impl / 431 DV / 1757 DV IDs / 4221
-  assoc / referenced 3754 / unreferenced 382.
-- [x] `make check` GREEN (parity 156s, internal/esper 119s). Independent
-  parity review (`ParityReview596`, read-only): OVERALL PASS, 3×P3 —
-  (1) PLANS mutation-count prose fixed (4 trace + 9 raw); (2) manifest
-  trailing newline restored; (3) oracle SODA-redeploy listener claim
-  routed back to `AssetJoinSel596` (inert, comment+behavior fix).
-- [x] Post-P3 re-validation: build + six-test family + `TestOnSelectDelete`
-  re-run green; regenerated trace byte-identical. Shipped; Git owns identity.
+- Unit: the 4 unreferenced context executions from the prefetched
+  contract (scouts `NextJavaCtx597`/`NextGoCtx597`; the prefetch's
+  `ContextDocExamples` ord 0 stays deferred to its own unit per its own
+  recommendation). Frozen in `.omp/contract-597.md`.
+  - `ContextInitTermTemporalFixed` ord 18 `ContextStartEndDBHistorical`
+    (`java-runtime-bc152186877c0a641b3d`, static `java-06954b45a1979f495425`):
+    NineToFive daily ctx gates a SupportBean_S0 × sql:MyDB join; sends at
+    08:00/17:00 silent, 09:00 → {s1.mychar=Y}, next-day 09:00 →
+    {s1.mychar=X}.
+  - `ContextInitTermWithDistinct` ord 0 `ContextInitTermWithDistinctInvalid`
+    (`java-runtime-19cc6b63d1614c49dfbf`, static `java-1db75f8dcee67079871d`):
+    5 distinct-clause probes (missing 'as', pattern, sub-select, empty,
+    start-distinct).
+  - `ContextInitTermWithNow` ord 2 `ContextInitTermWNowInvalid`
+    (`java-runtime-6b3caa8f5e3490b05507`, static `java-21fe1b2ee6da1a4f412c`):
+    3 @now-composition probes.
+  - `ContextHashSegmented` ord 8 `ContextHashInvalid`
+    (`java-runtime-25a58a30d6cbd02f00e7`, static `java-0564864de64ece6e7772`):
+    6 hash/coalesce probes + ACtx/MyWindow silent deploys.
+- [x] **Engine fix (shared core)**: hash contexts recorded `streamFilters`
+  but never evaluated them — `partitionLocal`'s ContextHashSegmented
+  branch now applies the per-stream filter before bucket assignment
+  (Esper `from T(filter)` semantics; filtered events neither allocate a
+  partition nor deliver). `TestHashContextByStreamsStreamFilter` pins
+  it; full hash test family green.
+- [x] Assets by `AssetCtxRem597` (parity-asset-worker): scenario JSON
+  (4 cases / 30 steps), `ContextInitTermRemainderScenarioOracle.java` +
+  run script; oracle executed end-to-end vs MySQL fixture → 16 records
+  (2 listener + 14 compile-error).
+- [x] Go runner `internal/app/parity/context_init_term_remainder.go` +
+  run.go wiring (loader + modes + help). sql:MyDB leg modeled by the
+  function-fed HistoricalProvider over mytesttable rows (${id} bound per
+  S0 trigger); grammar-level rejections pinned as unrepresentable
+  prefixes; boundary probes verified against Go error code + substring.
+  Boundary corrections made during runner integration: dummy-filter
+  probe retargeted to statement-level filter validation (context stream
+  filters eval at event time); unknown hash function pinned via the
+  HashAlgorithm whitelist (`HashAlgorithm(3)`).
+- [x] Java trace 16 records → Go replay 16 records → `-mode
+  context-init-term-remainder-diff` passing / 0 differences; checked-in
+  `go.trace.json` + `evidence.json` written. Java via run script with
+  esper-mysql fixture (10 rows verified).
+- [x] Test family green: diff-passing evidence, 7 trace mutations,
+  7 raw-scenario mutations, runtime-ID/case-metadata mapping, help.
+- [x] Manifest/roadmap/CHANGELOG: new `case.context-init-term-remainder`
+  (born-DV, all 4 runtime IDs DV-listed), mapping → `context.partition` +
+  2 goRefs; summary 803 cases / 801 impl / 432 DV / 1761 DV IDs / 4225
+  assoc / referenced 3758 / unreferenced 378.
+- [x] `make check` GREEN (parity 155s, internal/esper 122s, layout + vet).
+- [x] Independent parity review (`ParityReview597`, read-only): OVERALL
+  PASS, 0 P0/P1/P2, 2 P3s. P3.1 FIXED: loader now pins the 34-step count,
+  per-op raw field whitelists, compileWithoutPath semantics (12 path-less
+  probes require true; the two with-path probes must not carry it) and
+  step.Case membership on every op. P3.2 FIXED: 'prefix' → 'assertion
+  clause' / '断言子句' across runner comments, manifest, roadmap and
+  CHANGELOG; oracle javadoc clarified (JAVA_ASSERT_PREFIXES = full Java
+  prefix via startsWith, expectError = pinned clause possibly mid-message)
+  via the original asset worker.
+- [x] Post-fix re-validation: build + ContextInitTermRemainder test family
+  + gofmt + git diff --check all green.
 
-## Prefetched N+1 contract (read-only, no writes started)
-
-Candidate Draft 4.597 ('context init-term remainder'): scouts
-`NextJavaCtx597` (java-oracle-scout; yield kept aborting on infra — full
-contract recovered from its session transcript) + `NextGoCtx597` (scout,
-structured report delivered). Five unreferenced context executions at
-9e1b9f1cc9117f:
-- `ContextInitTermTemporalFixed` ord 18 `ContextStartEndDBHistorical`
-  (`java-runtime-bc152186877c0a641b3d`, no flags): NineToFive crontab ctx +
-  `sql:MyDB` historical join (Oracle DB fixture via SupportDatabaseService).
-  Recommended: DV if the Go DB-historical path covers it, else
-  intentionally-different (no JDBC).
-- `ContextInitTermWithDistinct` ord 0 `ContextInitTermWithDistinctInvalid`
-  (`java-runtime-19cc6b63d1614c49dfbf`): 5 invalid-compile probes
-  (distinct-expression/stream rules; Go probes mostly unrepresentable-pin).
-- `ContextInitTermWithNow` ord 2 `ContextInitTermWNowInvalid`
-  (`java-runtime-6b3caa8f5e3490b05507`): invalid @now combination forms.
-- `ContextHashSegmented` ord 8 `ContextHashInvalid`
-  (`java-runtime-25a58a30d6cbd02f00e7`): invalid coalesce/hash probes +
-  statement-type listing assertion.
+## Next candidates (read-only prefetch queue)
 - `ContextDocExamples` ord 0 (`java-runtime-61b846fd7aae8c380963`, static
   `java-2aa018c5d66747fbbfd3`, class:run variant): ~30 deploy-only
-  statements, no sends. Recommended: separate dedicated unit; many forms
-  may be unrepresentable → intentionally-different candidates.
-Recommended grouping: 4-execution unit (three invalid-compile probes +
-DBHistorical) closing TemporalFixed/WithDistinct/WithNow/HashSegmented
-files; DocExamples deferred to its own unit. Go surface: all context
-constructors exist except distinct+terminated-after
-(NewDistinctInitiatedTerminatedContextTerminatedAfter gap); variable-schedule
-cron forms unrepresentable; hash per-stream coalesce lists modeled with a
-single key list (documented equivalence).
+  statements, no sends; intentionally-different candidates per prefetch.
+- Other unreferenced distribution: 378 IDs remaining manifest-wide;
+  select the next cluster after 4.597 commits.
 
 ## Previous work units (shipped)
+- Shipped: Draft 4.597 ('context init-term remainder') committed and
+ pushed as the HEAD commit; Git owns identity. New born-DV case with 4
+ runtime IDs; review CONFIRM PASS (2 P3s fixed: loader step-count/field/
+ compileWithoutPath pinning; assertion-clause wording). Shared-core fix:
+ hash contexts now evaluate per-stream filters before bucket assignment.
 - Shipped: Draft 4.596 ('infra-nwtable join + select-delete') committed
  and pushed as `3f17b6508`; Git owns identity. New born-DV case with 4
  runtime IDs; review PASS (3 P3s fixed).

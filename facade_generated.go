@@ -988,6 +988,13 @@ func CreateHashContextBy(env *Environment, name string, partitions int, keys ...
 	return internalengine.CreateHashContextBy(env, name, partitions, keys...)
 }
 
+// CreateHashContextByStreams registers a lazy hash context listing one or
+// more event types explicitly, mirroring Esper's `coalesce <func>(<params>)
+// from TypeA[, ...] granularity N` form; see NewHashContextByStreams.
+func CreateHashContextByStreams(env *Environment, name string, algorithm HashAlgorithm, partitions int, streams ...KeyContextStream) (ContextDefinition, error) {
+	return internalengine.CreateHashContextByStreams(env, name, algorithm, partitions, streams...)
+}
+
 // CreateHashContextWithAlgorithm registers a lazy hash context using an
 // explicit deterministic hash algorithm.
 func CreateHashContextWithAlgorithm(env *Environment, name string, algorithm HashAlgorithm, partitions int, keys ...Expr) (ContextDefinition, error) {
@@ -1138,6 +1145,12 @@ func CreatePreallocatedHashContext(env *Environment, name string, key Expr, part
 
 func CreatePreallocatedHashContextBy(env *Environment, name string, partitions int, keys ...Expr) (ContextDefinition, error) {
 	return internalengine.CreatePreallocatedHashContextBy(env, name, partitions, keys...)
+}
+
+// CreatePreallocatedHashContextByStreams registers the preallocated form of
+// the stream-listing hash context; see NewPreallocatedHashContextByStreams.
+func CreatePreallocatedHashContextByStreams(env *Environment, name string, algorithm HashAlgorithm, partitions int, streams ...KeyContextStream) (ContextDefinition, error) {
+	return internalengine.CreatePreallocatedHashContextByStreams(env, name, algorithm, partitions, streams...)
 }
 
 // CreatePreallocatedHashContextWithAlgorithm registers a preallocated hash
@@ -4527,6 +4540,21 @@ func NewHashContextBy(name string, partitions int, keys ...Expr) (ContextDefinit
 	return internalengine.NewHashContextBy(name, partitions, keys...)
 }
 
+// NewHashContextByStreams declares a hash-partitioned context listing one or
+// more event types explicitly, mirroring Esper's `coalesce
+// <hash_func>(<params>) from TypeA[, <hash_func>(<params>) from TypeB]
+// granularity N` form. Esper applies one hash function per listed stream
+// with that stream's parameter list; Go keeps the single deterministic
+// algorithm for every listed stream and applies each stream's own key
+// expressions, so listed types populate streamKeys the way
+// NewKeyContextByStreams does: statements bound to the context must filter
+// on a listed type (see validateSegmentedContextEventType) and events of an
+// unlisted type fan out to every existing partition. Key counts may differ
+// per stream, matching Esper's per-function parameter lists.
+func NewHashContextByStreams(name string, algorithm HashAlgorithm, partitions int, streams ...KeyContextStream) (ContextDefinition, error) {
+	return internalengine.NewHashContextByStreams(name, algorithm, partitions, streams...)
+}
+
 // NewHashContextWithAlgorithm declares a lazy hash context using an explicit
 // deterministic hash algorithm. Use HashAlgorithmCRC32 or
 // HashAlgorithmJavaHashCode when matching Esper's built-in context functions.
@@ -4774,6 +4802,13 @@ func NewPreallocatedHashContext(name string, key Expr, partitions int) (ContextD
 // NewPreallocatedHashContext.
 func NewPreallocatedHashContextBy(name string, partitions int, keys ...Expr) (ContextDefinition, error) {
 	return internalengine.NewPreallocatedHashContextBy(name, partitions, keys...)
+}
+
+// NewPreallocatedHashContextByStreams is the preallocated form of
+// NewHashContextByStreams: buckets are materialized when the first context
+// statement deploys instead of on first event.
+func NewPreallocatedHashContextByStreams(name string, algorithm HashAlgorithm, partitions int, streams ...KeyContextStream) (ContextDefinition, error) {
+	return internalengine.NewPreallocatedHashContextByStreams(name, algorithm, partitions, streams...)
 }
 
 // NewPreallocatedHashContextWithAlgorithm declares a preallocated hash

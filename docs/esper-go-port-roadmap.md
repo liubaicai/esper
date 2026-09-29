@@ -1,3 +1,26 @@
+> 最新补充：Draft 4.597（2026-09-29），`context.partition` 新增
+> `case.context-init-term-remainder`（born-DV），补齐 context 域最后 4 个未引用
+> execution：`ContextInitTermTemporalFixed.java` ord 18 `ContextStartEndDBHistorical`
+>（`java-runtime-bc152186877c0a641b3d`，NineToFive daily context 门控 SupportBean_S0
+> × sql:MyDB historical join——08:00/17:00 静默、09:00 发 {s1.mychar=Y}、次日 09:00
+> 发 {s1.mychar=X}）、`ContextInitTermWithDistinct.java` ord 0
+> `ContextInitTermWithDistinctInvalid`（`java-runtime-19cc6b63d1614c49dfbf`，5 个
+> distinct-clause 拒绝探针）、`ContextInitTermWithNow.java` ord 2 `ContextInitTermWNowInvalid`
+>（`java-runtime-6b3caa8f5e3490b05507`，3 个 @now 组合拒绝探针）与
+> `ContextHashSegmented.java` ord 8 `ContextHashInvalid`（`java-runtime-25a58a30d6cbd02f00e7`，
+> 6 个 coalesce/hash 拒绝探针 + ACtx/MyWindow 静默部署；static `java-06954b45a1979f495425`
+> / `java-1db75f8dcee67079871d` / `java-21fe1b2ee6da1a4f412c` / `java-0564864de64ece6e7772`；
+> Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；无 flags）。Java/Go 各 16 条
+> records（2 listener + 14 compile-error）、0 differences。**Shared-core 修复**：hash
+> context 的 `streamFilters` 先前从不求值——`partitionLocal` 的 ContextHashSegmented 分支
+> 现在先应用 per-stream filter 再做 bucket 分配（Esper `from T(filter)` 语义，filtered
+> 事件不分配分区也不投递）；引擎测试 `TestHashContextByStreamsStreamFilter` 钉定。
+> Approved difference：sql:MyDB leg 用函数式 HistoricalProvider 轮询 mytesttable 行
+>（外部数据源既有的 JDBC 替代约定），${id} 按 SupportBean_S0 trigger 绑定；语法层
+> 拒绝（缺 'as'、pattern/sub-select/bare-key 形态、@now 组合）按 invalid-probe 约定钉
+> unrepresentable 断言子句。manifest 803 cases / 432 DV / 1761 DV runtime IDs / unreferenced 378。
+
+
 > 最新补充：Draft 4.596（2026-09-29），`trigger.table-named-window` 的
 > `case.infra-nwtable-join-select-delete` born-differential 场景，对照固定 Java
 > `InfraNWTableJoin.java` ords 0/1 `InfraNWTableJoinSimple`（`java-runtime-9aad0c9a0b81e251f6d4` /

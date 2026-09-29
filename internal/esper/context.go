@@ -317,6 +317,62 @@ func newHashContextWithAlgorithm(name string, algorithm HashAlgorithm, partition
 	return ContextDefinition{name: name, kind: ContextHashSegmented, key: keys[0], keys: copyContextKeys(keys), partitions: partitions, preallocate: preallocate, hashAlgorithm: algorithm}, nil
 }
 
+// NewHashContextByStreams declares a hash-partitioned context listing one or
+// more event types explicitly, mirroring Esper's `coalesce
+// <hash_func>(<params>) from TypeA[, <hash_func>(<params>) from TypeB]
+// granularity N` form. Esper applies one hash function per listed stream
+// with that stream's parameter list; Go keeps the single deterministic
+// algorithm for every listed stream and applies each stream's own key
+// expressions, so listed types populate streamKeys the way
+// NewKeyContextByStreams does: statements bound to the context must filter
+// on a listed type (see validateSegmentedContextEventType) and events of an
+// unlisted type fan out to every existing partition. Key counts may differ
+// per stream, matching Esper's per-function parameter lists.
+func NewHashContextByStreams(name string, algorithm HashAlgorithm, partitions int, streams ...KeyContextStream) (ContextDefinition, error) {
+	return newHashContextByStreams(name, algorithm, partitions, false, streams)
+}
+
+// NewPreallocatedHashContextByStreams is the preallocated form of
+// NewHashContextByStreams: buckets are materialized when the first context
+// statement deploys instead of on first event.
+func NewPreallocatedHashContextByStreams(name string, algorithm HashAlgorithm, partitions int, streams ...KeyContextStream) (ContextDefinition, error) {
+	return newHashContextByStreams(name, algorithm, partitions, true, streams)
+}
+
+func newHashContextByStreams(name string, algorithm HashAlgorithm, partitions int, preallocate bool, streams []KeyContextStream) (ContextDefinition, error) {
+	if strings.TrimSpace(name) == "" {
+		return ContextDefinition{}, NewError(ErrorInvalidRule, "context name is required")
+	}
+	if len(streams) == 0 {
+		return ContextDefinition{}, NewError(ErrorInvalidRule, "context requires at least one stream")
+	}
+	streamKeys := make(map[string][]Expr, len(streams))
+	streamFilters := make(map[string]Expr, len(streams))
+	for _, stream := range streams {
+		if strings.TrimSpace(stream.Type) == "" {
+			return ContextDefinition{}, NewError(ErrorInvalidRule, "context stream type is required")
+		}
+		if err := validateContextKeys(stream.Keys); err != nil {
+			return ContextDefinition{}, err
+		}
+		if _, exists := streamKeys[stream.Type]; exists {
+			return ContextDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("the event type %q is listed twice", stream.Type))
+		}
+		streamKeys[stream.Type] = copyContextKeys(stream.Keys)
+		if stream.Filter != nil {
+			streamFilters[stream.Type] = stream.Filter
+		}
+	}
+	if partitions <= 0 {
+		return ContextDefinition{}, NewError(ErrorInvalidRule, "hash context partitions must be positive")
+	}
+	if !algorithm.valid() {
+		return ContextDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("unknown hash algorithm %d", algorithm))
+	}
+	first := streams[0]
+	return ContextDefinition{name: name, kind: ContextHashSegmented, key: first.Keys[0], keys: copyContextKeys(first.Keys), streamKeys: streamKeys, streamFilters: streamFilters, partitions: partitions, preallocate: preallocate, hashAlgorithm: algorithm}, nil
+}
+
 func NewCategoryContext(name string, categories ...ContextCategory) (ContextDefinition, error) {
 	if strings.TrimSpace(name) == "" {
 		return ContextDefinition{}, NewError(ErrorInvalidRule, "context name is required")
@@ -1723,6 +1779,16 @@ func (d ContextDefinition) partitionLocal(event Event, now time.Time, variables 
 		}
 		return "", false, nil
 	case ContextHashSegmented:
+		if filter := d.streamFilterForEvent(event); filter != nil {
+			value := filter.eval(EvalContext{Event: event, Now: now, Variables: variables})
+			matched, ok := boolValue(value)
+			if !ok || !matched {
+				// Esper's `coalesce <func>(k) from T(filter)` applies the
+				// stream filter before bucket assignment, so filtered-out
+				// events neither allocate a partition nor reach statements.
+				return "", false, nil
+			}
+		}
 		return fmt.Sprintf("hash:%d", d.hashBucket(event, now, variables)), true, nil
 	case ContextKeySegmented:
 		if filter := d.streamFilterForEvent(event); filter != nil {
@@ -1858,6 +1924,39 @@ func CreateHashContextWithAlgorithm(env *Environment, name string, algorithm Has
 
 func CreatePreallocatedHashContext(env *Environment, name string, key Expr, partitions int) (ContextDefinition, error) {
 	return CreatePreallocatedHashContextBy(env, name, partitions, key)
+}
+
+// CreateHashContextByStreams registers a lazy hash context listing one or
+// more event types explicitly, mirroring Esper's `coalesce <func>(<params>)
+// from TypeA[, ...] granularity N` form; see NewHashContextByStreams.
+func CreateHashContextByStreams(env *Environment, name string, algorithm HashAlgorithm, partitions int, streams ...KeyContextStream) (ContextDefinition, error) {
+	if env == nil {
+		return ContextDefinition{}, NewError(ErrorDependency, "nil environment")
+	}
+	definition, err := NewHashContextByStreams(name, algorithm, partitions, streams...)
+	if err != nil {
+		return ContextDefinition{}, err
+	}
+	if err := validateKeyContextStreams(env, name, streams); err != nil {
+		return ContextDefinition{}, err
+	}
+	return env.registerContextDefinition(definition)
+}
+
+// CreatePreallocatedHashContextByStreams registers the preallocated form of
+// the stream-listing hash context; see NewPreallocatedHashContextByStreams.
+func CreatePreallocatedHashContextByStreams(env *Environment, name string, algorithm HashAlgorithm, partitions int, streams ...KeyContextStream) (ContextDefinition, error) {
+	if env == nil {
+		return ContextDefinition{}, NewError(ErrorDependency, "nil environment")
+	}
+	definition, err := NewPreallocatedHashContextByStreams(name, algorithm, partitions, streams...)
+	if err != nil {
+		return ContextDefinition{}, err
+	}
+	if err := validateKeyContextStreams(env, name, streams); err != nil {
+		return ContextDefinition{}, err
+	}
+	return env.registerContextDefinition(definition)
 }
 
 func CreatePreallocatedHashContextBy(env *Environment, name string, partitions int, keys ...Expr) (ContextDefinition, error) {

@@ -88145,3 +88145,224 @@ func assertInfraNWTableComparative557Trace(t *testing.T, trace compat.Trace) {
 		}
 	}
 }
+
+func TestRunContextInitTermRemainderDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-remainder.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "context-init-term-remainder.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-remainder.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "context-init-term-remainder-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunContextInitTermRemainderDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "db-historical-row",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["s1.mychar"] = "Z"
+			},
+		},
+		{
+			name: "db-historical-time",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].Time = "2002-05-01T17:00:00Z"
+			},
+		},
+		{
+			name: "distinct-prefix",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[5].Value = "Distinct-expressions require a stream"
+			},
+		},
+		{
+			name: "now-probe-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[8].Statement = "now-alone-terminated"
+			},
+		},
+		{
+			name: "hash-prefix",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[13].Value = "expected a hash function that is any of {consistent_hash_crc32, hash_code}"
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:15]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[15].Case = "now-invalid"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-remainder.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "context-init-term-remainder.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-remainder.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "context-init-term-remainder-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
+func TestRunContextInitTermRemainderRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "context-init-term-remainder.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "context-init-term-remainder"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "context-init-term-remainder"`)...), 1)
+		}},
+		{name: "case-metadata", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 18`), []byte(`"ordinal": 8`), 1)
+		}},
+		{name: "step-field-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"statement": "distinct-no-as",`), []byte(`"statement": "distinct-no-as",
+      "statement": "distinct-no-as",`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+		{name: "unpinned-epl", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"epl": "@public create context NineToFive as start (0, 9, *, *, *) end (0, 17, *, *, *)"`), []byte(`"epl": "@public create context NineToFive as start (0, 8, *, *, *) end (0, 17, *, *, *)"`), 1)
+		}},
+		{name: "unpinned-probe-epl", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"epl": "create context MyContext initiated by distinct() SupportBean terminated after 15 seconds"`), []byte(`"epl": "create context MyContext initiated by distinct() SupportBean terminated after 20 seconds"`), 1)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", "context-init-term-remainder",
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunContextInitTermRemainderRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-remainder.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		JavaStatics  []string `json:"javaStaticIds"`
+		JavaSources  []string `json:"javaSourceFiles"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+			Execution string `json:"executionName"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, contextInitTermRemainderJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, contextInitTermRemainderJavaExecutions) ||
+		!reflect.DeepEqual(document.JavaStatics, contextInitTermRemainderJavaStaticIDs) ||
+		!reflect.DeepEqual(document.JavaSources, contextInitTermRemainderJavaSources) {
+		t.Fatalf("scenario metadata runtimes=%v names=%v statics=%v sources=%v",
+			document.JavaRuntimes, document.JavaNames, document.JavaStatics, document.JavaSources)
+	}
+	if len(document.Cases) != len(contextInitTermRemainderCases) {
+		t.Fatalf("scenario case count = %d, want %d", len(document.Cases), len(contextInitTermRemainderCases))
+	}
+	for index, entry := range document.Cases {
+		if entry.Case != contextInitTermRemainderCases[index] ||
+			entry.RuntimeID != contextInitTermRemainderJavaRuntimeIDs[index] ||
+			entry.Execution != contextInitTermRemainderJavaExecutions[index] {
+			t.Fatalf("case %d = %#v, want %q/%q/%q", index, entry,
+				contextInitTermRemainderCases[index],
+				contextInitTermRemainderJavaRuntimeIDs[index],
+				contextInitTermRemainderJavaExecutions[index])
+		}
+	}
+}
+
+func TestRunHelpIncludesContextInitTermRemainder(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-h"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("help exit code = %d, stderr = %q", code, stderr.String())
+	}
+	for _, mode := range []string{
+		"context-init-term-remainder",
+		"context-init-term-remainder-diff",
+	} {
+		if !strings.Contains(stderr.String(), mode) {
+			t.Fatalf("help output omits %q: %s", mode, stderr.String())
+		}
+	}
+}

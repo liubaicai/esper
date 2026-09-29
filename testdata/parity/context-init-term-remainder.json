@@ -1,0 +1,290 @@
+{
+ "version": "esper-parity/v1",
+ "id": "context-init-term-remainder",
+ "description": "Context initiated/terminated remainder across four suite files: ContextStartEndDBHistorical (ContextInitTermTemporalFixed ord 18) deploys the NineToFive cron context and an s0 join of SupportBean_S0 against sql:MyDB over mytesttable via the MySQL DriverManagerConnection fixture with POOLED lifecycle — S0(2) at 08:00 and 17:00 emits nothing outside the window while the two in-window 09:00 sends emit {s1.mychar='Y'} for id 2 and {s1.mychar='X'} for id 3; ContextInitTermWithDistinctInvalid (ContextInitTermWithDistinct ord 0) pins five distinct-clause rejection probes (missing 'as' stream name, pattern stream, sub-select expression, empty list, non-overlapping start/end); ContextInitTermWNowInvalid (ContextInitTermWithNow ord 2) pins three @now misuse rejections (bare @now terminated, @now with condition in a non-overlapping context, @now with a filter stream); ContextHashInvalid (ContextHashSegmented ord 8) pins four path-less coalesce-clause probes (bad filter property, unknown/bare hash function, no parameters) then deploys the ACtx context and the MyWindow fixture to pin the statement stream-type and named-window partition rejections with the module path. listener records carry the pinned s1.mychar field; compile-error records carry the pinned value while the oracle asserts the Java prefix (Java sources regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextInitTermTemporalFixed.java, ContextInitTermWithDistinct.java, ContextInitTermWithNow.java, ContextHashSegmented.java).",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextInitTermTemporalFixed.java",
+ "javaSourceFiles": [
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextInitTermTemporalFixed.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextInitTermWithDistinct.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextInitTermWithNow.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextHashSegmented.java"
+ ],
+ "javaRuntimes": [
+  "java-runtime-bc152186877c0a641b3d",
+  "java-runtime-19cc6b63d1614c49dfbf",
+  "java-runtime-6b3caa8f5e3490b05507",
+  "java-runtime-25a58a30d6cbd02f00e7"
+ ],
+ "javaNames": [
+  "ContextStartEndDBHistorical",
+  "ContextInitTermWithDistinctInvalid",
+  "ContextInitTermWNowInvalid",
+  "ContextHashInvalid"
+ ],
+ "javaStaticIds": [
+  "java-06954b45a1979f495425",
+  "java-1db75f8dcee67079871d",
+  "java-21fe1b2ee6da1a4f412c",
+  "java-0564864de64ece6e7772"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "db-historical",
+   "ordinal": 18,
+   "runtimeId": "java-runtime-bc152186877c0a641b3d",
+   "executionName": "ContextStartEndDBHistorical",
+   "observation": "listener; the NineToFive cron context bounds an s0 join of SupportBean_S0 to sql:MyDB over mytesttable (DriverManagerConnection, POOLED lifecycle): S0(2) at 08:00 and 17:00 stays silent out of window, the in-window 09:00 send emits {s1.mychar='Y'} for mybigint 2 and the next-day 09:00 send emits {s1.mychar='X'} for mybigint 3",
+   "epl": "@name('s0') context NineToFive select * from SupportBean_S0 as s0, sql:MyDB ['select * from mytesttable where ${id} = mytesttable.mybigint'] as s1"
+  },
+  {
+   "case": "distinct-invalid",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-19cc6b63d1614c49dfbf",
+   "executionName": "ContextInitTermWithDistinctInvalid",
+   "observation": "compile-error; five tryInvalidCompile probes pin the missing 'as' stream name, the pattern-as-initiated-by rejection, the sub-select distinct-clause expression, the empty distinct list, and the non-overlapping start/end distinct parse rejection",
+   "epl": "create context MyContext initiated by distinct(theString) SupportBean terminated after 15 seconds"
+  },
+  {
+   "case": "now-invalid",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-6b3caa8f5e3490b05507",
+   "executionName": "ContextInitTermWNowInvalid",
+   "observation": "compile-error; three tryInvalidCompile probes pin bare @now terminated (expecting 'and'), @now combined with a condition in a non-overlapping context, and @now together with an initiated-by filter stream",
+   "epl": "create context TimedImmediate initiated @now terminated after 10 seconds"
+  },
+  {
+   "case": "hash-invalid",
+   "ordinal": 8,
+   "runtimeId": "java-runtime-25a58a30d6cbd02f00e7",
+   "executionName": "ContextHashInvalid",
+   "observation": "compile-error; four path-less probes pin the dummy filter property, the unknown hash_code_xyz function, the bare intPrimitive coalesce expression, and the zero-parameter hash_code; after deploying the ACtx context and the MyWindow fixture the with-path probes pin the unlisted statement stream type and the named-window partition criteria",
+   "epl": "create context ACtx coalesce hash_code(intPrimitive) from SupportBean(dummy = 1) granularity 10"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "db-historical"
+  },
+  {
+   "op": "advance-time",
+   "case": "db-historical",
+   "at": "2002-05-01T08:00:00.000Z"
+  },
+  {
+   "op": "deploy",
+   "case": "db-historical",
+   "statement": "ctx",
+   "epl": "@public create context NineToFive as start (0, 9, *, *, *) end (0, 17, *, *, *)"
+  },
+  {
+   "op": "deploy",
+   "case": "db-historical",
+   "statement": "s0",
+   "epl": "@name('s0') context NineToFive select * from SupportBean_S0 as s0, sql:MyDB ['select * from mytesttable where ${id} = mytesttable.mybigint'] as s1"
+  },
+  {
+   "op": "send",
+   "case": "db-historical",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 2,
+    "p00": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "db-historical",
+   "at": "2002-05-01T09:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "case": "db-historical",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 2,
+    "p00": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "db-historical",
+   "at": "2002-05-01T17:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "case": "db-historical",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 2,
+    "p00": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "db-historical",
+   "at": "2002-05-02T09:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "case": "db-historical",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 3,
+    "p00": null
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "db-historical"
+  },
+  {
+   "op": "case",
+   "case": "distinct-invalid"
+  },
+  {
+   "op": "build-error",
+   "case": "distinct-invalid",
+   "statement": "distinct-no-as",
+   "epl": "create context MyContext initiated by distinct(theString) SupportBean terminated after 15 seconds",
+   "expectError": "Distinct-expressions require that a stream name is assigned to the stream using 'as'",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "build-error",
+   "case": "distinct-invalid",
+   "statement": "distinct-pattern",
+   "epl": "create context MyContext initiated by distinct(a.theString) pattern [a=SupportBean] terminated after 15 seconds",
+   "expectError": "Distinct-expressions require a stream as the initiated-by condition",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "build-error",
+   "case": "distinct-invalid",
+   "statement": "distinct-subselect",
+   "epl": "create context MyContext initiated by distinct((select * from MyWindow)) SupportBean as sb terminated after 15 seconds",
+   "expectError": "Invalid context distinct-clause expression 'subselect_0': Aggregation, sub-select, previous or prior functions are not supported in this context",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "build-error",
+   "case": "distinct-invalid",
+   "statement": "distinct-empty",
+   "epl": "create context MyContext initiated by distinct() SupportBean terminated after 15 seconds",
+   "expectError": "Distinct-expressions have not been provided",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "build-error",
+   "case": "distinct-invalid",
+   "statement": "start-distinct",
+   "epl": "create context MyContext start distinct(theString) SupportBean end after 15 seconds",
+   "expectError": "Incorrect syntax near 'distinct' (a reserved keyword)",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "undeploy-all",
+   "case": "distinct-invalid"
+  },
+  {
+   "op": "case",
+   "case": "now-invalid"
+  },
+  {
+   "op": "build-error",
+   "case": "now-invalid",
+   "statement": "now-alone-terminated",
+   "epl": "create context TimedImmediate initiated @now terminated after 10 seconds",
+   "expectError": "Incorrect syntax near 'terminated' (a reserved keyword) expecting 'and'",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "build-error",
+   "case": "now-invalid",
+   "statement": "now-and-nonoverlapping",
+   "epl": "create context TimedImmediate start @now and after 5 seconds end after 10 seconds",
+   "expectError": "Incorrect syntax near 'and' (a reserved keyword)",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "build-error",
+   "case": "now-invalid",
+   "statement": "now-with-filter",
+   "epl": "create context TimedImmediate initiated @now and SupportBean terminated after 10 seconds",
+   "expectError": "Invalid use of 'now' with initiated-by stream",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "undeploy-all",
+   "case": "now-invalid"
+  },
+  {
+   "op": "case",
+   "case": "hash-invalid"
+  },
+  {
+   "op": "build-error",
+   "case": "hash-invalid",
+   "statement": "hash-dummy-filter",
+   "epl": "create context ACtx coalesce hash_code(intPrimitive) from SupportBean(dummy = 1) granularity 10",
+   "expectError": "Failed to validate filter expression 'dummy=1': Property named 'dummy' is not valid in any stream",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "build-error",
+   "case": "hash-invalid",
+   "statement": "hash-bad-func",
+   "epl": "create context ACtx coalesce hash_code_xyz(intPrimitive) from SupportBean granularity 10",
+   "expectError": "expected a hash function that is any of {consistent_hash_crc32, hash_code}",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "build-error",
+   "case": "hash-invalid",
+   "statement": "hash-bare-prop",
+   "epl": "create context ACtx coalesce intPrimitive from SupportBean granularity 10",
+   "expectError": "expected a hash function that is any of {consistent_hash_crc32, hash_code}",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "build-error",
+   "case": "hash-invalid",
+   "statement": "hash-no-params",
+   "epl": "create context ACtx coalesce hash_code() from SupportBean granularity 10",
+   "expectError": "expected one or more parameters to the hash function",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "deploy",
+   "case": "hash-invalid",
+   "statement": "ctx",
+   "epl": "@public create context ACtx coalesce hash_code(intPrimitive) from SupportBean granularity 10"
+  },
+  {
+   "op": "build-error",
+   "case": "hash-invalid",
+   "statement": "statement-stream-type",
+   "epl": "context ACtx select * from SupportBean_S0",
+   "expectError": "requires that any of the event types that are listed in the segmented context also appear in any of the filter expressions of the statement, type 'SupportBean_S0' is not one of the types listed"
+  },
+  {
+   "op": "deploy",
+   "case": "hash-invalid",
+   "statement": "window",
+   "epl": "@public create window MyWindow#keepall as SupportBean"
+  },
+  {
+   "op": "build-error",
+   "case": "hash-invalid",
+   "statement": "partition-named-window",
+   "epl": "@public create context SegmentedByWhat partition by theString from MyWindow",
+   "expectError": "Partition criteria may not include named windows"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "hash-invalid"
+  }
+ ]
+}
