@@ -242,10 +242,44 @@ Active: Draft 4.596 ('infra-nwtable-join-and-select-delete').
 - [x] Post-P3 re-validation: build + six-test family + `TestOnSelectDelete`
   re-run green; regenerated trace byte-identical. Shipped; Git owns identity.
 
+## Prefetched N+1 contract (read-only, no writes started)
+
+Candidate Draft 4.597 ('context init-term remainder'): scouts
+`NextJavaCtx597` (java-oracle-scout; yield kept aborting on infra — full
+contract recovered from its session transcript) + `NextGoCtx597` (scout,
+structured report delivered). Five unreferenced context executions at
+9e1b9f1cc9117f:
+- `ContextInitTermTemporalFixed` ord 18 `ContextStartEndDBHistorical`
+  (`java-runtime-bc152186877c0a641b3d`, no flags): NineToFive crontab ctx +
+  `sql:MyDB` historical join (Oracle DB fixture via SupportDatabaseService).
+  Recommended: DV if the Go DB-historical path covers it, else
+  intentionally-different (no JDBC).
+- `ContextInitTermWithDistinct` ord 0 `ContextInitTermWithDistinctInvalid`
+  (`java-runtime-19cc6b63d1614c49dfbf`): 5 invalid-compile probes
+  (distinct-expression/stream rules; Go probes mostly unrepresentable-pin).
+- `ContextInitTermWithNow` ord 2 `ContextInitTermWNowInvalid`
+  (`java-runtime-6b3caa8f5e3490b05507`): invalid @now combination forms.
+- `ContextHashSegmented` ord 8 `ContextHashInvalid`
+  (`java-runtime-25a58a30d6cbd02f00e7`): invalid coalesce/hash probes +
+  statement-type listing assertion.
+- `ContextDocExamples` ord 0 (`java-runtime-61b846fd7aae8c380963`, static
+  `java-2aa018c5d66747fbbfd3`, class:run variant): ~30 deploy-only
+  statements, no sends. Recommended: separate dedicated unit; many forms
+  may be unrepresentable → intentionally-different candidates.
+Recommended grouping: 4-execution unit (three invalid-compile probes +
+DBHistorical) closing TemporalFixed/WithDistinct/WithNow/HashSegmented
+files; DocExamples deferred to its own unit. Go surface: all context
+constructors exist except distinct+terminated-after
+(NewDistinctInitiatedTerminatedContextTerminatedAfter gap); variable-schedule
+cron forms unrepresentable; hash per-stream coalesce lists modeled with a
+single key list (documented equivalence).
+
 ## Previous work units (shipped)
-- Shipped: Draft 4.591 ('timer-interval spec-resolution forms')
- committed and pushed as `f76502639`; Git owns identity.
- case.pattern-every +5 DV IDs; review PASS (1 P3).
+- Shipped: Draft 4.596 ('infra-nwtable join + select-delete') committed
+ and pushed as `3f17b6508`; Git owns identity. New born-DV case with 4
+ runtime IDs; review PASS (3 P3s fixed).
+- Shipped: Draft 4.595 ('timer:within remainder ords 1-6') committed and
+ pushed as `72d0eb91e`; Git owns identity. Review PASS (5 P3s).
 - Shipped: Draft 4.590 ('guard-while cluster') committed and
  pushed as `f20b88aec`; Git owns identity. case 4/4 DV.
 - Shipped: Draft 4.589 ('withinmax W-harness + every-within fix')
