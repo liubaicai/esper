@@ -163,9 +163,12 @@ Active: Draft 4.595 ('timer:within remainder — PatternGuardTimerWithin ords 1-
  BindPositionalParameters call); P3.3 test comment mechanism fixed;
  P3.4 left (non-string-field coverage belongs to the differential
  compare, not the row-type pin); P3.5 HTML-escape artifacts removed
- from oracle comments. Scenario regenerated + diff re-passed after the
- text fixes.
-- [ ] Commit + push.
+- Shipped; Git owns identity. Draft 4.595 committed and pushed as `72d0eb91e`;
+ parity review PASS (5 P3s, four fixed; P3.4 intentionally left).
+
+## Current work unit
+Idle — awaiting N+1 contract (NextJavaContract596 scout, aborted twice by
+infra cancel; resume on demand).
 
 ## Previous work units (shipped)
 - Shipped: Draft 4.591 ('timer-interval spec-resolution forms')
