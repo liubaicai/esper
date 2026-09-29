@@ -18,18 +18,27 @@ Esper Go 是 Esper 9.0.0 的 Go 移植。规则使用可分析、类型安全的
 
 ## 当前进度
 
-截至 2026-09-12（Draft 4.393），manifest v2 记录：
+截至 2026-09-29（HEAD `1766ba2b2`），`testdata/compat/capability-manifest.json` 的已校验 `summary` 记录：
 
 | 维度 | 数值 |
 | --- | --- |
 | Java runtime inventory | 4,136 |
-| 已关联 runtime | 3,293（79.6%） |
-| Differential-verified runtime | 1,012 |
-| Capability / case | 120 / 648 |
-| Differential-verified case | 271 |
+| 已关联 runtime | 3,763（91.0%） |
+| 未关联 runtime | 373 |
+| Differential-verified runtime | 1,766（42.7%） |
+| Capability（其中 differential-verified） | 126（50） |
+| Case（implemented / differential-verified / intentionally-different） | 804（802 / 433 / 40） |
+| Representative scenario 通过 | 122 / 122 |
 
+三个口径必须区分：**关联**表示该 runtime 已有处置记录；**implemented** 表示 Go 侧已有对应实现；**differential-verified** 才表示已有可重放 scenario、Java/Go trace 和零差异 evidence（严格 parity 口径以 runtime 计，42.7% 而非 91.0%）。`nfr-verified` 目前为 0，性能与并发尚未纳入验收。
 
-Runtime 关联率只表示已有处置记录，不是 Java/Go parity 通过率。只有带可重放 scenario、Java/Go trace 和零差异 evidence 的 runtime 才计入 differential-verified。
+上表的 4,136 只覆盖 `regression-lib` 的 11 个 suite 域（client、context、epl、event、expr、infra、multithread、pattern、resultset、rowrecog、view）；Dataflow、EsperIO 和连接器矩阵不在该 inventory 内，因此这里的百分比不能外推到那些能力面。
+
+数值随每个工作单元提交变化，需要时直接从 manifest 重算，不要手工维护第二份：
+
+```sh
+python3 -c "import json;print(json.load(open('testdata/compat/capability-manifest.json'))['summary'])"
+```
 
 ## 本地验证
 
