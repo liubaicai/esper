@@ -65862,6 +65862,336 @@ func TestRunInfraNWTableOnUpdateDiffRejectsTraceMutations(t *testing.T) {
 	}
 }
 
+func TestRunInfraNWTableJoinSelectDeleteDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraNWTableJoinSelectDeleteID,
+		"-scenario", filepath.Join(root, infraNWTableJoinSelectDeleteID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertInfraNWTableJoinSelectDeleteTrace(t, trace)
+}
+
+func TestRunInfraNWTableJoinSelectDeleteDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), infraNWTableJoinSelectDeleteID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraNWTableJoinSelectDeleteID + "-diff",
+		"-scenario", filepath.Join(root, infraNWTableJoinSelectDeleteID+".json"),
+		"-java-trace", filepath.Join(root, infraNWTableJoinSelectDeleteID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != infraNWTableJoinSelectDeleteJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, infraNWTableJoinSelectDeleteJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, infraNWTableJoinSelectDeleteJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, infraNWTableJoinSelectDeleteJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertInfraNWTableJoinSelectDeleteTrace(t, evidence.JavaTrace)
+	assertInfraNWTableJoinSelectDeleteTrace(t, evidence.GoTrace)
+}
+
+func TestRunInfraNWTableJoinSelectDeleteDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "join-c1-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "join-nw" && rec.Operation == "listener" && rec.Sequence == 1 {
+						rec.New[0].Fields["c1"] = json.Number("99")
+						return
+					}
+				}
+				panic("no join-nw listener record 1")
+			},
+		},
+		{
+			name: "seldel-sum-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "seldel-nw" && rec.Operation == "listener" && rec.Sequence == 2 {
+						rec.New[0].Fields["c0"] = json.Number("10")
+						return
+					}
+				}
+				panic("no seldel-nw listener record 2")
+			},
+		},
+		{
+			name: "seldel-snapshot-row-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "seldel-table" && rec.Operation == "snapshot" && len(rec.New) == 3 {
+						rec.New = rec.New[:2]
+						return
+					}
+				}
+				panic("no seldel-table snapshot with 3 rows")
+			},
+		},
+		{
+			name: "seldel-final-snapshot-nonempty",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "seldel-nw" && rec.Operation == "snapshot" && len(rec.New) == 0 {
+						rec.New = []compat.ResultRecord{{Kind: "row", Fields: map[string]any{"theString": "E9"}}}
+						return
+					}
+				}
+				panic("no empty seldel-nw snapshot")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTrace, err := loadTraceFile(filepath.Join(root, infraNWTableJoinSelectDeleteID+".trace.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			test.mutate(&javaTrace)
+			mutatedPath := filepath.Join(t.TempDir(), "mutated-trace.json")
+			mutatedJSON, err := json.Marshal(javaTrace)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(mutatedPath, mutatedJSON, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			evidencePath := filepath.Join(t.TempDir(), "evidence.json")
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", infraNWTableJoinSelectDeleteID + "-diff",
+				"-scenario", filepath.Join(root, infraNWTableJoinSelectDeleteID+".json"),
+				"-java-trace", mutatedPath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("mutated trace %q unexpectedly passed: stdout=%q", test.name, stdout.String())
+			}
+		})
+	}
+}
+
+func TestRunInfraNWTableJoinSelectDeleteCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, infraNWTableJoinSelectDeleteID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, infraNWTableJoinSelectDeleteID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, infraNWTableJoinSelectDeleteID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if evidence.JavaCommit != infraNWTableJoinSelectDeleteJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, infraNWTableJoinSelectDeleteJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, infraNWTableJoinSelectDeleteJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, infraNWTableJoinSelectDeleteJavaExecutions) {
+		t.Fatalf("checked-in Java metadata = %#v", evidence)
+	}
+	assertInfraNWTableJoinSelectDeleteTrace(t, javaTrace)
+	assertInfraNWTableJoinSelectDeleteTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, infraNWTableJoinSelectDeleteID+".json")
+	scenarioData, err := os.ReadFile(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rawScenario struct {
+		Version string        `json:"version"`
+		ID      string        `json:"id"`
+		Steps   []compat.Step `json:"steps"`
+	}
+	if err := json.Unmarshal(scenarioData, &rawScenario); err != nil {
+		t.Fatal(err)
+	}
+	scenario := compat.Scenario{Version: rawScenario.Version, ID: rawScenario.ID, Steps: rawScenario.Steps}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatalf("checked-in scenario differs from evidence scenario")
+	}
+}
+
+func TestRunInfraNWTableJoinSelectDeleteRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, infraNWTableJoinSelectDeleteID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "join-nw"`), []byte(`"case": "join-nw", "extra": 0`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-9aad0c9a0b81e251f6d4"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "join-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`sb.theString = ce.cid`), []byte(`sb.theString = ce.zid`), 1)
+		}},
+		{name: "seldel-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`s0.p00=win.theString`), []byte(`s0.p00=win.intPrimitive`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"p00": "E1"`), []byte(`"p00": "E1", "extra": 0`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "MyEvent"`), []byte(`"eventType": "WrongEvent"`), 1)
+		}},
+		{name: "payload-type-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"p00": "E1"`), []byte(`"p00": 1`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", infraNWTableJoinSelectDeleteID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunInfraNWTableJoinSelectDeleteRuntimeIDMappingMatchesScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, infraNWTableJoinSelectDeleteID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenario struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &scenario); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenario.JavaRuntimes, infraNWTableJoinSelectDeleteJavaRuntimeIDs) {
+		t.Fatalf("javaRuntimes = %#v", scenario.JavaRuntimes)
+	}
+	if !reflect.DeepEqual(scenario.JavaNames, infraNWTableJoinSelectDeleteJavaExecutions) {
+		t.Fatalf("javaNames = %#v", scenario.JavaNames)
+	}
+	for index, definition := range scenario.Cases {
+		if definition.RuntimeID != infraNWTableJoinSelectDeleteJavaRuntimeIDs[index] {
+			t.Fatalf("case %q runtimeId = %q, want %q", definition.Case, definition.RuntimeID, infraNWTableJoinSelectDeleteJavaRuntimeIDs[index])
+		}
+	}
+}
+
+func assertInfraNWTableJoinSelectDeleteTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != infraNWTableJoinSelectDeleteID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 30 {
+		t.Fatalf("trace records = %d, want 30", len(trace.Records))
+	}
+	counts := map[string]map[string]int{}
+	for _, record := range trace.Records {
+		if counts[record.Case] == nil {
+			counts[record.Case] = map[string]int{}
+		}
+		counts[record.Case][record.Operation]++
+	}
+	want := map[string]map[string]int{
+		"join-nw":      {"deployed": 3, "listener": 2},
+		"join-table":   {"deployed": 3, "listener": 2},
+		"seldel-nw":    {"deployed": 4, "listener": 2, "snapshot": 4},
+		"seldel-table": {"deployed": 4, "listener": 2, "snapshot": 4},
+	}
+	if !reflect.DeepEqual(counts, want) {
+		t.Fatalf("record counts = %#v, want %#v", counts, want)
+	}
+	for _, record := range trace.Records {
+		// The select-delete listener emits only the folded c0 sum; the join
+		// listener emits c0/c1. The final store snapshot must be empty.
+		if record.Operation == "listener" && record.Statement == "s0" {
+			if record.Case == "join-nw" || record.Case == "join-table" {
+				if len(record.New) != 1 || record.New[0].Fields["c1"] == nil {
+					t.Fatalf("join listener record missing c1: %#v", record)
+				}
+			} else if len(record.New) != 1 || len(record.New[0].Fields) != 1 || record.New[0].Fields["c0"] == nil {
+				t.Fatalf("select-delete listener record is not the single c0 fold: %#v", record)
+			}
+		}
+	}
+}
+
 func TestRunInfraNWTableOnUpdateCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "testdata", "parity")
 	javaTrace, err := loadTraceFile(filepath.Join(root, infraNWTableOnUpdateID+".trace.json"))

@@ -344,6 +344,12 @@ type triggerDefinition struct {
 	// having applies a post-aggregation predicate to the grouped on-select
 	// form; it is evaluated per emitted group row after aggregation.
 	having Expression[bool]
+	// deleteAfterSelect mirrors Esper's "on T select and delete <projection>
+	// from <store> where <predicate>" form: the matched store rows are
+	// projected into the trigger result first, then deleted with the same
+	// predicate while the trigger event is still being processed, so later
+	// cascaded statements of the same event observe the removal.
+	deleteAfterSelect bool
 }
 
 type tableMutationResult struct {
@@ -613,6 +619,18 @@ func (s TriggerStream[T]) SelectFromNamedWindow(window string, predicate Express
 	return s.namedWindowTrigger(window, triggerSelectTable, predicate, nil, selections)
 }
 
+// SelectDeleteFromNamedWindow projects the matching named-window events and
+// deletes them in the same trigger action, mirroring Esper's "on <trigger>
+// select and delete <projection> from <window> where <predicate>" form. The
+// predicate is evaluated with Field reading the trigger event and
+// NamedWindowField reading the candidate row — the same scope the delete
+// reuses, so exactly the projected match set is removed.
+func (s TriggerStream[T]) SelectDeleteFromNamedWindow(window string, predicate Expression[bool], selections ...Selection) TriggerQuery {
+	query := s.namedWindowTrigger(window, triggerSelectTable, predicate, nil, selections)
+	query.definition.deleteAfterSelect = true
+	return query
+}
+
 // SelectFromNamedWindowRollup reads matching named-window events once per
 // trigger and emits one row per rollup level per group: the full-key detail
 // level first, then progressively coarser levels, the overall level last —
@@ -724,6 +742,18 @@ func (s TriggerStream[T]) SelectFromTableWhere(table string, predicate Expressio
 			selections: append([]Selection(nil), selections...),
 		},
 	}
+}
+
+// SelectDeleteFromTable projects the table rows matching a target-row
+// predicate and deletes them in the same trigger action, mirroring Esper's
+// "on <trigger> select and delete <projection> from <table> where
+// <predicate>" form. TableField addresses the row and Field addresses the
+// trigger for both the projection and the deletion predicate. A nil
+// predicate deletes every row in scope.
+func (s TriggerStream[T]) SelectDeleteFromTable(table string, predicate Expression[bool], selections ...Selection) TriggerQuery {
+	query := s.SelectFromTableWhere(table, predicate, selections...)
+	query.definition.deleteAfterSelect = true
+	return query
 }
 
 // SelectFromTableGroupBy reads matching table rows once per trigger and emits
@@ -855,6 +885,9 @@ func (d *triggerDefinition) description() string {
 		triggerResetTableAggregates: "reset-aggregates",
 		triggerSplitStream:          "split-stream",
 	}[d.action]
+	if d.action == triggerSelectTable && d.deleteAfterSelect {
+		action = "select-and-delete"
+	}
 	if d.action == triggerSplitStream {
 		mode := "first"
 		if d.splitAll {
@@ -2089,6 +2122,25 @@ func (s *Statement) processTriggerRuntime(ctx context.Context, runtime *statemen
 			}
 			result.New = append(result.New, batch.New...)
 			result.Old = append(result.Old, batch.Old...)
+			if definition.deleteAfterSelect {
+				// "select and delete": the projected rows are already
+				// delivered; now remove the same predicate match set while
+				// the trigger event is still being processed. The delete
+				// definition reuses the full mutation path (named-window
+				// delta fan-out, table ownership bookkeeping) so later
+				// cascaded statements of this event observe the removal.
+				deleteDefinition := *definition
+				deleteDefinition.action = triggerDeleteTable
+				deleteDefinition.deleteAfterSelect = false
+				if deleteDefinition.target != triggerTargetNamedWindow && deleteDefinition.where == nil {
+					// A predicate-less select-delete on a table scans the
+					// whole scope; the matching deletion is delete-all.
+					deleteDefinition.action = triggerDeleteAllTable
+				}
+				if _, deleteErr := executeTriggerActionWithTags(ctx, s.engine, &deleteDefinition, candidate, now, variables, s, runtime, tags, tagValues); deleteErr != nil {
+					return deleteErr
+				}
+			}
 			return nil
 		}
 		mutation, err := executeTriggerActionWithTags(ctx, s.engine, definition, candidate, now, variables, s, runtime, tags, tagValues)

@@ -167,8 +167,80 @@ Active: Draft 4.595 ('timer:within remainder — PatternGuardTimerWithin ords 1-
  parity review PASS (5 P3s, four fixed; P3.4 intentionally left).
 
 ## Current work unit
-Idle — awaiting N+1 contract (NextJavaContract596 scout, aborted twice by
-infra cancel; resume on demand).
+Active: Draft 4.596 ('infra-nwtable-join-and-select-delete').
+
+- Unit: 4 executions across two sibling oracle files, same
+  `infra.nwtable` store surface (namedWindow={true,false} pairs):
+  - `InfraNWTableJoin` ords 0/1 `InfraNWTableJoinSimple`
+    (`java-runtime-9aad0c9a0b81e251f6d4` /
+    `java-runtime-333f1a440da03d4b266a`, static
+    `java-675ca69dbc976b4c4448`): continuous join `from MyInfra as ce,
+    SupportBean#keepall() as sb where sb.theString = ce.cid` over a
+    keepall named window / a keyed table, listener rows only.
+  - `InfraNWTableOnSelectWDelete` ords 0/1
+    `InfraNWTableOnSelectWDeleteAssertion`
+    (`java-runtime-27d8980edc91c4593d34` /
+    `java-runtime-60c74e5e717dc6d9330e`, static
+    `java-5a29ff903cb7fd7a100d`): `on SupportBean_S0 select and delete
+    window(win.*).aggregate(0,(result,value)=>result+value.intPrimitive)
+    as c0 from MyInfra as win where s0.p00=win.theString` — correlated
+    select-AND-delete with an inline fold over matched store rows +
+    iterator probes on the 'create' statement.
+  - Java source read by primary agent (Java-contract scout aborted 3x
+    on infra cancel → serial fallback recorded); contract pins: schema
+    DDL `create schema MyEvent(cid string)` + `create window
+    MyInfra.win:keepall() as MyEvent` OR `create table
+    MyInfra(cid string primary key)` + `insert into MyInfra select *
+    from MyEvent`; join asserts 4 rows for E1-E4 sends; select-delete
+    asserts `assertPropsPerRowIteratorAnyOrder` for table /
+    ordered for window; S0 insert into statement created/undeployed
+    inside exec; supportbean/S0 fixtures registered in path.
+- [x] Go-surface contract: scout `GoSurfaceJoinSel596` (read-only)
+  mapped every surface: join infra×stream SUPPORTED via
+  `JoinMany(JoinRecordSource(FromNamedWindow|FromTable), JoinRecordSource(
+  From[bean].Window(KeepAll()).AsRecord())).On(OnSourcesEqual(...))`;
+  ungrouped trigger-select aggregate fold SUPPORTED
+  (`Sum[int32](NamedWindowField|TableField)`); DDL + `Statement.Snapshot`
+  probes SUPPORTED. Single GAP: select-AND-delete trigger action.
+- [x] **Engine addition (shared core)**: `triggerDefinition.deleteAfterSelect`
+  flag; new `TriggerStream.SelectDeleteFromNamedWindow` /
+  `SelectDeleteFromTable` builders keep `triggerSelectTable` semantics and
+  re-run the matched-set deletion inside the same candidate processing via
+  `executeTriggerActionWithTags` (nil-predicate table form maps to
+  delete-all). Engine tests `TestOnSelectDeleteNamedWindow|Table` cover the
+  exact Java sequence (sum fold + iterator empties) and pass.
+- [x] Scenario + oracle assets by `AssetJoinSel596` (parity-asset-worker):
+  `testdata/parity/infra-nwtable-join-select-delete.json` (4 cases / 30 steps),
+  `tools/java-oracle/InfraNWTableJoinSelectDeleteScenarioOracle.java` +
+  `run-infra-nwtable-join-select-delete.sh`. Two review-fix rounds via DM:
+  (1) run-script output jq asserted raw iterator order for `any`-mode
+  probes — fixed to `canonSnap` canonical sort (Java table emits {2,4,3});
+  (2) oracle now emits canonical-sorted `new` rows at emission time for
+  `any`-mode snapshot probes, so the checked-in raw trace equals the
+  comparator-canonicalized form (ordered probes keep engine iterator order).
+- [x] Go runner `internal/app/parity/infra_nwtable_join_select_delete.go`
+  + run.go wiring (mode `infra-nwtable-join-select-delete` / `-diff`).
+  Strict payload decoder now enforces exact key sets per event type
+  (payload-extra rejection). Root + step field sets reuse
+  `requireInfraNWTableOnDeleteFields` incl. `javaSourceFiles`.
+- [x] Java trace via run script (30 records, canonical any-mode order) →
+  Go replay 30 records → `-mode ...-diff` status `passing` / 0 differences;
+  checked-in `go.trace.json` + `evidence.json` written.
+- [x] Six-test family in run_test.go green (direct replay, diff evidence,
+  4 trace mutations, checked-in equality, 9 raw-scenario mutations,
+  runtime-ID mapping): `go test -run TestRunInfraNWTableJoinSelectDelete`
+  PASS.
+- [x] Manifest/roadmap/CHANGELOG: new `case.infra-nwtable-join-select-delete`
+  (born-DV, 4 runtime IDs), mapping → `trigger.table-named-window` + 2
+  goRefs; summary 802 cases / 800 impl / 431 DV / 1757 DV IDs / 4221
+  assoc / referenced 3754 / unreferenced 382.
+- [x] `make check` GREEN (parity 156s, internal/esper 119s). Independent
+  parity review (`ParityReview596`, read-only): OVERALL PASS, 3×P3 —
+  (1) PLANS mutation-count prose fixed (4 trace + 9 raw); (2) manifest
+  trailing newline restored; (3) oracle SODA-redeploy listener claim
+  routed back to `AssetJoinSel596` (inert, comment+behavior fix).
+- [x] Post-P3 re-validation: build + six-test family + `TestOnSelectDelete`
+  re-run green; regenerated trace byte-identical. Shipped; Git owns identity.
 
 ## Previous work units (shipped)
 - Shipped: Draft 4.591 ('timer-interval spec-resolution forms')

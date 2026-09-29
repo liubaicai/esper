@@ -1744,7 +1744,9 @@
     "internal/app/parity/infra_table_subquery.go",
     "internal/app/parity/infra_table_context.go",
     "internal/app/parity/infra_table_invalid.go",
-    "internal/app/parity/infra_nwtable_on_select_aggregation.go"
+    "internal/app/parity/infra_nwtable_on_select_aggregation.go",
+    "internal/app/parity/infra_nwtable_join_select_delete.go",
+    "internal/esper/trigger_on_select_delete_test.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -52018,6 +52020,70 @@
     "java-runtime-3bf753f4ff71d21df968"
    ],
    "notes": "Draft 4.566: 33 records each (5/28 per case), 0 differences. Engine fix: declared unique-index validation moved after retention displacement in insertIntoState. Oracle pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c. Residual: other retentions (firsttime, batch, ext_timed, group, composite, sorted-rank, expression) still validate unique indexes pre-displacement \u2014 a future unique-index unit over them needs the same survivor handling."
+  },
+  {
+   "id": "case.infra-nwtable-join-select-delete",
+   "javaRuntimeIds": [
+    "java-runtime-9aad0c9a0b81e251f6d4",
+    "java-runtime-333f1a440da03d4b266a",
+    "java-runtime-27d8980edc91c4593d34",
+    "java-runtime-60c74e5e717dc6d9330e"
+   ],
+   "javaNames": [
+    "InfraNWTableJoinSimple{namedWindow=true}",
+    "InfraNWTableJoinSimple{namedWindow=false}",
+    "InfraNWTableOnSelectWDeleteAssertion{namedWindow=true}",
+    "InfraNWTableOnSelectWDeleteAssertion{namedWindow=false}"
+   ],
+   "javaStaticIds": [
+    "java-675ca69dbc976b4c4448",
+    "java-675ca69dbc976b4c4448",
+    "java-5a29ff903cb7fd7a100d",
+    "java-5a29ff903cb7fd7a100d"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableJoin.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnSelectWDelete.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunInfraNWTableJoinSelectDeleteDirectReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableJoinSelectDeleteDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableJoinSelectDeleteDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableJoinSelectDeleteCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableJoinSelectDeleteRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableJoinSelectDeleteRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "correctness",
+    "infra",
+    "named-window",
+    "table",
+    "join",
+    "on-select-delete",
+    "trigger",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-nwtable-join-select-delete.json",
+    "testdata/parity/infra-nwtable-join-select-delete.trace.json",
+    "testdata/parity/infra-nwtable-join-select-delete.go.trace.json",
+    "testdata/parity/infra-nwtable-join-select-delete.evidence.json",
+    "tools/java-oracle/InfraNWTableJoinSelectDeleteScenarioOracle.java",
+    "tools/java-oracle/run-infra-nwtable-join-select-delete.sh"
+   ],
+   "notes": "InfraNWTableJoin ords 0/1 + InfraNWTableOnSelectWDelete ords 0/1 born-differential (30 records, 0 differences). Join: MyInfra keepall window / cid-PK table declared in one module with the @buseventtype MyEvent schema, fed by the select-* insert and joined against SupportBean#keepall on cid=theString. Select-delete: on SupportBean_S0 select-and-delete whose ungrouped aggregate fold sums intPrimitive over the matched store rows and removes exactly that match set; iterator probes on the 'create' statement emit canonical row order for any-mode probes. Shared-core addition: triggerDefinition.deleteAfterSelect + SelectDeleteFromNamedWindow/SelectDeleteFromTable reusing triggerSelectTable projection then the mutation delete pass inside the same candidate processing.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-9aad0c9a0b81e251f6d4",
+    "java-runtime-333f1a440da03d4b266a",
+    "java-runtime-27d8980edc91c4593d34",
+    "java-runtime-60c74e5e717dc6d9330e"
+   ]
   }
  ],
  "mappings": [
@@ -55572,13 +55638,17 @@
   {
    "capabilityId": "infra.namedwindow.views",
    "caseId": "case.infra-namedwindow-explicit-index"
+  },
+  {
+   "capabilityId": "trigger.table-named-window",
+   "caseId": "case.infra-nwtable-join-select-delete"
   }
  ],
  "summary": {
-  "inventoriedCases": 801,
-  "implementedCases": 799,
-  "differentialVerifiedCases": 430,
-  "differentialVerifiedRuntimeIds": 1753,
+  "inventoriedCases": 802,
+  "implementedCases": 800,
+  "differentialVerifiedCases": 431,
+  "differentialVerifiedRuntimeIds": 1757,
   "intentionallyDifferentCases": 40,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -55588,13 +55658,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 4217,
-  "referencedJavaRuntimeIds": 3750,
+  "runtimeAssociationCount": 4221,
+  "referencedJavaRuntimeIds": 3754,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 386,
+  "unreferencedJavaRuntimeIds": 382,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 801,
+  "totalCases": 802,
   "totalCapabilities": 126
  }
 }

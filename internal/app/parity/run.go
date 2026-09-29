@@ -227,6 +227,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadEplOtherPlanInKeywordScenario(file)
 	} else if *mode == "infra-nwtable-on-delete" || *mode == "infra-nwtable-on-delete-diff" {
 		scenario, err = loadInfraNWTableOnDeleteScenario(file)
+	} else if *mode == "infra-nwtable-join-select-delete" || *mode == "infra-nwtable-join-select-delete-diff" {
+		scenario, err = loadInfraNWTableJoinSelectDeleteScenario(file)
 	} else if *mode == "infra-nwtable-on-select-aggregation" || *mode == "infra-nwtable-on-select-aggregation-diff" {
 		scenario, err = loadInfraNWTableOnSelectAggScenario(file)
 	} else if *mode == "infra-nwtable-on-update" || *mode == "infra-nwtable-on-update-diff" {
@@ -727,6 +729,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNWTableOnDeleteJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNWTableOnDeleteJavaSources),
 				splitMetadata(*javaExecutions, infraNWTableOnDeleteJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-nwtable-join-select-delete" || *mode == "infra-nwtable-join-select-delete-diff" {
+		trace, err := runInfraNWTableJoinSelectDeleteScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-nwtable-join-select-delete-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, infraNWTableJoinSelectDeleteJavaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNWTableJoinSelectDeleteJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNWTableJoinSelectDeleteJavaSources),
+				splitMetadata(*javaExecutions, infraNWTableJoinSelectDeleteJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

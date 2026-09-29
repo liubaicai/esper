@@ -1,3 +1,28 @@
+> 最新补充：Draft 4.596（2026-09-29），`trigger.table-named-window` 的
+> `case.infra-nwtable-join-select-delete` born-differential 场景，对照固定 Java
+> `InfraNWTableJoin.java` ords 0/1 `InfraNWTableJoinSimple`（`java-runtime-9aad0c9a0b81e251f6d4` /
+> `java-runtime-333f1a440da03d4b266a`；static `java-675ca69dbc976b4c4448`）与
+> `InfraNWTableOnSelectWDelete.java` ords 0/1 `InfraNWTableOnSelectWDeleteAssertion`
+>（`java-runtime-27d8980edc91c4593d34` / `java-runtime-60c74e5e717dc6d9330e`；
+> static `java-5a29ff903cb7fd7a100d`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；
+> 无 flags）——Java/Go 各 30 records、0 differences。join 切片：`@buseventtype create schema
+> MyEvent(cid string)` 与 keepall named window（或 cid-PK table）同模块声明，`select *`
+> insert 装载后 `from MyInfra as ce, SupportBean#keepall() as sb where sb.theString = ce.cid`
+> 连续 join 按到达事件交付 {c0,c1}（C2→1、C1→4）。select-delete 切片：`on SupportBean_S0
+> select and delete window(win.*).aggregate(0,(result,value) => result+value.intPrimitive) as c0
+> from MyInfra as win where s0.p00=win.theString`——ungrouped fold 对匹配集求和后
+> 在同一 trigger 动作内删除恰好该匹配集（E1→c0=1、三个 E2→c0=9），store iterator
+> 探针按模式记录（window 首个探针保持插入序、其余 any-mode 规范排序，oracle
+> 发射端同步规范化；Java table 原始迭代序 {2,4,3} 在发射时排序）。**Shared-core
+> 新增**：`triggerDefinition.deleteAfterSelect` + `TriggerStream.SelectDeleteFromNamedWindow`/
+> `SelectDeleteFromTable`——复用 `triggerSelectTable` 投影后在同一 candidate 处理内
+> 经 `executeTriggerActionWithTags` 执行匹配集删除（nil-predicate table 形式映射
+> delete-all），Esper "select and delete" 原子语义；引擎测试 `TestOnSelectDelete*`
+> 覆盖窗口/表两路。SODA re-deploy 复打同一 EPL 文本（s0 deployed seq 2，
+> Java 侧不重复注册 listener）。manifest 802 cases / 431 DV / 1757 DV runtime
+> IDs / unreferenced 382。
+
+
 > 最新补充：Draft 4.595（2026-09-29），`pattern.basic` 的 `case.pattern-every` 补全固定 Java
 > `PatternGuardTimerWithin.java` ordinals 1–6（ord1 `PatternInterval10Min`
 > `java-runtime-f0649272cfb528ce731b`、ord2 `PatternInterval10MinVariable`
