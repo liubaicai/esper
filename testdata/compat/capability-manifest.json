@@ -16666,7 +16666,11 @@
     "internal/app/parity/pattern_timerinterval_property_array_593_test.go/TestRunPatternTimerIntervalPropertyArray593ScenarioReplay",
     "internal/app/parity/pattern_timerinterval_property_array_593_test.go/TestRunPatternTimerIntervalPropertyArray593PinnedArtifacts",
     "internal/app/parity/pattern_timerinterval_property_array_593_test.go/TestRunPatternTimerIntervalPropertyArray593RejectsMalformedRawScenario",
-    "internal/app/parity/pattern_timerinterval_property_array_593_test.go/TestRunPatternTimerIntervalPropertyArray593RuntimeIDMapping"
+    "internal/app/parity/pattern_timerinterval_property_array_593_test.go/TestRunPatternTimerIntervalPropertyArray593RuntimeIDMapping",
+    "internal/app/parity/pattern_guard_timerwithin_wharness_594_test.go/TestRunPatternGuardTimerWithinWHarness594ScenarioReplay",
+    "internal/app/parity/pattern_guard_timerwithin_wharness_594_test.go/TestRunPatternGuardTimerWithinWHarness594PinnedArtifacts",
+    "internal/app/parity/pattern_guard_timerwithin_wharness_594_test.go/TestRunPatternGuardTimerWithinWHarness594RejectsMalformedRawScenario",
+    "internal/app/parity/pattern_guard_timerwithin_wharness_594_test.go/TestRunPatternGuardTimerWithinWHarness594RuntimeIDMapping"
    ],
    "tags": [
     "correctness",
@@ -16680,7 +16684,8 @@
     "testdata/parity/pattern-guard-withinmax-589.evidence.json",
     "testdata/parity/pattern-timer-interval-forms-591.evidence.json",
     "testdata/parity/pattern-timerinterval-wharness-592.evidence.json",
-    "testdata/parity/pattern-timer-interval-property-array-593.evidence.json"
+    "testdata/parity/pattern-timer-interval-property-array-593.evidence.json",
+    "testdata/parity/pattern-guard-timerwithin-wharness-594.evidence.json"
    ],
    "difference": "Go covers outer Within versus inner Within().EveryDistinct() scope, distinct suppression with an AST-owned Every state, virtual-clock expiry via Within and explicit EveryDistinctFor, ordinary Pattern and Pattern Context lifecycle, scoped WithinOrMax guards, dynamic duration from captured tags, variables, deployment parameters and component expressions, repeated-tag property access including indexed fields from repeated event tags, component-wise fixed-duration parameters, variable reconfiguration for the next recurring timer period, microsecond precision, recurring month-calendar boundaries, mixed calendar-plus-fixed timer periods, exact-deadline tests, edge-scoped FollowedByMax capacity for nested/composed followed-by branches, and MatchUntil expression bounds resolved from variables, deployment parameters, null open bounds and captured outer tags. Bounded-until additionally preserves a capped repeated branch while waiting for a terminator, gives the terminator priority on the same event, and expires without output below the lower bound. Compound every (every (a and b), every (timer:interval and not X)) now materializes into the AST so the every state holds a single active attempt like Esper's EvalEveryStateNode, and restarted attempts inherit the every begin-state tags instead of the just-fired match tags (spawn-state snapshot). Nested Every levels now multiply matches exactly like Esper: every(every(b)) fires B2 twice and B3 four times, every^3 fires B2 three times and B3 nine times, every^4 fires B2 four times and B3 sixteen times, because a completed non-quitting child stays resident while a fresh sibling is spawned alongside it. Java additionally covers ISO period parsing, multi-key expiry, nested observer/guard/consumption combinations and exact execution trace parity; Go WithinOrMax, dynamic duration and dynamic MatchUntil support do not yet cover every nested parent transition, followed-by dynamic maxima or the complete consumption policy matrix.",
    "verification": [
@@ -16696,9 +16701,10 @@
     "java-runtime-bbb75d6bcc54f29c7652",
     "java-runtime-d5ad6ad9d226628f8383",
     "java-runtime-9b41fb5951301c0de979",
-    "java-runtime-6155a2b0181e2169f2a4"
+    "java-runtime-6155a2b0181e2169f2a4",
+    "java-runtime-bb8113cb979826cff927"
    ],
-   "notes": " Draft 4.589: PatternGuardTimerWithinOrMax ord0 DV (17-leg simultaneous W-harness, 30 records, 0 differences); required an internal/esper fix \u2014 a capped every-within inside a followed-by stayed resident and re-emitted stale rows (patternCompletionPermanent/patternCanContinueAfterMatch now treat a terminal within as quitting its child, mirroring EvalWithinStateNode.quitInternal). Draft 4.591: PatternObserverTimerInterval ords 1/2/3/5/6 DV (5 records, 0 differences) \u2014 literal/variable/expression/prepared-param interval specs sharing the 62s boundary contract + calendar 1-month Feb1->Mar1. ords 0/7 deferred. Draft 4.592: PatternObserverTimerInterval ord0 PatternOp DV \u2014 the full 31-leg timer:interval W-harness over EventSetOne advance-before-send replay (32 records, 0 differences); required three internal/esper fixes \u2014 satisfied one-shot timer branches are permanent (EvalObserverStateNode quitInternal), an and-state's satisfied-but-unquitted side stays resident to cache its match, and event dispatch drains timers already due at that instant (S14's b->timer:interval(0) fires in B1's send). Follow-on: `initiated by @Now and pattern [...]` is a condition union, not an or-NFA \u2014 ContextDefinition.initiatedNow + CreateOverlappingPatternInitiatedTerminatedContextNow materializes the deploy-time @Now partition while the every pattern continues on its own schedule (fixes context-init-term-with-now regression from the permanence change). Draft 4.593: ord 7 PatternIntervalSpecExpressionWithPropertyArray DV \u2014 `[2] a=SupportBean -> timer:interval(a[0].intPrimitive+a[1].intPrimitive seconds)`; the interval spec reads the repeated-tag array once at arm (Java/Go 1 record each, 0 differences)."
+   "notes": " Draft 4.589: PatternGuardTimerWithinOrMax ord0 DV (17-leg simultaneous W-harness, 30 records, 0 differences); required an internal/esper fix \u2014 a capped every-within inside a followed-by stayed resident and re-emitted stale rows (patternCompletionPermanent/patternCanContinueAfterMatch now treat a terminal within as quitting its child, mirroring EvalWithinStateNode.quitInternal). Draft 4.591: PatternObserverTimerInterval ords 1/2/3/5/6 DV (5 records, 0 differences) \u2014 literal/variable/expression/prepared-param interval specs sharing the 62s boundary contract + calendar 1-month Feb1->Mar1. ords 0/7 deferred. Draft 4.592: PatternObserverTimerInterval ord0 PatternOp DV \u2014 the full 31-leg timer:interval W-harness over EventSetOne advance-before-send replay (32 records, 0 differences); required three internal/esper fixes \u2014 satisfied one-shot timer branches are permanent (EvalObserverStateNode quitInternal), an and-state's satisfied-but-unquitted side stays resident to cache its match, and event dispatch drains timers already due at that instant (S14's b->timer:interval(0) fires in B1's send). Follow-on: `initiated by @Now and pattern [...]` is a condition union, not an or-NFA \u2014 ContextDefinition.initiatedNow + CreateOverlappingPatternInitiatedTerminatedContextNow materializes the deploy-time @Now partition while the every pattern continues on its own schedule (fixes context-init-term-with-now regression from the permanence change). Draft 4.593: ord 7 PatternIntervalSpecExpressionWithPropertyArray DV \u2014 `[2] a=SupportBean -> timer:interval(a[0].intPrimitive+a[1].intPrimitive seconds)`; the interval spec reads the repeated-tag array once at arm (Java/Go 1 record each, 0 differences). Draft 4.594: PatternGuardTimerWithin ord0 PatternOp DV \u2014 the full 34-leg timer:within W-harness (incl. the S3 SODA model leg) replayed as 47 listener invocations / 64 assertion rows, 0 differences; required internal/esper guard semantics fixes: a within whose child already quit now disarms rather than post-firing (EvalGuardStateNode/TimerWithinGuard), and a restartable evaluateFalse respawns every at the expiry-callback instant (EvalEveryStateNode.evaluateFalse)."
   },
   {
    "id": "case.pattern-guard-observer-prearmed",
@@ -16717,7 +16723,11 @@
    "goTests": [
     "TestPatternIndependentWithinGuardsComposeWithEveryAndMatchesEsper",
     "internal/app/parity/pattern_timerinterval_wharness_592_test.go/TestRunPatternTimerIntervalWHarness592ScenarioReplay",
-    "internal/app/parity/pattern_timerinterval_wharness_592_test.go/TestRunPatternTimerIntervalWHarness592PinnedArtifacts"
+    "internal/app/parity/pattern_timerinterval_wharness_592_test.go/TestRunPatternTimerIntervalWHarness592PinnedArtifacts",
+    "internal/app/parity/pattern_guard_timerwithin_wharness_594_test.go/TestRunPatternGuardTimerWithinWHarness594ScenarioReplay",
+    "internal/app/parity/pattern_guard_timerwithin_wharness_594_test.go/TestRunPatternGuardTimerWithinWHarness594PinnedArtifacts",
+    "internal/app/parity/pattern_guard_timerwithin_wharness_594_test.go/TestRunPatternGuardTimerWithinWHarness594RejectsMalformedRawScenario",
+    "internal/app/parity/pattern_guard_timerwithin_wharness_594_test.go/TestRunPatternGuardTimerWithinWHarness594RuntimeIDMapping"
    ],
    "tags": [
     "correctness",
@@ -16732,12 +16742,17 @@
     "java-runtime-inventory",
     "java-junit",
     "go-unit",
-    "testdata/parity/pattern-timerinterval-wharness-592.evidence.json"
+    "testdata/parity/pattern-timerinterval-wharness-592.evidence.json",
+    "testdata/parity/pattern-guard-timerwithin-wharness-594.evidence.json"
    ],
-   "difference": "Go composes two independently guarded event branches with And and definition-level Every. Virtual-clock prearming is retained on each active branch; the first matching event advances the prearmed branch instead of creating a duplicate Every root, and an expired guarded branch does not produce a late conjunction. The Java source contains a broader guard/observer case matrix; nested consume, Not/Until/MatchUntil, dynamic calendar components, SODA and full shared trace remain partial; the S12 prearmed `timer:interval(0) -> b` leg is now additionally covered by the 31-leg W-harness trace (pattern-timerinterval-wharness-592).",
+   "difference": "Go composes two independently guarded event branches with And and definition-level Every. Virtual-clock prearming is retained on each active branch; the first matching event advances the prearmed branch instead of creating a duplicate Every root. After Draft 4.594 the full 34-leg PatternGuardTimerWithin ord0 matrix is differential-verified: an expired within disarms its conjunction (every respawns a fresh and instance at the expiry-callback instant) and a dead non-every within pattern never restarts. Remaining gaps are limited to nested consume, Not/Until/MatchUntil variants, dynamic calendar components and other Java files' executions.",
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-bb8113cb979826cff927"
    ]
   },
   {
@@ -55549,8 +55564,8 @@
  "summary": {
   "inventoriedCases": 801,
   "implementedCases": 799,
-  "differentialVerifiedCases": 429,
-  "differentialVerifiedRuntimeIds": 1746,
+  "differentialVerifiedCases": 430,
+  "differentialVerifiedRuntimeIds": 1747,
   "intentionallyDifferentCases": 40,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,

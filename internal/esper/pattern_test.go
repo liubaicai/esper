@@ -2268,6 +2268,10 @@ func TestPatternWithinExpressionUsesDeploymentParameter(t *testing.T) {
 	if len(rows) != 0 {
 		t.Fatalf("parameterized within matched at exact deadline = %#v", rows)
 	}
+	// The right-side within guard that expired at the exact deadline
+	// killed the whole followed-by permanently (PatternGuardTimerWithin
+	// legs S16/S17/S24 prove the same boundary): a later a-event cannot
+	// restart a dead non-every pattern, so B2 fires nothing.
 	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "A2"}); err != nil {
 		t.Fatal(err)
 	}
@@ -2277,8 +2281,8 @@ func TestPatternWithinExpressionUsesDeploymentParameter(t *testing.T) {
 	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "B2"}); err != nil {
 		t.Fatal(err)
 	}
-	if len(rows) != 1 {
-		t.Fatalf("parameterized within before deadline rows = %#v", rows)
+	if len(rows) != 0 {
+		t.Fatalf("dead non-every within pattern restarted = %#v", rows)
 	}
 }
 

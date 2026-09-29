@@ -65,12 +65,18 @@ func TestPatternIndependentWithinGuardsComposeWithEveryAndMatchesEsper(t *testin
 		t.Fatalf("first guarded conjunction rows = %#v", rows)
 	}
 
-	// A fresh B at t=10 has a deadline at t=12.001. D at t=13 must not
-	// complete that attempt, proving the left guard is not shared with the
-	// already-completed branch.
+	// Esper's EvalGuardStateNode disarms a within whose child already
+	// quit, and EvalEveryStateNode respawns the and at the expiry
+	// callback instant (restartable evaluateFalse). The first instance
+	// completes at t=2; the respawn armed at t=2 dies when its left
+	// within(2001ms) guard expires, and Java's scheduling service runs
+	// that callback at the advance target (t=10s), so the instance
+	// respawned there holds deadlines 12001/16001. B at t=10 satisfies
+	// that left side; D at t=13 completes it, mirroring the S18/S29
+	// retained-side pairs in PatternGuardTimerWithin.
 	sendAt(10, "B")
 	sendAt(13, "D")
-	if len(rows) != 1 {
-		t.Fatalf("expired guarded conjunction emitted a row = %#v", rows)
+	if len(rows) != 2 || rows[1].Get("b").Any() != "B" || rows[1].Get("d").Any() != "D" || rows[1].Get("matchedAt").Any() != time.Unix(13, 0).UTC() {
+		t.Fatalf("respawned guarded conjunction rows = %#v", rows)
 	}
 }

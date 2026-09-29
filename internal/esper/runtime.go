@@ -9390,7 +9390,11 @@ func advanceContextPattern(state **patternRuntimeState, definition *patternDefin
 				}
 				continue
 			}
-			if patternProgressTerminal(transition.state) {
+			if patternProgressTerminal(transition.state) && !patternSatisfied(transition.state) {
+				// An unsatisfied-terminal transition (a within guard that
+				// expired, a not that fired) ends a non-every context
+				// pattern permanently instead of draining the active set
+				// so the next event restarts it.
 				terminal = true
 			}
 			if !transition.fireOnly && patternProgressActive(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition, pool) {
@@ -21564,7 +21568,11 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 
 	case patternWithinNode:
 		next := clonePatternProgress(progress)
-		if next.expired || next.done {
+		// A quit guard is permanently finished: Esper's
+		// EvalGuardStateNode evaluateTrue(isQuitted=true) calls
+		// guard.stopGuard(), so the deadline can never expire a
+		// satisfied within and it reports no further completions.
+		if next.expired || next.done || next.quit {
 			return []patternTransition{{state: next, complete: false}}
 		}
 		if !next.timerStarted {
@@ -21601,6 +21609,15 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 				}
 				if candidate.node.maximum > 0 && candidate.count >= candidate.node.maximum {
 					candidate.done = true
+				}
+				if patternCompletionPermanent(childTransition.state) {
+					// The child quit permanently (a one-shot filter that
+					// matched, a dead and/or/sequence): Esper's
+					// EvalGuardStateNode stops the guard timer and the
+					// within keeps reporting its retained match while never
+					// expiring again. The quit flag disarms the deadline
+					// and leaves satisfaction to the completed child.
+					candidate.quit = true
 				}
 			}
 			withinTransition := patternTransitionFrom(candidate, childTransition.complete && patternSatisfied(candidate), childTransition)
@@ -22258,7 +22275,7 @@ func (r *statementRuntime) patternCompositeTimeBatchFor(definition *patternDefin
 				}
 				continue
 			}
-			if patternWithinTerminal(transition.state) {
+			if patternProgressTerminal(transition.state) && !patternSatisfied(transition.state) {
 				terminal = true
 			}
 			if !transition.fireOnly && patternProgressActive(transition.state) && r.admitPatternMatch(nextActive, candidate, definition, pool) {

@@ -1,3 +1,18 @@
+> 最新补充：Draft 4.594（2026-09-29），`pattern.basic` 的 `case.pattern-every` +
+> `case.pattern-guard-observer-prearmed`（后者升至 differential-verified）补全固定 Java
+> `PatternGuardTimerWithin.java` ord 0 `PatternOp`（`java-runtime-bb8113cb979826cff927`，
+> static `java-0dec801a426fed297402` / static-manifest `java-811b1a1fcf834ee01db8`，无 flags；
+> Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）——34 条 `timer:within` leg 的
+> W-harness（S3 为 SODA `timerWithin(10.001d)` model leg，oracle 以 toEPL 断言）经单一
+> deploy-all 重放：Java 64 个断言 add 按 (statement,trigger) 折叠为 47 次 listener
+> invocation，Go trace 47 records、0 differences。共享核心两修：过期 `within` 走
+> disarm/quit 而非延迟补行（EvalGuardStateNode）；`every` 在 restartable evaluateFalse
+> 于到期回调时刻（advance 目标时刻，Java SchedulingServiceImpl 在目标时刻派发）respawn
+> 新实例，12001/16001 截止拦下 B@10s/D@13s。两条钉住旧语义的 Go 测试改为
+> Java 契约：expired-and respawn 后 {B,D}@13s 行存在；非-every within 到期永久终止
+>（A2 不再唤醒）。manifest 801 cases / 430 DV / 1747 DV runtime IDs / unreferenced 386。
+
+
 
 
 > 最新补充：Draft 4.593（2026-09-29），`pattern.basic` 的 `case.pattern-every` 补全固定 Java

@@ -50,81 +50,65 @@ activity or a single coverage percentage.
  df78702b7 + plan marker d2dabe48e.
 
 ## Current work unit
-Active: Draft 4.593 ('timer:interval property-array spec — PatternObserverTimerInterval ord7').
+Active: Draft 4.594 ('timer:within 34-leg W-harness — PatternGuardTimerWithin ord0').
 
-- [x] Contract frozen (agents JavaContract593 + GoSurface593): ord7
- PatternIntervalSpecExpressionWithPropertyArray, java-runtime-6155a2b0181e2169f2a4,
- static java-1422565b568236b2bfea, no flags, Java commit 9e1b9f1cc9117f.
- EPL: `@name('s0') select a[0].theString as a0id, a[1].theString as a1id from
- pattern [ [2] a=SupportBean -> timer:interval(a[0].intPrimitive+a[1].intPrimitive seconds)]`.
- Sequence: advance(0), deploy+listener, advance(10000), send E1(3), send E2(2)
- (repeat completes, arms 5000ms once), advance(14999) silent, milestone(0)
- no-step, advance(15000) one row {a0id:E1,a1id:E2}, undeployAll.
- Go: PatternFrom(...).MatchUntil(2,2).Then(TimerIntervalExpr(base,
- DurationSeconds[int](Add[int](TagFieldAt("a",0,"intPrimitive"),
- TagFieldAt("a",1,"intPrimitive"))))); pure asset work, no engine gap.
-- [x] Assets: scenario testdata/parity/pattern-timer-interval-property-array-593.json
- (1 case / 8 steps), runner internal/app/parity/pattern_timerinterval_property_array_593.go,
- run.go wiring, oracle tools/java-oracle/PatternTimerIntervalPropertyArray593ScenarioOracle.java
- + run-pattern-timerinterval-property-array-593.sh.
-- [x] Java trace /tmp/593-java-trace.json (1 record); Go trace byte-identical;
- diff `pattern-timer-interval-property-array-593-diff` passing / 0 differences;
- evidence testdata/parity/pattern-timer-interval-property-array-593.evidence.json.
-- [x] Manifest: case.pattern-every gains the runtime in
- differentialVerifiedRuntimeIds (now 8) + four 593 goTests + evidence path;
- summary recomputed (1746 DV runtime IDs, 3750 referenced, 386 unreferenced).
-- [x] Roadmap + CHANGELOG entries.
-- [x] Gates: `make check` exit 0 (parity 153s, internal/esper 120s); gofmt/diff-clean.
-- [x] Review: Review593 OVERALL PASS (no P0-P2; one P3 goTests naming fixed).
-- [x] Committed and pushed as 7e208506b (master).
-
-
-- Contract frozen (JavaContract592 + GoSurface592): ord0
- PatternOp (java-runtime-9b41fb5951301c0de979, static
- java-1422565b568236b2bfea) — 31 legs on the EventSetOne
- advance-before-send harness: literal/sodas, every-timer,
- timer->event / event->timer both directions, 3-way chains,
- or/and compositions, and the two `timer:within` no-match legs
- (3.0-within-2.0 and 3.0-within-3.0 boundary). SODA leg is
- intentionally-different (EPL text is not the entry point;
- covered as shape in expression-text parity). Within-on-timer-root
- has builder support but zero existing coverage — new boundary
- exercised here. Deploy-all as ONE DeployPlans + per-(stmt,event)
- multiset buckets (588 precedent).
-- [x] Assets592 + Java trace (/tmp/592-java-trace.json, md5
- 7fb395f1b36fb1bdbdb5c587f0547b56); Go replay 32 records; differential
- diff passing/0 differences (evidence committed
- testdata/parity/pattern-timerinterval-wharness-592.evidence.json).
-- [x] Engine fixes required: (1) satisfied one-shot timer branches are
- permanent in patternCompletionPermanent (EvalObserverStateNode quitInternal)
- — closes the S25-28 and-refire and the or-timer-winner residencies;
- (2) patternProgressActive keeps a satisfied-but-unquitted `and` side
- resident (eventsPerChild cache) so S28's early-fired 1ms timer pairs with
- B2 instead of a fresh instance; (3) event dispatch drains timers already
- due at the send instant (patternAnyDueTimer sweep in patternBatchFor) so
- S14's `b -> timer:interval(0)` fires inside B1's send. The timer-path
- terminal check in patternCompositeTimeBatchFor now mirrors the event
- path's permanence test so a completed and/or ends the statement.
-- [x] Regression fix: the context-init-term-with-now `initiated-now-pattern`
- case emulated `initiated by @Now and pattern [every timer:interval(10)]`
- as a single or-NFA whose zombie every leg kept initiating; with the
- permanence fix that emulation died. Now modeled Java-faithfully as a
- condition union — new ContextDefinition.initiatedNow +
- CreateOverlappingPatternInitiatedTerminatedContextNow materializes the
- deploy-time @Now partition while `every timer(10s)` continues on its own
- schedule (per ContextControllerInitTerm: @Now is an immediate condition,
- not an or-branch). Runner rewritten accordingly; diff green again.
-- [x] Full gates green after every edit: `make check` exit 0
- (check-layout incl. facade-drift, go vet, full go test — parity 152s,
- internal/esper 119s); gofmt/`git diff --check` clean.
-- [x] Independent parity review (Review592): OVERALL PASS, no P0/P1/P2;
- Java oracle re-derived (TimerIntervalObserver quitted=true sync fire,
- EvalOrStateNode sibling quit on isQuitted, EvalAndStateNode
- eventsPerChild + all-quit rule, `initiated by @Now and pattern` =
- ContextConditionDescriptorImmediate union). Six P3s fixed: sweep-bound
- comment, helper error propagation restored, context-sweep follow-up
- noted, docstring updated, typo, manifest prose.
-- [x] Committed and pushed as `df78702b7` (master).
+- [x] Contract frozen (agents JavaContract594b + GoSurface594b): ord0 PatternOp,
+ java-runtime-bb8113cb979826cff927, static java-0dec801a426fed297402 /
+ static-manifest java-811b1a1fcf834ee01db8, no flags, Java commit 9e1b9f1cc9117f.
+ 34 legs S0..S33 over EventSetOne A1@1s..D3@12s (advance-before-send), 64 expected
+ Java assertion rows collapsing to 47 listener invocations (records); bucket totals
+ B1=11 B2=8 D1=12 D2=4 B3=18 D3=9; silent legs S0,S2,S5,S6,S17,S20,S21,S24,S27,S28,
+ S33. SODA leg S3 = timer:within(10.001d) == S4's 10001ms. Exclusive deadline: event
+ at exactly arm+P loses to the quit callback.
+ Go fluent mapping: X.Within(d)=`X where within(d)`; X.Every().Within(d)=
+ `(every X) where within`; X.Within(d).Every()=`every (X where within)`;
+ X.Every().Within(d).Every()=`every ((every X) where within)`.
+ Key engine semantics verified: guard-expiry respawn under every (restartable
+ evaluateFalse), and-side expiry kills branch, or survives a side's expiry,
+ nested-every accumulation (S11/S12 doubling 1,2,4), and-side completed-partial
+ retention across later sends (S18/S29 I3 {B3,D2}).
+- [x] Assets: scenario `testdata/parity/pattern-guard-timerwithin-wharness-594.json`
+ (34 epls, 15 steps, 12 advance-before-send sends + deploy-all + undeploy-all);
+ runner `internal/app/parity/pattern_guard_timerwithin_wharness_594.go` + run.go
+ wiring; six-test file `pattern_guard_timerwithin_wharness_594_test.go` (521/527
+ expiry variants plus artifacts/ID/malformed probes). Oracle assets by agent
+ OracleAssets594: `tools/java-oracle/PatternGuardTimerWithinWHarness594ScenarioOracle.java`
+ + `run-pattern-guard-timerwithin-wharness-594.sh` (ATOMS byte-verified vs both Go
+ const and Java ord0 source; SODA leg asserted via toEPL). Contract deviation
+ verified: EXPECTED_RECORDS=47 per-invocation records, not 64 per-add rows.
+- [x] **Engine fix (shared core, internal/esper/runtime.go)**: expired `within`
+ guards now disarm (quit path) instead of post-firing stale rows, and restartable
+ evaluateFalse respawns `every` at the expiry-callback instant
+ (EvalGuardStateNode/EvalEveryStateNode parity). Two tests that pinned the old
+ buggy semantics were re-based on the Java contract:
+ `TestPatternIndependentWithinGuardsComposeWithEveryAndMatchesEsper` (now expects
+ the {B@10s,D@13s} row Java emits after every respawns the and at the
+ expiry-callback instant t=10s) and
+ `TestPatternWithinExpressionUsesDeploymentParameter` (permanent death of a
+ non-every within at deadline; B2 emits nothing).
+ Post-fix regression found by `make check`: dropping the `continue` after the
+ `transition.complete` block in `advanceContextPattern` double-admitted
+ completed-but-active transitions into `nextActive` (duplicate context
+ partitions; three `context_test.go` failures + the context-init-term diff
+ test). Restored the original control flow — completed transitions `continue`
+ after the complete-block, satisfied-terminal ones set `terminal` there — while
+ the quit/disarm semantics stay in `advancePatternNodeTrigger`. All failures
+- [x] Gates/review: `make check` green (parity 154s, internal/esper 120s) after
+ the `continue` restoration; independent review (agent ParityReview594) PASS on
+ areas A-G, two P3s fixed (dead `terminal` branch removed at runtime.go; stale
+ comment arithmetic corrected — Java dispatches due callbacks at the advance
+ target, so the respawn arms at t=10s with 12001/16001 deadlines) plus one DV
+ list-consistency add (`bb8113cb` on case.pattern-every). Post-P3 targeted tests
+ re-run green; diff re-verified `passing`/[].
+- [x] Java trace 47 records via oracle (commit 9e1b9f1cc9117f); normalized
+ zero-diff compare `-mode pattern-guard-timerwithin-wharness-594-diff` -> status
+ `passing`, differences `[]`; evidence
+ `testdata/parity/pattern-guard-timerwithin-wharness-594.evidence.json`.
+- [x] Manifest: `case.pattern-every` evidence/goTests/notes extended (rid already
+ in DV list); `case.pattern-guard-observer-prearmed` promoted to
+ `differential-verified` (rid `java-runtime-bb8113cb979826cff927`), goTests +
+ evidence + narrowed `difference` prose. internal/compat Validate passes.
+- [ ] Gates, review, commit.
 
 ## Previous work units (shipped)
 - Shipped: Draft 4.591 ('timer-interval spec-resolution forms')

@@ -591,6 +591,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadPatternTimerIntervalForms591Scenario(file)
 	} else if *mode == "pattern-timer-interval-property-array-593" || *mode == "pattern-timer-interval-property-array-593-diff" {
 		scenario, err = loadPatternTimerIntervalPropertyArray593Scenario(file)
+	} else if *mode == "pattern-guard-timerwithin-wharness-594" || *mode == "pattern-guard-timerwithin-wharness-594-diff" {
+		scenario, err = loadPatternGuardTimerWithinWHarness594Scenario(file)
 	} else if *mode == "epl-contained-event-example" || *mode == "epl-contained-event-example-diff" {
 		scenario, err = loadEPLContainedEventExampleScenario(file)
 	} else if *mode == "epl-other-pattern-event-properties" || *mode == "epl-other-pattern-event-properties-diff" {
@@ -2904,6 +2906,23 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, patternTimerIntervalPropertyArray593JavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, patternTimerIntervalPropertyArray593JavaSources),
 				splitMetadata(*javaExecutions, patternTimerIntervalPropertyArray593JavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "pattern-guard-timerwithin-wharness-594" || *mode == "pattern-guard-timerwithin-wharness-594-diff" {
+		trace, err := runPatternGuardTimerWithinWHarness594Scenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "pattern-guard-timerwithin-wharness-594-diff" {
+			return runDifferentialModeWithNormalizer(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, patternGuardTimerWithinWHarness594JavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, patternGuardTimerWithinWHarness594JavaSources),
+				splitMetadata(*javaExecutions, patternGuardTimerWithinWHarness594JavaExecutions), scenario, trace,
+				sortPatternTimerIntervalWHarness592Records)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
