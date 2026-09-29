@@ -445,20 +445,20 @@ func exprEnumSumOfRemainderBuildError(env *esper.Environment, trace *compat.Trac
 		).Query(esper.StatementName("s0")))
 	case "sumof-null-lambda":
 		// `select strvals.sumOf(v => null) from SupportCollection` — Java
-		// rejects the null-typed lambda result at compile time. Go has no
-		// null-typed expression: NullLiteral is typed, so the fluent form
-		// MUST build (a Build failure here is a Go regression, not parity).
-		// The recorded value stays the pinned Java prefix because the Java
-		// rejection itself is unrepresentable.
-		if _, err := env.Build(esper.Select(
+		// rejects the null-typed selector result with the non-null-result
+		// clause (ExprEnumSumOf:169); the fluent equivalent must fail
+		// Build with the same category and message family.
+		_, err := env.Build(esper.Select(
 			esper.From[exprEnumSumOfRemainderCollection](env, "SupportCollection"),
 			esper.Alias("c0", esper.EnumSumOf[string, int64](
 				esper.Field[exprEnumSumOfRemainderCollection, []string]("strvals"), esper.NullLiteral[int64]())),
-		).Query(esper.StatementName("s0"))); err != nil {
-			return fmt.Errorf("%s: build-error probe %q: typed NullLiteral selector must build, got %v",
-				exprEnumSumOfRemainderID, step.Statement, err)
+		).Query(esper.StatementName("s0")))
+		var espErr *esper.Error
+		if !errors.As(err, &espErr) || espErr.Code != esper.ErrorInvalidRule ||
+			!strings.Contains(err.Error(), `enumeration method "sumOf" expected a non-null result for expression parameter 0 but received a null-typed expression`) {
+			return fmt.Errorf("%s: build-error probe %q drift: got %v", exprEnumSumOfRemainderID, step.Statement, err)
 		}
-		buildErr = fmt.Errorf("null-typed lambda results are unrepresentable")
+		buildErr = err
 	default:
 		return fmt.Errorf("%s: unknown build-error probe %q", exprEnumSumOfRemainderID, step.Statement)
 	}

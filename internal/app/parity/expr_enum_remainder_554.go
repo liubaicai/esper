@@ -631,13 +631,13 @@ func exprEnumRemainder554BuildError(env *esper.Environment, trace *compat.Trace,
 			esper.Alias("c0", esper.EnumAverageOf[exprEnumRemainder554ST0, int64](contained, nil)),
 		).Query(esper.StatementName("probe")))
 	case "average-null-lambda":
-		// `select strvals.average(v => null)` — Go has no null-typed lambda
-		// result; NullLiteral is typed, so the fluent form MUST build (a
-		// Build failure here is a Go regression, not parity).
+		// `select strvals.average(v => null)` — Java rejects a null-typed
+		// selector result with the non-null-result clause
+		// (ExprEnumAverage:135); the fluent equivalent must fail Build the
+		// same way.
 		build(esper.Select(collectionSource,
 			esper.Alias("c0", esper.EnumAverageOf[string, int64](strvals, esper.NullLiteral[int64]())),
 		).Query(esper.StatementName("probe")))
-		buildMustFail = false
 	case "allof-int-result", "anyof-int-result":
 		// `x => 1` is unrepresentable as a boolean-typed Go predicate; the
 		// nearest boundary — a nil predicate — must fail Build.
@@ -645,12 +645,12 @@ func exprEnumRemainder554BuildError(env *esper.Environment, trace *compat.Trace,
 			esper.Alias("c0", esper.EnumAllOf[exprEnumRemainder554ST0](contained, nil)),
 		).Query(esper.StatementName("probe")))
 	case "anyof-null-lambda":
-		// `x => null` has no Go spelling; the typed NullLiteral predicate
-		// MUST build.
+		// `x => null` — Java rejects a null-typed predicate result
+		// (ExprEnumAllOfAnyOf:45); the fluent NullLiteral predicate must
+		// fail Build the same way.
 		build(esper.Select(containerSource,
 			esper.Alias("c0", esper.EnumAnyOf[exprEnumRemainder554ST0](contained, esper.NullLiteral[bool]())),
 		).Query(esper.StatementName("probe")))
-		buildMustFail = false
 	case "enum-take-no-param":
 		// `contained.take()` — the dynamic-count footprint EnumTakeExpr
 		// with a nil count is the nearest boundary and must fail Build.
@@ -698,9 +698,17 @@ func exprEnumRemainder554BuildError(env *esper.Environment, trace *compat.Trace,
 			return fmt.Errorf("%s: must-succeed probe %q failed Build: %v", exprEnumRemainder554ID, step.Statement, buildErr)
 		}
 		var espErr *esper.Error
-		if !errors.As(buildErr, &espErr) || espErr.Code != esper.ErrorInvalidRule ||
-			!strings.Contains(buildErr.Error(), "requires all selector expressions") {
+		if !errors.As(buildErr, &espErr) || espErr.Code != esper.ErrorInvalidRule {
 			return fmt.Errorf("%s: build-error probe %q drift: got %v", exprEnumRemainder554ID, step.Statement, buildErr)
+		}
+		// Null-lambda probes reject via the non-null-result clause;
+		// every other expressible probe rejects a missing selector.
+		wantFragment := "requires all selector expressions"
+		if step.Statement == "average-null-lambda" || step.Statement == "anyof-null-lambda" {
+			wantFragment = "expected a non-null result for expression parameter 0 but received a null-typed expression"
+		}
+		if !strings.Contains(buildErr.Error(), wantFragment) {
+			return fmt.Errorf("%s: build-error probe %q drift: got %v, want fragment %q", exprEnumRemainder554ID, step.Statement, buildErr, wantFragment)
 		}
 	}
 	trace.Records = append(trace.Records, compat.TraceRecord{

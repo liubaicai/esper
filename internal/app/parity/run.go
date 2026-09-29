@@ -77,6 +77,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include context-nested-initterm and context-nested-initterm-diff")
 		fmt.Fprintln(stderr, "runner modes include context-lifecycle and context-lifecycle-diff")
 		fmt.Fprintln(stderr, "runner modes include context-init-term-remainder and context-init-term-remainder-diff")
+		fmt.Fprintln(stderr, "runner modes include expr-enum-invalid-args and expr-enum-invalid-args-diff")
 		fmt.Fprintln(stderr, "runner modes include context-init-term-prioritized and context-init-term-prioritized-diff")
 		fmt.Fprintln(stderr, "runner modes include context-selection-faf and context-selection-faf-diff")
 		fmt.Fprintln(stderr, "runner modes include context-selection-faf-nested and context-selection-faf-nested-diff")
@@ -310,6 +311,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadContextLifecycleScenario(file)
 	} else if *mode == "context-init-term-remainder" || *mode == "context-init-term-remainder-diff" {
 		scenario, err = loadContextInitTermRemainderScenario(file)
+	} else if *mode == "expr-enum-invalid-args" || *mode == "expr-enum-invalid-args-diff" {
+		scenario, err = loadExprEnumInvalidArgsScenario(file)
 	} else if *mode == "context-selection-faf" || *mode == "context-selection-faf-diff" {
 		scenario, err = loadContextSelectionFAFScenario(file)
 	} else if *mode == "context-selection-faf-nested" || *mode == "context-selection-faf-nested-diff" {
@@ -4613,6 +4616,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, contextInitTermRemainderJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, contextInitTermRemainderJavaSources),
 				splitMetadata(*javaExecutions, contextInitTermRemainderJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "expr-enum-invalid-args" || *mode == "expr-enum-invalid-args-diff" {
+		trace, err := runExprEnumInvalidArgsScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "expr-enum-invalid-args-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, exprEnumInvalidArgsJavaCommit,
+				splitMetadata(*javaRuntimeIDs, exprEnumInvalidArgsJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, exprEnumInvalidArgsJavaSources),
+				splitMetadata(*javaExecutions, exprEnumInvalidArgsJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

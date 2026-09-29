@@ -620,7 +620,8 @@
 "internal/esper/enum_method_nested_source_test.go",
 "internal/esper/enum_select_from_test.go",
 "internal/esper/enum_table_source_test.go",
-"internal/esper/expr.go"
+"internal/esper/expr.go",
+"internal/app/parity/expr_enum_invalid_args.go"
 ],
 "phase": 1,
 "status": "implemented",
@@ -14359,6 +14360,71 @@
 "inventoried",
 "implemented"
 ]
+},
+{
+"id": "case.expr-enum-invalid-args",
+"javaRuntimeIds": [
+"java-runtime-67deab0a6d57e2bc57fa",
+"java-runtime-5556be14d552b0228acc",
+"java-runtime-f721caa1c77ad596eca4",
+"java-runtime-3c4f6374416fe5a2ee04",
+"java-runtime-50b5bc269985fbfd9ed2"
+],
+"javaNames": [
+"ExprEnumMinMax.ExprEnumInvalid",
+"ExprEnumMinMaxByInvalid",
+"ExprEnumOrderByInvalid",
+"ExprEnumTakeInvalid",
+"ExprEnumTakeWhileInvalid"
+],
+"javaSourceFiles": [
+"regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumMinMax.java",
+"regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumMinMaxBy.java",
+"regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumOrderBy.java",
+"regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumTakeAndTakeLast.java",
+"regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumTakeWhileAndWhileLast.java"
+],
+"goTests": [
+"internal/app/parity/expr_enum_invalid_args.go",
+"internal/app/parity/run_test.go"
+],
+"tags": [
+"expr",
+"enum",
+"invalid",
+"compile-error",
+"differential"
+],
+"status": "differential-verified",
+"evidence": [
+"testdata/parity/expr-enum-invalid-args.json",
+"testdata/parity/expr-enum-invalid-args.trace.json",
+"testdata/parity/expr-enum-invalid-args.go.trace.json",
+"testdata/parity/expr-enum-invalid-args.evidence.json",
+"tools/java-oracle/ExprEnumInvalidArgsScenarioOracle.java",
+"tools/java-oracle/run-expr-enum-invalid-args.sh"
+],
+"verification": [
+"inventoried",
+"implemented",
+"differential-verified"
+],
+"differentialVerifiedRuntimeIds": [
+"java-runtime-67deab0a6d57e2bc57fa",
+"java-runtime-5556be14d552b0228acc",
+"java-runtime-f721caa1c77ad596eca4",
+"java-runtime-3c4f6374416fe5a2ee04",
+"java-runtime-50b5bc269985fbfd9ed2"
+],
+"javaStaticIds": [
+"java-167415d6e7af87a7a111",
+"java-4083b006f50db9c59884",
+"java-0277b2cbf963ec07d2c0",
+"java-3f7b6e1e84fe78b4a816",
+"java-0fec7ea37236a9b16857"
+],
+"difference": "The two 0-parameter-footprint probes over event collections (contained.min(), contained.orderBy()) are unrepresentable in the typed Go API \u2014 Go generics require EnumOrdered elements, so Go cannot express the invalid EPL; clauses pinned without a boundary claim. Java's dual null-parameter diagnostics map to per-method-kind Go errors: selector lambdas (min/minBy/orderBy/where/select family) reject with 'enumeration method %q: Null-type is not allowed' while value-expression parameters (take/takeWhile count-predicate family) reject with the Java-mirrored 'expected a non-null result for expression parameter %d but received a null-typed expression'.",
+"notes": "Draft 4.598: closes the last unreferenced enum-method executions. 7 compile-error records, Java/Go zero differences; shared-core adds Build-time rejection of null-typed enumeration method parameters (previously accepted silently)."
 },
 {
 "id": "case.expr-enum-footprints",
@@ -55713,13 +55779,17 @@
 {
 "capabilityId": "context.partition",
 "caseId": "case.context-init-term-remainder"
+},
+{
+"capabilityId": "expr.enum",
+"caseId": "case.expr-enum-invalid-args"
 }
 ],
 "summary": {
-"inventoriedCases": 803,
-"implementedCases": 801,
-"differentialVerifiedCases": 432,
-"differentialVerifiedRuntimeIds": 1761,
+"inventoriedCases": 804,
+"implementedCases": 802,
+"differentialVerifiedCases": 433,
+"differentialVerifiedRuntimeIds": 1766,
 "intentionallyDifferentCases": 40,
 "representativeVerifiedCases": 120,
 "nfrVerifiedCases": 0,
@@ -55729,13 +55799,13 @@
 "intentionallyDifferentCapabilities": 11,
 "representativeVerifiedCapabilities": 11,
 "nfrVerifiedCapabilities": 0,
-"runtimeAssociationCount": 4225,
-"referencedJavaRuntimeIds": 3758,
+"runtimeAssociationCount": 4230,
+"referencedJavaRuntimeIds": 3763,
 "totalJavaRuntimeIds": 4136,
-"unreferencedJavaRuntimeIds": 378,
+"unreferencedJavaRuntimeIds": 373,
 "representativeScenarioTotal": 122,
 "representativeScenarioPassing": 122,
-"totalCases": 803,
+"totalCases": 804,
 "totalCapabilities": 126
 }
 }

@@ -586,7 +586,113 @@ func makeEnumExpr[T any](kind, description string, children []*exprNode, input E
 		Footprints:     enumLambdaFootprints(strings.TrimPrefix(kind, "enum-")),
 	}
 	expression.node().enumMetadata = &metadata
+	for parameter, child := range expression.node().children {
+		if parameter == 0 {
+			// The collection operand itself may be a Null value; only
+			// method parameters carry Java's non-null requirement.
+			continue
+		}
+		if reason := enumNullParameterReason(strings.TrimPrefix(kind, "enum-"), parameter-1, child); reason != "" {
+			expression.node().enumInvalidReason = reason
+			break
+		}
+	}
 	return expression
+}
+
+// enumJavaMethodName renders the kebab-case node kind in the Java
+// enumeration method spelling used by the assertion messages.
+func enumJavaMethodName(kind string) string {
+	switch kind {
+	case "take-last":
+		return "takeLast"
+	case "take-while":
+		return "takeWhile"
+	case "take-while-last":
+		return "takeWhileLast"
+	case "min-by":
+		return "minBy"
+	case "max-by":
+		return "maxBy"
+	case "order-by":
+		return "orderBy"
+	case "order-by-desc":
+		return "orderByDesc"
+	case "count-of":
+		return "countOf"
+	case "any-of":
+		return "anyOf"
+	case "all-of":
+		return "allOf"
+	case "first-of":
+		return "firstOf"
+	case "last-of":
+		return "lastOf"
+	case "most-frequent":
+		return "mostFrequent"
+	case "least-frequent":
+		return "leastFrequent"
+	case "group-by":
+		return "groupBy"
+	case "to-map":
+		return "toMap"
+	case "select-from":
+		return "selectFrom"
+	case "sequence-equal":
+		return "sequenceequal"
+	case "sum":
+		return "sumOf"
+	case "array-of":
+		return "arrayOf"
+	case "reverse":
+		return "reverse"
+	default:
+		return kind
+	}
+}
+
+// enumNullParameterReason mirrors Java's two enumeration null-parameter
+// diagnostics, split by the method's footprint parameter kind:
+//
+//   - ANY-parameter selector methods route through the three-form forge's
+//     validateNonNull and assert "Null-type is not allowed"
+//     (ExprEnumMinMax:142 contained.min, ExprEnumMinMaxBy:107 minBy,
+//     ExprEnumOrderBy:180 orderBy, ExprEnumMostLeastFrequent:121
+//     mostFrequent, ExprEnumArrayOf:195 arrayOf).
+//   - BOOLEAN/NUMERIC-parameter methods route through
+//     EPLValidationUtil.validateParameterType, which asserts "expected a
+//     non-null result for expression parameter %d but received a
+//     null-typed expression" (ExprEnumAllOfAnyOf:45 anyOf,
+//     ExprEnumAverage:135 average, ExprEnumSumOf:169 sumOf,
+//     ExprEnumTakeWhileAndWhileLast:152 takeWhile sharing WHERE_FP,
+//     ExprEnumTakeAndTakeLast:125 take). Twins sharing each footprint
+//     arm (takeLast/takeWhileLast, allOf, firstOf/lastOf/countOf, where,
+//     average-exact) follow the same validation path.
+//   - ANY-parameter value selectors are NOT rejected: Java compiles
+//     selectFrom(x => null), distinctOf(x => null), groupBy(c => null)
+//     and aggregate's null-typed accumulator fine
+//     (ExprEnumSelectFrom:138, ExprEnumDistinct:102, ExprEnumGroupBy:53,
+//     ExprEnumAggregate:61), so they return "" here.
+//
+// The parameter index counts method parameters after the collection
+// operand.
+func enumNullParameterReason(kind string, parameter int, child *exprNode) string {
+	if child == nil || child.kind != "null" {
+		return ""
+	}
+	method := enumJavaMethodName(kind)
+	switch kind {
+	case "min", "max", "min-by", "max-by",
+		"order-by", "order-by-desc",
+		"most-frequent", "least-frequent", "array-of":
+		return fmt.Sprintf("enumeration method %q: Null-type is not allowed", method)
+	case "take", "take-last", "take-while", "take-while-last",
+		"where", "any-of", "all-of", "count-of", "first-of", "last-of",
+		"sum", "average", "average-exact":
+		return fmt.Sprintf("enumeration method %q expected a non-null result for expression parameter %d but received a null-typed expression", method, parameter)
+	default:
+		return ""
+	}
 }
 
 func validateEnumExpressionNodes(node *exprNode) error {

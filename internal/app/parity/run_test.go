@@ -88366,3 +88366,231 @@ func TestRunHelpIncludesContextInitTermRemainder(t *testing.T) {
 		}
 	}
 }
+
+func TestRunExprEnumInvalidArgsDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "expr-enum-invalid-args.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "expr-enum-invalid-args.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "expr-enum-invalid-args.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "expr-enum-invalid-args-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunExprEnumInvalidArgsDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "min-footprint-value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Value = "Invalid input for built-in enumeration method 'min'"
+			},
+		},
+		{
+			name: "min-selector-clause",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].Value = "Null-type is required"
+			},
+		},
+		{
+			name: "take-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[5].Statement = "take-last-null-count"
+			},
+		},
+		{
+			name: "takewhile-clause",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[6].Value = "Failed to validate enumeration method 'take'"
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:6]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[6].Case = "take-invalid"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "expr-enum-invalid-args.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "expr-enum-invalid-args.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "expr-enum-invalid-args.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "expr-enum-invalid-args-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
+func TestRunExprEnumInvalidArgsRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "expr-enum-invalid-args.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "expr-enum-invalid-args"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "expr-enum-invalid-args"`)...), 1)
+		}},
+		{name: "case-metadata", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 4`), []byte(`"ordinal": 1`), 1)
+		}},
+		{name: "step-field-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"statement": "min-event-input",`), []byte(`"statement": "min-event-input",
+      "statement": "min-event-input",`), 1)
+		}},
+		{name: "compile-without-path-dropped", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"compileWithoutPath": true`), []byte(`"compileWithoutPath": false`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+		{name: "unpinned-epl", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"epl": "select strvals.take(null) from SupportCollection"`), []byte(`"epl": "select strvals.takeLast(null) from SupportCollection"`), 1)
+		}},
+		{name: "step-case-mismatch", mutate: func(data []byte) []byte {
+			needle := []byte(`"op": "undeploy-all",
+   "case": "min-invalid"`)
+			return bytes.Replace(data, needle, []byte(`"op": "undeploy-all",
+   "case": "take-invalid"`), 1)
+		}},
+		{name: "case-order-swapped", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "case",
+   "case": "minby-invalid"`), []byte(`"op": "case",
+   "case": "take-invalid"`), 1)
+		}},
+		{name: "observation-mutated", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"observation": "compile-error; one tryInvalidCompile probe over SupportCollection`), []byte(`"observation": "mutated; one tryInvalidCompile probe over SupportCollection`), 1)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", "expr-enum-invalid-args",
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunExprEnumInvalidArgsRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "expr-enum-invalid-args.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		JavaStatics  []string `json:"javaStaticIds"`
+		JavaSources  []string `json:"javaSourceFiles"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			Ordinal   int    `json:"ordinal"`
+			RuntimeID string `json:"runtimeId"`
+			Execution string `json:"executionName"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, exprEnumInvalidArgsJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, exprEnumInvalidArgsJavaExecutions) ||
+		!reflect.DeepEqual(document.JavaStatics, exprEnumInvalidArgsJavaStaticIDs) ||
+		!reflect.DeepEqual(document.JavaSources, exprEnumInvalidArgsJavaSources) {
+		t.Fatalf("scenario metadata runtimes=%v names=%v statics=%v sources=%v",
+			document.JavaRuntimes, document.JavaNames, document.JavaStatics, document.JavaSources)
+	}
+	if len(document.Cases) != len(exprEnumInvalidArgsCases) {
+		t.Fatalf("scenario case count = %d, want %d", len(document.Cases), len(exprEnumInvalidArgsCases))
+	}
+	for index, entry := range document.Cases {
+		if entry.Case != exprEnumInvalidArgsCases[index] ||
+			entry.Ordinal != exprEnumInvalidArgsCaseOrdinals[index] ||
+			entry.RuntimeID != exprEnumInvalidArgsJavaRuntimeIDs[index] ||
+			entry.Execution != exprEnumInvalidArgsJavaExecutions[index] {
+			t.Fatalf("case %d = %#v", index, entry)
+		}
+	}
+}
+
+func TestRunHelpIncludesExprEnumInvalidArgs(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-h"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("help exit code = %d, stderr = %q", code, stderr.String())
+	}
+	for _, mode := range []string{
+		"expr-enum-invalid-args",
+		"expr-enum-invalid-args-diff",
+	} {
+		if !strings.Contains(stderr.String(), mode) {
+			t.Fatalf("help output omits %q: %s", mode, stderr.String())
+		}
+	}
+}

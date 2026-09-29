@@ -44,8 +44,6 @@ activity or a single coverage percentage.
 
 
 
-## Previous work units (shipped)
-
 - Shipped: Draft 4.592 (timer-interval W-harness) committed and pushed as
  df78702b7 + plan marker d2dabe48e.
 
@@ -167,68 +165,91 @@ Active: Draft 4.595 ('timer:within remainder — PatternGuardTimerWithin ords 1-
  parity review PASS (5 P3s, four fixed; P3.4 intentionally left).
 
 ## Current work unit
-Active: Draft 4.597 ('context init-term remainder').
+Active: Draft 4.598 ('enummethod invalid-executions remainder').
 
-- Unit: the 4 unreferenced context executions from the prefetched
-  contract (scouts `NextJavaCtx597`/`NextGoCtx597`; the prefetch's
-  `ContextDocExamples` ord 0 stays deferred to its own unit per its own
-  recommendation). Frozen in `.omp/contract-597.md`.
-  - `ContextInitTermTemporalFixed` ord 18 `ContextStartEndDBHistorical`
-    (`java-runtime-bc152186877c0a641b3d`, static `java-06954b45a1979f495425`):
-    NineToFive daily ctx gates a SupportBean_S0 × sql:MyDB join; sends at
-    08:00/17:00 silent, 09:00 → {s1.mychar=Y}, next-day 09:00 →
-    {s1.mychar=X}.
-  - `ContextInitTermWithDistinct` ord 0 `ContextInitTermWithDistinctInvalid`
-    (`java-runtime-19cc6b63d1614c49dfbf`, static `java-1db75f8dcee67079871d`):
-    5 distinct-clause probes (missing 'as', pattern, sub-select, empty,
-    start-distinct).
-  - `ContextInitTermWithNow` ord 2 `ContextInitTermWNowInvalid`
-    (`java-runtime-6b3caa8f5e3490b05507`, static `java-21fe1b2ee6da1a4f412c`):
-    3 @now-composition probes.
-  - `ContextHashSegmented` ord 8 `ContextHashInvalid`
-    (`java-runtime-25a58a30d6cbd02f00e7`, static `java-0564864de64ece6e7772`):
-    6 hash/coalesce probes + ACtx/MyWindow silent deploys.
-- [x] **Engine fix (shared core)**: hash contexts recorded `streamFilters`
-  but never evaluated them — `partitionLocal`'s ContextHashSegmented
-  branch now applies the per-stream filter before bucket assignment
-  (Esper `from T(filter)` semantics; filtered events neither allocate a
-  partition nor deliver). `TestHashContextByStreamsStreamFilter` pins
-  it; full hash test family green.
-- [x] Assets by `AssetCtxRem597` (parity-asset-worker): scenario JSON
-  (4 cases / 30 steps), `ContextInitTermRemainderScenarioOracle.java` +
-  run script; oracle executed end-to-end vs MySQL fixture → 16 records
-  (2 listener + 14 compile-error).
-- [x] Go runner `internal/app/parity/context_init_term_remainder.go` +
-  run.go wiring (loader + modes + help). sql:MyDB leg modeled by the
-  function-fed HistoricalProvider over mytesttable rows (${id} bound per
-  S0 trigger); grammar-level rejections pinned as unrepresentable
-  prefixes; boundary probes verified against Go error code + substring.
-  Boundary corrections made during runner integration: dummy-filter
-  probe retargeted to statement-level filter validation (context stream
-  filters eval at event time); unknown hash function pinned via the
-  HashAlgorithm whitelist (`HashAlgorithm(3)`).
-- [x] Java trace 16 records → Go replay 16 records → `-mode
-  context-init-term-remainder-diff` passing / 0 differences; checked-in
-  `go.trace.json` + `evidence.json` written. Java via run script with
-  esper-mysql fixture (10 rows verified).
-- [x] Test family green: diff-passing evidence, 7 trace mutations,
+- Unit: the last 5 unreferenced enummethod executions, all
+  tryInvalidCompile-only (scouts `NextJavaEnum598`/`NextGoEnum598`; frozen
+  in `.omp/contract-598.md`):
+  - ExprEnumMinMax ord 4 `ExprEnumInvalid` (`java-runtime-67deab0a6d57e2bc57fa`,
+    static `java-167415d6e7af87a7a111`): `contained.min()` 0-parameter
+    footprint over event collection (Go-unrepresentable) + `min(x => null)`.
+  - ExprEnumMinMaxBy ord 2 `ExprEnumMinMaxByInvalid`
+    (`java-runtime-5556be14d552b0228acc`, static `java-4083b006f50db9c59884`):
+    `minBy(x => null)` null selector.
+  - ExprEnumOrderBy ord 4 `ExprEnumOrderByInvalid`
+    (`java-runtime-f721caa1c77ad596eca4`, static `java-0277b2cbf963ec07d2c0`):
+    `orderBy()` unrepresentable + `strvals.orderBy(v => null)`.
+  - ExprEnumTakeAndTakeLast ord 2 `ExprEnumTakeInvalid`
+    (`java-runtime-3c4f6374416fe5a2ee04`, static `java-3f7b6e1e84fe78b4a816`):
+    `take(null)` expression-valued count rejects null-typed param.
+  - ExprEnumTakeWhileAndWhileLast ord 2 `ExprEnumTakeWhileInvalid`
+    (`java-runtime-50b5bc269985fbfd9ed2`, static `java-0fec7ea37236a9b16857`):
+    `takeWhile(x => null)` null predicate.
+- [x] **Engine fix (shared core)**: `makeEnumExpr` now rejects null-typed
+  parameter expressions (children beyond the collection input) at Build.
+  Selector-lambda methods (min/minBy/orderBy/where/select/first-of etc.)
+  report `enumeration method %q: Null-type is not allowed` with the Java
+  camelCase name; value-parameter methods (take/takeLast/sequence-equal)
+  report Java's `expected a non-null result for expression parameter %d
+  but received a null-typed expression`. New
+  `TestEnumerableBuildRejectsMissingRequiredExpressions` rows cover both
+  message families.
+- [x] Assets by `AssetEnum598` (parity-asset-worker, resumed after an
+  abort — nothing lost): scenario JSON (5 cases / 17 steps, 7 build-error
+  probes), `ExprEnumInvalidArgsScenarioOracle.java` + run script; oracle
+  exit 0 at pinned commit; trace md5 `717c09fa5bfe3e821a091190f10391f6`,
+  7 compile-error records byte-equal to the pinned assertion clauses.
+- [x] Go runner `internal/app/parity/expr_enum_invalid_args.go` + run.go
+  wiring (loader: 17-step count, per-op field whitelists, compileWithoutPath
+  on all 7 probes, cases[].epl pin added after a mutation test exposed the
+  gap). Boundary probes verified against Go error code + substring; the two
+  0-parameter-footprint probes pinned as unrepresentable.
+- [x] `-mode expr-enum-invalid-args-diff` passing / 0 differences;
+  checked-in `go.trace.json` + `evidence.json` written.
+- [x] Test family green: diff-passing evidence, 6 trace mutations,
   7 raw-scenario mutations, runtime-ID/case-metadata mapping, help.
-- [x] Manifest/roadmap/CHANGELOG: new `case.context-init-term-remainder`
-  (born-DV, all 4 runtime IDs DV-listed), mapping → `context.partition` +
-  2 goRefs; summary 803 cases / 801 impl / 432 DV / 1761 DV IDs / 4225
-  assoc / referenced 3758 / unreferenced 378.
-- [x] `make check` GREEN (parity 155s, internal/esper 122s, layout + vet).
-- [x] Independent parity review (`ParityReview597`, read-only): OVERALL
-  PASS, 0 P0/P1/P2, 2 P3s. P3.1 FIXED: loader now pins the 34-step count,
-  per-op raw field whitelists, compileWithoutPath semantics (12 path-less
-  probes require true; the two with-path probes must not carry it) and
-  step.Case membership on every op. P3.2 FIXED: 'prefix' → 'assertion
-  clause' / '断言子句' across runner comments, manifest, roadmap and
-  CHANGELOG; oracle javadoc clarified (JAVA_ASSERT_PREFIXES = full Java
-  prefix via startsWith, expectError = pinned clause possibly mid-message)
-  via the original asset worker.
-- [x] Post-fix re-validation: build + ContextInitTermRemainder test family
-  + gofmt + git diff --check all green.
+- [x] Manifest/roadmap/CHANGELOG: new `case.expr-enum-invalid-args`
+  (born-DV, all 5 runtime IDs DV-listed), mapping -> `expr.enum` + 3
+  goRefs; summary 804 cases / 433 DV / 1766 DV IDs / unreferenced 373.
+- [x] Independent parity review (`ParityReview598`, read-only): assets +
+  pins PASS (ordinals/statics/clauses/steps/trace all re-derived); shared
+  core FAIL with one P1 + two P3s.
+  - **P1 FIXED:** `enumNullParameterReason` now matches Java's real
+    footprint-param split — ANY-param forge methods (min/max/minBy/maxBy/
+    orderBy/orderByDesc/mostFrequent/leastFrequent/arrayOf) report
+    `Null-type is not allowed`; BOOLEAN/NUMERIC-param methods (take/
+    takeLast/takeWhile/takeWhileLast/where/anyOf/allOf/countOf/firstOf/
+    lastOf/sumOf/average/average-exact) report the non-null-result clause;
+    Java-valid null params (selectFrom/distinctOf/groupBy/select,
+    aggregate accumulator, set-op second operand) no longer rejected.
+    Fixed Java names sumOf/arrayOf/sequenceequal; dead min-of/max-of arms
+    removed. (Reviewer reviewed the first-iteration code; the over-reach
+    had already regressed two existing parity tests before review
+    landed — both recovered.)
+  - **P3.1 FIXED:** loader comment arithmetic 22 → 17.
+  - **P3.2 FIXED:** build-error/undeploy-all steps now pin step.case to
+    the enclosing case marker (ordered markers via
+    `indexOfExprEnumInvalidArgsMarker`), and `cases[].observation` is
+    pinned per the oracle's CASE_OBSERVATIONS.
+- [x] Post-fix validation: full enum + parity test families green,
+  gofmt/`git diff --check` clean; three new raw-scenario mutations
+  (step-case-mismatch/case-order-swapped/observation-mutated) added.
+- [x] Confirmation review (same agent `ParityReview598`): CONFIRM PASS on
+  all three fixes; one new P3 — a 6th "case" marker within 17 steps
+  panicked via `indexOfExprEnumInvalidArgsMarker` → FIXED with a bounds
+  guard returning a validation error (verified crafted 17-step/6-marker
+  scenario rejects cleanly).
+- [x] Collateral stale-boundary fixes surfaced by the P1: prior runners
+  had pinned "typed NullLiteral MUST build" (pre-rejection semantics):
+  `expr_enum_remainder_554.go` average-null-lambda + anyof-null-lambda
+  and `expr_enum_sumof_remainder.go` sumof-null-lambda now verify the
+  Java-matching rejection (ExprEnumAverage:135/ExprEnumAllOfAnyOf:45/
+  ExprEnumSumOf:169); both diffs still 0 differences, records unchanged.
+- [x] Full gates GREEN after every change: `make check` exit 0
+  (parity 152s, internal/esper 119s, layout + vet); gofmt and
+  `git diff --check` clean.
+
+
 
 ## Next candidates (read-only prefetch queue)
 - `ContextDocExamples` ord 0 (`java-runtime-61b846fd7aae8c380963`, static

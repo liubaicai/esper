@@ -1,3 +1,23 @@
+> 最新补充：Draft 4.598（2026-09-29），`expr.enum` 新增
+> `case.expr-enum-invalid-args`（born-DV），补齐 enummethod 域最后 5 个未引用
+> execution（全部为 tryInvalidCompile-only）：`ExprEnumMinMax.java` ord 4
+> `ExprEnumInvalid`（`java-runtime-67deab0a6d57e2bc57fa`，`contained.min()`
+> 0-parameter footprint over event collection→unrepresentable + `min(x => null)`）、
+> `ExprEnumMinMaxBy.java` ord 2 `ExprEnumMinMaxByInvalid`（`minBy(x => null)`）、
+> `ExprEnumOrderBy.java` ord 4 `ExprEnumOrderByInvalid`（`orderBy()` unrepresentable
+> + `strvals.orderBy(v => null)`）、`ExprEnumTakeAndTakeLast.java` ord 2
+> `ExprEnumTakeInvalid`（`strvals.take(null)` 表达式参数 reject）、
+> `ExprEnumTakeWhileAndWhileLast.java` ord 2 `ExprEnumTakeWhileInvalid`
+>（`takeWhile(x => null)`）；静态 `java-167415d6e7af87a7a111`、
+> `java-4083b006f50db9c59884`、`java-0277b2cbf963ec07d2c0`、
+> `java-3f7b6e1e84fe78b4a816`、`java-0fec7ea37236a9b16857`；无 flags；
+> Java/Go 各 7 条 compile-error records、0 differences。**shared-core 修复**：
+> null-typed enumeration 方法参数此前静默通过 Build——selector lambda
+> 参数（min/minBy/orderBy/where/select 等）报 `enumeration method %q:
+> Null-type is not allowed`，值表达式参数（take/takeWhile 系列）报 Java 同构
+> `expected a non-null result for expression parameter %d but received a
+> null-typed expression`。
+>
 > 最新补充：Draft 4.597（2026-09-29），`context.partition` 新增
 > `case.context-init-term-remainder`（born-DV），补齐 context 域最后 4 个未引用
 > execution：`ContextInitTermTemporalFixed.java` ord 18 `ContextStartEndDBHistorical`

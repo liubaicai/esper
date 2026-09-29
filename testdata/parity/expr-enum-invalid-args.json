@@ -1,0 +1,176 @@
+{
+ "version": "esper-parity/v1",
+ "id": "expr-enum-invalid-args",
+ "description": "Enum-method invalid-argument compile probes across five suite files: ExprEnumInvalid (ExprEnumMinMax ord 4) pins the 0-parameter-footprint collection-of-events rejection for contained.min() and the Null-type selector rejection for contained.min(x => null) over SupportBean_ST0_Container.contained : List<SupportBean_ST0>; ExprEnumMinMaxByInvalid (ExprEnumMinMaxBy ord 2) pins the Null-type selector rejection for contained.minBy(x => null); ExprEnumOrderByInvalid (ExprEnumOrderBy ord 4) pins the same 0-parameter-footprint rejection for contained.orderBy() and the Null-type selector rejection for strvals.orderBy(v => null) over SupportCollection.strvals : List<String>; ExprEnumTakeInvalid (ExprEnumTakeAndTakeLast ord 2) pins the non-null-expression-parameter rejection for strvals.take(null); ExprEnumTakeWhileInvalid (ExprEnumTakeWhileAndWhileLast ord 2) pins the same rejection for strvals.takeWhile(x => null). All seven probes go through the path-less env.tryInvalidCompile overload; compile-error records carry the pinned expectError value while the oracle asserts the verbatim Java assertion text with startsWith semantics (Java sources regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumMinMax.java, ExprEnumMinMaxBy.java, ExprEnumOrderBy.java, ExprEnumTakeAndTakeLast.java, ExprEnumTakeWhileAndWhileLast.java).",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumMinMax.java",
+ "javaSourceFiles": [
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumMinMax.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumMinMaxBy.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumOrderBy.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumTakeAndTakeLast.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumTakeWhileAndWhileLast.java"
+ ],
+ "javaRuntimes": [
+  "java-runtime-67deab0a6d57e2bc57fa",
+  "java-runtime-5556be14d552b0228acc",
+  "java-runtime-f721caa1c77ad596eca4",
+  "java-runtime-3c4f6374416fe5a2ee04",
+  "java-runtime-50b5bc269985fbfd9ed2"
+ ],
+ "javaNames": [
+  "ExprEnumInvalid",
+  "ExprEnumMinMaxByInvalid",
+  "ExprEnumOrderByInvalid",
+  "ExprEnumTakeInvalid",
+  "ExprEnumTakeWhileInvalid"
+ ],
+ "javaStaticIds": [
+  "java-167415d6e7af87a7a111",
+  "java-4083b006f50db9c59884",
+  "java-0277b2cbf963ec07d2c0",
+  "java-3f7b6e1e84fe78b4a816",
+  "java-0fec7ea37236a9b16857"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "min-invalid",
+   "ordinal": 4,
+   "runtimeId": "java-runtime-67deab0a6d57e2bc57fa",
+   "executionName": "ExprEnumInvalid",
+   "observation": "compile-error; two tryInvalidCompile probes over SupportBean_ST0_Container pin the 0-parameter-footprint collection-of-events rejection for contained.min() and the Null-type selector rejection for contained.min(x => null)",
+   "epl": "select contained.min() from SupportBean_ST0_Container"
+  },
+  {
+   "case": "minby-invalid",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-5556be14d552b0228acc",
+   "executionName": "ExprEnumMinMaxByInvalid",
+   "observation": "compile-error; one tryInvalidCompile probe over SupportBean_ST0_Container pins the Null-type selector rejection for contained.minBy(x => null)",
+   "epl": "select contained.minBy(x => null) from SupportBean_ST0_Container"
+  },
+  {
+   "case": "orderby-invalid",
+   "ordinal": 4,
+   "runtimeId": "java-runtime-f721caa1c77ad596eca4",
+   "executionName": "ExprEnumOrderByInvalid",
+   "observation": "compile-error; two tryInvalidCompile probes pin the 0-parameter-footprint collection-of-events rejection for contained.orderBy() over SupportBean_ST0_Container and the Null-type selector rejection for strvals.orderBy(v => null) over SupportCollection",
+   "epl": "select contained.orderBy() from SupportBean_ST0_Container"
+  },
+  {
+   "case": "take-invalid",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-3c4f6374416fe5a2ee04",
+   "executionName": "ExprEnumTakeInvalid",
+   "observation": "compile-error; one tryInvalidCompile probe over SupportCollection pins the non-null-expression-parameter rejection for strvals.take(null)",
+   "epl": "select strvals.take(null) from SupportCollection"
+  },
+  {
+   "case": "takewhile-invalid",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-50b5bc269985fbfd9ed2",
+   "executionName": "ExprEnumTakeWhileInvalid",
+   "observation": "compile-error; one tryInvalidCompile probe over SupportCollection pins the non-null-expression-parameter rejection for strvals.takeWhile(x => null)",
+   "epl": "select strvals.takeWhile(x => null) from SupportCollection"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "min-invalid"
+  },
+  {
+   "op": "build-error",
+   "case": "min-invalid",
+   "statement": "min-event-input",
+   "epl": "select contained.min() from SupportBean_ST0_Container",
+   "expectError": "Failed to validate select-clause expression 'contained.min()': Invalid input for built-in enumeration method 'min' and 0-parameter footprint, expecting collection of values (typically scalar values) as input, received collection of events of type 'com.espertech.esper.regressionlib.support.bean.SupportBean_ST0'",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "build-error",
+   "case": "min-invalid",
+   "statement": "min-null-selector",
+   "epl": "select contained.min(x => null) from SupportBean_ST0_Container",
+   "expectError": "Null-type is not allowed",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "undeploy-all",
+   "case": "min-invalid"
+  },
+  {
+   "op": "case",
+   "case": "minby-invalid"
+  },
+  {
+   "op": "build-error",
+   "case": "minby-invalid",
+   "statement": "minby-null-selector",
+   "epl": "select contained.minBy(x => null) from SupportBean_ST0_Container",
+   "expectError": "Null-type is not allowed",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "undeploy-all",
+   "case": "minby-invalid"
+  },
+  {
+   "op": "case",
+   "case": "orderby-invalid"
+  },
+  {
+   "op": "build-error",
+   "case": "orderby-invalid",
+   "statement": "orderby-event-input",
+   "epl": "select contained.orderBy() from SupportBean_ST0_Container",
+   "expectError": "Failed to validate select-clause expression 'contained.orderBy()': Invalid input for built-in enumeration method 'orderBy' and 0-parameter footprint, expecting collection of values (typically scalar values) as input, received collection of events of type 'com.espertech.esper.regressionlib.support.bean.SupportBean_ST0'",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "build-error",
+   "case": "orderby-invalid",
+   "statement": "orderby-null-selector",
+   "epl": "select strvals.orderBy(v => null) from SupportCollection",
+   "expectError": "Null-type is not allowed",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "undeploy-all",
+   "case": "orderby-invalid"
+  },
+  {
+   "op": "case",
+   "case": "take-invalid"
+  },
+  {
+   "op": "build-error",
+   "case": "take-invalid",
+   "statement": "take-null-count",
+   "epl": "select strvals.take(null) from SupportCollection",
+   "expectError": "Failed to validate enumeration method 'take', expected a non-null result for expression parameter 0 but received a null-typed expression",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "undeploy-all",
+   "case": "take-invalid"
+  },
+  {
+   "op": "case",
+   "case": "takewhile-invalid"
+  },
+  {
+   "op": "build-error",
+   "case": "takewhile-invalid",
+   "statement": "takewhile-null-predicate",
+   "epl": "select strvals.takeWhile(x => null) from SupportCollection",
+   "expectError": "Failed to validate enumeration method 'takeWhile', expected a non-null result for expression parameter 0 but received a null-typed expression",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "undeploy-all",
+   "case": "takewhile-invalid"
+  }
+ ]
+}

@@ -1,0 +1,232 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-67deab0a6d57e2bc57fa",
+    "java-runtime-5556be14d552b0228acc",
+    "java-runtime-f721caa1c77ad596eca4",
+    "java-runtime-3c4f6374416fe5a2ee04",
+    "java-runtime-50b5bc269985fbfd9ed2"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumMinMax.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumMinMaxBy.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumOrderBy.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumTakeAndTakeLast.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumTakeWhileAndWhileLast.java"
+  ],
+  "javaExecutions": [
+    "ExprEnumInvalid",
+    "ExprEnumMinMaxByInvalid",
+    "ExprEnumOrderByInvalid",
+    "ExprEnumTakeInvalid",
+    "ExprEnumTakeWhileInvalid"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "expr-enum-invalid-args",
+    "steps": [
+      {
+        "op": "case",
+        "case": "min-invalid"
+      },
+      {
+        "op": "build-error",
+        "case": "min-invalid",
+        "statement": "min-event-input",
+        "expectError": "Failed to validate select-clause expression 'contained.min()': Invalid input for built-in enumeration method 'min' and 0-parameter footprint, expecting collection of values (typically scalar values) as input, received collection of events of type 'com.espertech.esper.regressionlib.support.bean.SupportBean_ST0'",
+        "epl": "select contained.min() from SupportBean_ST0_Container"
+      },
+      {
+        "op": "build-error",
+        "case": "min-invalid",
+        "statement": "min-null-selector",
+        "expectError": "Null-type is not allowed",
+        "epl": "select contained.min(x =\u003e null) from SupportBean_ST0_Container"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "min-invalid"
+      },
+      {
+        "op": "case",
+        "case": "minby-invalid"
+      },
+      {
+        "op": "build-error",
+        "case": "minby-invalid",
+        "statement": "minby-null-selector",
+        "expectError": "Null-type is not allowed",
+        "epl": "select contained.minBy(x =\u003e null) from SupportBean_ST0_Container"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "minby-invalid"
+      },
+      {
+        "op": "case",
+        "case": "orderby-invalid"
+      },
+      {
+        "op": "build-error",
+        "case": "orderby-invalid",
+        "statement": "orderby-event-input",
+        "expectError": "Failed to validate select-clause expression 'contained.orderBy()': Invalid input for built-in enumeration method 'orderBy' and 0-parameter footprint, expecting collection of values (typically scalar values) as input, received collection of events of type 'com.espertech.esper.regressionlib.support.bean.SupportBean_ST0'",
+        "epl": "select contained.orderBy() from SupportBean_ST0_Container"
+      },
+      {
+        "op": "build-error",
+        "case": "orderby-invalid",
+        "statement": "orderby-null-selector",
+        "expectError": "Null-type is not allowed",
+        "epl": "select strvals.orderBy(v =\u003e null) from SupportCollection"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "orderby-invalid"
+      },
+      {
+        "op": "case",
+        "case": "take-invalid"
+      },
+      {
+        "op": "build-error",
+        "case": "take-invalid",
+        "statement": "take-null-count",
+        "expectError": "Failed to validate enumeration method 'take', expected a non-null result for expression parameter 0 but received a null-typed expression",
+        "epl": "select strvals.take(null) from SupportCollection"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "take-invalid"
+      },
+      {
+        "op": "case",
+        "case": "takewhile-invalid"
+      },
+      {
+        "op": "build-error",
+        "case": "takewhile-invalid",
+        "statement": "takewhile-null-predicate",
+        "expectError": "Failed to validate enumeration method 'takeWhile', expected a non-null result for expression parameter 0 but received a null-typed expression",
+        "epl": "select strvals.takeWhile(x =\u003e null) from SupportCollection"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "takewhile-invalid"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-enum-invalid-args",
+    "records": [
+      {
+        "case": "min-invalid",
+        "operation": "compile-error",
+        "statement": "min-event-input",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'contained.min()': Invalid input for built-in enumeration method 'min' and 0-parameter footprint, expecting collection of values (typically scalar values) as input, received collection of events of type 'com.espertech.esper.regressionlib.support.bean.SupportBean_ST0'"
+      },
+      {
+        "case": "min-invalid",
+        "operation": "compile-error",
+        "statement": "min-null-selector",
+        "sequence": 0,
+        "value": "Null-type is not allowed"
+      },
+      {
+        "case": "minby-invalid",
+        "operation": "compile-error",
+        "statement": "minby-null-selector",
+        "sequence": 0,
+        "value": "Null-type is not allowed"
+      },
+      {
+        "case": "orderby-invalid",
+        "operation": "compile-error",
+        "statement": "orderby-event-input",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'contained.orderBy()': Invalid input for built-in enumeration method 'orderBy' and 0-parameter footprint, expecting collection of values (typically scalar values) as input, received collection of events of type 'com.espertech.esper.regressionlib.support.bean.SupportBean_ST0'"
+      },
+      {
+        "case": "orderby-invalid",
+        "operation": "compile-error",
+        "statement": "orderby-null-selector",
+        "sequence": 0,
+        "value": "Null-type is not allowed"
+      },
+      {
+        "case": "take-invalid",
+        "operation": "compile-error",
+        "statement": "take-null-count",
+        "sequence": 0,
+        "value": "Failed to validate enumeration method 'take', expected a non-null result for expression parameter 0 but received a null-typed expression"
+      },
+      {
+        "case": "takewhile-invalid",
+        "operation": "compile-error",
+        "statement": "takewhile-null-predicate",
+        "sequence": 0,
+        "value": "Failed to validate enumeration method 'takeWhile', expected a non-null result for expression parameter 0 but received a null-typed expression"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-enum-invalid-args",
+    "records": [
+      {
+        "case": "min-invalid",
+        "operation": "compile-error",
+        "statement": "min-event-input",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'contained.min()': Invalid input for built-in enumeration method 'min' and 0-parameter footprint, expecting collection of values (typically scalar values) as input, received collection of events of type 'com.espertech.esper.regressionlib.support.bean.SupportBean_ST0'"
+      },
+      {
+        "case": "min-invalid",
+        "operation": "compile-error",
+        "statement": "min-null-selector",
+        "sequence": 0,
+        "value": "Null-type is not allowed"
+      },
+      {
+        "case": "minby-invalid",
+        "operation": "compile-error",
+        "statement": "minby-null-selector",
+        "sequence": 0,
+        "value": "Null-type is not allowed"
+      },
+      {
+        "case": "orderby-invalid",
+        "operation": "compile-error",
+        "statement": "orderby-event-input",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'contained.orderBy()': Invalid input for built-in enumeration method 'orderBy' and 0-parameter footprint, expecting collection of values (typically scalar values) as input, received collection of events of type 'com.espertech.esper.regressionlib.support.bean.SupportBean_ST0'"
+      },
+      {
+        "case": "orderby-invalid",
+        "operation": "compile-error",
+        "statement": "orderby-null-selector",
+        "sequence": 0,
+        "value": "Null-type is not allowed"
+      },
+      {
+        "case": "take-invalid",
+        "operation": "compile-error",
+        "statement": "take-null-count",
+        "sequence": 0,
+        "value": "Failed to validate enumeration method 'take', expected a non-null result for expression parameter 0 but received a null-typed expression"
+      },
+      {
+        "case": "takewhile-invalid",
+        "operation": "compile-error",
+        "statement": "takewhile-null-predicate",
+        "sequence": 0,
+        "value": "Failed to validate enumeration method 'takeWhile', expected a non-null result for expression parameter 0 but received a null-typed expression"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
