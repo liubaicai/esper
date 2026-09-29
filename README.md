@@ -18,7 +18,7 @@ Esper Go 是 Esper 9.0.0 的 Go 移植。规则使用可分析、类型安全的
 
 ## 当前进度
 
-截至 2026-09-29（HEAD `1766ba2b2`），`testdata/compat/capability-manifest.json` 的已校验 `summary` 记录：
+截至 2026-09-29（manifest 提交 `ad04246e8`），`testdata/compat/capability-manifest.json` 的已校验 `summary` 记录：
 
 | 维度 | 数值 |
 | --- | --- |
@@ -32,7 +32,11 @@ Esper Go 是 Esper 9.0.0 的 Go 移植。规则使用可分析、类型安全的
 
 三个口径必须区分：**关联**表示该 runtime 已有处置记录；**implemented** 表示 Go 侧已有对应实现；**differential-verified** 才表示已有可重放 scenario、Java/Go trace 和零差异 evidence（严格 parity 口径以 runtime 计，42.7% 而非 91.0%）。`nfr-verified` 目前为 0，性能与并发尚未纳入验收。
 
-上表的 4,136 只覆盖 `regression-lib` 的 11 个 suite 域（client、context、epl、event、expr、infra、multithread、pattern、resultset、rowrecog、view）；Dataflow、EsperIO 和连接器矩阵不在该 inventory 内，因此这里的百分比不能外推到那些能力面。
+上表的 4,136 是 `regression-lib` 中 RegressionExecution 的清单，按顶层 `suite/<域>` 分为 11 个域（client、context、epl、event、expr、infra、multithread、pattern、resultset、rowrecog、view）。这一点有几个容易误读的边界：
+
+- **Dataflow 已计入，但在 `epl` 名下**：`suite/epl/dataflow/` 的 70 个 execution（23 个类）按域分组落在 epl，不是独立域；其中 58 个已关联、50 个已差分验证。Go 侧实现面为 `internal/esper/dataflow.go` 等。
+- **EsperIO 与连接器不在该清单内**：Kafka/AMQP/JMS/socket/http/db/csv/springjms 的 58 个测试位于 `esperio/*` 独立 Maven 模块，不是 regression-lib 的 RegressionExecution，运行态 inventory 中为 0 条，只登记在 `testdata/compat/source-test-manifest.json`（`esperio-unit`，discovery 为 `static-source-file; runtime-test-mapping-required`），且依赖外部服务，按质量策略走 Docker fixture 门禁而非确定性 trace 差分。因此本表百分比不能外推到这些连接器能力面。
+- Avro、XML、JSON 等事件表示的部分用例在清单内：avro 10 条（event 8 / epl 2）、xml 69 条（event 68 / epl 1）、json 86 条（均在 event）。
 
 数值随每个工作单元提交变化，需要时直接从 manifest 重算，不要手工维护第二份：
 
