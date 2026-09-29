@@ -1,0 +1,417 @@
+{
+ "cases": [
+  {
+   "case": "interval-10-min",
+   "epls": [
+    "@name('s0') select * from pattern [(every SupportBean) where timer:within(1 days 2 hours 3 minutes 4 seconds 5 milliseconds)]"
+   ],
+   "executionName": "PatternInterval10Min",
+   "observation": "listener; external clock; guard arms at deploy t=0 with period 93784005ms (1d2h3m4s5ms): tryAssertion sends the default-ctor SupportBean at t=0 (fire 1), advances to 93784004 and sends again (fire 2), then advances to 93784005 and sends a third SupportBean which the exclusive deadline kills — two empty-payload rows (untagged atoms project nothing).",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-f0649272cfb528ce731b"
+  },
+  {
+   "case": "interval-10-min-variable",
+   "epls": [
+    "@name('s0') select * from pattern [(every SupportBean) where timer:within(D days H hours M minutes S seconds MS milliseconds)]"
+   ],
+   "executionName": "PatternInterval10MinVariable",
+   "observation": "listener; identical tryAssertion schedule; the guard period is the same 93784005ms read once at arm time from variables D/H/M/S/MS=1/2/3/4/5 (suite-level declarations like TestSuitePattern.configure's addVariable doubles). Java also asserts stmtText == eplToModel(stmtText).toEPL() — a compile-path invariant with no Go counterpart (approved-difference precedent), not an observable payload.",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-2fe5370a7c1599bfb424"
+  },
+  {
+   "case": "interval-prepared",
+   "epls": [
+    "@name('s0') select * from pattern [(every SupportBean) where timer:within(?::int days ?::int hours ?::int minutes ?::int seconds ?::int milliseconds)]"
+   ],
+   "executionName": "PatternIntervalPrepared",
+   "observation": "listener; identical tryAssertion schedule; the guard period is the same 93784005ms composed at deploy from five positional `?::int` substitution params (1,2,3,4,5) — Go deploys via DeployWithPositionalParameters(1..5) instead of DeploymentOptions.setStatementSubstitutionParameter.",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-66d65309509fac58bbfc"
+  },
+  {
+   "case": "within-from-expression",
+   "epls": [
+    "@name('s0') select b.theString as id from pattern[a=SupportBean -\u003e (every b=SupportBean) where timer:within(a.intPrimitive seconds)]"
+   ],
+   "executionName": "PatternWithinFromExpression",
+   "observation": "listener; event-correlated guard: `a=SupportBean -\u003e (every b=SupportBean) where timer:within(a.intPrimitive seconds)` — SupportBean(\"E1\",3)@t=0 completes a and arms the every-b guard to t=3000; SupportBean(\"E2\",-1)@2000 emits {id:E2}, SupportBean(\"E3\",-1)@2999 emits {id:E3}, advance to 3000 expires the guard so the post-deadline SupportBean(\"E4\",-1) emits nothing.",
+   "ordinal": 4,
+   "runtimeId": "java-runtime-36ef6f15f14a0e86ab93"
+  },
+  {
+   "case": "pattern-not-followed-by",
+   "epls": [
+    "@name('s0') select * from pattern [ every(SupportBean -\u003e (SupportMarketDataBean where timer:within(5 sec))) ]"
+   ],
+   "executionName": "PatternPatternNotFollowedBy",
+   "observation": "listener; `every(SupportBean -\u003e (SupportMarketDataBean where timer:within(5 sec)))` — E1@t=0 and E2@t=0 each spawn a branch whose guarded RHS expires at its own +5000ms deadline; advance to 6000 kills both branches and the outer every respawns at the advance instant (594 respawn semantics), so SupportBean(\"E4\",1)@6000 starts a fresh branch that SupportMarketDataBean (\"E5\",\"M1\",1)@6000 completes — exactly one empty-payload emission.",
+   "ordinal": 5,
+   "runtimeId": "java-runtime-6a5e8128ae184e8a7249"
+  },
+  {
+   "case": "may-max-month",
+   "epls": [
+    "@name('s0') select * from pattern [(every SupportBean) where timer:within(1 month)]",
+    "@name('s0') select * from pattern [(every SupportBean) where timer:withinmax(1 month, 10)]"
+   ],
+   "executionName": "PatternWithinMayMaxMonthScoped",
+   "observation": "listener; two sequential rounds under one execution (deploy/undeploy cycle per round): `(every SupportBean) where timer:within(1 month)` then `timer:withinmax(1 month, 10)` — each arms 2002-02-01T09:00:00Z, fires E1 at arm and E2 at 2002-03-01T09:00:00Z-1ms (calendar AddDate keeps the month boundary), and stays silent for E3 at the exact boundary; two empty-payload rows per round.",
+   "ordinal": 6,
+   "runtimeId": "java-runtime-34555c4a9823a346d710"
+  }
+ ],
+ "description": "PatternGuardTimerWithin ordinals 1-6 — the six remaining timer:within executions after the ord-0 W-harness, each replayed as its own case on a fresh engine: ord 1 `within(1 days 2 hours 3 minutes 4 seconds 5 milliseconds)` (93784005ms, tryAssertion fire@0/fire@period-1/silent@period), ord 2 the same period read from variables D/H/M/S/MS=1..5, ord 3 the same via five positional `?::int` substitution params (1..5), ord 4 `a=SupportBean -\u003e (every b=SupportBean) where timer:within(a.intPrimitive seconds)` (E1(3)@0 arms 3000ms, {id:E2}@2000, {id:E3}@2999, expiry@3000 silent), ord 5 `every(SupportBean -\u003e (SupportMarketDataBean where timer:within(5 sec)))` (branch expiry + every respawn at the 6000 advance, ONE emission for E4+E5), ord 6 two rounds `(every SupportBean) where timer:within(1 month)` and `timer:withinmax(1 month, 10)` (fire E1 + E2 at boundary-1ms, silent at boundary). Java milestone()/assertRuntime calls are oracle-internal and carry no observable listener payload.",
+ "id": "pattern-guard-timerwithin-forms-595",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaFlags": [],
+ "javaNames": [
+  "PatternInterval10Min",
+  "PatternInterval10MinVariable",
+  "PatternIntervalPrepared",
+  "PatternWithinFromExpression",
+  "PatternPatternNotFollowedBy",
+  "PatternWithinMayMaxMonthScoped"
+ ],
+ "javaRuntimes": [
+  "java-runtime-f0649272cfb528ce731b",
+  "java-runtime-2fe5370a7c1599bfb424",
+  "java-runtime-66d65309509fac58bbfc",
+  "java-runtime-36ef6f15f14a0e86ab93",
+  "java-runtime-6a5e8128ae184e8a7249",
+  "java-runtime-34555c4a9823a346d710"
+ ],
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternGuardTimerWithin.java",
+ "javaSourceFiles": [
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternGuardTimerWithin.java",
+  "common/src/main/java/com/espertech/esper/common/internal/support/SupportBean.java",
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportMarketDataBean.java"
+ ],
+ "javaStaticIds": [
+  "java-0dec801a426fed297402"
+ ],
+ "steps": [
+  {
+   "case": "interval-10-min",
+   "op": "case"
+  },
+  {
+   "case": "interval-10-min",
+   "op": "deploy",
+   "statement": "s0"
+  },
+  {
+   "at": "1970-01-01T00:00:00Z",
+   "case": "interval-10-min",
+   "eventType": "SupportBean",
+   "op": "send",
+   "payload": {
+    "intPrimitive": 0,
+    "theString": null
+   }
+  },
+  {
+   "at": "1970-01-02T02:03:04.004Z",
+   "case": "interval-10-min",
+   "eventType": "SupportBean",
+   "op": "send",
+   "payload": {
+    "intPrimitive": 0,
+    "theString": null
+   }
+  },
+  {
+   "at": "1970-01-02T02:03:04.005Z",
+   "case": "interval-10-min",
+   "eventType": "SupportBean",
+   "op": "send",
+   "payload": {
+    "intPrimitive": 0,
+    "theString": null
+   }
+  },
+  {
+   "case": "interval-10-min",
+   "op": "undeploy-all"
+  },
+  {
+   "case": "interval-10-min-variable",
+   "op": "case"
+  },
+  {
+   "case": "interval-10-min-variable",
+   "op": "deploy",
+   "statement": "s0"
+  },
+  {
+   "at": "1970-01-01T00:00:00Z",
+   "case": "interval-10-min-variable",
+   "eventType": "SupportBean",
+   "op": "send",
+   "payload": {
+    "intPrimitive": 0,
+    "theString": null
+   }
+  },
+  {
+   "at": "1970-01-02T02:03:04.004Z",
+   "case": "interval-10-min-variable",
+   "eventType": "SupportBean",
+   "op": "send",
+   "payload": {
+    "intPrimitive": 0,
+    "theString": null
+   }
+  },
+  {
+   "at": "1970-01-02T02:03:04.005Z",
+   "case": "interval-10-min-variable",
+   "eventType": "SupportBean",
+   "op": "send",
+   "payload": {
+    "intPrimitive": 0,
+    "theString": null
+   }
+  },
+  {
+   "case": "interval-10-min-variable",
+   "op": "undeploy-all"
+  },
+  {
+   "case": "interval-prepared",
+   "op": "case"
+  },
+  {
+   "case": "interval-prepared",
+   "op": "deploy",
+   "statement": "s0"
+  },
+  {
+   "at": "1970-01-01T00:00:00Z",
+   "case": "interval-prepared",
+   "eventType": "SupportBean",
+   "op": "send",
+   "payload": {
+    "intPrimitive": 0,
+    "theString": null
+   }
+  },
+  {
+   "at": "1970-01-02T02:03:04.004Z",
+   "case": "interval-prepared",
+   "eventType": "SupportBean",
+   "op": "send",
+   "payload": {
+    "intPrimitive": 0,
+    "theString": null
+   }
+  },
+  {
+   "at": "1970-01-02T02:03:04.005Z",
+   "case": "interval-prepared",
+   "eventType": "SupportBean",
+   "op": "send",
+   "payload": {
+    "intPrimitive": 0,
+    "theString": null
+   }
+  },
+  {
+   "case": "interval-prepared",
+   "op": "undeploy-all"
+  },
+  {
+   "case": "within-from-expression",
+   "op": "case"
+  },
+  {
+   "case": "within-from-expression",
+   "op": "deploy",
+   "statement": "s0"
+  },
+  {
+   "at": "1970-01-01T00:00:00Z",
+   "case": "within-from-expression",
+   "eventType": "SupportBean",
+   "op": "send",
+   "payload": {
+    "intPrimitive": 3,
+    "theString": "E1"
+   }
+  },
+  {
+   "at": "1970-01-01T00:00:02Z",
+   "case": "within-from-expression",
+   "eventType": "SupportBean",
+   "op": "send",
+   "payload": {
+    "intPrimitive": -1,
+    "theString": "E2"
+   }
+  },
+  {
+   "at": "1970-01-01T00:00:02.999Z",
+   "case": "within-from-expression",
+   "eventType": "SupportBean",
+   "op": "send",
+   "payload": {
+    "intPrimitive": -1,
+    "theString": "E3"
+   }
+  },
+  {
+   "at": "1970-01-01T00:00:03Z",
+   "case": "within-from-expression",
+   "eventType": "SupportBean",
+   "op": "send",
+   "payload": {
+    "intPrimitive": -1,
+    "theString": "E4"
+   }
+  },
+  {
+   "case": "within-from-expression",
+   "op": "undeploy-all"
+  },
+  {
+   "case": "pattern-not-followed-by",
+   "op": "case"
+  },
+  {
+   "case": "pattern-not-followed-by",
+   "op": "deploy",
+   "statement": "s0"
+  },
+  {
+   "at": "1970-01-01T00:00:00Z",
+   "case": "pattern-not-followed-by",
+   "eventType": "SupportBean",
+   "op": "send",
+   "payload": {
+    "intPrimitive": 1,
+    "theString": "E1"
+   }
+  },
+  {
+   "at": "1970-01-01T00:00:00Z",
+   "case": "pattern-not-followed-by",
+   "eventType": "SupportBean",
+   "op": "send",
+   "payload": {
+    "intPrimitive": 2,
+    "theString": "E2"
+   }
+  },
+  {
+   "at": "1970-01-01T00:00:06Z",
+   "case": "pattern-not-followed-by",
+   "eventType": "SupportBean",
+   "op": "send",
+   "payload": {
+    "intPrimitive": 1,
+    "theString": "E4"
+   }
+  },
+  {
+   "at": "1970-01-01T00:00:06Z",
+   "case": "pattern-not-followed-by",
+   "eventType": "SupportMarketDataBean",
+   "op": "send",
+   "payload": {
+    "id": "M1",
+    "price": 1,
+    "symbol": "E5"
+   }
+  },
+  {
+   "case": "pattern-not-followed-by",
+   "op": "undeploy-all"
+  },
+  {
+   "case": "may-max-month",
+   "op": "case"
+  },
+  {
+   "at": "2002-02-01T09:00:00Z",
+   "case": "may-max-month",
+   "op": "deploy",
+   "statement": "s0"
+  },
+  {
+   "at": "2002-02-01T09:00:00Z",
+   "case": "may-max-month",
+   "eventType": "SupportBean",
+   "op": "send",
+   "payload": {
+    "intPrimitive": 0,
+    "theString": "E1"
+   }
+  },
+  {
+   "at": "2002-03-01T08:59:59.999Z",
+   "case": "may-max-month",
+   "eventType": "SupportBean",
+   "op": "send",
+   "payload": {
+    "intPrimitive": 0,
+    "theString": "E2"
+   }
+  },
+  {
+   "at": "2002-03-01T09:00:00Z",
+   "case": "may-max-month",
+   "eventType": "SupportBean",
+   "op": "send",
+   "payload": {
+    "intPrimitive": 0,
+    "theString": "E3"
+   }
+  },
+  {
+   "case": "may-max-month",
+   "op": "undeploy-all"
+  },
+  {
+   "at": "2002-02-01T09:00:00Z",
+   "case": "may-max-month",
+   "op": "deploy",
+   "statement": "s0"
+  },
+  {
+   "at": "2002-02-01T09:00:00Z",
+   "case": "may-max-month",
+   "eventType": "SupportBean",
+   "op": "send",
+   "payload": {
+    "intPrimitive": 0,
+    "theString": "E1"
+   }
+  },
+  {
+   "at": "2002-03-01T08:59:59.999Z",
+   "case": "may-max-month",
+   "eventType": "SupportBean",
+   "op": "send",
+   "payload": {
+    "intPrimitive": 0,
+    "theString": "E2"
+   }
+  },
+  {
+   "at": "2002-03-01T09:00:00Z",
+   "case": "may-max-month",
+   "eventType": "SupportBean",
+   "op": "send",
+   "payload": {
+    "intPrimitive": 0,
+    "theString": "E3"
+   }
+  },
+  {
+   "case": "may-max-month",
+   "op": "undeploy-all"
+  }
+ ],
+ "version": "esper-parity/v1"
+}

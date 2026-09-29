@@ -1,3 +1,24 @@
+> 最新补充：Draft 4.595（2026-09-29），`pattern.basic` 的 `case.pattern-every` 补全固定 Java
+> `PatternGuardTimerWithin.java` ordinals 1–6（ord1 `PatternInterval10Min`
+> `java-runtime-f0649272cfb528ce731b`、ord2 `PatternInterval10MinVariable`
+> `java-runtime-2fe5370a7c1599bfb424`、ord3 `PatternIntervalPrepared`
+> `java-runtime-66d65309509fac58bbfc`、ord4 `PatternWithinFromExpression`
+> `java-runtime-36ef6f15f14a0e86ab93`、ord5 `PatternPatternNotFollowedBy`
+> `java-runtime-6a5e8128ae184e8a7249`、ord6 `PatternWithinMayMaxMonthScoped`
+> `java-runtime-34555c4a9823a346d710`，静态 `java-0dec801a426fed297402`，无 flags）——
+> ord0 W-harness 之后全部 `timer:within` executions：同一 tryAssertion 边界契约
+>（fire@0 / fire@period−1ms / period 处静默，exclusive deadline）横跨字面量、
+> 套件变量（D/H/M/S/MS=1..5）与五个位置 `?::int` 替换参数三种 period 形态；
+> ord4 `within(a.intPrimitive seconds)` 按完成的 a 事件逐个 arm；ord5 `every`
+> 包被护的 followed-by 在 advance 内 respawn 使新分支看到同刻事件；ord6 两轮
+> `within(1 month)`/`withinmax(1 month, 10)` 的 deploy 带 pre-deploy 时钟推进
+>（Java sendCurrentTime 先于 compileDeploy），非单调时钟重放同组时刻。
+> Java/Go 各 13 records、0 differences。重放揪出三处 runner 修正（a/b 原子
+> 共享同一 SupportBean 流、deploy `at` 语义、per-deploy listener sequence 复位），
+> Go 引擎本身未改。manifest 801 cases / 430 DV / 1753 DV runtime IDs /
+> unreferenced 386。
+
+
 > 最新补充：Draft 4.594（2026-09-29），`pattern.basic` 的 `case.pattern-every` +
 > `case.pattern-guard-observer-prearmed`（后者升至 differential-verified）补全固定 Java
 > `PatternGuardTimerWithin.java` ord 0 `PatternOp`（`java-runtime-bb8113cb979826cff927`，

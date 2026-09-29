@@ -104,11 +104,68 @@ Active: Draft 4.594 ('timer:within 34-leg W-harness — PatternGuardTimerWithin 
  zero-diff compare `-mode pattern-guard-timerwithin-wharness-594-diff` -> status
  `passing`, differences `[]`; evidence
  `testdata/parity/pattern-guard-timerwithin-wharness-594.evidence.json`.
-- [x] Manifest: `case.pattern-every` evidence/goTests/notes extended (rid already
- in DV list); `case.pattern-guard-observer-prearmed` promoted to
- `differential-verified` (rid `java-runtime-bb8113cb979826cff927`), goTests +
- evidence + narrowed `difference` prose. internal/compat Validate passes.
-- [ ] Gates, review, commit.
+- Shipped; Git owns identity. Draft 4.594 committed and pushed as `d9e0ed92b`;
+ review PASS (2 P3s fixed: dead terminal branch, stale respawn arithmetic).
+
+## Current work unit
+Active: Draft 4.595 ('timer:within remainder — PatternGuardTimerWithin ords 1-6').
+
+- [x] Contract frozen (agents JavaContract595 + GoSurface595, read-only):
+ PatternGuardTimerWithin ords 1-6, all static `java-0dec801a426fed297402`,
+ flags [], commit 9e1b9f1cc9117f. Per-ord runtime IDs: ord1 PatternInterval10Min
+ `java-runtime-f0649272cfb528ce731b` (within(93784005ms), tryAssertion fire@0,
+ fire@93784004, silent@93784005); ord2 PatternInterval10MinVariable
+ `java-runtime-2fe5370a7c1599bfb424` (suite variables D/H/M/S/MS=1..5, same
+ schedule; eplToModel round-trip = approved difference); ord3
+ PatternIntervalPrepared `java-runtime-66d65309509fac58bbfc` (5 positional `?`
+ params -> Parameter + DeployWithParameters); ord4 PatternWithinFromExpression
+ `java-runtime-36ef6f15f14a0e86ab93` (`a=SB -> (every b=SB) where
+ within(a.intPrimitive seconds)` event-correlated deadline: E1(3)@0 arms 3000,
+ E2@2000/E3@2999 emit {id}, expiry@3000 silent); ord5
+ PatternPatternNotFollowedBy `java-runtime-6a5e8128ae184e8a7249`
+ (`every(SB -> (SMDB where within(5s)))`: E1/E2 branches die @6000, every
+ respawns during advance, E4 branch + E5 match -> ONE empty-payload emission);
+ ord6 PatternWithinMayMaxMonthScoped `java-runtime-34555c4a9823a346d710`
+ (two rounds: within(1 month) then withinmax(1 month,10); arm 2002-02-01 09:00,
+ fire E1 + E2 at 03-01 09:00-1ms, silent at boundary).
+- GoSurface595: ALL six expressible with existing API — Within/WithinExpr/
+ WithinCalendar/WithinOrMaxCalendar, DurationSum+VariableRef, Parameter+
+ DeployWithParameters, tag-correlated duration (patternDurationDeadline).
+ No engine changes expected: pure asset unit (594-style runner clone).
+- [x] Assets: scenario `testdata/parity/pattern-guard-timerwithin-forms-595.json`
+ (6 cases / 43 steps, deploy steps may carry `at` = advance-before-deploy,
+ ord 6 only), runner `internal/app/parity/pattern_guard_timerwithin_forms_595.go`
+ + run.go wiring, six-test family `pattern_guard_timerwithin_forms_595_test.go`
+ (replay pin 13 records, 7 raw mutations, pinned artifacts, runtime mapping,
+ byte-exact EPLs, arm-order) all green.
+- [x] **Runner fixes found by replay** (Go engine correct — throwaway repros
+ proved 1-row fire + boundary silence on a shared stream):
+ (1) ord4's two `esper.From[bean](env,"SupportBean")` calls duplicated the
+ event feed → doubled `{id}` rows; fixed by sharing one stream for a and b;
+ (2) ord6 deploys must run on the already-advanced clock (Java calls
+ sendCurrentTime BEFORE compileDeploy) — deploy steps now pin an optional
+ `at` the runner advances to before compiling; without it the `within` arms
+ at epoch 0 and dies before 2002 while `withinmax` mis-fires through the
+ backward replay.
+- [x] Oracle + differential evidence: Java oracle authored by
+ OracleAssets595 (`tools/java-oracle/PatternGuardTimerWithinForms595ScenarioOracle.java`
+ + run script); Java trace 13 records (java 17.0.20), Go trace 13,
+ `-mode pattern-guard-timerwithin-forms-595-diff` -> status `passing`,
+ differences []; evidence
+ `testdata/parity/pattern-guard-timerwithin-forms-595.evidence.json`.
+- [x] Manifest/roadmap/CHANGELOG: `case.pattern-every` +6 DV runtime IDs
+ (ord1-6), +6 goTests, +1 evidence path, Draft 4.595 note appended;
+ summary 801/430/1753/386 consistent; roadmap + CHANGELOG entries.
+- [x] Gates + review: `make check` exit 0. Parity review PASS
+ (agent ParityReview595): 5 P3s — P3.1 variables now registered as
+ float64 to mirror Java double.class; P3.2 observation/oracle/scenario
+ text corrected to DeployWithPositionalParameters(1..5) (no
+ BindPositionalParameters call); P3.3 test comment mechanism fixed;
+ P3.4 left (non-string-field coverage belongs to the differential
+ compare, not the row-type pin); P3.5 HTML-escape artifacts removed
+ from oracle comments. Scenario regenerated + diff re-passed after the
+ text fixes.
+- [ ] Commit + push.
 
 ## Previous work units (shipped)
 - Shipped: Draft 4.591 ('timer-interval spec-resolution forms')

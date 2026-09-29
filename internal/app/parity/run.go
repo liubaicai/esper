@@ -593,6 +593,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadPatternTimerIntervalPropertyArray593Scenario(file)
 	} else if *mode == "pattern-guard-timerwithin-wharness-594" || *mode == "pattern-guard-timerwithin-wharness-594-diff" {
 		scenario, err = loadPatternGuardTimerWithinWHarness594Scenario(file)
+	} else if *mode == "pattern-guard-timerwithin-forms-595" || *mode == "pattern-guard-timerwithin-forms-595-diff" {
+		scenario, err = loadPatternGuardTimerWithinForms595Scenario(file)
 	} else if *mode == "epl-contained-event-example" || *mode == "epl-contained-event-example-diff" {
 		scenario, err = loadEPLContainedEventExampleScenario(file)
 	} else if *mode == "epl-other-pattern-event-properties" || *mode == "epl-other-pattern-event-properties-diff" {
@@ -2923,6 +2925,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaSourceFiles, patternGuardTimerWithinWHarness594JavaSources),
 				splitMetadata(*javaExecutions, patternGuardTimerWithinWHarness594JavaExecutions), scenario, trace,
 				sortPatternTimerIntervalWHarness592Records)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "pattern-guard-timerwithin-forms-595" || *mode == "pattern-guard-timerwithin-forms-595-diff" {
+		trace, err := runPatternGuardTimerWithinForms595Scenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "pattern-guard-timerwithin-forms-595-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, patternGuardTimerWithinForms595JavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, patternGuardTimerWithinForms595JavaSources),
+				splitMetadata(*javaExecutions, patternGuardTimerWithinForms595JavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

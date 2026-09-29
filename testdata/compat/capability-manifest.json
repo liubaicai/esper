@@ -16670,7 +16670,13 @@
     "internal/app/parity/pattern_guard_timerwithin_wharness_594_test.go/TestRunPatternGuardTimerWithinWHarness594ScenarioReplay",
     "internal/app/parity/pattern_guard_timerwithin_wharness_594_test.go/TestRunPatternGuardTimerWithinWHarness594PinnedArtifacts",
     "internal/app/parity/pattern_guard_timerwithin_wharness_594_test.go/TestRunPatternGuardTimerWithinWHarness594RejectsMalformedRawScenario",
-    "internal/app/parity/pattern_guard_timerwithin_wharness_594_test.go/TestRunPatternGuardTimerWithinWHarness594RuntimeIDMapping"
+    "internal/app/parity/pattern_guard_timerwithin_wharness_594_test.go/TestRunPatternGuardTimerWithinWHarness594RuntimeIDMapping",
+    "internal/app/parity/pattern_guard_timerwithin_forms_595_test.go/TestRunPatternGuardTimerWithinForms595ScenarioReplay",
+    "internal/app/parity/pattern_guard_timerwithin_forms_595_test.go/TestRunPatternGuardTimerWithinForms595RejectsMalformedRawScenario",
+    "internal/app/parity/pattern_guard_timerwithin_forms_595_test.go/TestRunPatternGuardTimerWithinForms595PinnedArtifacts",
+    "internal/app/parity/pattern_guard_timerwithin_forms_595_test.go/TestRunPatternGuardTimerWithinForms595RuntimeIDMappingMatchesScenario",
+    "internal/app/parity/pattern_guard_timerwithin_forms_595_test.go/TestRunPatternGuardTimerWithinForms595EPLsByteExact",
+    "internal/app/parity/pattern_guard_timerwithin_forms_595_test.go/TestRunPatternGuardTimerWithinForms595ArmOrder"
    ],
    "tags": [
     "correctness",
@@ -16685,7 +16691,8 @@
     "testdata/parity/pattern-timer-interval-forms-591.evidence.json",
     "testdata/parity/pattern-timerinterval-wharness-592.evidence.json",
     "testdata/parity/pattern-timer-interval-property-array-593.evidence.json",
-    "testdata/parity/pattern-guard-timerwithin-wharness-594.evidence.json"
+    "testdata/parity/pattern-guard-timerwithin-wharness-594.evidence.json",
+    "testdata/parity/pattern-guard-timerwithin-forms-595.evidence.json"
    ],
    "difference": "Go covers outer Within versus inner Within().EveryDistinct() scope, distinct suppression with an AST-owned Every state, virtual-clock expiry via Within and explicit EveryDistinctFor, ordinary Pattern and Pattern Context lifecycle, scoped WithinOrMax guards, dynamic duration from captured tags, variables, deployment parameters and component expressions, repeated-tag property access including indexed fields from repeated event tags, component-wise fixed-duration parameters, variable reconfiguration for the next recurring timer period, microsecond precision, recurring month-calendar boundaries, mixed calendar-plus-fixed timer periods, exact-deadline tests, edge-scoped FollowedByMax capacity for nested/composed followed-by branches, and MatchUntil expression bounds resolved from variables, deployment parameters, null open bounds and captured outer tags. Bounded-until additionally preserves a capped repeated branch while waiting for a terminator, gives the terminator priority on the same event, and expires without output below the lower bound. Compound every (every (a and b), every (timer:interval and not X)) now materializes into the AST so the every state holds a single active attempt like Esper's EvalEveryStateNode, and restarted attempts inherit the every begin-state tags instead of the just-fired match tags (spawn-state snapshot). Nested Every levels now multiply matches exactly like Esper: every(every(b)) fires B2 twice and B3 four times, every^3 fires B2 three times and B3 nine times, every^4 fires B2 four times and B3 sixteen times, because a completed non-quitting child stays resident while a fresh sibling is spawned alongside it. Java additionally covers ISO period parsing, multi-key expiry, nested observer/guard/consumption combinations and exact execution trace parity; Go WithinOrMax, dynamic duration and dynamic MatchUntil support do not yet cover every nested parent transition, followed-by dynamic maxima or the complete consumption policy matrix.",
    "verification": [
@@ -16702,9 +16709,15 @@
     "java-runtime-d5ad6ad9d226628f8383",
     "java-runtime-9b41fb5951301c0de979",
     "java-runtime-6155a2b0181e2169f2a4",
-    "java-runtime-bb8113cb979826cff927"
+    "java-runtime-bb8113cb979826cff927",
+    "java-runtime-f0649272cfb528ce731b",
+    "java-runtime-2fe5370a7c1599bfb424",
+    "java-runtime-66d65309509fac58bbfc",
+    "java-runtime-36ef6f15f14a0e86ab93",
+    "java-runtime-6a5e8128ae184e8a7249",
+    "java-runtime-34555c4a9823a346d710"
    ],
-   "notes": " Draft 4.589: PatternGuardTimerWithinOrMax ord0 DV (17-leg simultaneous W-harness, 30 records, 0 differences); required an internal/esper fix \u2014 a capped every-within inside a followed-by stayed resident and re-emitted stale rows (patternCompletionPermanent/patternCanContinueAfterMatch now treat a terminal within as quitting its child, mirroring EvalWithinStateNode.quitInternal). Draft 4.591: PatternObserverTimerInterval ords 1/2/3/5/6 DV (5 records, 0 differences) \u2014 literal/variable/expression/prepared-param interval specs sharing the 62s boundary contract + calendar 1-month Feb1->Mar1. ords 0/7 deferred. Draft 4.592: PatternObserverTimerInterval ord0 PatternOp DV \u2014 the full 31-leg timer:interval W-harness over EventSetOne advance-before-send replay (32 records, 0 differences); required three internal/esper fixes \u2014 satisfied one-shot timer branches are permanent (EvalObserverStateNode quitInternal), an and-state's satisfied-but-unquitted side stays resident to cache its match, and event dispatch drains timers already due at that instant (S14's b->timer:interval(0) fires in B1's send). Follow-on: `initiated by @Now and pattern [...]` is a condition union, not an or-NFA \u2014 ContextDefinition.initiatedNow + CreateOverlappingPatternInitiatedTerminatedContextNow materializes the deploy-time @Now partition while the every pattern continues on its own schedule (fixes context-init-term-with-now regression from the permanence change). Draft 4.593: ord 7 PatternIntervalSpecExpressionWithPropertyArray DV \u2014 `[2] a=SupportBean -> timer:interval(a[0].intPrimitive+a[1].intPrimitive seconds)`; the interval spec reads the repeated-tag array once at arm (Java/Go 1 record each, 0 differences). Draft 4.594: PatternGuardTimerWithin ord0 PatternOp DV \u2014 the full 34-leg timer:within W-harness (incl. the S3 SODA model leg) replayed as 47 listener invocations / 64 assertion rows, 0 differences; required internal/esper guard semantics fixes: a within whose child already quit now disarms rather than post-firing (EvalGuardStateNode/TimerWithinGuard), and a restartable evaluateFalse respawns every at the expiry-callback instant (EvalEveryStateNode.evaluateFalse)."
+   "notes": " Draft 4.589: PatternGuardTimerWithinOrMax ord0 DV (17-leg simultaneous W-harness, 30 records, 0 differences); required an internal/esper fix \u2014 a capped every-within inside a followed-by stayed resident and re-emitted stale rows (patternCompletionPermanent/patternCanContinueAfterMatch now treat a terminal within as quitting its child, mirroring EvalWithinStateNode.quitInternal). Draft 4.591: PatternObserverTimerInterval ords 1/2/3/5/6 DV (5 records, 0 differences) \u2014 literal/variable/expression/prepared-param interval specs sharing the 62s boundary contract + calendar 1-month Feb1->Mar1. ords 0/7 deferred. Draft 4.592: PatternObserverTimerInterval ord0 PatternOp DV \u2014 the full 31-leg timer:interval W-harness over EventSetOne advance-before-send replay (32 records, 0 differences); required three internal/esper fixes \u2014 satisfied one-shot timer branches are permanent (EvalObserverStateNode quitInternal), an and-state's satisfied-but-unquitted side stays resident to cache its match, and event dispatch drains timers already due at that instant (S14's b->timer:interval(0) fires in B1's send). Follow-on: `initiated by @Now and pattern [...]` is a condition union, not an or-NFA \u2014 ContextDefinition.initiatedNow + CreateOverlappingPatternInitiatedTerminatedContextNow materializes the deploy-time @Now partition while the every pattern continues on its own schedule (fixes context-init-term-with-now regression from the permanence change). Draft 4.593: ord 7 PatternIntervalSpecExpressionWithPropertyArray DV \u2014 `[2] a=SupportBean -> timer:interval(a[0].intPrimitive+a[1].intPrimitive seconds)`; the interval spec reads the repeated-tag array once at arm (Java/Go 1 record each, 0 differences). Draft 4.594: PatternGuardTimerWithin ord0 PatternOp DV \u2014 the full 34-leg timer:within W-harness (incl. the S3 SODA model leg) replayed as 47 listener invocations / 64 assertion rows, 0 differences; required internal/esper guard semantics fixes: a within whose child already quit now disarms rather than post-firing (EvalGuardStateNode/TimerWithinGuard), and a restartable evaluateFalse respawns every at the expiry-callback instant (EvalEveryStateNode.evaluateFalse). Draft 4.595: PatternGuardTimerWithin ords 1-6 DV (13 records, 0 differences) \u2014 the six remaining timer:within executions after the ord-0 W-harness: shared tryAssertion boundary contract (fire@0/fire@period-1ms/silent@period exclusive deadline) across literal, suite-variable (D/H/M/S/MS) and five-positional-`?::int` period specs; event-correlated within(a.intPrimitive seconds) arming per completed a; every over a guarded followed-by respawning inside the advance so the fresh branch sees the same-tick event; and the two-round MayMaxMonth run whose deploys carry a pre-deploy clock advance (Java sendCurrentTime before compileDeploy) and whose within calendar month boundary is exclusive while withinmax(1 month, 10) shares it. The Go runner fixes found by replay (single SupportBean stream for a/b atoms; deploy-at advance; per-deploy listener sequence reset) pin the arm-at-deploy ordering Java's sendCurrentTime establishes."
   },
   {
    "id": "case.pattern-guard-observer-prearmed",
@@ -55565,7 +55578,7 @@
   "inventoriedCases": 801,
   "implementedCases": 799,
   "differentialVerifiedCases": 430,
-  "differentialVerifiedRuntimeIds": 1747,
+  "differentialVerifiedRuntimeIds": 1753,
   "intentionallyDifferentCases": 40,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
